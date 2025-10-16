@@ -1,0 +1,36 @@
+.kanban {
+  display: flex;
+  flex: 1 1 auto;
+  overflow: auto;
+  height: calc(100vh - 110px);
+}
+
+.kanban-container {
+  display: flex;
+  flex-direction: row;
+  padding: 16px;
+}
+
+/* Custom Scroll for kanban */
+.kanban::-webkit-scrollbar,
+.kanban-column > div:nth-child(2)::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.kanban::-webkit-scrollbar-track,
+.kanban-column > div:nth-child(2)::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.kanban::-webkit-scrollbar-thumb,
+.kanban-column > div:nth-child(2)::-webkit-scrollbar-thumb {
+  background: #aaa;
+  border-radius: 3px;
+}
+
+.kanban::-webkit-scrollbar-thumb:hover,
+.kanban-column > div:nth-child(2)::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}

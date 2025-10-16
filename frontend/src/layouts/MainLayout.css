@@ -1,0 +1,38 @@
+.modern-sider {
+  transition: all 0.15s ease-out;
+}
+
+.nav-item {
+  position: relative;
+  transition: all 0.15s ease-out;
+}
+
+.nav-item:hover {
+  background: #e6f7ff !important;
+}
+
+.nav-item.active:hover {
+  background: #e6f7ff !important;
+}
+
+.nav-item.collapsed {
+  text-align: center;
+}
+
+/* Custom scrollbar for sidebar */
+.modern-sider::-webkit-scrollbar {
+  width: 4px;
+}
+
+.modern-sider::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modern-sider::-webkit-scrollbar-thumb {
+  background: #d9d9d9;
+  border-radius: 2px;
+}
+
+.modern-sider::-webkit-scrollbar-thumb:hover {
+  background: #bfbfbf;
+}
