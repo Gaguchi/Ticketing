@@ -50,6 +50,12 @@ const getTypeIcon = (type?: string) => {
   }
 };
 
+// Helper function to format ticket ID with type prefix
+const formatTicketId = (type?: string, id?: number) => {
+  const typePrefix = type ? type.toUpperCase() : "TASK";
+  return `${typePrefix}-${id}`;
+};
+
 // Sortable Filter Box Component
 const SortableFilterBox: React.FC<{
   box: FilterBox;
@@ -162,7 +168,7 @@ const SortableFilterBox: React.FC<{
               <span
                 style={{ color: "#0052cc", fontWeight: 500, flexShrink: 0 }}
               >
-                #{ticket.id}
+                {formatTicketId(ticket.type, ticket.id)}
               </span>
               <span
                 style={{
@@ -393,7 +399,7 @@ const Dashboard: React.FC = () => {
               flexShrink: 0,
             }}
           >
-            #{record.id}
+            {formatTicketId(record.type, record.id)}
           </span>
           <span style={{ color: "#172b4d", fontSize: "14px" }}>
             {record.name}

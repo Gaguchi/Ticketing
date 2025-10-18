@@ -36,6 +36,12 @@ const getTypeIcon = (type?: string) => {
   }
 };
 
+// Helper function to format ticket ID with type prefix
+const formatTicketId = (type?: string, id?: number) => {
+  const typePrefix = type ? type.toUpperCase() : "TASK";
+  return `${typePrefix}-${id}`;
+};
+
 export const TicketCard: React.FC<TicketCardProps> = ({
   id,
   ticket,
@@ -133,7 +139,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({
                     fontWeight: 500,
                   }}
                 >
-                  #{ticket.id}
+                  {formatTicketId(ticket.type, ticket.id)}
                 </span>
               </Space>
               {ticket.following && <EyeOutlined style={{ fontSize: "14px" }} />}
