@@ -5,7 +5,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Button, Badge } from "antd";
+import { Button } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import { TicketCard } from "./TicketCard";
 import type { Ticket } from "../types/ticket";
@@ -17,6 +17,7 @@ interface KanbanColumnProps {
   tickets: Ticket[];
   isSortingContainer?: boolean;
   dragOverlay?: boolean;
+  onTicketClick?: (ticket: Ticket) => void;
 }
 
 export const KanbanColumn: React.FC<KanbanColumnProps> = ({
@@ -26,6 +27,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
   tickets,
   isSortingContainer,
   dragOverlay,
+  onTicketClick,
 }) => {
   const {
     attributes,
@@ -47,15 +49,16 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
     transition,
     opacity: isDragging ? 0.5 : 1,
     boxShadow: dragOverlay ? "0 2px 8px rgba(0,0,0,0.15)" : undefined,
-    border: dragOverlay ? "1px solid #1890ff" : "1px solid #e8e8e8",
+    border: "none",
     touchAction: "manipulation",
     display: "flex",
     flexDirection: "column",
-    marginRight: "10px",
-    minWidth: "240px",
-    maxWidth: "240px",
-    borderRadius: "2px",
-    backgroundColor: "#fafafa",
+    marginRight: "8px",
+    minWidth: "272px",
+    maxWidth: "272px",
+    borderRadius: "3px",
+    backgroundColor: "#f4f5f7",
+    height: "calc(100vh - 180px)",
   };
 
   return (
@@ -65,28 +68,31 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
         {...attributes}
         {...listeners}
         style={{
-          padding: "10px 12px",
+          padding: "12px 12px 8px",
           fontWeight: 600,
           fontSize: "13px",
           cursor: dragOverlay ? "grabbing" : "grab",
-          backgroundColor: "#fff",
-          borderBottom: "1px solid #e8e8e8",
+          color: "#172b4d",
+          textTransform: "uppercase",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
+          letterSpacing: "0.04em",
         }}
       >
         <span>{name}</span>
-        <Badge
-          count={items.length || 0}
-          showZero
+        <span
           style={{
-            backgroundColor: "#fff",
-            color: "#000",
-            border: "1px solid #e8e8e8",
-            fontSize: "11px",
+            fontSize: "13px",
+            fontWeight: 600,
+            color: "#5e6c84",
+            backgroundColor: "#dfe1e6",
+            padding: "2px 8px",
+            borderRadius: "10px",
           }}
-        />
+        >
+          {items.length}
+        </span>
       </div>
       <div
         style={{
@@ -94,8 +100,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
           flexDirection: "column",
           flex: 1,
           overflowY: "auto",
-          padding: "8px",
-          minHeight: "200px",
+          padding: "4px 8px 8px",
         }}
       >
         <SortableContext items={items} strategy={verticalListSortingStrategy}>
@@ -108,30 +113,28 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
                 key={item}
                 ticket={ticket}
                 disabled={isSortingContainer}
+                onClick={onTicketClick}
               />
             );
           })}
         </SortableContext>
-      </div>
-      <div
-        style={{
-          padding: "8px",
-          borderTop: "1px solid #e8e8e8",
-          backgroundColor: "#fff",
-        }}
-      >
         <Button
           type="text"
-          icon={<PlusOutlined />}
+          icon={<PlusOutlined style={{ fontSize: "14px" }} />}
           size="small"
           style={{
             width: "100%",
             textAlign: "left",
-            fontSize: "12px",
-            height: "28px",
+            fontSize: "14px",
+            height: "32px",
+            marginTop: "4px",
+            padding: "4px 8px",
+            color: "#5e6c84",
+            justifyContent: "flex-start",
+            fontWeight: 400,
           }}
         >
-          Add ticket
+          Create
         </Button>
       </div>
     </div>

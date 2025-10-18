@@ -1,43 +1,411 @@
-import React from "react";
-import { Row, Col, Card, Statistic, Table, Tag, Progress } from "antd";
+﻿import React, { useState } from "react";
+import { Input, Table, Tag, Badge } from "antd";
+import { SearchOutlined } from "@ant-design/icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  InboxOutlined,
-  CheckCircleOutlined,
-  ClockCircleOutlined,
-  ExclamationCircleOutlined,
-  ArrowUpOutlined,
-} from "@ant-design/icons";
-import type { ColumnsType } from "antd/es/table";
+  faCheckSquare,
+  faBug,
+  faBookmark,
+  faBolt,
+} from "@fortawesome/free-solid-svg-icons";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import type { DragEndEvent } from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  useSortable,
+  horizontalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { getPriorityIcon } from "../components/PriorityIcons";
+import { TicketModal } from "../components/TicketModal";
+import type { Ticket } from "../types/ticket";
+import type { TableColumnsType } from "antd";
 
-interface TicketData {
-  key: string;
+interface FilterBox {
   id: string;
-  subject: string;
-  customer: string;
-  status: string;
-  urgency: string;
-  importance: string;
-  assignee: string;
+  title: string;
+  filter: (ticket: Ticket) => boolean;
+  color: string;
 }
 
+const getTypeIcon = (type?: string) => {
+  switch (type) {
+    case "task":
+      return { icon: faCheckSquare, color: "#4bade8" };
+    case "bug":
+      return { icon: faBug, color: "#e5493a" };
+    case "story":
+      return { icon: faBookmark, color: "#63ba3c" };
+    case "epic":
+      return { icon: faBolt, color: "#904ee2" };
+    default:
+      return { icon: faCheckSquare, color: "#4bade8" };
+  }
+};
+
+// Sortable Filter Box Component
+const SortableFilterBox: React.FC<{
+  box: FilterBox;
+  filteredCount: number;
+  tickets: Ticket[];
+  onTicketClick: (ticket: Ticket) => void;
+}> = ({ box, filteredCount, tickets, onTicketClick }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: box.id,
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        ...style,
+        backgroundColor: "#fff",
+        border: "1px solid #dfe1e6",
+        borderRadius: "3px",
+        padding: "12px",
+        cursor: isDragging ? "grabbing" : "grab",
+        transition: isDragging ? transition : "all 0.2s",
+        height: "150px", // Reduced height for tighter spacing
+        display: "flex",
+        flexDirection: "column",
+      }}
+      {...attributes}
+      {...listeners}
+      onMouseEnter={(e) => {
+        if (!isDragging) {
+          e.currentTarget.style.borderColor = box.color;
+          e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.1)";
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!isDragging) {
+          e.currentTarget.style.borderColor = "#dfe1e6";
+          e.currentTarget.style.boxShadow = "none";
+        }
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "8px",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <Badge
+            count={filteredCount}
+            style={{
+              backgroundColor: box.color,
+              fontSize: "12px",
+              fontWeight: 600,
+              minWidth: "24px",
+              height: "24px",
+              lineHeight: "24px",
+            }}
+          />
+          <span style={{ fontSize: "14px", fontWeight: 600, color: "#172b4d" }}>
+            {box.title}
+          </span>
+        </div>
+      </div>
+
+      <div style={{ flex: 1, overflow: "hidden" }}>
+        {tickets
+          .filter(box.filter)
+          .slice(0, 3)
+          .map((ticket) => (
+            <div
+              key={ticket.id}
+              onClick={(e) => {
+                e.stopPropagation();
+                onTicketClick(ticket);
+              }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "4px 0",
+                fontSize: "12px",
+                color: "#5e6c84",
+                cursor: "pointer",
+              }}
+            >
+              <FontAwesomeIcon
+                icon={getTypeIcon(ticket.type).icon}
+                style={{
+                  fontSize: "12px",
+                  color: getTypeIcon(ticket.type).color,
+                  flexShrink: 0,
+                }}
+              />
+              <span
+                style={{ color: "#0052cc", fontWeight: 500, flexShrink: 0 }}
+              >
+                #{ticket.id}
+              </span>
+              <span
+                style={{
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  color: "#172b4d",
+                }}
+              >
+                {ticket.name}
+              </span>
+            </div>
+          ))}
+        {filteredCount > 3 && (
+          <div
+            style={{
+              fontSize: "12px",
+              color: "#5e6c84",
+              marginTop: "4px",
+              fontStyle: "italic",
+            }}
+          >
+            +{filteredCount - 3} more...
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const mockTickets: Ticket[] = [
+  {
+    id: 1,
+    colId: 1,
+    name: "Website homepage not loading for mobile users",
+    priorityId: 4,
+    following: true,
+    assigneeIds: [1, 2],
+    customer: "TechCorp Solutions",
+    status: "New",
+    createdAt: "2025-10-15",
+    urgency: "High",
+    importance: "Critical",
+    type: "bug",
+  },
+  {
+    id: 2,
+    colId: 2,
+    name: "Integrate payment gateway with new API",
+    priorityId: 2,
+    assigneeIds: [1],
+    customer: "RetailMax Inc",
+    status: "In Progress",
+    createdAt: "2025-10-14",
+    urgency: "Normal",
+    importance: "High",
+    type: "task",
+  },
+  {
+    id: 3,
+    colId: 2,
+    name: "Fix typo in user registration email",
+    priorityId: 3,
+    assigneeIds: [2],
+    customer: "StartupHub",
+    status: "In Progress",
+    createdAt: "2025-10-13",
+    urgency: "Low",
+    importance: "Normal",
+    type: "bug",
+  },
+  {
+    id: 4,
+    colId: 2,
+    name: "Improve database query performance",
+    priorityId: 2,
+    following: true,
+    commentsCount: 3,
+    assigneeIds: [1, 2, 3],
+    customer: "DataFlow Systems",
+    status: "In Progress",
+    createdAt: "2025-10-12",
+    urgency: "Normal",
+    importance: "High",
+    type: "story",
+  },
+  {
+    id: 5,
+    colId: 3,
+    name: "Update user documentation",
+    priorityId: 1,
+    assigneeIds: [2],
+    customer: "EduTech Platform",
+    status: "Review",
+    createdAt: "2025-10-11",
+    urgency: "Low",
+    importance: "Low",
+    type: "task",
+  },
+  {
+    id: 6,
+    colId: 1,
+    name: "Cannot login with SSO credentials",
+    priorityId: 4,
+    commentsCount: 11,
+    assigneeIds: [1, 3],
+    customer: "Enterprise Global",
+    status: "New",
+    createdAt: "2025-10-10",
+    urgency: "High",
+    importance: "Critical",
+    type: "bug",
+  },
+  {
+    id: 7,
+    colId: 4,
+    name: "Migrate legacy authentication system",
+    priorityId: 3,
+    assigneeIds: [3],
+    customer: "FinanceFlow",
+    status: "Done",
+    createdAt: "2025-10-09",
+    urgency: "Normal",
+    importance: "High",
+    type: "epic",
+  },
+  {
+    id: 8,
+    colId: 1,
+    name: "Server returning 500 errors intermittently",
+    priorityId: 4,
+    commentsCount: 8,
+    assigneeIds: [1, 2, 3],
+    customer: "CloudServe Inc",
+    status: "New",
+    createdAt: "2025-10-08",
+    urgency: "High",
+    importance: "Critical",
+    type: "bug",
+  },
+];
+
 const Dashboard: React.FC = () => {
-  const columns: ColumnsType<TicketData> = [
+  const [searchText, setSearchText] = useState("");
+  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [filterBoxes, setFilterBoxes] = useState<FilterBox[]>([
     {
-      title: "ID",
-      dataIndex: "id",
-      key: "id",
-      width: 90,
+      id: "unassigned",
+      title: "Unassigned",
+      filter: (ticket) =>
+        !ticket.assigneeIds || ticket.assigneeIds.length === 0,
+      color: "#ff4d4f",
     },
     {
-      title: "Subject",
-      dataIndex: "subject",
-      key: "subject",
+      id: "myTickets",
+      title: "Assigned to Me",
+      filter: (ticket) => ticket.assigneeIds?.includes(1) || false,
+      color: "#1890ff",
+    },
+    {
+      id: "inProgress",
+      title: "In Progress",
+      filter: (ticket) => ticket.status === "In Progress",
+      color: "#fa8c16",
+    },
+    {
+      id: "new",
+      title: "New",
+      filter: (ticket) => ticket.status === "New",
+      color: "#52c41a",
+    },
+    {
+      id: "critical",
+      title: "Critical Priority",
+      filter: (ticket) => ticket.priorityId === 4,
+      color: "#e5493a",
+    },
+  ]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      setFilterBoxes((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over.id);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
+  };
+
+  const columns: TableColumnsType<Ticket> = [
+    {
+      title: "Work",
+      key: "work",
+      width: 400,
+      render: (_: any, record: Ticket) => (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            cursor: "pointer",
+          }}
+          onClick={() => setSelectedTicket(record)}
+        >
+          <FontAwesomeIcon
+            icon={getTypeIcon(record.type).icon}
+            style={{
+              fontSize: "16px",
+              color: getTypeIcon(record.type).color,
+              flexShrink: 0,
+            }}
+          />
+          <span
+            style={{
+              color: "#0052cc",
+              fontWeight: 500,
+              fontSize: "14px",
+              flexShrink: 0,
+            }}
+          >
+            #{record.id}
+          </span>
+          <span style={{ color: "#172b4d", fontSize: "14px" }}>
+            {record.name}
+          </span>
+        </div>
+      ),
     },
     {
       title: "Customer",
       dataIndex: "customer",
       key: "customer",
-      width: 140,
+      width: 180,
     },
     {
       title: "Status",
@@ -45,14 +413,21 @@ const Dashboard: React.FC = () => {
       key: "status",
       width: 120,
       render: (status: string) => {
-        const colors: Record<string, string> = {
-          Open: "blue",
+        const colorMap: Record<string, string> = {
+          New: "blue",
           "In Progress": "orange",
-          Resolved: "green",
-          Closed: "default",
+          Review: "purple",
+          Done: "green",
         };
-        return <Tag color={colors[status]}>{status}</Tag>;
+        return <Tag color={colorMap[status]}>{status}</Tag>;
       },
+    },
+    {
+      title: "Priority",
+      dataIndex: "priorityId",
+      key: "priorityId",
+      width: 100,
+      render: (priorityId: number) => getPriorityIcon(priorityId),
     },
     {
       title: "Urgency",
@@ -60,388 +435,208 @@ const Dashboard: React.FC = () => {
       key: "urgency",
       width: 100,
       render: (urgency: string) => {
-        const colors: Record<string, string> = {
-          Critical: "red",
-          High: "orange",
-          Medium: "blue",
-          Low: "default",
+        const colorMap: Record<string, string> = {
+          High: "red",
+          Normal: "orange",
+          Low: "green",
         };
-        return <Tag color={colors[urgency]}>{urgency}</Tag>;
+        return <Tag color={colorMap[urgency]}>{urgency}</Tag>;
       },
     },
     {
-      title: "Assignee",
-      dataIndex: "assignee",
-      key: "assignee",
+      title: "Importance",
+      dataIndex: "importance",
+      key: "importance",
+      width: 120,
+      render: (importance: string) => {
+        const colorMap: Record<string, string> = {
+          Critical: "red",
+          High: "orange",
+          Normal: "blue",
+          Low: "green",
+        };
+        return <Tag color={colorMap[importance]}>{importance}</Tag>;
+      },
+    },
+    {
+      title: "Created",
+      dataIndex: "createdAt",
+      key: "createdAt",
       width: 120,
     },
   ];
 
-  const recentTickets: TicketData[] = [
-    {
-      key: "1",
-      id: "#T-1001",
-      subject: "Cannot login to account",
-      customer: "John Doe",
-      status: "Open",
-      urgency: "Critical",
-      importance: "High",
-      assignee: "Agent Smith",
-    },
-    {
-      key: "2",
-      id: "#T-1002",
-      subject: "Email not receiving",
-      customer: "Jane Smith",
-      status: "In Progress",
-      urgency: "High",
-      importance: "Medium",
-      assignee: "Agent Johnson",
-    },
-    {
-      key: "3",
-      id: "#T-1003",
-      subject: "Feature request: Dark mode",
-      customer: "Bob Wilson",
-      status: "Open",
-      urgency: "Low",
-      importance: "Low",
-      assignee: "Unassigned",
-    },
-    {
-      key: "4",
-      id: "#T-1004",
-      subject: "Payment processing issue",
-      customer: "Alice Brown",
-      status: "In Progress",
-      urgency: "Critical",
-      importance: "Critical",
-      assignee: "Agent Davis",
-    },
-    {
-      key: "5",
-      id: "#T-1005",
-      subject: "App crashes on iOS",
-      customer: "Charlie Green",
-      status: "Resolved",
-      urgency: "High",
-      importance: "High",
-      assignee: "Agent Wilson",
-    },
-  ];
+  const filteredTickets = mockTickets.filter((ticket) =>
+    ticket.name.toLowerCase().includes(searchText.toLowerCase())
+  );
 
   return (
-    <div>
-      <div style={{ marginBottom: 16 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 600, marginBottom: 4 }}>
-          Dashboard
-        </h1>
-        <p style={{ color: "#8c8c8c", fontSize: 13 }}>
-          Welcome back! Here's what's happening with your support today.
-        </p>
+    <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "16px 20px",
+          borderBottom: "1px solid #e8e8e8",
+          backgroundColor: "#fff",
+        }}
+      >
+        <h1 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>Dashboard</h1>
       </div>
 
-      <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
-        <Col xs={24} sm={12} lg={6}>
-          <Card
-            size="small"
-            bordered
+      <div
+        style={{
+          flex: 1,
+          overflow: "auto",
+          padding: "20px",
+          backgroundColor: "#f4f5f7",
+        }}
+      >
+        <div style={{ marginBottom: "24px" }}>
+          <h2
             style={{
-              borderRadius: 2,
-              border: "1px solid #e8e8e8",
+              fontSize: "14px",
+              fontWeight: 600,
+              color: "#172b4d",
+              marginBottom: "12px",
             }}
-            bodyStyle={{ padding: 12 }}
           >
-            <Statistic
-              title="Total Tickets"
-              value={156}
-              prefix={<InboxOutlined style={{ color: "#1890ff" }} />}
-              valueStyle={{ color: "#262626", fontSize: 24, fontWeight: 600 }}
-              suffix={
-                <span
-                  style={{ fontSize: 13, color: "#52c41a", fontWeight: 500 }}
-                >
-                  <ArrowUpOutlined /> 12%
-                </span>
-              }
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card
-            size="small"
-            bordered
-            style={{
-              borderRadius: 2,
-              border: "1px solid #e8e8e8",
-            }}
-            bodyStyle={{ padding: 12 }}
+            Quick Filters
+          </h2>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
           >
-            <Statistic
-              title="Open Tickets"
-              value={48}
-              prefix={<ClockCircleOutlined style={{ color: "#fa8c16" }} />}
-              valueStyle={{ color: "#262626", fontSize: 24, fontWeight: 600 }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card
-            size="small"
-            bordered
-            style={{
-              borderRadius: 2,
-              border: "1px solid #e8e8e8",
-            }}
-            bodyStyle={{ padding: 12 }}
-          >
-            <Statistic
-              title="Critical"
-              value={12}
-              prefix={
-                <ExclamationCircleOutlined style={{ color: "#ff4d4f" }} />
-              }
-              valueStyle={{ color: "#262626", fontSize: 24, fontWeight: 600 }}
-              suffix={
-                <span
-                  style={{ fontSize: 13, color: "#ff4d4f", fontWeight: 500 }}
-                >
-                  <ArrowUpOutlined /> 8%
-                </span>
-              }
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card
-            size="small"
-            bordered
-            style={{
-              borderRadius: 2,
-              border: "1px solid #e8e8e8",
-            }}
-            bodyStyle={{ padding: 12 }}
-          >
-            <Statistic
-              title="Resolved Today"
-              value={28}
-              prefix={<CheckCircleOutlined style={{ color: "#52c41a" }} />}
-              valueStyle={{ color: "#262626", fontSize: 24, fontWeight: 600 }}
-              suffix={
-                <span
-                  style={{ fontSize: 13, color: "#52c41a", fontWeight: 500 }}
-                >
-                  <ArrowUpOutlined /> 15%
-                </span>
-              }
-            />
-          </Card>
-        </Col>
-      </Row>
+            <SortableContext
+              items={filterBoxes.map((box) => box.id)}
+              strategy={horizontalListSortingStrategy}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  gap: "12px",
+                  overflowX: "auto",
+                  paddingBottom: "4px",
+                }}
+              >
+                {filterBoxes.map((box) => {
+                  const filteredCount = mockTickets.filter(box.filter).length;
 
-      <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
-        <Col xs={24} lg={16}>
-          <Card
-            title={
-              <span style={{ fontSize: 14, fontWeight: 600 }}>
-                Recent Tickets
-              </span>
-            }
-            size="small"
-            bordered
+                  return (
+                    <div
+                      key={box.id}
+                      style={{ minWidth: "240px", width: "240px" }}
+                    >
+                      <SortableFilterBox
+                        box={box}
+                        filteredCount={filteredCount}
+                        tickets={mockTickets}
+                        onTicketClick={setSelectedTicket}
+                      />
+                    </div>
+                  );
+                })}
+                {/* Add Filter Button */}
+                <div style={{ minWidth: "240px", width: "240px" }}>
+                  <button
+                    onClick={() => console.log("Add new filter")}
+                    style={{
+                      width: "100%",
+                      height: "60px",
+                      border: "2px dashed #dfe1e6",
+                      borderRadius: "3px",
+                      backgroundColor: "transparent",
+                      cursor: "pointer",
+                      fontSize: "20px",
+                      color: "#5e6c84",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      transition: "all 0.2s",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = "#f4f5f7";
+                      e.currentTarget.style.borderColor = "#172b4d";
+                      e.currentTarget.style.color = "#172b4d";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                      e.currentTarget.style.borderColor = "#dfe1e6";
+                      e.currentTarget.style.color = "#5e6c84";
+                    }}
+                  >
+                    + Add Filter
+                  </button>
+                </div>
+              </div>
+            </SortableContext>
+          </DndContext>
+        </div>
+
+        <div>
+          <div
             style={{
-              borderRadius: 2,
-              border: "1px solid #e8e8e8",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "12px",
+            }}
+          >
+            <h2
+              style={{
+                fontSize: "14px",
+                fontWeight: 600,
+                color: "#172b4d",
+                margin: 0,
+              }}
+            >
+              All Tickets
+            </h2>
+            <Input
+              placeholder="Search tickets..."
+              prefix={<SearchOutlined style={{ color: "#5e6c84" }} />}
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              style={{
+                width: 240,
+                backgroundColor: "#fff",
+                border: "1px solid #dfe1e6",
+                borderRadius: "3px",
+              }}
+              size="small"
+            />
+          </div>
+          <div
+            style={{
+              backgroundColor: "#fff",
+              border: "1px solid #dfe1e6",
+              borderRadius: "3px",
             }}
           >
             <Table
               columns={columns}
-              dataSource={recentTickets}
-              pagination={false}
+              dataSource={filteredTickets}
+              pagination={{
+                pageSize: 10,
+                showSizeChanger: true,
+                showTotal: (total) => `Total ${total} tickets`,
+              }}
               size="small"
+              rowKey="id"
+              scroll={{ x: 1200 }}
             />
-          </Card>
-        </Col>
-        <Col xs={24} lg={8}>
-          <Card
-            title={
-              <span style={{ fontSize: 14, fontWeight: 600 }}>
-                SLA Compliance
-              </span>
-            }
-            size="small"
-            bordered
-            style={{
-              marginBottom: 12,
-              borderRadius: 2,
-              border: "1px solid #e8e8e8",
-            }}
-          >
-            <div style={{ marginBottom: 12 }}>
-              <div
-                style={{
-                  marginBottom: 6,
-                  display: "flex",
-                  justifyContent: "space-between",
-                }}
-              >
-                <span style={{ fontSize: 13, color: "#595959" }}>
-                  First Response
-                </span>
-                <span style={{ fontWeight: 600, fontSize: 13 }}>85%</span>
-              </div>
-              <Progress
-                percent={85}
-                strokeColor="#1890ff"
-                showInfo={false}
-                size="small"
-              />
-            </div>
-            <div style={{ marginBottom: 12 }}>
-              <div
-                style={{
-                  marginBottom: 6,
-                  display: "flex",
-                  justifyContent: "space-between",
-                }}
-              >
-                <span style={{ fontSize: 13, color: "#595959" }}>
-                  Resolution Time
-                </span>
-                <span style={{ fontWeight: 600, fontSize: 13 }}>78%</span>
-              </div>
-              <Progress
-                percent={78}
-                strokeColor="#fa8c16"
-                showInfo={false}
-                size="small"
-              />
-            </div>
-            <div>
-              <div
-                style={{
-                  marginBottom: 6,
-                  display: "flex",
-                  justifyContent: "space-between",
-                }}
-              >
-                <span style={{ fontSize: 13, color: "#595959" }}>
-                  Customer Satisfaction
-                </span>
-                <span style={{ fontWeight: 600, fontSize: 13 }}>92%</span>
-              </div>
-              <Progress
-                percent={92}
-                strokeColor="#52c41a"
-                showInfo={false}
-                size="small"
-              />
-            </div>
-          </Card>
-          <Card
-            title={
-              <span style={{ fontSize: 14, fontWeight: 600 }}>
-                Team Performance
-              </span>
-            }
-            size="small"
-            bordered
-            style={{
-              borderRadius: 2,
-              border: "1px solid #e8e8e8",
-            }}
-          >
-            <div style={{ marginBottom: 12 }}>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  marginBottom: 6,
-                }}
-              >
-                <span style={{ fontSize: 13 }}>Agent Smith</span>
-                <span
-                  style={{ color: "#52c41a", fontWeight: 600, fontSize: 13 }}
-                >
-                  24 resolved
-                </span>
-              </div>
-              <Progress
-                percent={96}
-                strokeColor="#52c41a"
-                showInfo={false}
-                size="small"
-              />
-            </div>
-            <div style={{ marginBottom: 12 }}>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  marginBottom: 6,
-                }}
-              >
-                <span style={{ fontSize: 13 }}>Agent Johnson</span>
-                <span
-                  style={{ color: "#1890ff", fontWeight: 600, fontSize: 13 }}
-                >
-                  18 resolved
-                </span>
-              </div>
-              <Progress
-                percent={72}
-                strokeColor="#1890ff"
-                showInfo={false}
-                size="small"
-              />
-            </div>
-            <div style={{ marginBottom: 12 }}>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  marginBottom: 6,
-                }}
-              >
-                <span style={{ fontSize: 13 }}>Agent Davis</span>
-                <span
-                  style={{ color: "#fa8c16", fontWeight: 600, fontSize: 13 }}
-                >
-                  15 resolved
-                </span>
-              </div>
-              <Progress
-                percent={60}
-                strokeColor="#fa8c16"
-                showInfo={false}
-                size="small"
-              />
-            </div>
-            <div>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  marginBottom: 6,
-                }}
-              >
-                <span style={{ fontSize: 13 }}>Agent Wilson</span>
-                <span
-                  style={{ color: "#1890ff", fontWeight: 600, fontSize: 13 }}
-                >
-                  12 resolved
-                </span>
-              </div>
-              <Progress
-                percent={48}
-                strokeColor="#1890ff"
-                showInfo={false}
-                size="small"
-              />
-            </div>
-          </Card>
-        </Col>
-      </Row>
+          </div>
+        </div>
+      </div>
+
+      {/* Ticket Modal */}
+      <TicketModal
+        open={!!selectedTicket}
+        onClose={() => setSelectedTicket(null)}
+        ticket={selectedTicket}
+      />
     </div>
   );
 };

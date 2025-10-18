@@ -1,14 +1,18 @@
 .kanban {
   display: flex;
   flex: 1 1 auto;
-  overflow: auto;
-  height: calc(100vh - 110px);
+  overflow-x: auto;
+  overflow-y: hidden;
+  height: calc(100vh - 120px);
+  background-color: #fff;
 }
 
 .kanban-container {
   display: flex;
   flex-direction: row;
-  padding: 16px;
+  padding: 16px 20px;
+  align-items: flex-start;
+  min-height: 100%;
 }
 
 /* Custom Scroll for kanban */

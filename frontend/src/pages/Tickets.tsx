@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Button, Input, Select, Space, Table, Tag } from "antd";
+import { Button, Input, Select, Table, Tag, Space } from "antd";
 import type { TableColumnsType } from "antd";
 import {
   PlusOutlined,
@@ -7,12 +7,36 @@ import {
   AppstoreOutlined,
   UnorderedListOutlined,
 } from "@ant-design/icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faCheckSquare,
+  faBug,
+  faBookmark,
+  faBolt,
+} from "@fortawesome/free-solid-svg-icons";
 import { KanbanBoard } from "../components/KanbanBoard";
 import { getPriorityIcon } from "../components/PriorityIcons";
+import { TicketModal } from "../components/TicketModal";
 import type { Ticket, TicketColumn } from "../types/ticket";
 import "./Tickets.css";
 
 const { Option } = Select;
+
+// Helper function for issue type icons
+const getTypeIcon = (type?: string) => {
+  switch (type) {
+    case "task":
+      return { icon: faCheckSquare, color: "#4bade8" };
+    case "bug":
+      return { icon: faBug, color: "#e5493a" };
+    case "story":
+      return { icon: faBookmark, color: "#63ba3c" };
+    case "epic":
+      return { icon: faBolt, color: "#904ee2" };
+    default:
+      return { icon: faCheckSquare, color: "#4bade8" };
+  }
+};
 
 // Mock data
 const mockTickets: Ticket[] = [
@@ -28,6 +52,7 @@ const mockTickets: Ticket[] = [
     createdAt: "2025-10-15",
     urgency: "High",
     importance: "Critical",
+    type: "bug",
   },
   {
     id: 2,
@@ -40,6 +65,7 @@ const mockTickets: Ticket[] = [
     createdAt: "2025-10-14",
     urgency: "Normal",
     importance: "High",
+    type: "task",
   },
   {
     id: 3,
@@ -52,6 +78,7 @@ const mockTickets: Ticket[] = [
     createdAt: "2025-10-13",
     urgency: "Low",
     importance: "Normal",
+    type: "bug",
   },
   {
     id: 4,
@@ -66,6 +93,7 @@ const mockTickets: Ticket[] = [
     createdAt: "2025-10-12",
     urgency: "Normal",
     importance: "High",
+    type: "story",
   },
   {
     id: 5,
@@ -78,6 +106,7 @@ const mockTickets: Ticket[] = [
     createdAt: "2025-10-11",
     urgency: "Low",
     importance: "Low",
+    type: "task",
   },
   {
     id: 6,
@@ -91,6 +120,7 @@ const mockTickets: Ticket[] = [
     createdAt: "2025-10-10",
     urgency: "High",
     importance: "Critical",
+    type: "bug",
   },
   {
     id: 7,
@@ -103,6 +133,7 @@ const mockTickets: Ticket[] = [
     createdAt: "2025-10-09",
     urgency: "Normal",
     importance: "High",
+    type: "epic",
   },
   {
     id: 8,
@@ -116,6 +147,7 @@ const mockTickets: Ticket[] = [
     createdAt: "2025-10-08",
     urgency: "High",
     importance: "Critical",
+    type: "bug",
   },
 ];
 
@@ -132,20 +164,46 @@ const Tickets: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState<string | undefined>(
     undefined
   );
+  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
 
   const columns: TableColumnsType<Ticket> = [
     {
-      title: "ID",
-      dataIndex: "id",
-      key: "id",
-      width: 80,
-      render: (id: number) => `#${id}`,
-    },
-    {
-      title: "Title",
-      dataIndex: "name",
-      key: "name",
-      width: 300,
+      title: "Work",
+      key: "work",
+      width: 400,
+      render: (_: any, record: Ticket) => (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            cursor: "pointer",
+          }}
+          onClick={() => setSelectedTicket(record)}
+        >
+          <FontAwesomeIcon
+            icon={getTypeIcon(record.type).icon}
+            style={{
+              fontSize: "16px",
+              color: getTypeIcon(record.type).color,
+              flexShrink: 0,
+            }}
+          />
+          <span
+            style={{
+              color: "#0052cc",
+              fontWeight: 500,
+              fontSize: "14px",
+              flexShrink: 0,
+            }}
+          >
+            #{record.id}
+          </span>
+          <span style={{ color: "#172b4d", fontSize: "14px" }}>
+            {record.name}
+          </span>
+        </div>
+      ),
     },
     {
       title: "Customer",
@@ -222,80 +280,67 @@ const Tickets: React.FC = () => {
 
   return (
     <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-      {/* Header */}
-      <div style={{ marginBottom: 16 }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 12,
-          }}
-        >
-          <div>
-            <h1 style={{ fontSize: 20, fontWeight: 600, marginBottom: 4 }}>
-              Tickets
-            </h1>
-            <p style={{ color: "#8c8c8c", fontSize: 13, margin: 0 }}>
-              Manage and track all support tickets
-            </p>
-          </div>
-          <Button type="primary" icon={<PlusOutlined />} size="middle">
-            New Ticket
-          </Button>
-        </div>
-
-        {/* Filters and View Toggle */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: 12,
-          }}
-        >
-          <Space size="small">
+      {/* Simplified Header - Jira Style */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "16px 20px",
+          borderBottom: "1px solid #e8e8e8",
+          backgroundColor: "#fff",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+          <h1 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>Board</h1>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <Input
-              placeholder="Search tickets..."
-              prefix={<SearchOutlined />}
+              placeholder="Search"
+              prefix={<SearchOutlined style={{ color: "#5e6c84" }} />}
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
-              style={{ width: 250 }}
+              style={{
+                width: 200,
+                backgroundColor: "#f4f5f7",
+                border: "1px solid #dfe1e6",
+                borderRadius: "3px",
+              }}
               size="small"
             />
             <Select
-              placeholder="Filter by status"
-              style={{ width: 150 }}
+              placeholder="Filter"
               allowClear
               value={filterStatus}
               onChange={setFilterStatus}
               size="small"
+              style={{
+                width: 140,
+              }}
             >
               <Option value="New">New</Option>
               <Option value="In Progress">In Progress</Option>
               <Option value="Review">Review</Option>
               <Option value="Done">Done</Option>
             </Select>
-          </Space>
+          </div>
+        </div>
 
-          <Space size="small">
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <Space.Compact size="small">
             <Button
               type={viewMode === "list" ? "primary" : "default"}
               icon={<UnorderedListOutlined />}
-              size="small"
               onClick={() => setViewMode("list")}
-            >
-              List
-            </Button>
+            />
             <Button
               type={viewMode === "kanban" ? "primary" : "default"}
               icon={<AppstoreOutlined />}
-              size="small"
               onClick={() => setViewMode("kanban")}
-            >
-              Board
-            </Button>
-          </Space>
+            />
+          </Space.Compact>
+          <Button type="primary" icon={<PlusOutlined />} size="small">
+            Create
+          </Button>
         </div>
       </div>
 
@@ -315,9 +360,20 @@ const Tickets: React.FC = () => {
             scroll={{ y: "calc(100vh - 260px)" }}
           />
         ) : (
-          <KanbanBoard tickets={filteredTickets} columns={mockColumns} />
+          <KanbanBoard
+            tickets={filteredTickets}
+            columns={mockColumns}
+            onTicketClick={setSelectedTicket}
+          />
         )}
       </div>
+
+      {/* Ticket Modal */}
+      <TicketModal
+        open={!!selectedTicket}
+        onClose={() => setSelectedTicket(null)}
+        ticket={selectedTicket}
+      />
     </div>
   );
 };

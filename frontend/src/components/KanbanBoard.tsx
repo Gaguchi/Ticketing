@@ -32,11 +32,13 @@ import type { Ticket, TicketColumn, KanbanItems } from "../types/ticket";
 interface KanbanBoardProps {
   tickets: Ticket[];
   columns: TicketColumn[];
+  onTicketClick?: (ticket: Ticket) => void;
 }
 
 export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   tickets,
   columns,
+  onTicketClick,
 }) => {
   const [data, setData] = useState<Ticket[] | null>(null);
   const [items, setItems] = useState<KanbanItems>({});
@@ -164,14 +166,12 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   const sensors = useSensors(
     useSensor(MouseSensor, {
       activationConstraint: {
-        delay: 100,
-        tolerance: 5,
+        distance: 8,
       },
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        distance: 5,
-        delay: 100,
+        delay: 150,
         tolerance: 5,
       },
     }),
@@ -299,10 +299,50 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                   name={column.name}
                   tickets={data || []}
                   isSortingContainer={isSortingContainer}
+                  onTicketClick={onTicketClick}
                 />
               );
             })}
           </SortableContext>
+
+          {/* Add Column Button */}
+          <div
+            style={{
+              width: "40px",
+              minWidth: "40px",
+              marginRight: "8px",
+              padding: "8px",
+              backgroundColor: "rgba(9,30,66,0.04)",
+              borderRadius: "3px",
+              cursor: "pointer",
+              transition: "background-color 0.15s",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              height: "40px",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "rgba(9,30,66,0.08)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "rgba(9,30,66,0.04)";
+            }}
+            onClick={() => {
+              // TODO: Implement add column functionality
+              console.log("Add new column");
+            }}
+          >
+            <span
+              style={{
+                fontSize: "20px",
+                fontWeight: 400,
+                color: "#5e6c84",
+                lineHeight: "1",
+              }}
+            >
+              +
+            </span>
+          </div>
         </div>
         <ClientOnlyPortal selector=".kanban">
           <DragOverlay>
@@ -317,6 +357,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                   }
                   tickets={data || []}
                   dragOverlay
+                  onTicketClick={onTicketClick}
                 />
               ) : (
                 <TicketCard

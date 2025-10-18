@@ -342,9 +342,9 @@ const MainLayout: React.FC = () => {
         </Header>
         <Content
           style={{
-            margin: "16px",
             padding: 0,
-            minHeight: 280,
+            minHeight: "calc(100vh - 48px)",
+            background: "#fff",
           }}
         >
           <Outlet />

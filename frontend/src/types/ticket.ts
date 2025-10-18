@@ -11,6 +11,7 @@ export interface Ticket {
   createdAt?: string;
   urgency?: string;
   importance?: string;
+  type?: 'task' | 'bug' | 'story' | 'epic';
 }
 
 export interface TicketColumn {
