@@ -1,5 +1,5 @@
 # Stage 1: Build the Vite application
-FROM node:18-alpine AS build-stage
+FROM node:22-alpine AS build-stage
 
 # Ensure necessary build tools and permissions
 RUN apk add --no-cache bash git python3 make g++
