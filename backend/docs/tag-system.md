@@ -14,6 +14,7 @@ The Tag System provides a flexible way to organize tickets by clients, locations
 ## Key Features
 
 ### Tags
+
 - **Project-Specific**: Each tag belongs to a specific project/column
 - **Superadmin Only**: Only superadmins can create, edit, or delete tags
 - **Uniform Color**: All tags use the same color (#0052cc) for visual consistency
@@ -22,6 +23,7 @@ The Tag System provides a flexible way to organize tickets by clients, locations
 - **Description Field**: Optional description for additional context
 
 ### Contacts
+
 - **Multiple Per Tag**: A tag can have many contacts
 - **Reusable**: A contact can be associated with multiple tags
 - **Rich Information**: Name, email, phone, title, department, description
@@ -29,6 +31,7 @@ The Tag System provides a flexible way to organize tickets by clients, locations
 - **Not System Users**: Contacts are separate from the User model (external stakeholders)
 
 ### Team Membership
+
 - **User-Tag Association**: Users can be members of tag-based teams
 - **No Special Permissions**: Team membership is organizational only (no permission grants)
 - **Multiple Teams**: A user can belong to multiple tags/teams
@@ -38,6 +41,7 @@ The Tag System provides a flexible way to organize tickets by clients, locations
 ### Core Tables
 
 #### Tag
+
 ```sql
 CREATE TABLE tag (
     id BIGSERIAL PRIMARY KEY,
@@ -53,6 +57,7 @@ CREATE TABLE tag (
 ```
 
 #### Contact
+
 ```sql
 CREATE TABLE contact (
     id BIGSERIAL PRIMARY KEY,
@@ -70,6 +75,7 @@ CREATE TABLE contact (
 ### Junction Tables
 
 #### Ticket_Tags
+
 ```sql
 CREATE TABLE ticket_tags (
     id BIGSERIAL PRIMARY KEY,
@@ -82,6 +88,7 @@ CREATE TABLE ticket_tags (
 ```
 
 #### Tag_Contacts
+
 ```sql
 CREATE TABLE tag_contacts (
     id BIGSERIAL PRIMARY KEY,
@@ -95,6 +102,7 @@ CREATE TABLE tag_contacts (
 ```
 
 #### User_Tags
+
 ```sql
 CREATE TABLE user_tags (
     id BIGSERIAL PRIMARY KEY,
@@ -110,44 +118,44 @@ CREATE TABLE user_tags (
 
 ### Tags
 
-| Method | Endpoint | Description | Permission |
-|--------|----------|-------------|------------|
-| GET | `/api/tickets/tags/` | List all tags | All |
-| POST | `/api/tickets/tags/` | Create new tag | Superadmin |
-| GET | `/api/tickets/tags/{id}/` | Get tag details | All |
-| PUT/PATCH | `/api/tickets/tags/{id}/` | Update tag | Superadmin |
-| DELETE | `/api/tickets/tags/{id}/` | Delete tag | Superadmin |
-| GET | `/api/tickets/tags/{id}/contacts/` | Get tag contacts | All |
-| POST | `/api/tickets/tags/{id}/add_contact/` | Add contact to tag | Superadmin |
-| DELETE | `/api/tickets/tags/{id}/remove_contact/` | Remove contact from tag | Superadmin |
-| GET | `/api/tickets/tags/{id}/tickets/` | Get tickets with tag | All |
+| Method    | Endpoint                                 | Description             | Permission |
+| --------- | ---------------------------------------- | ----------------------- | ---------- |
+| GET       | `/api/tickets/tags/`                     | List all tags           | All        |
+| POST      | `/api/tickets/tags/`                     | Create new tag          | Superadmin |
+| GET       | `/api/tickets/tags/{id}/`                | Get tag details         | All        |
+| PUT/PATCH | `/api/tickets/tags/{id}/`                | Update tag              | Superadmin |
+| DELETE    | `/api/tickets/tags/{id}/`                | Delete tag              | Superadmin |
+| GET       | `/api/tickets/tags/{id}/contacts/`       | Get tag contacts        | All        |
+| POST      | `/api/tickets/tags/{id}/add_contact/`    | Add contact to tag      | Superadmin |
+| DELETE    | `/api/tickets/tags/{id}/remove_contact/` | Remove contact from tag | Superadmin |
+| GET       | `/api/tickets/tags/{id}/tickets/`        | Get tickets with tag    | All        |
 
 ### Contacts
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/tickets/contacts/` | List all contacts |
-| POST | `/api/tickets/contacts/` | Create new contact |
-| GET | `/api/tickets/contacts/{id}/` | Get contact details |
-| PUT/PATCH | `/api/tickets/contacts/{id}/` | Update contact |
-| DELETE | `/api/tickets/contacts/{id}/` | Delete contact |
-| GET | `/api/tickets/contacts/{id}/tags/` | Get tags for contact |
+| Method    | Endpoint                           | Description          |
+| --------- | ---------------------------------- | -------------------- |
+| GET       | `/api/tickets/contacts/`           | List all contacts    |
+| POST      | `/api/tickets/contacts/`           | Create new contact   |
+| GET       | `/api/tickets/contacts/{id}/`      | Get contact details  |
+| PUT/PATCH | `/api/tickets/contacts/{id}/`      | Update contact       |
+| DELETE    | `/api/tickets/contacts/{id}/`      | Delete contact       |
+| GET       | `/api/tickets/contacts/{id}/tags/` | Get tags for contact |
 
 ### Ticket Tags
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/tickets/ticket-tags/` | List ticket-tag associations |
-| POST | `/api/tickets/ticket-tags/` | Add tag to ticket |
-| DELETE | `/api/tickets/ticket-tags/{id}/` | Remove tag from ticket |
+| Method | Endpoint                         | Description                  |
+| ------ | -------------------------------- | ---------------------------- |
+| GET    | `/api/tickets/ticket-tags/`      | List ticket-tag associations |
+| POST   | `/api/tickets/ticket-tags/`      | Add tag to ticket            |
+| DELETE | `/api/tickets/ticket-tags/{id}/` | Remove tag from ticket       |
 
 ### User Tags (Team Membership)
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/tickets/user-tags/` | List user-tag associations |
-| POST | `/api/tickets/user-tags/` | Add user to team |
-| DELETE | `/api/tickets/user-tags/{id}/` | Remove user from team |
+| Method | Endpoint                       | Description                |
+| ------ | ------------------------------ | -------------------------- |
+| GET    | `/api/tickets/user-tags/`      | List user-tag associations |
+| POST   | `/api/tickets/user-tags/`      | Add user to team           |
+| DELETE | `/api/tickets/user-tags/{id}/` | Remove user from team      |
 
 ## Usage Examples
 
@@ -232,7 +240,7 @@ class Tag(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_tags')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         unique_together = [['name', 'project']]
 ```
@@ -285,7 +293,7 @@ interface Contact {
   value={selectedTagIds}
   onChange={handleTagChange}
 >
-  {tags.map(tag => (
+  {tags.map((tag) => (
     <Select.Option key={tag.id} value={tag.id}>
       <Tag color={tag.color}>{tag.name}</Tag>
     </Select.Option>
@@ -296,24 +304,29 @@ interface Contact {
 ### Display Contacts for Selected Tag
 
 ```typescript
-{selectedTag && selectedTag.contacts.map(tc => (
-  <div key={tc.contact.id}>
-    <h4>{tc.contact.name}</h4>
-    {tc.role && <span>{tc.role}</span>}
-    <p>Email: {tc.contact.email}</p>
-    {tc.contact.phone && <p>Phone: {tc.contact.phone}</p>}
-    {tc.contact.title && <p>Title: {tc.contact.title}</p>}
-  </div>
-))}
+{
+  selectedTag &&
+    selectedTag.contacts.map((tc) => (
+      <div key={tc.contact.id}>
+        <h4>{tc.contact.name}</h4>
+        {tc.role && <span>{tc.role}</span>}
+        <p>Email: {tc.contact.email}</p>
+        {tc.contact.phone && <p>Phone: {tc.contact.phone}</p>}
+        {tc.contact.title && <p>Title: {tc.contact.title}</p>}
+      </div>
+    ));
+}
 ```
 
 ## Permission System
 
 ### Current State (Temporary)
+
 - All endpoints use `AllowAny` permission
 - No authentication required
 
 ### Future Implementation
+
 - **Tag Creation/Edit/Delete**: `IsSuperAdmin` permission
 - **Contact Management**: `IsAuthenticated` permission
 - **Viewing Tags/Contacts**: `AllowAny` permission
@@ -323,12 +336,14 @@ interface Contact {
 ## Future Enhancements
 
 ### Not Implemented (By Design)
+
 1. **No Hierarchy**: Intentionally flat structure for simplicity
 2. **No Tag Types**: All tags are the same - differentiation by name/description
 3. **No Auto-Notifications**: Users are not automatically notified when tags are added
 4. **No Tag-Based Permissions**: Team membership doesn't grant special access
 
 ### Potential Future Additions
+
 1. **Tag Colors**: Allow custom colors per tag (currently all use #0052cc)
 2. **Tag Statistics**: Dashboard showing ticket distribution by tag
 3. **Contact Import**: Bulk import contacts from CSV
@@ -340,6 +355,7 @@ interface Contact {
 ## Migration Guide
 
 ### From Old System (labels field)
+
 If you have existing tickets with `labels` JSON field:
 
 ```python
@@ -354,7 +370,7 @@ for ticket in Ticket.objects.exclude(labels__isnull=True):
             project=ticket.column,
             defaults={'created_by': ticket.reporter}
         )
-        
+
         # Associate tag with ticket
         TicketTag.objects.get_or_create(
             ticket=ticket,
@@ -375,21 +391,25 @@ for ticket in Ticket.objects.exclude(labels__isnull=True):
 ## Troubleshooting
 
 ### Tag Not Appearing in Dropdown
+
 - Verify tag belongs to the correct project
 - Check if tag was created by superadmin
 - Ensure tag hasn't been deleted
 
 ### Contact Not Showing for Tag
+
 - Verify TagContact relationship exists
 - Check if contact was properly associated with tag
 - Ensure contact hasn't been deleted
 
 ### Cannot Create Tag
+
 - Verify user has superadmin privileges
 - Check if tag name already exists in project
 - Ensure project_id is valid
 
 ### Filtering by Tags Not Working
+
 - Use correct query parameter: `?tags=1&tags=2`
 - Verify tag IDs exist in database
 - Check if tickets actually have these tags assigned

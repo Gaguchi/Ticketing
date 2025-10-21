@@ -14,6 +14,16 @@ RUN npm ci --silent
 # Copy rest of the source
 COPY . .
 
+# Accept build arguments (Vite environment variables)
+ARG VITE_API_BASE_URL
+ARG VITE_APP_NAME=Ticketing System
+ARG VITE_APP_VERSION=1.0.0
+
+# Set as environment variables for the build process
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+ENV VITE_APP_NAME=$VITE_APP_NAME
+ENV VITE_APP_VERSION=$VITE_APP_VERSION
+
 # Ensure node_modules binaries are executable
 RUN chmod -R a+rx node_modules/.bin || true
 

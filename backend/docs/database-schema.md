@@ -989,24 +989,26 @@ INSERT INTO tag_contacts (tag_id, contact_id, role, added_by_id) VALUES
 ### Dokploy Deployment (Internal)
 
 ```
-Host: tickets-db-ydxqzn
+Host: <internal-db-host>
 Port: 5432
 Database: postgres
 User: postgres
-Password: ltivsr15rtap3jvz
-Connection URL: postgresql://postgres:ltivsr15rtap3jvz@tickets-db-ydxqzn:5432/postgres
+Password: <set-via-environment-variables>
+Connection URL: postgresql://postgres:<password>@<internal-db-host>:5432/postgres
 ```
 
 ### External Access
 
 ```
-Host: 31.97.181.167
+Host: <your-db-host>
 Port: 5433
 Database: postgres
 User: postgres
-Password: ltivsr15rtap3jvz
-Connection URL: postgresql://postgres:ltivsr15rtap3jvz@31.97.181.167:5433/postgres
+Password: <set-via-environment-variables>
+Connection URL: postgresql://postgres:<password>@<your-db-host>:5433/postgres
 ```
+
+**Security Note:** Never commit real database credentials to version control. Use environment variables and keep `.env` files in `.gitignore`.
 
 ---
 
@@ -1348,24 +1350,26 @@ Django automatically creates this table for the Many-to-Many relationship betwee
 ### Dokploy Deployment (Internal)
 
 ```
-Host: tickets-db-ydxqzn
+Host: <internal-db-host>
 Port: 5432
 Database: postgres
 User: postgres
-Password: ltivsr15rtap3jvz
-Connection URL: postgresql://postgres:ltivsr15rtap3jvz@tickets-db-ydxqzn:5432/postgres
+Password: <set-via-environment-variables>
+Connection URL: postgresql://postgres:<password>@<internal-db-host>:5432/postgres
 ```
 
 ### External Access
 
 ```
-Host: 31.97.181.167
+Host: <your-db-host>
 Port: 5433
 Database: postgres
 User: postgres
-Password: ltivsr15rtap3jvz
-Connection URL: postgresql://postgres:ltivsr15rtap3jvz@31.97.181.167:5433/postgres
+Password: <set-via-environment-variables>
+Connection URL: postgresql://postgres:<password>@<your-db-host>:5433/postgres
 ```
+
+**Security Note:** Never commit real database credentials to version control. Use environment variables and keep `.env` files in `.gitignore`.
 
 ---
 
@@ -1392,8 +1396,8 @@ To backup the database:
 
 ```bash
 # Backup (from external host)
-pg_dump -h 31.97.181.167 -p 5433 -U postgres -d postgres > backup.sql
+pg_dump -h <your-db-host> -p 5433 -U postgres -d postgres > backup.sql
 
 # Restore
-psql -h 31.97.181.167 -p 5433 -U postgres -d postgres < backup.sql
+psql -h <your-db-host> -p 5433 -U postgres -d postgres < backup.sql
 ```
