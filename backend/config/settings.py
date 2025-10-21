@@ -172,8 +172,11 @@ CORS_ALLOW_HEADERS = [
 
 # Security Headers (adjusted for HTTP development)
 # Note: Some headers like COOP require HTTPS to work properly
-if not DEBUG:
-    # Production security headers (when using HTTPS)
+# Use USE_HTTPS env var to control SSL redirect (defaults to False for HTTP deployments)
+USE_HTTPS = os.getenv('USE_HTTPS', 'False').lower() in ('true', '1', 'yes')
+
+if USE_HTTPS:
+    # HTTPS enabled - enforce secure connections
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
@@ -181,7 +184,7 @@ if not DEBUG:
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
 else:
-    # Development (HTTP) - relaxed security
+    # HTTP deployment - no SSL redirect
     SECURE_SSL_REDIRECT = False
     SESSION_COOKIE_SECURE = False
     CSRF_COOKIE_SECURE = False

@@ -9,6 +9,7 @@ Set these in **Dokploy Dashboard → Backend Service → Environment Variables**
 | `SECRET_KEY`           | Generate with `get_random_secret_key()`                          | ✅ Yes   |
 | `DEBUG`                | `False`                                                          | ✅ Yes   |
 | `ALLOWED_HOSTS`        | `tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me`         | ✅ Yes   |
+| `USE_HTTPS`            | `False` (HTTP) or `True` (HTTPS enabled in Dokploy)             | ✅ Yes   |
 | `DB_HOST`              | `tickets-db-ydxqzn`                                              | ✅ Yes   |
 | `DB_PORT`              | `5432`                                                           | ✅ Yes   |
 | `DB_NAME`              | `postgres`                                                       | ✅ Yes   |
@@ -22,6 +23,7 @@ Set these in **Dokploy Dashboard → Backend Service → Environment Variables**
 SECRET_KEY=<generate-this>
 DEBUG=False
 ALLOWED_HOSTS=tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me
+USE_HTTPS=False
 DB_HOST=tickets-db-ydxqzn
 DB_PORT=5432
 DB_NAME=postgres

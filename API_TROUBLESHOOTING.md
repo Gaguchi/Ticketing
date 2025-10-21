@@ -2,7 +2,35 @@
 
 ## Common Issues and Solutions
 
-### 1. 404 Not Found on `/api`
+### 1. HTTP Redirecting to HTTPS (307 Redirect Loop)
+
+**Problem:**
+```
+Browser keeps redirecting from HTTP to HTTPS even though HTTPS toggle is OFF in Dokploy
+Status: 307 Internal Redirect
+```
+
+**Cause:** Django's `SECURE_SSL_REDIRECT = True` forces HTTPS redirects when `DEBUG=False`, regardless of whether HTTPS is actually configured in Traefik/Dokploy.
+
+**Solution:** ✅ Fixed
+- Added `USE_HTTPS` environment variable to control SSL redirect independently
+- Set `USE_HTTPS=False` for HTTP deployments
+- Set `USE_HTTPS=True` only when HTTPS toggle is ON in Dokploy
+
+**Configuration:**
+```bash
+# In Dokploy Backend Environment Variables
+USE_HTTPS=False  # ← Add this! (False for HTTP, True for HTTPS)
+DEBUG=False      # Can still be False for production
+```
+
+**When to enable:**
+- Set `USE_HTTPS=False`: HTTP deployment (HTTPS toggle OFF in Dokploy)
+- Set `USE_HTTPS=True`: HTTPS deployment (HTTPS toggle ON, Let's Encrypt configured)
+
+---
+
+### 2. 404 Not Found on `/api`
 
 **Problem:**
 ```
@@ -180,6 +208,10 @@ SECRET_KEY=<generated-secret-key>
 DEBUG=False
 ALLOWED_HOSTS=tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me
 
+# HTTPS Configuration - IMPORTANT!
+# Set to False for HTTP, True only when HTTPS is enabled in Dokploy
+USE_HTTPS=False
+
 # Database (Internal)
 DB_HOST=tickets-db-ydxqzn
 DB_PORT=5432
@@ -285,20 +317,23 @@ Both must succeed!
 When ready to enable HTTPS:
 
 1. **Enable Let's Encrypt in Dokploy** for both services
+   - Toggle HTTPS ON in domain settings
+   - Wait for certificate provisioning (1-2 minutes)
 
 2. **Update Backend Environment Variables:**
    ```bash
    ALLOWED_HOSTS=tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me
    CORS_ALLOWED_ORIGINS=https://tickets-frontend-wzaz6z-11ca3e-31-97-181-167.traefik.me
+   USE_HTTPS=True  # ← Change this!
    DEBUG=False
    ```
 
-3. **Update Frontend Build Arguments (rebuild required):**
+3. **Restart Backend** (for env var changes)
+
+4. **Update Frontend Build Arguments (rebuild required):**
    ```bash
    VITE_API_BASE_URL=https://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me
    ```
-
-4. **Restart Backend** (for env var changes)
 
 5. **Rebuild Frontend** (build args require rebuild)
 
