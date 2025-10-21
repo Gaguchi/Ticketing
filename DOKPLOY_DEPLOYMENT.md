@@ -138,35 +138,35 @@ Ensure `frontend/nginx.conf` handles the API proxy correctly:
 server {
     listen 80;
     server_name _;
-    
+
     root /usr/share/nginx/html;
     index index.html;
-    
+
     # Gzip compression
     gzip on;
     gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
-    
+
     # Security headers
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-XSS-Protection "1; mode=block" always;
-    
+
     # Client-side routing support
     location / {
         try_files $uri $uri/ /index.html;
     }
-    
+
     # Cache static assets
     location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
         expires 1y;
         add_header Cache-Control "public, immutable";
     }
-    
+
     # Don't cache index.html
     location = /index.html {
         add_header Cache-Control "no-cache, no-store, must-revalidate";
     }
-    
+
     # Health check endpoint
     location /health {
         access_log off;
@@ -215,6 +215,7 @@ Password: <password>
 ### Initial Setup
 
 1. **Create Backend Service in Dokploy**
+
    - Name: `tickets-backend`
    - Type: Docker
    - Repository: Your Git repository
@@ -225,6 +226,7 @@ Password: <password>
    - Domain: `tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me`
 
 2. **Set Backend Environment Variables**
+
    ```
    SECRET_KEY=<generated-key>
    DEBUG=False
@@ -238,10 +240,12 @@ Password: <password>
    ```
 
 3. **Deploy Backend**
+
    - Click "Deploy"
    - Wait for build to complete
 
 4. **Run Migrations**
+
    ```bash
    # In Dokploy terminal or SSH
    python manage.py migrate
@@ -250,6 +254,7 @@ Password: <password>
    ```
 
 5. **Create Frontend Service in Dokploy**
+
    - Name: `tickets-frontend`
    - Type: Docker
    - Repository: Your Git repository
@@ -260,6 +265,7 @@ Password: <password>
    - Domain: `tickets-frontend-wzaz6z-11ca3e-31-97-181-167.traefik.me`
 
 6. **Set Frontend Build Arguments**
+
    ```
    VITE_API_BASE_URL=http://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me
    VITE_APP_NAME=Ticketing System
@@ -273,10 +279,12 @@ Password: <password>
 ### Verification
 
 1. **Check Backend**
+
    - Visit: http://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me/admin/
    - Should see Django admin login
 
 2. **Check API**
+
    - Visit: http://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me/api/docs/
    - Should see Swagger API documentation
 
@@ -325,11 +333,13 @@ VITE_APP_VERSION=1.0.0
 If you see CORS errors in browser console:
 
 1. **Check Backend CORS_ALLOWED_ORIGINS**
+
    - Must include frontend domain
    - Check for typos
    - Include both http and https if needed
 
 2. **Check Backend ALLOWED_HOSTS**
+
    - Must include backend domain
 
 3. **Restart Backend Service** after changing environment variables
@@ -337,6 +347,7 @@ If you see CORS errors in browser console:
 ### Frontend Can't Connect to Backend
 
 1. **Check VITE_API_BASE_URL**
+
    - Must match backend domain exactly
    - Include protocol (http://)
 
@@ -347,10 +358,12 @@ If you see CORS errors in browser console:
 ### Database Connection Issues
 
 1. **Check DB_HOST**
+
    - Use internal host: `tickets-db-ydxqzn`
    - NOT external IP `31.97.181.167`
 
 2. **Check Database Service is Running**
+
    - Verify in Dokploy dashboard
 
 3. **Check Database Password**
@@ -413,6 +426,7 @@ If you see CORS errors in browser console:
 ### Logs
 
 Access logs in Dokploy dashboard:
+
 - Click on service → "Logs" tab
 - Filter by date/time
 - Search for errors

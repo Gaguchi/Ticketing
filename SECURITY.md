@@ -5,12 +5,14 @@
 ### Never Commit Credentials
 
 **❌ DO NOT:**
+
 - Commit `.env` files with real credentials
 - Hardcode passwords in source code
 - Put credentials in documentation
 - Use default passwords in `settings.py`
 
 **✅ DO:**
+
 - Use `.env` files (gitignored)
 - Set credentials via environment variables
 - Use `.env.example` with placeholder values
@@ -47,6 +49,7 @@ print(get_random_secret_key())
 ```
 
 Or use command line:
+
 ```bash
 python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
 ```
@@ -120,12 +123,14 @@ git push --force --all
 ### Connection Security
 
 **For Production:**
+
 - Use SSL/TLS for database connections
 - Restrict access by IP whitelist
 - Use strong passwords (min 20 characters)
 - Rotate passwords regularly
 
 **For Dokploy Deployment:**
+
 ```bash
 # Set environment variables in Dokploy dashboard
 DB_HOST=internal-db-host
@@ -135,6 +140,7 @@ DB_PASSWORD=<strong-password>
 ### Password Requirements
 
 Generate strong passwords:
+
 ```bash
 # Linux/Mac
 openssl rand -base64 32
@@ -191,6 +197,7 @@ CORS_ALLOWED_ORIGINS = [
 Current state: `AllowAny` permission (development only)
 
 **For Production:**
+
 - Implement JWT token authentication
 - Use Django REST Framework permissions
 - Rate limiting
@@ -241,6 +248,7 @@ ALLOWED_UPLOAD_EXTENSIONS = [
 ### GitGuardian
 
 Already monitoring for:
+
 - Generic passwords
 - PostgreSQL URIs
 - API keys
@@ -266,6 +274,7 @@ bandit -r backend/
 ### If Credentials Are Exposed:
 
 1. **Immediate Actions:**
+
    - [ ] Change all exposed passwords
    - [ ] Revoke exposed API keys
    - [ ] Review access logs for unauthorized activity
@@ -273,6 +282,7 @@ bandit -r backend/
    - [ ] Force push cleaned repository
 
 2. **Investigation:**
+
    - [ ] Check database logs for suspicious queries
    - [ ] Review application logs
    - [ ] Check for data exfiltration
@@ -321,17 +331,20 @@ pre-commit run --all-files
 ## Regular Security Audits
 
 ### Weekly:
+
 - Review access logs
 - Check for failed login attempts
 - Update dependencies
 
 ### Monthly:
+
 - Rotate database passwords
 - Review user permissions
 - Audit API usage
 - Check for outdated packages
 
 ### Quarterly:
+
 - Full security audit
 - Penetration testing
 - Update security documentation
@@ -347,6 +360,7 @@ pre-commit run --all-files
 ## Contact
 
 For security issues:
+
 - **DO NOT** open public GitHub issues
 - Email: security@yourdomain.com (set this up)
 - Report vulnerabilities privately

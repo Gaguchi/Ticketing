@@ -3,11 +3,13 @@
 ## Quick Start
 
 1. **Copy the example environment file:**
+
    ```bash
    cp backend/.env.example backend/.env
    ```
 
 2. **Edit `backend/.env` with your actual credentials:**
+
    ```bash
    # Update these values:
    DB_HOST=your-database-host
@@ -72,6 +74,7 @@ DEBUG=True
 ### Dokploy Deployment
 
 Set environment variables in Dokploy dashboard:
+
 ```bash
 DATABASE_URL=postgresql://postgres:password@tickets-db-ydxqzn:5432/postgres
 DB_HOST=tickets-db-ydxqzn
@@ -82,11 +85,13 @@ DEBUG=False
 ## Security Notes
 
 ⚠️ **NEVER commit these files:**
+
 - `backend/.env`
 - Any file containing passwords or API keys
 - Database dumps with real data
 
 ✅ **SAFE to commit:**
+
 - `backend/.env.example` (with placeholder values only)
 - Configuration files using environment variables
 - Documentation without credentials

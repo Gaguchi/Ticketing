@@ -4,17 +4,17 @@
 
 Set these in **Dokploy Dashboard → Backend Service → Environment Variables**:
 
-| Variable | Value | Required |
-|----------|-------|----------|
-| `SECRET_KEY` | Generate with `get_random_secret_key()` | ✅ Yes |
-| `DEBUG` | `False` | ✅ Yes |
-| `ALLOWED_HOSTS` | `tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me` | ✅ Yes |
-| `DB_HOST` | `tickets-db-ydxqzn` | ✅ Yes |
-| `DB_PORT` | `5432` | ✅ Yes |
-| `DB_NAME` | `postgres` | ✅ Yes |
-| `DB_USER` | `postgres` | ✅ Yes |
-| `DB_PASSWORD` | Your secure password | ✅ Yes |
-| `CORS_ALLOWED_ORIGINS` | `http://tickets-frontend-wzaz6z-11ca3e-31-97-181-167.traefik.me` | ✅ Yes |
+| Variable               | Value                                                            | Required |
+| ---------------------- | ---------------------------------------------------------------- | -------- |
+| `SECRET_KEY`           | Generate with `get_random_secret_key()`                          | ✅ Yes   |
+| `DEBUG`                | `False`                                                          | ✅ Yes   |
+| `ALLOWED_HOSTS`        | `tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me`         | ✅ Yes   |
+| `DB_HOST`              | `tickets-db-ydxqzn`                                              | ✅ Yes   |
+| `DB_PORT`              | `5432`                                                           | ✅ Yes   |
+| `DB_NAME`              | `postgres`                                                       | ✅ Yes   |
+| `DB_USER`              | `postgres`                                                       | ✅ Yes   |
+| `DB_PASSWORD`          | Your secure password                                             | ✅ Yes   |
+| `CORS_ALLOWED_ORIGINS` | `http://tickets-frontend-wzaz6z-11ca3e-31-97-181-167.traefik.me` | ✅ Yes   |
 
 ### Copy-Paste Template (Backend):
 
@@ -36,11 +36,11 @@ CORS_ALLOWED_ORIGINS=http://tickets-frontend-wzaz6z-11ca3e-31-97-181-167.traefik
 
 Set these in **Dokploy Dashboard → Frontend Service → Build Arguments** (NOT Environment Variables):
 
-| Variable | Value | Required |
-|----------|-------|----------|
-| `VITE_API_BASE_URL` | `http://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me` | ✅ Yes |
-| `VITE_APP_NAME` | `Ticketing System` | ⚠️ Optional |
-| `VITE_APP_VERSION` | `1.0.0` | ⚠️ Optional |
+| Variable            | Value                                                           | Required    |
+| ------------------- | --------------------------------------------------------------- | ----------- |
+| `VITE_API_BASE_URL` | `http://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me` | ✅ Yes      |
+| `VITE_APP_NAME`     | `Ticketing System`                                              | ⚠️ Optional |
+| `VITE_APP_VERSION`  | `1.0.0`                                                         | ⚠️ Optional |
 
 ### Copy-Paste Template (Frontend):
 
@@ -56,11 +56,11 @@ VITE_APP_VERSION=1.0.0
 
 Set these in **Dokploy Dashboard → Database Service → Environment Variables**:
 
-| Variable | Value | Required |
-|----------|-------|----------|
-| `POSTGRES_DB` | `postgres` | ✅ Yes |
-| `POSTGRES_USER` | `postgres` | ✅ Yes |
-| `POSTGRES_PASSWORD` | Your secure password | ✅ Yes |
+| Variable            | Value                | Required |
+| ------------------- | -------------------- | -------- |
+| `POSTGRES_DB`       | `postgres`           | ✅ Yes   |
+| `POSTGRES_USER`     | `postgres`           | ✅ Yes   |
+| `POSTGRES_PASSWORD` | Your secure password | ✅ Yes   |
 
 ### Copy-Paste Template (Database):
 
@@ -92,20 +92,24 @@ print(get_random_secret_key())
 ## ⚠️ Important Notes
 
 ### Backend
+
 - **Environment Variables** are set at **runtime**
 - Changes require **service restart**
 - No rebuild needed
 
 ### Frontend
+
 - **Build Arguments** are embedded at **build time**
 - Changes require **full rebuild**
 - Not accessible at runtime
 
 ### Domains
+
 - Backend: `http://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me`
 - Frontend: `http://tickets-frontend-wzaz6z-11ca3e-31-97-181-167.traefik.me`
 
 ### CORS
+
 - Must include frontend domain in `CORS_ALLOWED_ORIGINS`
 - Must include backend domain in `ALLOWED_HOSTS`
 - Both services must use matching protocols (http/https)
@@ -146,11 +150,13 @@ print(get_random_secret_key())
 After deployment, test these URLs:
 
 ### Backend:
+
 - Admin: http://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me/admin/
 - API Docs: http://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me/api/docs/
 - API Tickets: http://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me/api/tickets/tickets/
 
 ### Frontend:
+
 - Main App: http://tickets-frontend-wzaz6z-11ca3e-31-97-181-167.traefik.me/
 - Health: http://tickets-frontend-wzaz6z-11ca3e-31-97-181-167.traefik.me/health
 
@@ -161,33 +167,41 @@ After deployment, test these URLs:
 ### "CORS Error" in browser
 
 **Fix Backend:**
+
 ```
 CORS_ALLOWED_ORIGINS=http://tickets-frontend-wzaz6z-11ca3e-31-97-181-167.traefik.me
 ```
+
 Restart backend service.
 
 ### "Failed to fetch" or "Network Error"
 
 **Fix Frontend (rebuild required):**
+
 ```
 VITE_API_BASE_URL=http://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me
 ```
+
 Rebuild frontend service.
 
 ### "DisallowedHost" error
 
 **Fix Backend:**
+
 ```
 ALLOWED_HOSTS=tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me
 ```
+
 Restart backend service.
 
 ### Database connection failed
 
 **Fix Backend:**
+
 ```
 DB_HOST=tickets-db-ydxqzn
 DB_PORT=5432
 DB_PASSWORD=<correct-password>
 ```
+
 Restart backend service.
