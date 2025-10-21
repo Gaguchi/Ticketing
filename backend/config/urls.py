@@ -23,7 +23,25 @@ def api_root(request):
 
 def health_check(request):
     """Health check endpoint"""
-    return JsonResponse({'status': 'healthy', 'service': 'backend'})
+    import os
+    from django.conf import settings
+    
+    # Check USE_HTTPS configuration
+    use_https_env = os.getenv('USE_HTTPS', 'NOT_SET')
+    use_https_resolved = use_https_env.lower() in ('true', '1', 'yes')
+    
+    return JsonResponse({
+        'status': 'healthy',
+        'service': 'backend',
+        'config': {
+            'USE_HTTPS_env': use_https_env,
+            'USE_HTTPS_resolved': use_https_resolved,
+            'SECURE_SSL_REDIRECT': settings.SECURE_SSL_REDIRECT,
+            'DEBUG': settings.DEBUG,
+            'is_secure_request': request.is_secure(),
+            'scheme': request.scheme,
+        }
+    })
 
 
 urlpatterns = [

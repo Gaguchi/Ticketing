@@ -5,6 +5,7 @@
 ### 1. HTTP Redirecting to HTTPS (307 Redirect Loop)
 
 **Problem:**
+
 ```
 Browser keeps redirecting from HTTP to HTTPS even though HTTPS toggle is OFF in Dokploy
 Status: 307 Internal Redirect
@@ -13,11 +14,13 @@ Status: 307 Internal Redirect
 **Cause:** Django's `SECURE_SSL_REDIRECT = True` forces HTTPS redirects when `DEBUG=False`, regardless of whether HTTPS is actually configured in Traefik/Dokploy.
 
 **Solution:** ✅ Fixed
+
 - Added `USE_HTTPS` environment variable to control SSL redirect independently
 - Set `USE_HTTPS=False` for HTTP deployments
 - Set `USE_HTTPS=True` only when HTTPS toggle is ON in Dokploy
 
 **Configuration:**
+
 ```bash
 # In Dokploy Backend Environment Variables
 USE_HTTPS=False  # ← Add this! (False for HTTP, True for HTTPS)
@@ -25,6 +28,7 @@ DEBUG=False      # Can still be False for production
 ```
 
 **When to enable:**
+
 - Set `USE_HTTPS=False`: HTTP deployment (HTTPS toggle OFF in Dokploy)
 - Set `USE_HTTPS=True`: HTTPS deployment (HTTPS toggle ON, Let's Encrypt configured)
 
@@ -33,6 +37,7 @@ DEBUG=False      # Can still be False for production
 ### 2. 404 Not Found on `/api`
 
 **Problem:**
+
 ```
 Failed to load resource: the server responded with a status of 404 (Not Found)
 URL: http://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me/api
@@ -41,11 +46,13 @@ URL: http://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me/api
 **Cause:** The `/api` endpoint didn't exist. Backend endpoints are at `/api/tickets/`, `/api/docs/`, etc.
 
 **Solution:** ✅ Fixed
+
 - Added `/api/` root endpoint that lists available routes
 - Added `/` health check endpoint
 - Frontend already correctly uses `/api/tickets/` endpoints
 
 **Test URLs:**
+
 - Health: http://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me/
 - API Root: http://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me/api/
 - API Docs: http://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me/api/docs/
@@ -56,6 +63,7 @@ URL: http://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me/api
 ### 2. Cross-Origin-Opener-Policy (COOP) Warning
 
 **Problem:**
+
 ```
 The Cross-Origin-Opener-Policy header has been ignored, because the URL's origin was untrustworthy.
 It was defined either in the final response or a redirect.
@@ -71,6 +79,7 @@ Please deliver the response using the HTTPS protocol.
 In Traefik/Dokploy, enable HTTPS with Let's Encrypt:
 
 1. **Enable HTTPS in Dokploy:**
+
    - Go to service settings
    - Enable "SSL/TLS" or "Let's Encrypt"
    - Traefik will automatically provision certificates
@@ -78,12 +87,14 @@ In Traefik/Dokploy, enable HTTPS with Let's Encrypt:
 2. **Update Environment Variables:**
 
    **Backend:**
+
    ```bash
    ALLOWED_HOSTS=tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me
    CORS_ALLOWED_ORIGINS=https://tickets-frontend-wzaz6z-11ca3e-31-97-181-167.traefik.me
    ```
 
    **Frontend (rebuild required):**
+
    ```bash
    VITE_API_BASE_URL=https://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me
    ```
@@ -91,11 +102,13 @@ In Traefik/Dokploy, enable HTTPS with Let's Encrypt:
 #### Option B: Suppress Warning (Development Only)
 
 The warning is just informational. The custom middleware now:
+
 - Only adds COOP header on HTTPS connections
 - Still allows the application to work on HTTP
 - Adds other security headers that work on HTTP
 
 **Current State:** ✅ Fixed
+
 - COOP header only added on HTTPS
 - Warning won't appear (header not sent on HTTP)
 - App works normally on HTTP
@@ -105,6 +118,7 @@ The warning is just informational. The custom middleware now:
 ### 3. CORS Errors
 
 **Problem:**
+
 ```
 Access to fetch at 'http://backend...' from origin 'http://frontend...' has been blocked by CORS policy
 ```
@@ -121,11 +135,13 @@ CORS_ALLOWED_ORIGINS=http://tickets-frontend-wzaz6z-11ca3e-31-97-181-167.traefik
 ```
 
 Or for HTTPS:
+
 ```bash
 CORS_ALLOWED_ORIGINS=https://tickets-frontend-wzaz6z-11ca3e-31-97-181-167.traefik.me
 ```
 
 **Multiple origins (comma-separated):**
+
 ```bash
 CORS_ALLOWED_ORIGINS=http://localhost:5173,http://tickets-frontend-wzaz6z-11ca3e-31-97-181-167.traefik.me,https://tickets-frontend-wzaz6z-11ca3e-31-97-181-167.traefik.me
 ```
@@ -139,6 +155,7 @@ CORS_ALLOWED_ORIGINS=http://localhost:5173,http://tickets-frontend-wzaz6z-11ca3e
 Visit: http://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me/
 
 Expected response:
+
 ```json
 {
   "status": "healthy",
@@ -151,6 +168,7 @@ Expected response:
 Visit: http://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me/api/
 
 Expected response:
+
 ```json
 {
   "message": "Ticketing System API",
@@ -175,6 +193,7 @@ Should see Swagger UI with all API endpoints.
 Visit: http://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me/api/tickets/tickets/
 
 Expected response:
+
 ```json
 {
   "count": 0,
@@ -187,11 +206,12 @@ Expected response:
 ### 5. Test CORS from Frontend
 
 Open browser console on frontend and run:
+
 ```javascript
-fetch('http://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me/api/')
-  .then(r => r.json())
+fetch("http://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me/api/")
+  .then((r) => r.json())
   .then(console.log)
-  .catch(console.error)
+  .catch(console.error);
 ```
 
 Should see the API root response (no CORS error).
@@ -237,16 +257,19 @@ VITE_APP_VERSION=1.0.0
 ## Common Mistakes
 
 ### ❌ Wrong: Trailing Slash in API_BASE_URL
+
 ```bash
 VITE_API_BASE_URL=http://backend.../   # DON'T include trailing slash
 ```
 
 ### ✅ Correct:
+
 ```bash
 VITE_API_BASE_URL=http://backend...
 ```
 
 ### ❌ Wrong: Mismatched Protocols
+
 ```bash
 # Backend
 CORS_ALLOWED_ORIGINS=https://frontend...
@@ -256,6 +279,7 @@ VITE_API_BASE_URL=http://backend...    # ← Different protocol!
 ```
 
 ### ✅ Correct: Match Protocols
+
 ```bash
 # Backend
 CORS_ALLOWED_ORIGINS=http://frontend...
@@ -265,12 +289,14 @@ VITE_API_BASE_URL=http://backend...    # ← Same protocol!
 ```
 
 ### ❌ Wrong: Using Internal DB Host from External
+
 ```bash
 # Local development .env
 DB_HOST=tickets-db-ydxqzn  # ← Won't work from outside Docker
 ```
 
 ### ✅ Correct: Use External Host for Local Dev
+
 ```bash
 # Local development .env
 DB_HOST=31.97.181.167
@@ -286,18 +312,21 @@ DB_PORT=5433
 Open DevTools → Network tab → Click on API request → Check Response Headers:
 
 **Should see:**
+
 ```
 Access-Control-Allow-Origin: http://tickets-frontend-wzaz6z-11ca3e-31-97-181-167.traefik.me
 Access-Control-Allow-Credentials: true
 ```
 
 **If missing:**
+
 - Backend `CORS_ALLOWED_ORIGINS` not set correctly
 - Restart backend service after changing env vars
 
 ### Check Request Headers
 
 Request should include:
+
 ```
 Origin: http://tickets-frontend-wzaz6z-11ca3e-31-97-181-167.traefik.me
 ```
@@ -305,6 +334,7 @@ Origin: http://tickets-frontend-wzaz6z-11ca3e-31-97-181-167.traefik.me
 ### Check Preflight Requests
 
 For POST/PUT/DELETE, you'll see two requests:
+
 1. **OPTIONS** (preflight) - checks CORS permissions
 2. **POST/PUT/DELETE** (actual request)
 
@@ -317,10 +347,12 @@ Both must succeed!
 When ready to enable HTTPS:
 
 1. **Enable Let's Encrypt in Dokploy** for both services
+
    - Toggle HTTPS ON in domain settings
    - Wait for certificate provisioning (1-2 minutes)
 
 2. **Update Backend Environment Variables:**
+
    ```bash
    ALLOWED_HOSTS=tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me
    CORS_ALLOWED_ORIGINS=https://tickets-frontend-wzaz6z-11ca3e-31-97-181-167.traefik.me
@@ -331,6 +363,7 @@ When ready to enable HTTPS:
 3. **Restart Backend** (for env var changes)
 
 4. **Update Frontend Build Arguments (rebuild required):**
+
    ```bash
    VITE_API_BASE_URL=https://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me
    ```
@@ -348,6 +381,7 @@ When ready to enable HTTPS:
 The backend now sends these security headers:
 
 ### On HTTP:
+
 - `Cross-Origin-Resource-Policy: cross-origin` (allows CORS)
 - `Referrer-Policy: strict-origin-when-cross-origin`
 - `X-Content-Type-Options: nosniff`
@@ -355,6 +389,7 @@ The backend now sends these security headers:
 - `X-Frame-Options: SAMEORIGIN`
 
 ### On HTTPS (in addition to above):
+
 - `Cross-Origin-Opener-Policy: same-origin-allow-popups`
 - `Strict-Transport-Security` headers (HSTS)
 
@@ -365,10 +400,12 @@ The backend now sends these security headers:
 ### Check Logs
 
 **In Dokploy:**
+
 - Click service → "Logs" tab
 - Look for errors, 404s, CORS rejections
 
 **Django Debug Mode (Local Only):**
+
 ```bash
 DEBUG=True  # Shows detailed errors
 ```
@@ -376,15 +413,19 @@ DEBUG=True  # Shows detailed errors
 ### Common Log Messages
 
 **CORS rejection:**
+
 ```
 Origin 'http://frontend...' not in CORS_ALLOWED_ORIGINS
 ```
+
 **Solution:** Add frontend domain to `CORS_ALLOWED_ORIGINS`
 
 **DisallowedHost:**
+
 ```
 Invalid HTTP_HOST header: 'backend...'
 ```
+
 **Solution:** Add backend domain to `ALLOWED_HOSTS`
 
 ---
