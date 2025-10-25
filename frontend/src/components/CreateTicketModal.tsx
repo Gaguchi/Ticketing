@@ -157,8 +157,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               gap: "8px",
             }}
           >
-            Create{" "}
-            {ticketType.charAt(0).toUpperCase() + ticketType.slice(1)}
+            Create {ticketType.charAt(0).toUpperCase() + ticketType.slice(1)}
           </h1>
           <div style={{ display: "flex", gap: "8px" }}>
             <Button
