@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { Form, Input, Button, Card, Typography, Alert, Steps } from "antd";
-import { ProjectOutlined, KeyOutlined, UserOutlined } from "@ant-design/icons";
+import { Form, Input, Button, Card, Typography, Alert, Select, Tag } from "antd";
+import { ProjectOutlined, KeyOutlined, MailOutlined, PlusOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { projectService } from "../services/project.service";
@@ -13,16 +13,34 @@ interface ProjectFormValues {
   key: string;
   name: string;
   description: string;
-  leadUsername: string;
+  collaborators: string[];
 }
 
 const ProjectSetup: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [currentStep, setCurrentStep] = useState(0);
   const navigate = useNavigate();
   const { user } = useAuth();
   const [form] = Form.useForm();
+
+  // Auto-generate project key from name
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const name = e.target.value;
+    const currentKey = form.getFieldValue("key");
+    
+    // Only auto-fill if key is empty or matches previous auto-fill pattern
+    if (!currentKey || currentKey.length <= 4) {
+      const autoKey = name
+        .trim()
+        .slice(0, 4)
+        .toUpperCase()
+        .replace(/[^A-Z]/g, "");
+      
+      if (autoKey.length >= 2) {
+        form.setFieldsValue({ key: autoKey });
+      }
+    }
+  };
 
   const onFinish = async (values: ProjectFormValues) => {
     setLoading(true);
@@ -33,11 +51,17 @@ const ProjectSetup: React.FC = () => {
         key: values.key.toUpperCase(),
         name: values.name,
         description: values.description,
-        lead_username: values.leadUsername || user?.username,
+        lead_username: user?.username,
       });
 
       // Store current project
       localStorage.setItem("currentProject", JSON.stringify(project));
+
+      // TODO: Send invitation emails to collaborators
+      if (values.collaborators && values.collaborators.length > 0) {
+        console.log("Sending invitations to:", values.collaborators);
+        // This will be implemented when we add the invitation API
+      }
 
       // Navigate to dashboard
       navigate("/");
@@ -58,20 +82,10 @@ const ProjectSetup: React.FC = () => {
     return Promise.resolve();
   };
 
-  const steps = [
-    {
-      title: "Welcome",
-      description: "Let's set up your first project",
-    },
-    {
-      title: "Project Details",
-      description: "Configure your project",
-    },
-    {
-      title: "Ready",
-      description: "Start managing tickets",
-    },
-  ];
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
 
   return (
     <div className="setup-container">
@@ -82,20 +96,13 @@ const ProjectSetup: React.FC = () => {
               <div className="logo-section">
                 <div className="logo-icon">T</div>
                 <Title level={2} className="app-title">
-                  Welcome to Ticketing
+                  Create Your Project
                 </Title>
               </div>
               <Paragraph type="secondary" className="subtitle">
-                Let's get started by creating your first project
+                Set up a new project to organize your tickets and collaborate with your team
               </Paragraph>
             </div>
-
-            <Steps
-              current={currentStep}
-              items={steps}
-              className="setup-steps"
-              size="small"
-            />
 
             {error && (
               <Alert
@@ -103,127 +110,113 @@ const ProjectSetup: React.FC = () => {
                 type="error"
                 closable
                 onClose={() => setError(null)}
-                style={{ marginTop: 24, marginBottom: 24 }}
+                style={{ marginBottom: 24 }}
               />
             )}
 
-            {currentStep === 0 && (
-              <div className="welcome-content">
-                <div className="feature-list">
-                  <div className="feature-item">
-                    <ProjectOutlined className="feature-icon" />
-                    <div>
-                      <Title level={5}>Organize Your Work</Title>
-                      <Text type="secondary">
-                        Create projects to organize tickets, track progress, and
-                        collaborate with your team.
-                      </Text>
-                    </div>
-                  </div>
-                  <div className="feature-item">
-                    <KeyOutlined className="feature-icon" />
-                    <div>
-                      <Title level={5}>Unique Project Keys</Title>
-                      <Text type="secondary">
-                        Each project has a unique key (e.g., "PROJ") used to
-                        identify tickets like PROJ-1, PROJ-2.
-                      </Text>
-                    </div>
-                  </div>
-                  <div className="feature-item">
-                    <UserOutlined className="feature-icon" />
-                    <div>
-                      <Title level={5}>Team Collaboration</Title>
-                      <Text type="secondary">
-                        Assign tickets, add comments, track progress, and keep
-                        everyone on the same page.
-                      </Text>
-                    </div>
-                  </div>
-                </div>
+            <Form
+              form={form}
+              name="project-setup"
+              onFinish={onFinish}
+              layout="vertical"
+              className="setup-form"
+              initialValues={{ collaborators: [] }}
+            >
+              <Form.Item
+                name="name"
+                label="Project Name"
+                rules={[
+                  { required: true, message: "Please enter a project name" },
+                ]}
+              >
+                <Input
+                  prefix={<ProjectOutlined />}
+                  placeholder="My First Project"
+                  onChange={handleNameChange}
+                  size="large"
+                />
+              </Form.Item>
 
+              <Form.Item
+                name="key"
+                label="Project Key"
+                rules={[{ validator: validateProjectKey }]}
+                tooltip="A short, unique identifier for your project (2-10 uppercase letters). Auto-filled from project name."
+                normalize={(value) => value.toUpperCase()}
+              >
+                <Input
+                  prefix={<KeyOutlined />}
+                  placeholder="PROJ"
+                  maxLength={10}
+                  style={{ textTransform: "uppercase" }}
+                  size="large"
+                />
+              </Form.Item>
+
+              <Form.Item name="description" label="Description (Optional)">
+                <TextArea
+                  placeholder="Describe what this project is about..."
+                  rows={3}
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="collaborators"
+                label="Invite Collaborators (Optional)"
+                tooltip="Enter email addresses to send project invitations"
+              >
+                <Select
+                  mode="tags"
+                  placeholder="Enter email addresses and press Enter"
+                  onChange={(emails: string[]) => {
+                    // Validate emails as they're added
+                    const validEmails = emails.filter((email: string) => validateEmail(email));
+                    if (validEmails.length !== emails.length) {
+                      form.setFields([{
+                        name: 'collaborators',
+                        errors: ['Please enter valid email addresses']
+                      }]);
+                    }
+                  }}
+                  tokenSeparators={[',', ' ']}
+                  suffixIcon={<MailOutlined />}
+                  tagRender={(props) => {
+                    const { label, closable, onClose } = props;
+                    const isValid = validateEmail(label as string);
+                    return (
+                      <Tag
+                        color={isValid ? "blue" : "red"}
+                        closable={closable}
+                        onClose={onClose}
+                        style={{ marginRight: 3 }}
+                      >
+                        {label}
+                      </Tag>
+                    );
+                  }}
+                />
+              </Form.Item>
+
+              <Form.Item style={{ marginTop: 32, marginBottom: 0 }}>
                 <Button
                   type="primary"
+                  htmlType="submit"
+                  loading={loading}
                   size="large"
                   block
-                  onClick={() => setCurrentStep(1)}
                   className="setup-button"
+                  icon={<PlusOutlined />}
                 >
-                  Get Started
+                  Create Project
                 </Button>
+              </Form.Item>
+
+              <div style={{ textAlign: "center", marginTop: 16 }}>
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  You'll be the project lead and can add more collaborators later
+                </Text>
               </div>
-            )}
-
-            {currentStep === 1 && (
-              <Form
-                form={form}
-                name="project-setup"
-                onFinish={onFinish}
-                layout="vertical"
-                className="setup-form"
-              >
-                <Form.Item
-                  name="key"
-                  label="Project Key"
-                  rules={[{ validator: validateProjectKey }]}
-                  tooltip="A short, unique identifier for your project (2-10 uppercase letters)"
-                  normalize={(value) => value.toUpperCase()}
-                >
-                  <Input
-                    prefix={<KeyOutlined />}
-                    placeholder="PROJ"
-                    maxLength={10}
-                    style={{ textTransform: "uppercase" }}
-                  />
-                </Form.Item>
-
-                <Form.Item
-                  name="name"
-                  label="Project Name"
-                  rules={[
-                    { required: true, message: "Please enter a project name" },
-                  ]}
-                >
-                  <Input
-                    prefix={<ProjectOutlined />}
-                    placeholder="My First Project"
-                  />
-                </Form.Item>
-
-                <Form.Item name="description" label="Description (Optional)">
-                  <TextArea
-                    placeholder="Describe what this project is about..."
-                    rows={4}
-                  />
-                </Form.Item>
-
-                <Form.Item
-                  name="leadUsername"
-                  label="Project Lead (Optional)"
-                  tooltip="Username of the person responsible for this project"
-                >
-                  <Input
-                    prefix={<UserOutlined />}
-                    placeholder="Enter username"
-                  />
-                </Form.Item>
-
-                <div style={{ display: "flex", gap: 12 }}>
-                  <Button onClick={() => setCurrentStep(0)} style={{ flex: 1 }}>
-                    Back
-                  </Button>
-                  <Button
-                    type="primary"
-                    htmlType="submit"
-                    loading={loading}
-                    style={{ flex: 2 }}
-                    className="setup-button"
-                  >
-                    Create Project
-                  </Button>
-                </div>
-              </Form>
-            )}
+            </Form>
           </Card>
         </div>
       </div>
