@@ -16,20 +16,20 @@ function App() {
           {/* Public routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          
+
           {/* Project setup (protected) */}
-          <Route 
-            path="/setup" 
+          <Route
+            path="/setup"
             element={
               <ProtectedRoute>
                 <ProjectSetup />
               </ProtectedRoute>
-            } 
+            }
           />
-          
+
           {/* Protected routes */}
-          <Route 
-            path="/" 
+          <Route
+            path="/"
             element={
               <ProtectedRoute>
                 <MainLayout />
@@ -41,7 +41,7 @@ function App() {
             <Route path="contacts" element={<div>Contacts Page</div>} />
             <Route path="settings" element={<div>Settings Page</div>} />
           </Route>
-          
+
           {/* Catch all */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

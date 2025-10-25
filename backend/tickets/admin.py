@@ -1,32 +1,35 @@
 from django.contrib import admin
 from .models import (
-    Ticket, Column, Customer, Comment, Attachment,
+    Ticket, Column, Project, Comment, Attachment,
     Tag, Contact, TagContact, UserTag, TicketTag
 )
 
 
-@admin.register(Customer)
-class CustomerAdmin(admin.ModelAdmin):
-    list_display = ['name', 'email', 'company', 'created_at']
-    search_fields = ['name', 'email', 'company']
+@admin.register(Project)
+class ProjectAdmin(admin.ModelAdmin):
+    list_display = ['key', 'name', 'lead_username', 'created_at']
+    search_fields = ['key', 'name', 'description', 'lead_username']
     list_filter = ['created_at']
+    readonly_fields = ['created_at', 'updated_at']
 
 
 @admin.register(Column)
 class ColumnAdmin(admin.ModelAdmin):
-    list_display = ['name', 'order', 'color', 'created_at']
+    list_display = ['name', 'project', 'order', 'color', 'created_at']
     list_editable = ['order']
-    ordering = ['order']
+    ordering = ['project', 'order']
     search_fields = ['name']
+    list_filter = ['project']
+    autocomplete_fields = ['project']
 
 
 @admin.register(Ticket)
 class TicketAdmin(admin.ModelAdmin):
-    list_display = ['id', 'name', 'type', 'status', 'priority_id', 'column', 'customer', 'created_at']
-    list_filter = ['type', 'status', 'priority_id', 'urgency', 'importance', 'created_at']
+    list_display = ['id', 'name', 'type', 'status', 'priority_id', 'column', 'project', 'created_at']
+    list_filter = ['type', 'status', 'priority_id', 'urgency', 'importance', 'project', 'created_at']
     search_fields = ['name', 'description']
     filter_horizontal = ['assignees']
-    autocomplete_fields = ['customer', 'reporter', 'parent']
+    autocomplete_fields = ['project', 'reporter', 'parent']
     readonly_fields = ['created_at', 'updated_at']
     
     fieldsets = (
@@ -37,7 +40,7 @@ class TicketAdmin(admin.ModelAdmin):
             'fields': ('priority_id', 'urgency', 'importance')
         }),
         ('Relationships', {
-            'fields': ('column', 'customer', 'assignees', 'reporter', 'parent')
+            'fields': ('column', 'project', 'assignees', 'reporter', 'parent')
         }),
         ('Additional Details', {
             'fields': ('following', 'due_date', 'start_date')

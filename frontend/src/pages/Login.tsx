@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
-import { Form, Input, Button, Card, Typography, Alert, Checkbox } from 'antd';
-import { UserOutlined, LockOutlined } from '@ant-design/icons';
-import { useNavigate, Link } from 'react-router-dom';
-import './Login.css';
+import React, { useState } from "react";
+import { Form, Input, Button, Card, Typography, Alert, Checkbox } from "antd";
+import { UserOutlined, LockOutlined } from "@ant-design/icons";
+import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
+import { authService } from "../services/auth.service";
+import "./Login.css";
 
 const { Title, Text } = Typography;
 
@@ -16,42 +18,29 @@ const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const onFinish = async (values: LoginFormValues) => {
     setLoading(true);
     setError(null);
 
     try {
-      // TODO: Replace with actual API call
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/auth/login/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username: values.username,
-          password: values.password,
-        }),
+      const response = await authService.login({
+        username: values.username,
+        password: values.password,
       });
 
-      if (!response.ok) {
-        throw new Error('Invalid username or password');
-      }
+      // Update auth context
+      login(response.access, response.user);
 
-      const data = await response.json();
-      
-      // Store auth token
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      
       if (values.remember) {
-        localStorage.setItem('remember', 'true');
+        localStorage.setItem("remember", "true");
       }
 
       // Navigate to project setup or dashboard
-      navigate('/setup');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred during login');
+      navigate("/setup");
+    } catch (err: any) {
+      setError(err?.message || "Invalid username or password");
     } finally {
       setLoading(false);
     }
@@ -65,7 +54,9 @@ const Login: React.FC = () => {
             <div className="login-header">
               <div className="logo-section">
                 <div className="logo-icon">T</div>
-                <Title level={2} className="app-title">Ticketing</Title>
+                <Title level={2} className="app-title">
+                  Ticketing
+                </Title>
               </div>
               <Text type="secondary" className="subtitle">
                 Project management inspired by Jira
@@ -91,18 +82,22 @@ const Login: React.FC = () => {
             >
               <Form.Item
                 name="username"
-                rules={[{ required: true, message: 'Please input your username!' }]}
+                rules={[
+                  { required: true, message: "Please input your username!" },
+                ]}
               >
-                <Input 
-                  prefix={<UserOutlined />} 
-                  placeholder="Username" 
+                <Input
+                  prefix={<UserOutlined />}
+                  placeholder="Username"
                   autoComplete="username"
                 />
               </Form.Item>
 
               <Form.Item
                 name="password"
-                rules={[{ required: true, message: 'Please input your password!' }]}
+                rules={[
+                  { required: true, message: "Please input your password!" },
+                ]}
               >
                 <Input.Password
                   prefix={<LockOutlined />}
@@ -112,7 +107,13 @@ const Login: React.FC = () => {
               </Form.Item>
 
               <Form.Item>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
                   <Form.Item name="remember" valuePropName="checked" noStyle>
                     <Checkbox>Remember me</Checkbox>
                   </Form.Item>
@@ -136,7 +137,9 @@ const Login: React.FC = () => {
 
               <div className="register-section">
                 <Text type="secondary">Don't have an account? </Text>
-                <Link to="/register" className="register-link">Sign up</Link>
+                <Link to="/register" className="register-link">
+                  Sign up
+                </Link>
               </div>
             </Form>
           </Card>

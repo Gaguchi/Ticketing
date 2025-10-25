@@ -343,7 +343,9 @@ const Tickets: React.FC = () => {
   const filteredTickets = mockTickets.filter((ticket) => {
     const matchesSearch =
       ticket.name.toLowerCase().includes(searchText.toLowerCase()) ||
-      ticket.tag_names?.some(tag => tag.toLowerCase().includes(searchText.toLowerCase()));
+      ticket.tag_names?.some((tag) =>
+        tag.toLowerCase().includes(searchText.toLowerCase())
+      );
     const matchesStatus = !filterStatus || ticket.status === filterStatus;
     return matchesSearch && matchesStatus;
   });

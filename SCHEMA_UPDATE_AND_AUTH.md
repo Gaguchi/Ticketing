@@ -11,9 +11,11 @@ Successfully updated the Ticketing application to align with the corrected datab
 #### 1. **Models (backend/tickets/models.py)**
 
 **Removed:**
+
 - `Customer` model (completely eliminated)
 
 **Added:**
+
 - `Project` model with Jira-style fields:
   - `key`: Unique project identifier (e.g., "PROJ", "BUG")
   - `name`: Project display name
@@ -21,11 +23,12 @@ Successfully updated the Ticketing application to align with the corrected datab
   - `lead_username`: Project lead
 
 **Updated:**
+
 - `Column` model:
   - Added `project` FK relationship
   - Made column names unique per project
-  
 - `Ticket` model:
+
   - **Removed** `customer` FK field
   - **Added** `project` FK field
   - Contacts now accessed through Tag→Contact relationships
@@ -36,14 +39,17 @@ Successfully updated the Ticketing application to align with the corrected datab
 #### 2. **Serializers (backend/tickets/serializers.py)**
 
 **Removed:**
+
 - `CustomerSerializer`
 - `customer` and `customer_name` fields from ticket serializers
 
 **Added:**
+
 - `ProjectSerializer` with tickets_count and columns_count
 - `tag_names` field in `TicketListSerializer` for quick display
 
 **Updated:**
+
 - `ColumnSerializer`: Added `project_key` field
 - `TicketSerializer`: Replaced `customer_name` with `project_key` and `tags_detail`
 - All serializers now properly reference `Project` instead of treating `Column` as project
@@ -53,6 +59,7 @@ Successfully updated the Ticketing application to align with the corrected datab
 #### 3. **Authentication System**
 
 **New Files Created:**
+
 - `frontend/src/pages/Login.tsx` - Jira-style login page
 - `frontend/src/pages/Login.css` - Login/Register page styling
 - `frontend/src/pages/Register.tsx` - User registration page
@@ -62,6 +69,7 @@ Successfully updated the Ticketing application to align with the corrected datab
 - `frontend/src/components/auth/ProtectedRoute.tsx` - Route protection component
 
 **Features:**
+
 - JWT token-based authentication
 - Protected routes requiring login
 - Persistent login with localStorage
@@ -71,10 +79,12 @@ Successfully updated the Ticketing application to align with the corrected datab
 #### 4. **Type Definitions (frontend/src/types/ticket.ts)**
 
 **Removed:**
+
 - `customer?: number`
 - `customer_name?: string`
 
 **Added:**
+
 - `project: number`
 - `project_key?: string`
 - `tags?: number[]`
@@ -87,6 +97,7 @@ Successfully updated the Ticketing application to align with the corrected datab
 #### 5. **Routing (frontend/src/App.tsx)**
 
 **Updated:**
+
 - Wrapped app in `AuthProvider`
 - Added public routes: `/login`, `/register`
 - Added protected route: `/setup` (project setup)
@@ -96,11 +107,13 @@ Successfully updated the Ticketing application to align with the corrected datab
 #### 6. **Mock Data Updates**
 
 **Files Updated:**
+
 - `frontend/src/pages/Dashboard.tsx`
 - `frontend/src/pages/Tickets.tsx`
 - `frontend/src/components/TicketModal.tsx`
 
 **Changes:**
+
 - Replaced `customer_name: "X"` with `tags: [ids]` and `tag_names: ["X"]`
 - Added `project: 1` and `project_key: "PROJ"` to all mock tickets
 - Updated `TicketColumn` mock data to include `project` field
@@ -115,11 +128,13 @@ Ticket → Tag → Contact
 ```
 
 Instead of:
+
 ```
 Ticket → Customer (REMOVED)
 ```
 
 **Example:**
+
 1. Create a Contact: "John Doe from Nikora" (email, phone, title, etc.)
 2. Create a Tag: "Nikora" (project-specific)
 3. Link Contact to Tag via `TagContact` (with optional role: "Primary Contact")
@@ -147,6 +162,7 @@ python manage.py migrate
 ```
 
 **Data Migration Notes:**
+
 - Existing `Customer` data should be migrated to `Contact` model
 - Customer-Ticket relationships should become Tag-Contact-Ticket relationships
 - Create a default `Project` for existing tickets
@@ -155,12 +171,14 @@ python manage.py migrate
 ## API Endpoints to Implement
 
 ### Authentication (NEW)
+
 - `POST /api/auth/login/` - User login
 - `POST /api/auth/register/` - User registration
 - `POST /api/auth/logout/` - User logout
 - `GET /api/auth/me/` - Get current user
 
 ### Projects (NEW)
+
 - `GET /api/projects/` - List all projects
 - `POST /api/projects/` - Create new project
 - `GET /api/projects/{id}/` - Get project details
@@ -168,6 +186,7 @@ python manage.py migrate
 - `DELETE /api/projects/{id}/` - Delete project
 
 ### Updated Endpoints
+
 - `GET /api/tickets/` - Now includes `project_key` and `tag_names`
 - `POST /api/tickets/` - Now requires `project` field instead of `customer`
 - `GET /api/columns/` - Now includes `project_key`
@@ -175,7 +194,9 @@ python manage.py migrate
 ## UI Changes
 
 ### New Pages
+
 1. **Login Page** (`/login`)
+
    - Username/password authentication
    - "Remember me" checkbox
    - Link to registration
@@ -183,6 +204,7 @@ python manage.py migrate
    - Jira-inspired design
 
 2. **Register Page** (`/register`)
+
    - Username, email, first name, last name
    - Password confirmation
    - Email validation
@@ -196,6 +218,7 @@ python manage.py migrate
    - Progress steps indicator
 
 ### Updated Components
+
 - **TicketModal**: Customer field replaced with Tags multi-select
 - **Dashboard**: Mock data uses tags instead of customer_name
 - **Tickets Page**: Search now includes tag names
@@ -203,12 +226,14 @@ python manage.py migrate
 ## Next Steps
 
 1. **Backend Implementation:**
+
    - Create authentication views (login, register, logout)
    - Create project CRUD views
    - Update ticket views to handle project field
    - Add migration script for Customer → Contact data
 
 2. **Frontend Integration:**
+
    - Connect login/register forms to real API
    - Connect project setup to real API
    - Update ticket services to use new schema
@@ -225,6 +250,7 @@ python manage.py migrate
 ## Breaking Changes
 
 ⚠️ **WARNING:** This is a breaking change that requires:
+
 - Database migration
 - Existing data migration (Customer → Contact)
 - API client updates
@@ -233,18 +259,21 @@ python manage.py migrate
 ## Benefits
 
 ✅ **Improved Data Model:**
+
 - More flexible contact management
 - Multiple contacts per tag
 - Tags can represent clients, teams, locations, etc.
 - Proper project hierarchy like Jira
 
 ✅ **Better UX:**
+
 - Professional login/setup experience
 - Clear project initialization
 - Tag-based organization
 - Industry-standard workflow
 
 ✅ **Jira-Inspired:**
+
 - Project keys (PROJ-1, BUG-2, etc.)
 - Project-centric architecture
 - Tag-based categorization

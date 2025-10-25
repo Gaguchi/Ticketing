@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
-import { Form, Input, Button, Card, Typography, Alert, Steps } from 'antd';
-import { ProjectOutlined, KeyOutlined, UserOutlined } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
-import './ProjectSetup.css';
+import React, { useState } from "react";
+import { Form, Input, Button, Card, Typography, Alert, Steps } from "antd";
+import { ProjectOutlined, KeyOutlined, UserOutlined } from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
+import { projectService } from "../services/project.service";
+import "./ProjectSetup.css";
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -19,6 +21,7 @@ const ProjectSetup: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [form] = Form.useForm();
 
   const onFinish = async (values: ProjectFormValues) => {
@@ -26,37 +29,20 @@ const ProjectSetup: React.FC = () => {
     setError(null);
 
     try {
-      const token = localStorage.getItem('token');
-      
-      // TODO: Replace with actual API call
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/projects/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          key: values.key.toUpperCase(),
-          name: values.name,
-          description: values.description,
-          lead_username: values.leadUsername,
-        }),
+      const project = await projectService.createProject({
+        key: values.key.toUpperCase(),
+        name: values.name,
+        description: values.description,
+        lead_username: values.leadUsername || user?.username,
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create project');
-      }
-
-      const project = await response.json();
-      
       // Store current project
-      localStorage.setItem('currentProject', JSON.stringify(project));
+      localStorage.setItem("currentProject", JSON.stringify(project));
 
       // Navigate to dashboard
-      navigate('/');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred while creating the project');
+      navigate("/");
+    } catch (err: any) {
+      setError(err?.message || "An error occurred while creating the project");
     } finally {
       setLoading(false);
     }
@@ -64,26 +50,26 @@ const ProjectSetup: React.FC = () => {
 
   const validateProjectKey = (_: any, value: string) => {
     if (!value) {
-      return Promise.reject(new Error('Project key is required'));
+      return Promise.reject(new Error("Project key is required"));
     }
     if (!/^[A-Z]{2,10}$/.test(value.toUpperCase())) {
-      return Promise.reject(new Error('Key must be 2-10 uppercase letters'));
+      return Promise.reject(new Error("Key must be 2-10 uppercase letters"));
     }
     return Promise.resolve();
   };
 
   const steps = [
     {
-      title: 'Welcome',
-      description: 'Let\'s set up your first project',
+      title: "Welcome",
+      description: "Let's set up your first project",
     },
     {
-      title: 'Project Details',
-      description: 'Configure your project',
+      title: "Project Details",
+      description: "Configure your project",
     },
     {
-      title: 'Ready',
-      description: 'Start managing tickets',
+      title: "Ready",
+      description: "Start managing tickets",
     },
   ];
 
@@ -95,7 +81,9 @@ const ProjectSetup: React.FC = () => {
             <div className="setup-header">
               <div className="logo-section">
                 <div className="logo-icon">T</div>
-                <Title level={2} className="app-title">Welcome to Ticketing</Title>
+                <Title level={2} className="app-title">
+                  Welcome to Ticketing
+                </Title>
               </div>
               <Paragraph type="secondary" className="subtitle">
                 Let's get started by creating your first project
@@ -127,7 +115,8 @@ const ProjectSetup: React.FC = () => {
                     <div>
                       <Title level={5}>Organize Your Work</Title>
                       <Text type="secondary">
-                        Create projects to organize tickets, track progress, and collaborate with your team.
+                        Create projects to organize tickets, track progress, and
+                        collaborate with your team.
                       </Text>
                     </div>
                   </div>
@@ -136,7 +125,8 @@ const ProjectSetup: React.FC = () => {
                     <div>
                       <Title level={5}>Unique Project Keys</Title>
                       <Text type="secondary">
-                        Each project has a unique key (e.g., "PROJ") used to identify tickets like PROJ-1, PROJ-2.
+                        Each project has a unique key (e.g., "PROJ") used to
+                        identify tickets like PROJ-1, PROJ-2.
                       </Text>
                     </div>
                   </div>
@@ -145,7 +135,8 @@ const ProjectSetup: React.FC = () => {
                     <div>
                       <Title level={5}>Team Collaboration</Title>
                       <Text type="secondary">
-                        Assign tickets, add comments, track progress, and keep everyone on the same page.
+                        Assign tickets, add comments, track progress, and keep
+                        everyone on the same page.
                       </Text>
                     </div>
                   </div>
@@ -182,14 +173,16 @@ const ProjectSetup: React.FC = () => {
                     prefix={<KeyOutlined />}
                     placeholder="PROJ"
                     maxLength={10}
-                    style={{ textTransform: 'uppercase' }}
+                    style={{ textTransform: "uppercase" }}
                   />
                 </Form.Item>
 
                 <Form.Item
                   name="name"
                   label="Project Name"
-                  rules={[{ required: true, message: 'Please enter a project name' }]}
+                  rules={[
+                    { required: true, message: "Please enter a project name" },
+                  ]}
                 >
                   <Input
                     prefix={<ProjectOutlined />}
@@ -197,10 +190,7 @@ const ProjectSetup: React.FC = () => {
                   />
                 </Form.Item>
 
-                <Form.Item
-                  name="description"
-                  label="Description (Optional)"
-                >
+                <Form.Item name="description" label="Description (Optional)">
                   <TextArea
                     placeholder="Describe what this project is about..."
                     rows={4}
@@ -218,11 +208,8 @@ const ProjectSetup: React.FC = () => {
                   />
                 </Form.Item>
 
-                <div style={{ display: 'flex', gap: 12 }}>
-                  <Button
-                    onClick={() => setCurrentStep(0)}
-                    style={{ flex: 1 }}
-                  >
+                <div style={{ display: "flex", gap: 12 }}>
+                  <Button onClick={() => setCurrentStep(0)} style={{ flex: 1 }}>
                     Back
                   </Button>
                   <Button

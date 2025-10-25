@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
-import { Form, Input, Button, Card, Typography, Alert } from 'antd';
-import { UserOutlined, LockOutlined, MailOutlined } from '@ant-design/icons';
-import { useNavigate, Link } from 'react-router-dom';
-import './Login.css';
+import React, { useState } from "react";
+import { Form, Input, Button, Card, Typography, Alert } from "antd";
+import { UserOutlined, LockOutlined, MailOutlined } from "@ant-design/icons";
+import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
+import { authService } from "../services/auth.service";
+import "./Login.css";
 
 const { Title, Text } = Typography;
 
@@ -19,6 +21,7 @@ const Register: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [form] = Form.useForm();
 
   const onFinish = async (values: RegisterFormValues) => {
@@ -26,36 +29,21 @@ const Register: React.FC = () => {
     setError(null);
 
     try {
-      // TODO: Replace with actual API call
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/auth/register/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username: values.username,
-          email: values.email,
-          first_name: values.firstName,
-          last_name: values.lastName,
-          password: values.password,
-        }),
+      const response = await authService.register({
+        username: values.username,
+        email: values.email,
+        first_name: values.firstName,
+        last_name: values.lastName,
+        password: values.password,
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Registration failed');
-      }
-
-      const data = await response.json();
-      
-      // Store auth token
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
+      // Update auth context
+      login(response.access, response.user);
 
       // Navigate to project setup
-      navigate('/setup');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred during registration');
+      navigate("/setup");
+    } catch (err: any) {
+      setError(err?.message || "An error occurred during registration");
     } finally {
       setLoading(false);
     }
@@ -69,7 +57,9 @@ const Register: React.FC = () => {
             <div className="login-header">
               <div className="logo-section">
                 <div className="logo-icon">T</div>
-                <Title level={2} className="app-title">Create Account</Title>
+                <Title level={2} className="app-title">
+                  Create Account
+                </Title>
               </div>
               <Text type="secondary" className="subtitle">
                 Get started with Ticketing
@@ -96,13 +86,13 @@ const Register: React.FC = () => {
               <Form.Item
                 name="username"
                 rules={[
-                  { required: true, message: 'Please input your username!' },
-                  { min: 3, message: 'Username must be at least 3 characters' }
+                  { required: true, message: "Please input your username!" },
+                  { min: 3, message: "Username must be at least 3 characters" },
                 ]}
               >
-                <Input 
-                  prefix={<UserOutlined />} 
-                  placeholder="Username" 
+                <Input
+                  prefix={<UserOutlined />}
+                  placeholder="Username"
                   autoComplete="username"
                 />
               </Form.Item>
@@ -110,21 +100,21 @@ const Register: React.FC = () => {
               <Form.Item
                 name="email"
                 rules={[
-                  { required: true, message: 'Please input your email!' },
-                  { type: 'email', message: 'Please enter a valid email!' }
+                  { required: true, message: "Please input your email!" },
+                  { type: "email", message: "Please enter a valid email!" },
                 ]}
               >
-                <Input 
-                  prefix={<MailOutlined />} 
-                  placeholder="Email" 
+                <Input
+                  prefix={<MailOutlined />}
+                  placeholder="Email"
                   autoComplete="email"
                 />
               </Form.Item>
 
-              <div style={{ display: 'flex', gap: 12 }}>
+              <div style={{ display: "flex", gap: 12 }}>
                 <Form.Item
                   name="firstName"
-                  rules={[{ required: true, message: 'Required' }]}
+                  rules={[{ required: true, message: "Required" }]}
                   style={{ flex: 1, marginBottom: 16 }}
                 >
                   <Input placeholder="First name" autoComplete="given-name" />
@@ -132,7 +122,7 @@ const Register: React.FC = () => {
 
                 <Form.Item
                   name="lastName"
-                  rules={[{ required: true, message: 'Required' }]}
+                  rules={[{ required: true, message: "Required" }]}
                   style={{ flex: 1, marginBottom: 16 }}
                 >
                   <Input placeholder="Last name" autoComplete="family-name" />
@@ -142,8 +132,8 @@ const Register: React.FC = () => {
               <Form.Item
                 name="password"
                 rules={[
-                  { required: true, message: 'Please input your password!' },
-                  { min: 8, message: 'Password must be at least 8 characters' }
+                  { required: true, message: "Please input your password!" },
+                  { min: 8, message: "Password must be at least 8 characters" },
                 ]}
               >
                 <Input.Password
@@ -155,15 +145,17 @@ const Register: React.FC = () => {
 
               <Form.Item
                 name="confirmPassword"
-                dependencies={['password']}
+                dependencies={["password"]}
                 rules={[
-                  { required: true, message: 'Please confirm your password!' },
+                  { required: true, message: "Please confirm your password!" },
                   ({ getFieldValue }) => ({
                     validator(_, value) {
-                      if (!value || getFieldValue('password') === value) {
+                      if (!value || getFieldValue("password") === value) {
                         return Promise.resolve();
                       }
-                      return Promise.reject(new Error('Passwords do not match!'));
+                      return Promise.reject(
+                        new Error("Passwords do not match!")
+                      );
                     },
                   }),
                 ]}
@@ -189,7 +181,9 @@ const Register: React.FC = () => {
 
               <div className="register-section">
                 <Text type="secondary">Already have an account? </Text>
-                <Link to="/login" className="register-link">Log in</Link>
+                <Link to="/login" className="register-link">
+                  Log in
+                </Link>
               </div>
             </Form>
           </Card>

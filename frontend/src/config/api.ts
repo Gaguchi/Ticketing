@@ -8,6 +8,18 @@ export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localho
 
 // API endpoints
 export const API_ENDPOINTS = {
+  // Authentication
+  AUTH_LOGIN: `${API_BASE_URL}/api/tickets/auth/login/`,
+  AUTH_REGISTER: `${API_BASE_URL}/api/tickets/auth/register/`,
+  AUTH_ME: `${API_BASE_URL}/api/tickets/auth/me/`,
+  AUTH_TOKEN_REFRESH: `${API_BASE_URL}/api/tickets/auth/token/refresh/`,
+  
+  // Projects
+  PROJECTS: `${API_BASE_URL}/api/tickets/projects/`,
+  PROJECT_DETAIL: (id: number) => `${API_BASE_URL}/api/tickets/projects/${id}/`,
+  PROJECT_TICKETS: (id: number) => `${API_BASE_URL}/api/tickets/projects/${id}/tickets/`,
+  PROJECT_COLUMNS: (id: number) => `${API_BASE_URL}/api/tickets/projects/${id}/columns/`,
+  
   // Tickets
   TICKETS: `${API_BASE_URL}/api/tickets/tickets/`,
   TICKET_DETAIL: (id: number) => `${API_BASE_URL}/api/tickets/tickets/${id}/`,
@@ -18,10 +30,6 @@ export const API_ENDPOINTS = {
   COLUMNS: `${API_BASE_URL}/api/tickets/columns/`,
   COLUMN_DETAIL: (id: number) => `${API_BASE_URL}/api/tickets/columns/${id}/`,
   COLUMN_REORDER: `${API_BASE_URL}/api/tickets/columns/reorder/`,
-  
-  // Customers
-  CUSTOMERS: `${API_BASE_URL}/api/tickets/customers/`,
-  CUSTOMER_DETAIL: (id: number) => `${API_BASE_URL}/api/tickets/customers/${id}/`,
   
   // Comments
   COMMENTS: `${API_BASE_URL}/api/tickets/comments/`,

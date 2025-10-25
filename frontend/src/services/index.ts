@@ -6,11 +6,14 @@
 export { apiService } from './api.service';
 export type { APIError } from './api.service';
 
+export { authService } from './auth.service';
+export type { LoginCredentials, RegisterData, AuthResponse, User } from './auth.service';
+
+export { projectService } from './project.service';
+export type { Project, CreateProjectData } from './project.service';
+
 export { ticketService } from './ticket.service';
 export type { CreateTicketData, UpdateTicketData, TicketListResponse } from './ticket.service';
 
 export { columnService } from './column.service';
 export type { Column, CreateColumnData, ReorderColumnsData } from './column.service';
-
-export { customerService } from './customer.service';
-export type { Customer, CreateCustomerData } from './customer.service';

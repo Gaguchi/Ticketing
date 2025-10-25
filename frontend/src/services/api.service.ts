@@ -13,6 +13,14 @@ export interface APIError {
 
 class APIService {
   /**
+   * Get authorization header with JWT token
+   */
+  private getAuthHeader(): Record<string, string> {
+    const token = localStorage.getItem('access_token');
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }
+
+  /**
    * Generic fetch wrapper with error handling
    */
   private async request<T>(
@@ -23,6 +31,7 @@ class APIService {
       ...options,
       headers: {
         ...API_HEADERS,
+        ...this.getAuthHeader(),
         ...options.headers,
       },
       credentials: API_CONFIG.withCredentials ? 'include' : 'same-origin',
