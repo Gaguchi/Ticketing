@@ -15,8 +15,8 @@ RUN npm ci --silent
 COPY . .
 
 # Accept build arguments (Vite environment variables)
-ARG VITE_API_BASE_URL
-ARG VITE_APP_NAME=Ticketing System
+ARG VITE_API_BASE_URL=http://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me
+ARG VITE_APP_NAME="Ticketing System"
 ARG VITE_APP_VERSION=1.0.0
 
 # Set as environment variables for the build process
