@@ -17,7 +17,8 @@ USE_HTTPS=False
 CORS_ALLOWED_ORIGINS=http://tickets-frontend-wzaz6z-11ca3e-31-97-181-167.traefik.me,http://localhost:5173
 ```
 
-**Important:** 
+**Important:**
+
 - Replace `YOUR_DB_PASSWORD_HERE` with your actual database password
 - Generate a new `SECRET_KEY` (use: `python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"`)
 
@@ -52,6 +53,7 @@ VITE_APP_VERSION=1.0.0
 5. Verify the build uses the production API URL (check logs for `VITE_API_BASE_URL`)
 
 **Note:** If you still see `localhost:8000` errors:
+
 - The Dockerfile now has the production URL as default
 - Try a hard rebuild: Delete the frontend service and recreate it
 - Or use Docker build args in Dokploy settings
@@ -68,15 +70,18 @@ VITE_APP_VERSION=1.0.0
 ## Troubleshooting
 
 ### If registration fails with connection error:
+
 - Check backend is running: `curl http://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me/health/`
 - Verify `CORS_ALLOWED_ORIGINS` includes frontend domain
 - Check browser console for specific error
 
 ### If CORS error appears:
+
 - Verify backend has: `CORS_ALLOWED_ORIGINS=http://tickets-frontend-wzaz6z-11ca3e-31-97-181-167.traefik.me`
 - Redeploy backend after adding CORS setting
 
 ### If 500 Internal Server Error:
+
 - Check backend logs in Dokploy
 - Verify all environment variables are set correctly
 - Ensure migrations have been run

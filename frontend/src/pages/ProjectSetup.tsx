@@ -1,6 +1,20 @@
 import React, { useState } from "react";
-import { Form, Input, Button, Card, Typography, Alert, Select, Tag } from "antd";
-import { ProjectOutlined, KeyOutlined, MailOutlined, PlusOutlined } from "@ant-design/icons";
+import {
+  Form,
+  Input,
+  Button,
+  Card,
+  Typography,
+  Alert,
+  Select,
+  Tag,
+} from "antd";
+import {
+  ProjectOutlined,
+  KeyOutlined,
+  MailOutlined,
+  PlusOutlined,
+} from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { projectService } from "../services/project.service";
@@ -27,7 +41,7 @@ const ProjectSetup: React.FC = () => {
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const name = e.target.value;
     const currentKey = form.getFieldValue("key");
-    
+
     // Only auto-fill if key is empty or matches previous auto-fill pattern
     if (!currentKey || currentKey.length <= 4) {
       const autoKey = name
@@ -35,7 +49,7 @@ const ProjectSetup: React.FC = () => {
         .slice(0, 4)
         .toUpperCase()
         .replace(/[^A-Z]/g, "");
-      
+
       if (autoKey.length >= 2) {
         form.setFieldsValue({ key: autoKey });
       }
@@ -100,7 +114,8 @@ const ProjectSetup: React.FC = () => {
                 </Title>
               </div>
               <Paragraph type="secondary" className="subtitle">
-                Set up a new project to organize your tickets and collaborate with your team
+                Set up a new project to organize your tickets and collaborate
+                with your team
               </Paragraph>
             </div>
 
@@ -170,15 +185,19 @@ const ProjectSetup: React.FC = () => {
                   placeholder="Enter email addresses and press Enter"
                   onChange={(emails: string[]) => {
                     // Validate emails as they're added
-                    const validEmails = emails.filter((email: string) => validateEmail(email));
+                    const validEmails = emails.filter((email: string) =>
+                      validateEmail(email)
+                    );
                     if (validEmails.length !== emails.length) {
-                      form.setFields([{
-                        name: 'collaborators',
-                        errors: ['Please enter valid email addresses']
-                      }]);
+                      form.setFields([
+                        {
+                          name: "collaborators",
+                          errors: ["Please enter valid email addresses"],
+                        },
+                      ]);
                     }
                   }}
-                  tokenSeparators={[',', ' ']}
+                  tokenSeparators={[",", " "]}
                   suffixIcon={<MailOutlined />}
                   tagRender={(props) => {
                     const { label, closable, onClose } = props;
@@ -213,7 +232,8 @@ const ProjectSetup: React.FC = () => {
 
               <div style={{ textAlign: "center", marginTop: 16 }}>
                 <Text type="secondary" style={{ fontSize: 12 }}>
-                  You'll be the project lead and can add more collaborators later
+                  You'll be the project lead and can add more collaborators
+                  later
                 </Text>
               </div>
             </Form>

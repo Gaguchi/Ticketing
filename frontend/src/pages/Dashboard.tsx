@@ -29,6 +29,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { getPriorityIcon } from "../components/PriorityIcons";
 import { TicketModal } from "../components/TicketModal";
+import { CreateTicketModal } from "../components/CreateTicketModal";
 import type { Ticket } from "../types/ticket";
 import type { TableColumnsType } from "antd";
 import { ticketService } from "../services";
@@ -775,10 +776,9 @@ const Dashboard: React.FC = () => {
       />
 
       {/* Create Ticket Modal */}
-      <TicketModal
+      <CreateTicketModal
         open={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        mode="create"
         columnId={1} // Default to first column (To Do)
         onSuccess={handleTicketCreated}
       />

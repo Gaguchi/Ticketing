@@ -55,11 +55,13 @@ python manage.py createsuperuser
 ## Testing the Deployment
 
 ### 1. Test Backend Health
+
 ```bash
 curl http://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me/health/
 ```
 
 Expected response:
+
 ```json
 {
   "status": "healthy",
@@ -72,6 +74,7 @@ Expected response:
 ### 2. Test Authentication Endpoints
 
 **Register a user:**
+
 ```bash
 curl -X POST http://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me/api/tickets/auth/register/ \
   -H "Content-Type: application/json" \
@@ -85,6 +88,7 @@ curl -X POST http://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me/api/t
 ```
 
 **Login:**
+
 ```bash
 curl -X POST http://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me/api/tickets/auth/login/ \
   -H "Content-Type: application/json" \
@@ -95,6 +99,7 @@ curl -X POST http://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me/api/t
 ```
 
 Expected response:
+
 ```json
 {
   "user": {
@@ -137,33 +142,41 @@ Open: http://tickets-frontend-wzaz6z-11ca3e-31-97-181-167.traefik.me/
 ## Common Issues
 
 ### CORS Errors
+
 **Symptom:** Browser shows "CORS policy" errors
 
 **Fix:** Ensure `CORS_ALLOWED_ORIGINS` in backend includes the frontend domain:
+
 ```bash
 CORS_ALLOWED_ORIGINS=http://tickets-frontend-wzaz6z-11ca3e-31-97-181-167.traefik.me
 ```
 
 ### Connection Refused
+
 **Symptom:** `ERR_CONNECTION_REFUSED` when calling APIs
 
 **Fix:** Check that:
+
 1. Backend service is running in Dokploy
 2. Frontend `.env.production` has correct `VITE_API_BASE_URL`
 3. Backend domain is accessible: `curl http://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me/health/`
 
 ### Migration Errors
+
 **Symptom:** Database errors on first deployment
 
 **Fix:** Run migrations in Dokploy terminal:
+
 ```bash
 python manage.py migrate
 ```
 
 ### 401 Unauthorized
+
 **Symptom:** All API calls return 401 after login
 
 **Fix:** Check that:
+
 1. JWT token is being stored in localStorage
 2. API service includes `Authorization: Bearer TOKEN` header
 3. Token hasn't expired (default: 1 day)
@@ -180,20 +193,24 @@ python manage.py migrate
 ## Deployment Steps
 
 1. **Update Backend Environment Variables in Dokploy**
+
    - Go to backend service settings
    - Add all environment variables listed above
    - Save and redeploy
 
 2. **Update Frontend Environment Variables in Dokploy**
+
    - Go to frontend service settings
    - Add `VITE_API_BASE_URL` with backend domain
    - Save and redeploy
 
 3. **Run Migrations**
+
    - Open backend terminal in Dokploy
    - Run `python manage.py migrate`
 
 4. **Create Superuser (Optional)**
+
    - Run `python manage.py createsuperuser`
    - Access admin at: http://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me/admin/
 
