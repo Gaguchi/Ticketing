@@ -46,8 +46,15 @@ VITE_APP_VERSION=1.0.0
 ## Step 5: Deploy Frontend
 
 1. Go to frontend service in Dokploy
-2. Click "Redeploy" or "Deploy"
-3. Wait for build to complete
+2. **IMPORTANT:** Clear build cache (if available) OR delete and recreate the service
+3. Click "Redeploy" or "Deploy"
+4. Wait for build to complete
+5. Verify the build uses the production API URL (check logs for `VITE_API_BASE_URL`)
+
+**Note:** If you still see `localhost:8000` errors:
+- The Dockerfile now has the production URL as default
+- Try a hard rebuild: Delete the frontend service and recreate it
+- Or use Docker build args in Dokploy settings
 
 ## Step 6: Test
 
