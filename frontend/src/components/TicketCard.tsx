@@ -153,7 +153,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({
           </Col>
           <Col>
             <Space align="center" size={6}>
-              {getPriorityIcon(ticket.priorityId)}
+              {getPriorityIcon(ticket.priorityId ?? ticket.priority_id ?? 3)}
               {ticket.assigneeIds && ticket.assigneeIds.length > 0 && (
                 <Avatar.Group
                   size={20}

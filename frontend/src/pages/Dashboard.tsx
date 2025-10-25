@@ -1,6 +1,10 @@
 ﻿import React, { useState, useEffect } from "react";
 import { Input, Table, Tag, Badge, Button, message } from "antd";
-import { SearchOutlined, PlusOutlined, ReloadOutlined } from "@ant-design/icons";
+import {
+  SearchOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+} from "@ant-design/icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCheckSquare,
@@ -203,109 +207,149 @@ const SortableFilterBox: React.FC<{
 const mockTickets: Ticket[] = [
   {
     id: 1,
+    column: 1,
     colId: 1,
     name: "Website homepage not loading for mobile users",
+    priority_id: 4,
     priorityId: 4,
-    following: true,
-    assigneeIds: [1, 2],
-    customer: "TechCorp Solutions",
+    type: "bug",
     status: "New",
+    following: true,
+    assignee_ids: [1, 2],
+    assigneeIds: [1, 2],
+    customer_name: "TechCorp Solutions",
+    created_at: "2025-10-15",
     createdAt: "2025-10-15",
+    updated_at: "2025-10-15",
     urgency: "High",
     importance: "Critical",
-    type: "bug",
   },
   {
     id: 2,
+    column: 2,
     colId: 2,
     name: "Integrate payment gateway with new API",
+    priority_id: 2,
     priorityId: 2,
-    assigneeIds: [1],
-    customer: "RetailMax Inc",
+    type: "task",
     status: "In Progress",
+    assignee_ids: [1],
+    assigneeIds: [1],
+    customer_name: "RetailMax Inc",
+    created_at: "2025-10-14",
     createdAt: "2025-10-14",
+    updated_at: "2025-10-14",
     urgency: "Normal",
     importance: "High",
-    type: "task",
   },
   {
     id: 3,
+    column: 2,
     colId: 2,
     name: "Fix typo in user registration email",
+    priority_id: 3,
     priorityId: 3,
-    assigneeIds: [2],
-    customer: "StartupHub",
+    type: "bug",
     status: "In Progress",
+    assignee_ids: [2],
+    assigneeIds: [2],
+    customer_name: "StartupHub",
+    created_at: "2025-10-13",
     createdAt: "2025-10-13",
+    updated_at: "2025-10-13",
     urgency: "Low",
     importance: "Normal",
-    type: "bug",
   },
   {
     id: 4,
+    column: 2,
     colId: 2,
     name: "Improve database query performance",
+    priority_id: 2,
     priorityId: 2,
     following: true,
     commentsCount: 3,
+    assignee_ids: [1, 2, 3],
     assigneeIds: [1, 2, 3],
-    customer: "DataFlow Systems",
+    customer_name: "DataFlow Systems",
     status: "In Progress",
+    created_at: "2025-10-12",
     createdAt: "2025-10-12",
+    updated_at: "2025-10-12",
     urgency: "Normal",
     importance: "High",
     type: "story",
   },
   {
     id: 5,
+    column: 3,
     colId: 3,
     name: "Update user documentation",
+    priority_id: 1,
     priorityId: 1,
+    assignee_ids: [2],
     assigneeIds: [2],
-    customer: "EduTech Platform",
+    customer_name: "EduTech Platform",
     status: "Review",
+    created_at: "2025-10-11",
     createdAt: "2025-10-11",
+    updated_at: "2025-10-11",
     urgency: "Low",
     importance: "Low",
     type: "task",
   },
   {
     id: 6,
+    column: 1,
     colId: 1,
     name: "Cannot login with SSO credentials",
+    priority_id: 4,
     priorityId: 4,
     commentsCount: 11,
+    assignee_ids: [1, 3],
     assigneeIds: [1, 3],
-    customer: "Enterprise Global",
+    customer_name: "Enterprise Global",
     status: "New",
+    created_at: "2025-10-10",
     createdAt: "2025-10-10",
+    updated_at: "2025-10-10",
     urgency: "High",
     importance: "Critical",
     type: "bug",
   },
   {
     id: 7,
+    column: 4,
     colId: 4,
     name: "Migrate legacy authentication system",
+    priority_id: 3,
     priorityId: 3,
+    assignee_ids: [3],
     assigneeIds: [3],
-    customer: "FinanceFlow",
+    customer_name: "FinanceFlow",
     status: "Done",
+    created_at: "2025-10-09",
     createdAt: "2025-10-09",
+    updated_at: "2025-10-09",
     urgency: "Normal",
     importance: "High",
     type: "epic",
   },
   {
     id: 8,
+    column: 1,
     colId: 1,
     name: "Server returning 500 errors intermittently",
+    priority_id: 4,
     priorityId: 4,
     commentsCount: 8,
+    assignee_ids: [1, 2, 3],
     assigneeIds: [1, 2, 3],
-    customer: "CloudServe Inc",
+    customer_name: "CloudServe Inc",
     status: "New",
+    created_at: "2025-10-08",
     createdAt: "2025-10-08",
+    updated_at: "2025-10-08",
     urgency: "High",
     importance: "Critical",
     type: "bug",
@@ -318,7 +362,7 @@ const Dashboard: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(false);
-  
+
   const [filterBoxes, setFilterBoxes] = useState<FilterBox[]>([
     {
       id: "unassigned",
@@ -360,8 +404,8 @@ const Dashboard: React.FC = () => {
       const response = await ticketService.getTickets();
       setTickets(response.results);
     } catch (error: any) {
-      console.error('Failed to fetch tickets:', error);
-      message.error(error.message || 'Failed to load tickets');
+      console.error("Failed to fetch tickets:", error);
+      message.error(error.message || "Failed to load tickets");
       // Fallback to mock data on error
       setTickets(mockTickets);
     } finally {
@@ -376,14 +420,16 @@ const Dashboard: React.FC = () => {
 
   // Handle ticket creation success
   const handleTicketCreated = (newTicket: Ticket) => {
-    setTickets(prev => [newTicket, ...prev]);
+    setTickets((prev) => [newTicket, ...prev]);
     setIsCreateModalOpen(false);
-    message.success('Ticket created successfully!');
+    message.success("Ticket created successfully!");
   };
 
   // Handle ticket update success
   const handleTicketUpdated = (updatedTicket: Ticket) => {
-    setTickets(prev => prev.map(t => t.id === updatedTicket.id ? updatedTicket : t));
+    setTickets((prev) =>
+      prev.map((t) => (t.id === updatedTicket.id ? updatedTicket : t))
+    );
     setSelectedTicket(null);
   };
 
@@ -568,7 +614,6 @@ const Dashboard: React.FC = () => {
               >
                 {filterBoxes.map((box) => {
                   const filteredCount = tickets.filter(box.filter).length;
-                  const filteredTickets = tickets.filter(box.filter);
 
                   return (
                     <div

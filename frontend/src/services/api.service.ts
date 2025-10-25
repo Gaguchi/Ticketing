@@ -3,7 +3,7 @@
  * Handles all API requests with proper error handling and type safety
  */
 
-import { API_ENDPOINTS, API_HEADERS, API_CONFIG } from '../config/api';
+import { API_HEADERS, API_CONFIG } from '../config/api';
 
 export interface APIError {
   message: string;
