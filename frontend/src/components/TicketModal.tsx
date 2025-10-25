@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Modal, Input, Select, DatePicker, Avatar, Button, Tabs } from "antd";
+import React, { useState, useEffect } from "react";
+import { Modal, Input, Select, DatePicker, Avatar, Button, Tabs, message } from "antd";
 import {
   CloseOutlined,
   UserOutlined,
@@ -17,8 +17,10 @@ import {
   faBookmark,
   faBolt,
 } from "@fortawesome/free-solid-svg-icons";
+import dayjs from "dayjs";
 import type { Ticket } from "../types/ticket";
 import { getPriorityIcon } from "./PriorityIcons";
+import { ticketService, type CreateTicketData } from "../services";
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -27,6 +29,9 @@ interface TicketModalProps {
   open: boolean;
   onClose: () => void;
   ticket?: Ticket | null;
+  mode?: 'create' | 'edit';
+  columnId?: number;
+  onSuccess?: (ticket: Ticket) => void;
 }
 
 const getTypeIcon = (type?: string) => {
@@ -57,14 +62,91 @@ export const TicketModal: React.FC<TicketModalProps> = ({
   open,
   onClose,
   ticket,
+  mode = 'edit',
+  columnId,
+  onSuccess,
 }) => {
-  const [description, setDescription] = useState("");
+  const isCreateMode = mode === 'create';
+  
+  // Form state
+  const [title, setTitle] = useState(ticket?.name || "");
+  const [description, setDescription] = useState(ticket?.description || "");
+  const [ticketType, setTicketType] = useState(ticket?.type || "task");
+  const [status, setStatus] = useState(ticket?.status || "New");
+  const [priority, setPriority] = useState(ticket?.priorityId || 3);
+  const [customer, setCustomer] = useState(ticket?.customer || "");
+  const [dueDate, setDueDate] = useState<dayjs.Dayjs | null>(
+    ticket?.dueDate ? dayjs(ticket.dueDate) : null
+  );
+  const [startDate, setStartDate] = useState<dayjs.Dayjs | null>(
+    ticket?.startDate ? dayjs(ticket.startDate) : null
+  );
   const [comment, setComment] = useState("");
   const [activeTab, setActiveTab] = useState("comments");
+  const [saving, setSaving] = useState(false);
 
-  if (!ticket) return null;
+  // Reset form when ticket changes
+  useEffect(() => {
+    if (open) {
+      setTitle(ticket?.name || "");
+      setDescription(ticket?.description || "");
+      setTicketType(ticket?.type || "task");
+      setStatus(ticket?.status || "New");
+      setPriority(ticket?.priorityId || 3);
+      setCustomer(ticket?.customer || "");
+      setDueDate(ticket?.dueDate ? dayjs(ticket.dueDate) : null);
+      setStartDate(ticket?.startDate ? dayjs(ticket.startDate) : null);
+    }
+  }, [open, ticket]);
 
-  const typeInfo = getTypeIcon(ticket.type);
+  const handleSave = async () => {
+    if (!title.trim()) {
+      message.error("Please enter a ticket title");
+      return;
+    }
+
+    if (isCreateMode && !columnId) {
+      message.error("Column ID is required for creating tickets");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const ticketData: CreateTicketData = {
+        name: title,
+        description,
+        type: ticketType,
+        status,
+        priority_id: priority,
+        column: columnId || ticket?.column || 1, // Default to column 1 if not provided
+        due_date: dueDate ? dueDate.format('YYYY-MM-DD') : undefined,
+        start_date: startDate ? startDate.format('YYYY-MM-DD') : undefined,
+      };
+
+      let savedTicket: Ticket;
+      if (isCreateMode) {
+        savedTicket = await ticketService.createTicket(ticketData);
+        message.success("Ticket created successfully!");
+      } else if (ticket) {
+        savedTicket = await ticketService.updateTicket(ticket.id, ticketData);
+        message.success("Ticket updated successfully!");
+      } else {
+        throw new Error("No ticket ID for update");
+      }
+
+      onSuccess?.(savedTicket);
+      onClose();
+    } catch (error: any) {
+      console.error('Failed to save ticket:', error);
+      message.error(error.message || 'Failed to save ticket');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!isCreateMode && !ticket) return null;
+
+  const typeInfo = getTypeIcon(ticketType);
 
   return (
     <Modal
@@ -162,37 +244,50 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                 style={{ fontSize: "16px", color: typeInfo.color }}
               />
               <span style={{ color: "#0052cc", fontWeight: 500 }}>
-                {ticket.type?.toUpperCase()}-{ticket.id}
+                {isCreateMode ? "NEW TICKET" : `${ticketType.toUpperCase()}-${ticket?.id}`}
               </span>
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            {!isCreateMode && (
+              <>
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<EyeOutlined />}
+                  style={{ color: "#5e6c84" }}
+                >
+                  1
+                </Button>
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<ShareAltOutlined />}
+                  style={{ color: "#5e6c84" }}
+                />
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<EllipsisOutlined />}
+                  style={{ color: "#5e6c84" }}
+                />
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<FullscreenOutlined />}
+                  style={{ color: "#5e6c84" }}
+                />
+              </>
+            )}
             <Button
-              type="text"
+              type="primary"
               size="small"
-              icon={<EyeOutlined />}
-              style={{ color: "#5e6c84" }}
+              onClick={handleSave}
+              loading={saving}
+              style={{ marginRight: "8px" }}
             >
-              1
+              {isCreateMode ? "Create" : "Save"}
             </Button>
-            <Button
-              type="text"
-              size="small"
-              icon={<ShareAltOutlined />}
-              style={{ color: "#5e6c84" }}
-            />
-            <Button
-              type="text"
-              size="small"
-              icon={<EllipsisOutlined />}
-              style={{ color: "#5e6c84" }}
-            />
-            <Button
-              type="text"
-              size="small"
-              icon={<FullscreenOutlined />}
-              style={{ color: "#5e6c84" }}
-            />
             <Button
               type="text"
               size="small"
@@ -209,7 +304,8 @@ export const TicketModal: React.FC<TicketModalProps> = ({
           <div style={{ flex: 1, padding: "24px", minWidth: 0 }}>
             {/* Title */}
             <Input
-              defaultValue={ticket.name}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
               bordered={false}
               style={{
                 fontSize: "24px",
@@ -438,7 +534,8 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                 Status
               </div>
               <Select
-                defaultValue={ticket.status}
+                value={status}
+                onChange={setStatus}
                 style={{ width: "100%" }}
                 size="small"
               >
@@ -558,7 +655,8 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                 Priority
               </div>
               <Select
-                defaultValue={ticket.priorityId}
+                value={priority}
+                onChange={setPriority}
                 style={{ width: "100%" }}
                 size="small"
               >
@@ -582,6 +680,8 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                 Due date
               </div>
               <DatePicker
+                value={dueDate}
+                onChange={setDueDate}
                 style={{ width: "100%" }}
                 size="small"
                 placeholder="Add due date"
@@ -601,7 +701,8 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                 Customer
               </div>
               <Input
-                defaultValue={ticket.customer}
+                value={customer}
+                onChange={(e) => setCustomer(e.target.value)}
                 size="small"
                 placeholder="Add customer"
               />
@@ -620,6 +721,8 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                 Start date
               </div>
               <DatePicker
+                value={startDate}
+                onChange={setStartDate}
                 style={{ width: "100%" }}
                 size="small"
                 placeholder="Add date"
@@ -679,19 +782,21 @@ export const TicketModal: React.FC<TicketModalProps> = ({
             </div>
 
             {/* Timestamps */}
-            <div
-              style={{
-                marginTop: "24px",
-                fontSize: "11px",
-                color: "#5e6c84",
-                display: "flex",
-                flexDirection: "column",
-                gap: "4px",
-              }}
-            >
-              <div>Created {ticket.createdAt}</div>
-              <div>Updated 2 days ago</div>
-            </div>
+            {!isCreateMode && ticket && (
+              <div
+                style={{
+                  marginTop: "24px",
+                  fontSize: "11px",
+                  color: "#5e6c84",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "4px",
+                }}
+              >
+                <div>Created {ticket.created_at || ticket.createdAt}</div>
+                <div>Updated {ticket.updated_at}</div>
+              </div>
+            )}
 
             {/* Configure Button */}
             <Button

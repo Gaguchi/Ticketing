@@ -1,6 +1,6 @@
-﻿import React, { useState } from "react";
-import { Input, Table, Tag, Badge } from "antd";
-import { SearchOutlined } from "@ant-design/icons";
+﻿import React, { useState, useEffect } from "react";
+import { Input, Table, Tag, Badge, Button, message } from "antd";
+import { SearchOutlined, PlusOutlined, ReloadOutlined } from "@ant-design/icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCheckSquare,
@@ -27,6 +27,7 @@ import { getPriorityIcon } from "../components/PriorityIcons";
 import { TicketModal } from "../components/TicketModal";
 import type { Ticket } from "../types/ticket";
 import type { TableColumnsType } from "antd";
+import { ticketService } from "../services";
 
 interface FilterBox {
   id: string;
@@ -314,6 +315,10 @@ const mockTickets: Ticket[] = [
 const Dashboard: React.FC = () => {
   const [searchText, setSearchText] = useState("");
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [loading, setLoading] = useState(false);
+  
   const [filterBoxes, setFilterBoxes] = useState<FilterBox[]>([
     {
       id: "unassigned",
@@ -347,6 +352,40 @@ const Dashboard: React.FC = () => {
       color: "#e5493a",
     },
   ]);
+
+  // Fetch tickets from API
+  const fetchTickets = async () => {
+    setLoading(true);
+    try {
+      const response = await ticketService.getTickets();
+      setTickets(response.results);
+    } catch (error: any) {
+      console.error('Failed to fetch tickets:', error);
+      message.error(error.message || 'Failed to load tickets');
+      // Fallback to mock data on error
+      setTickets(mockTickets);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load tickets on mount
+  useEffect(() => {
+    fetchTickets();
+  }, []);
+
+  // Handle ticket creation success
+  const handleTicketCreated = (newTicket: Ticket) => {
+    setTickets(prev => [newTicket, ...prev]);
+    setIsCreateModalOpen(false);
+    message.success('Ticket created successfully!');
+  };
+
+  // Handle ticket update success
+  const handleTicketUpdated = (updatedTicket: Ticket) => {
+    setTickets(prev => prev.map(t => t.id === updatedTicket.id ? updatedTicket : t));
+    setSelectedTicket(null);
+  };
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -472,7 +511,7 @@ const Dashboard: React.FC = () => {
     },
   ];
 
-  const filteredTickets = mockTickets.filter((ticket) =>
+  const filteredTickets = tickets.filter((ticket) =>
     ticket.name.toLowerCase().includes(searchText.toLowerCase())
   );
 
@@ -528,7 +567,8 @@ const Dashboard: React.FC = () => {
                 }}
               >
                 {filterBoxes.map((box) => {
-                  const filteredCount = mockTickets.filter(box.filter).length;
+                  const filteredCount = tickets.filter(box.filter).length;
+                  const filteredTickets = tickets.filter(box.filter);
 
                   return (
                     <div
@@ -600,19 +640,37 @@ const Dashboard: React.FC = () => {
             >
               All Tickets
             </h2>
-            <Input
-              placeholder="Search tickets..."
-              prefix={<SearchOutlined style={{ color: "#5e6c84" }} />}
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              style={{
-                width: 240,
-                backgroundColor: "#fff",
-                border: "1px solid #dfe1e6",
-                borderRadius: "3px",
-              }}
-              size="small"
-            />
+            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => setIsCreateModalOpen(true)}
+                size="small"
+              >
+                Create Ticket
+              </Button>
+              <Button
+                icon={<ReloadOutlined />}
+                onClick={fetchTickets}
+                loading={loading}
+                size="small"
+              >
+                Refresh
+              </Button>
+              <Input
+                placeholder="Search tickets..."
+                prefix={<SearchOutlined style={{ color: "#5e6c84" }} />}
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                style={{
+                  width: 240,
+                  backgroundColor: "#fff",
+                  border: "1px solid #dfe1e6",
+                  borderRadius: "3px",
+                }}
+                size="small"
+              />
+            </div>
           </div>
           <div
             style={{
@@ -624,6 +682,7 @@ const Dashboard: React.FC = () => {
             <Table
               columns={columns}
               dataSource={filteredTickets}
+              loading={loading}
               pagination={{
                 pageSize: 10,
                 showSizeChanger: true,
@@ -637,11 +696,22 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Ticket Modal */}
+      {/* Edit Ticket Modal */}
       <TicketModal
         open={!!selectedTicket}
         onClose={() => setSelectedTicket(null)}
         ticket={selectedTicket}
+        mode="edit"
+        onSuccess={handleTicketUpdated}
+      />
+
+      {/* Create Ticket Modal */}
+      <TicketModal
+        open={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        mode="create"
+        columnId={1} // Default to first column (To Do)
+        onSuccess={handleTicketCreated}
       />
     </div>
   );
