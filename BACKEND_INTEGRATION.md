@@ -7,12 +7,14 @@
 Created a modular service architecture for backend communication:
 
 - **`api.service.ts`**: Base API service with error handling
+
   - Generic request wrapper
   - Proper HTTP methods (GET, POST, PUT, PATCH, DELETE)
   - Error handling with custom APIError type
   - Credential management
 
 - **`ticket.service.ts`**: Ticket-specific operations
+
   - `getTickets()`: Fetch all tickets
   - `getTicket(id)`: Fetch single ticket
   - `createTicket(data)`: Create new ticket ✨
@@ -22,6 +24,7 @@ Created a modular service architecture for backend communication:
   - `toggleFollow(id)`: Follow/unfollow
 
 - **`column.service.ts`**: Column operations
+
   - CRUD operations for columns
   - Reorder columns functionality
 
@@ -31,6 +34,7 @@ Created a modular service architecture for backend communication:
 ### 2. Updated Type Definitions (`frontend/src/types/ticket.ts`)
 
 Enhanced `Ticket` interface to match backend schema:
+
 - Added `description`, `due_date`, `start_date`
 - Proper relationship fields (`column`, `customer`, `assignees`)
 - Backward compatibility aliases (e.g., `colId`/`column`)
@@ -41,6 +45,7 @@ Enhanced `Ticket` interface to match backend schema:
 Converted to full-featured form with backend integration:
 
 **Features:**
+
 - **Dual mode**: Create new tickets or edit existing ones
 - **Controlled inputs**: All form fields are state-managed
 - **Form fields**:
@@ -62,6 +67,7 @@ Converted to full-featured form with backend integration:
 Full backend integration for ticket management:
 
 **New Features:**
+
 - ✨ **Create Ticket** button with create modal
 - 🔄 **Refresh** button to reload tickets from API
 - 📊 **Loading states** in table
@@ -69,12 +75,14 @@ Full backend integration for ticket management:
 - **Auto-fetch** tickets on component mount
 
 **State Management:**
+
 - `tickets`: Stores API data
 - `loading`: Loading indicator
 - `isCreateModalOpen`: Controls create modal
 - `selectedTicket`: Currently editing ticket
 
 **Callbacks:**
+
 - `handleTicketCreated()`: Adds new ticket to list
 - `handleTicketUpdated()`: Updates ticket in list
 - `fetchTickets()`: Reloads from API
@@ -120,6 +128,7 @@ POST   /api/tickets/tickets/{id}/toggle_follow/  - Follow/unfollow
 ## Request/Response Examples
 
 ### Create Ticket Request
+
 ```json
 POST /api/tickets/tickets/
 {
@@ -135,6 +144,7 @@ POST /api/tickets/tickets/
 ```
 
 ### Response
+
 ```json
 {
   "id": 15,
@@ -170,12 +180,13 @@ try {
   message.success("Ticket created successfully!");
   onSuccess(ticket);
 } catch (error: any) {
-  console.error('Failed to create ticket:', error);
-  message.error(error.message || 'Failed to create ticket');
+  console.error("Failed to create ticket:", error);
+  message.error(error.message || "Failed to create ticket");
 }
 ```
 
 Error types:
+
 - Network errors (connection failed)
 - HTTP errors (4xx, 5xx responses)
 - Validation errors (missing required fields)
@@ -186,7 +197,7 @@ Error types:
 To complete the backend integration:
 
 1. **Customers**: Create customer selection dropdown
-2. **Assignees**: Add user assignment functionality  
+2. **Assignees**: Add user assignment functionality
 3. **Tags**: Implement tag selection UI
 4. **Comments**: Add comment creation/display
 5. **Attachments**: File upload functionality
@@ -201,12 +212,14 @@ To complete the backend integration:
 To test the implementation:
 
 1. Start backend:
+
    ```bash
    cd backend
    ../.venv/Scripts/python.exe manage.py runserver
    ```
 
 2. Start frontend:
+
    ```bash
    cd frontend
    npm run dev
@@ -227,6 +240,7 @@ VITE_API_BASE_URL=http://localhost:8000
 ```
 
 For Dokploy deployment:
+
 ```env
 VITE_API_BASE_URL=http://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me
 ```

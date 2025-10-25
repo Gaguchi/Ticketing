@@ -1,5 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { Modal, Input, Select, DatePicker, Avatar, Button, Tabs, message } from "antd";
+import {
+  Modal,
+  Input,
+  Select,
+  DatePicker,
+  Avatar,
+  Button,
+  Tabs,
+  message,
+} from "antd";
 import {
   CloseOutlined,
   UserOutlined,
@@ -29,7 +38,7 @@ interface TicketModalProps {
   open: boolean;
   onClose: () => void;
   ticket?: Ticket | null;
-  mode?: 'create' | 'edit';
+  mode?: "create" | "edit";
   columnId?: number;
   onSuccess?: (ticket: Ticket) => void;
 }
@@ -62,19 +71,19 @@ export const TicketModal: React.FC<TicketModalProps> = ({
   open,
   onClose,
   ticket,
-  mode = 'edit',
+  mode = "edit",
   columnId,
   onSuccess,
 }) => {
-  const isCreateMode = mode === 'create';
-  
+  const isCreateMode = mode === "create";
+
   // Form state
   const [title, setTitle] = useState(ticket?.name || "");
   const [description, setDescription] = useState(ticket?.description || "");
   const [ticketType, setTicketType] = useState(ticket?.type || "task");
   const [status, setStatus] = useState(ticket?.status || "New");
   const [priority, setPriority] = useState(ticket?.priorityId || 3);
-  const [customer, setCustomer] = useState(ticket?.customer || "");
+  const [tags, setTags] = useState<number[]>(ticket?.tags || []);
   const [dueDate, setDueDate] = useState<dayjs.Dayjs | null>(
     ticket?.dueDate ? dayjs(ticket.dueDate) : null
   );
@@ -93,7 +102,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
       setTicketType(ticket?.type || "task");
       setStatus(ticket?.status || "New");
       setPriority(ticket?.priorityId || 3);
-      setCustomer(ticket?.customer || "");
+      setTags(ticket?.tags || []);
       setDueDate(ticket?.dueDate ? dayjs(ticket.dueDate) : null);
       setStartDate(ticket?.startDate ? dayjs(ticket.startDate) : null);
     }
@@ -119,8 +128,8 @@ export const TicketModal: React.FC<TicketModalProps> = ({
         status,
         priority_id: priority,
         column: columnId || ticket?.column || 1, // Default to column 1 if not provided
-        due_date: dueDate ? dueDate.format('YYYY-MM-DD') : undefined,
-        start_date: startDate ? startDate.format('YYYY-MM-DD') : undefined,
+        due_date: dueDate ? dueDate.format("YYYY-MM-DD") : undefined,
+        start_date: startDate ? startDate.format("YYYY-MM-DD") : undefined,
       };
 
       let savedTicket: Ticket;
@@ -137,8 +146,8 @@ export const TicketModal: React.FC<TicketModalProps> = ({
       onSuccess?.(savedTicket);
       onClose();
     } catch (error: any) {
-      console.error('Failed to save ticket:', error);
-      message.error(error.message || 'Failed to save ticket');
+      console.error("Failed to save ticket:", error);
+      message.error(error.message || "Failed to save ticket");
     } finally {
       setSaving(false);
     }
@@ -244,7 +253,9 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                 style={{ fontSize: "16px", color: typeInfo.color }}
               />
               <span style={{ color: "#0052cc", fontWeight: 500 }}>
-                {isCreateMode ? "NEW TICKET" : `${ticketType.toUpperCase()}-${ticket?.id}`}
+                {isCreateMode
+                  ? "NEW TICKET"
+                  : `${ticketType.toUpperCase()}-${ticket?.id}`}
               </span>
             </div>
           </div>
@@ -688,7 +699,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
               />
             </div>
 
-            {/* Customer */}
+            {/* Tags */}
             <div style={{ marginBottom: "16px" }}>
               <div
                 style={{
@@ -698,13 +709,26 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                   marginBottom: "4px",
                 }}
               >
-                Customer
+                Tags
               </div>
-              <Input
-                value={customer}
-                onChange={(e) => setCustomer(e.target.value)}
+              <Select
+                mode="multiple"
+                value={tags}
+                onChange={(value) => setTags(value)}
                 size="small"
-                placeholder="Add customer"
+                placeholder="Add tags"
+                style={{ width: "100%" }}
+                options={[
+                  { value: 1, label: "TechCorp Solutions" },
+                  { value: 2, label: "RetailMax Inc" },
+                  { value: 3, label: "High Priority" },
+                  { value: 4, label: "StartupHub" },
+                  { value: 5, label: "DataFlow Systems" },
+                  { value: 6, label: "EduTech Platform" },
+                  { value: 7, label: "Enterprise Global" },
+                  { value: 8, label: "FinanceFlow" },
+                  { value: 9, label: "CloudServe Inc" },
+                ]}
               />
             </div>
 

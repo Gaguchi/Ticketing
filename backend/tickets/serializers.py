@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import (
-    Ticket, Column, Customer, Comment, Attachment,
+    Ticket, Project, Column, Comment, Attachment,
     Tag, Contact, TagContact, UserTag, TicketTag
 )
 
@@ -12,18 +12,31 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ['id', 'username', 'email', 'first_name', 'last_name']
 
 
-class CustomerSerializer(serializers.ModelSerializer):
+class ProjectSerializer(serializers.ModelSerializer):
+    """Serializer for Project model"""
+    tickets_count = serializers.SerializerMethodField()
+    columns_count = serializers.SerializerMethodField()
+    
     class Meta:
-        model = Customer
-        fields = '__all__'
+        model = Project
+        fields = ['id', 'key', 'name', 'description', 'lead_username', 
+                  'tickets_count', 'columns_count', 'created_at', 'updated_at']
+    
+    def get_tickets_count(self, obj):
+        return obj.tickets.count()
+    
+    def get_columns_count(self, obj):
+        return obj.columns.count()
 
 
 class ColumnSerializer(serializers.ModelSerializer):
     tickets_count = serializers.SerializerMethodField()
+    project_key = serializers.CharField(source='project.key', read_only=True)
     
     class Meta:
         model = Column
-        fields = ['id', 'name', 'order', 'color', 'tickets_count', 'created_at', 'updated_at']
+        fields = ['id', 'name', 'project', 'project_key', 'order', 'color', 
+                  'tickets_count', 'created_at', 'updated_at']
     
     def get_tickets_count(self, obj):
         return obj.tickets.count()
@@ -57,7 +70,7 @@ class TicketSerializer(serializers.ModelSerializer):
         required=False
     )
     reporter = UserSerializer(read_only=True)
-    customer_name = serializers.CharField(source='customer.name', read_only=True)
+    project_key = serializers.CharField(source='project.key', read_only=True)
     column_name = serializers.CharField(source='column.name', read_only=True)
     comments_count = serializers.IntegerField(read_only=True)
     subtasks = serializers.SerializerMethodField()
@@ -68,7 +81,7 @@ class TicketSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'name', 'description', 'type', 'status',
             'priority_id', 'urgency', 'importance',
-            'column', 'column_name', 'customer', 'customer_name',
+            'project', 'project_key', 'column', 'column_name',
             'assignees', 'assignee_ids', 'reporter',
             'parent', 'subtasks', 'following', 'tags', 'tags_detail',
             'due_date', 'start_date', 'comments_count',
@@ -89,20 +102,25 @@ class TicketSerializer(serializers.ModelSerializer):
 class TicketListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for list views"""
     assignee_ids = serializers.SerializerMethodField()
-    customer_name = serializers.CharField(source='customer.name', read_only=True)
+    project_key = serializers.CharField(source='project.key', read_only=True)
     comments_count = serializers.IntegerField(read_only=True)
+    tag_names = serializers.SerializerMethodField()
     
     class Meta:
         model = Ticket
         fields = [
             'id', 'name', 'type', 'status', 'priority_id',
-            'urgency', 'importance', 'column', 'customer_name',
-            'assignee_ids', 'following', 'comments_count',
+            'urgency', 'importance', 'project', 'project_key', 'column',
+            'assignee_ids', 'following', 'comments_count', 'tag_names',
             'created_at', 'updated_at'
         ]
     
     def get_assignee_ids(self, obj):
         return list(obj.assignees.values_list('id', flat=True))
+    
+    def get_tag_names(self, obj):
+        """Get list of tag names for quick display"""
+        return list(obj.tags.values_list('name', flat=True))
 
 
 class ContactSerializer(serializers.ModelSerializer):

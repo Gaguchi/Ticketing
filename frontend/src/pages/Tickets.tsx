@@ -48,6 +48,8 @@ const formatTicketId = (type?: string, id?: number) => {
 const mockTickets: Ticket[] = [
   {
     id: 1,
+    project: 1,
+    project_key: "PROJ",
     column: 1,
     colId: 1,
     name: "Website homepage not loading for mobile users",
@@ -56,7 +58,8 @@ const mockTickets: Ticket[] = [
     following: true,
     assignee_ids: [1, 2],
     assigneeIds: [1, 2],
-    customer_name: "TechCorp Solutions",
+    tags: [1, 3],
+    tag_names: ["TechCorp Solutions", "High Priority"],
     status: "New",
     created_at: "2025-10-15",
     createdAt: "2025-10-15",
@@ -67,6 +70,8 @@ const mockTickets: Ticket[] = [
   },
   {
     id: 2,
+    project: 1,
+    project_key: "PROJ",
     column: 2,
     colId: 2,
     name: "Integrate payment gateway with new API",
@@ -74,7 +79,8 @@ const mockTickets: Ticket[] = [
     priorityId: 2,
     assignee_ids: [1],
     assigneeIds: [1],
-    customer_name: "RetailMax Inc",
+    tags: [2],
+    tag_names: ["RetailMax Inc"],
     status: "In Progress",
     created_at: "2025-10-14",
     createdAt: "2025-10-14",
@@ -85,6 +91,8 @@ const mockTickets: Ticket[] = [
   },
   {
     id: 3,
+    project: 1,
+    project_key: "PROJ",
     column: 2,
     colId: 2,
     name: "Fix typo in user registration email",
@@ -92,7 +100,8 @@ const mockTickets: Ticket[] = [
     priorityId: 3,
     assignee_ids: [2],
     assigneeIds: [2],
-    customer_name: "StartupHub",
+    tags: [4],
+    tag_names: ["StartupHub"],
     status: "In Progress",
     created_at: "2025-10-13",
     createdAt: "2025-10-13",
@@ -103,6 +112,8 @@ const mockTickets: Ticket[] = [
   },
   {
     id: 4,
+    project: 1,
+    project_key: "PROJ",
     column: 2,
     colId: 2,
     name: "Improve database query performance",
@@ -112,7 +123,8 @@ const mockTickets: Ticket[] = [
     commentsCount: 3,
     assignee_ids: [1, 2, 3],
     assigneeIds: [1, 2, 3],
-    customer_name: "DataFlow Systems",
+    tags: [5],
+    tag_names: ["DataFlow Systems"],
     status: "In Progress",
     created_at: "2025-10-12",
     createdAt: "2025-10-12",
@@ -123,6 +135,8 @@ const mockTickets: Ticket[] = [
   },
   {
     id: 5,
+    project: 1,
+    project_key: "PROJ",
     column: 3,
     colId: 3,
     name: "Update user documentation",
@@ -130,7 +144,8 @@ const mockTickets: Ticket[] = [
     priorityId: 1,
     assignee_ids: [2],
     assigneeIds: [2],
-    customer_name: "EduTech Platform",
+    tags: [6],
+    tag_names: ["EduTech Platform"],
     status: "Review",
     created_at: "2025-10-11",
     createdAt: "2025-10-11",
@@ -141,6 +156,8 @@ const mockTickets: Ticket[] = [
   },
   {
     id: 6,
+    project: 1,
+    project_key: "PROJ",
     column: 1,
     colId: 1,
     name: "Cannot login with SSO credentials",
@@ -149,7 +166,8 @@ const mockTickets: Ticket[] = [
     commentsCount: 11,
     assignee_ids: [1, 3],
     assigneeIds: [1, 3],
-    customer_name: "Enterprise Global",
+    tags: [7],
+    tag_names: ["Enterprise Global"],
     status: "New",
     created_at: "2025-10-10",
     createdAt: "2025-10-10",
@@ -160,6 +178,8 @@ const mockTickets: Ticket[] = [
   },
   {
     id: 7,
+    project: 1,
+    project_key: "PROJ",
     column: 4,
     colId: 4,
     name: "Migrate legacy authentication system",
@@ -167,7 +187,8 @@ const mockTickets: Ticket[] = [
     priorityId: 3,
     assignee_ids: [3],
     assigneeIds: [3],
-    customer_name: "FinanceFlow",
+    tags: [8],
+    tag_names: ["FinanceFlow"],
     status: "Done",
     created_at: "2025-10-09",
     createdAt: "2025-10-09",
@@ -178,6 +199,8 @@ const mockTickets: Ticket[] = [
   },
   {
     id: 8,
+    project: 1,
+    project_key: "PROJ",
     column: 1,
     colId: 1,
     name: "Server returning 500 errors intermittently",
@@ -186,7 +209,8 @@ const mockTickets: Ticket[] = [
     commentsCount: 8,
     assignee_ids: [1, 2, 3],
     assigneeIds: [1, 2, 3],
-    customer_name: "CloudServe Inc",
+    tags: [9],
+    tag_names: ["CloudServe Inc"],
     status: "New",
     created_at: "2025-10-08",
     createdAt: "2025-10-08",
@@ -198,10 +222,10 @@ const mockTickets: Ticket[] = [
 ];
 
 const mockColumns: TicketColumn[] = [
-  { id: 1, name: "New", order: 1 },
-  { id: 2, name: "In Progress", order: 2 },
-  { id: 3, name: "Review", order: 3 },
-  { id: 4, name: "Done", order: 4 },
+  { id: 1, name: "New", project: 1, order: 1 },
+  { id: 2, name: "In Progress", project: 1, order: 2 },
+  { id: 3, name: "Review", project: 1, order: 3 },
+  { id: 4, name: "Done", project: 1, order: 4 },
 ];
 
 const Tickets: React.FC = () => {
@@ -319,7 +343,7 @@ const Tickets: React.FC = () => {
   const filteredTickets = mockTickets.filter((ticket) => {
     const matchesSearch =
       ticket.name.toLowerCase().includes(searchText.toLowerCase()) ||
-      ticket.customer_name?.toLowerCase().includes(searchText.toLowerCase());
+      ticket.tag_names?.some(tag => tag.toLowerCase().includes(searchText.toLowerCase()));
     const matchesStatus = !filterStatus || ticket.status === filterStatus;
     return matchesSearch && matchesStatus;
   });

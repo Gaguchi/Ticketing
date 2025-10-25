@@ -1,35 +1,44 @@
 from django.db import models
 from django.contrib.auth.models import User
 
-class Customer(models.Model):
-    """Customer/Client model"""
+
+class Project(models.Model):
+    """
+    Project model following Jira's pattern.
+    Each project has a unique key (e.g., 'BUG', 'PROJ') used for issue keys.
+    """
+    key = models.CharField(max_length=10, unique=True)  # e.g., "PROJ", "BUG"
     name = models.CharField(max_length=255)
-    email = models.EmailField(unique=True, null=True, blank=True)
-    phone = models.CharField(max_length=50, null=True, blank=True)
-    company = models.CharField(max_length=255, null=True, blank=True)
+    description = models.TextField(blank=True, null=True)
+    lead_username = models.CharField(max_length=150, blank=True, null=True)  # Project lead
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['-created_at']
+        ordering = ['name']
 
     def __str__(self):
-        return self.name
+        return f"{self.key}: {self.name}"
 
 
 class Column(models.Model):
-    """Kanban column model"""
+    """
+    Kanban column model for organizing tickets within a project.
+    Represents workflow states (e.g., To Do, In Progress, Done).
+    """
     name = models.CharField(max_length=100)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='columns')
     order = models.IntegerField(default=0)
     color = models.CharField(max_length=7, default='#0052cc')  # Hex color
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['order']
+        ordering = ['project', 'order']
+        unique_together = [['name', 'project']]  # Column names unique per project
 
     def __str__(self):
-        return self.name
+        return f"{self.project.key}: {self.name}"
 
 
 class Ticket(models.Model):
@@ -81,8 +90,8 @@ class Ticket(models.Model):
     importance = models.CharField(max_length=10, choices=IMPORTANCE_CHOICES, default='normal')
     
     # Relationships
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='tickets')
     column = models.ForeignKey(Column, on_delete=models.CASCADE, related_name='tickets')
-    customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, blank=True, related_name='tickets')
     assignees = models.ManyToManyField(User, related_name='assigned_tickets', blank=True)
     reporter = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='reported_tickets')
     parent = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='subtasks')
@@ -162,7 +171,7 @@ class Tag(models.Model):
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True, null=True)
     color = models.CharField(max_length=7, default='#0052cc')  # Hex color (all tags use same color)
-    project = models.ForeignKey(Column, on_delete=models.CASCADE, related_name='tags')  # Using Column as Project for now
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='tags')
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_tags')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -172,7 +181,7 @@ class Tag(models.Model):
         unique_together = [['name', 'project']]  # Tag names must be unique within a project
 
     def __str__(self):
-        return f"{self.project.name}: {self.name}"
+        return f"{self.project.key}: {self.name}"
 
 
 class Contact(models.Model):
