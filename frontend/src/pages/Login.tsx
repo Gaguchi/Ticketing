@@ -37,8 +37,21 @@ const Login: React.FC = () => {
         localStorage.setItem("remember", "true");
       }
 
-      // Navigate to project setup or dashboard
-      navigate("/setup");
+      // Check if user has existing projects
+      try {
+        const { projectService } = await import("../services/project.service");
+        const projects = await projectService.getProjects();
+
+        // If user has projects, go to dashboard, otherwise go to setup
+        if (projects && projects.length > 0) {
+          navigate("/");
+        } else {
+          navigate("/setup");
+        }
+      } catch (projectError) {
+        // If there's an error checking projects, default to setup
+        navigate("/setup");
+      }
     } catch (err: any) {
       setError(err?.message || "Invalid username or password");
     } finally {

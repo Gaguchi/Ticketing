@@ -41,6 +41,19 @@ class APIService {
       const response = await fetch(url, config);
 
       if (!response.ok) {
+        // Handle 401 Unauthorized - logout and redirect to login
+        if (response.status === 401) {
+          // Import dynamically to avoid circular dependencies
+          const { default: authService } = await import('./auth.service');
+          authService.logout();
+          window.location.href = '/login';
+          throw {
+            message: 'Session expired. Please login again.',
+            status: 401,
+            details: {}
+          } as APIError;
+        }
+
         const errorData = await response.json().catch(() => ({}));
         throw {
           message: errorData.detail || errorData.message || `HTTP Error: ${response.status}`,

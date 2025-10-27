@@ -40,8 +40,21 @@ const Register: React.FC = () => {
       // Update auth context
       login(response.access, response.user);
 
-      // Navigate to project setup
-      navigate("/setup");
+      // Check if user has existing projects
+      try {
+        const { projectService } = await import("../services/project.service");
+        const projects = await projectService.getProjects();
+
+        // If user has projects, go to dashboard, otherwise go to setup
+        if (projects && projects.length > 0) {
+          navigate("/");
+        } else {
+          navigate("/setup");
+        }
+      } catch (projectError) {
+        // If there's an error checking projects, default to setup
+        navigate("/setup");
+      }
     } catch (err: any) {
       setError(err?.message || "An error occurred during registration");
     } finally {
