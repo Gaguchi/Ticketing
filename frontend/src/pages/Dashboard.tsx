@@ -402,16 +402,15 @@ const Dashboard: React.FC = () => {
           review: "Review",
           done: "Done",
         };
-        const displayStatus = statusMap[status] || status.charAt(0).toUpperCase() + status.slice(1);
+        const displayStatus =
+          statusMap[status] || status.charAt(0).toUpperCase() + status.slice(1);
         const colorMap: Record<string, string> = {
           New: "blue",
           "In Progress": "orange",
           Review: "purple",
           Done: "green",
         };
-        return (
-          <Tag color={colorMap[displayStatus]}>{displayStatus}</Tag>
-        );
+        return <Tag color={colorMap[displayStatus]}>{displayStatus}</Tag>;
       },
     },
     {
