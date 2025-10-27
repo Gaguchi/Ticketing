@@ -136,6 +136,7 @@ class TicketListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for list views"""
     assignee_ids = serializers.SerializerMethodField()
     project_key = serializers.CharField(source='project.key', read_only=True)
+    column_name = serializers.CharField(source='column.name', read_only=True)
     comments_count = serializers.IntegerField(read_only=True)
     tag_names = serializers.SerializerMethodField()
     
@@ -143,7 +144,7 @@ class TicketListSerializer(serializers.ModelSerializer):
         model = Ticket
         fields = [
             'id', 'name', 'type', 'status', 'priority_id',
-            'urgency', 'importance', 'project', 'project_key', 'column',
+            'urgency', 'importance', 'project', 'project_key', 'column', 'column_name',
             'assignee_ids', 'following', 'comments_count', 'tag_names',
             'created_at', 'updated_at'
         ]
