@@ -179,19 +179,38 @@ const Tickets: React.FC = () => {
 
   // Handle ticket move between columns in Kanban
   const handleTicketMove = async (ticketId: number, newColumnId: number) => {
+    console.log("🎯 handleTicketMove called:", { ticketId, newColumnId });
+
     try {
       const ticket = tickets.find((t) => t.id === ticketId);
       const column = kanbanColumns.find((c) => c.id === newColumnId);
 
+      console.log("📋 Ticket info:", {
+        ticket: ticket
+          ? { id: ticket.id, name: ticket.name, currentColumn: ticket.colId }
+          : "NOT FOUND",
+        targetColumn: column
+          ? { id: column.id, name: column.name }
+          : "NOT FOUND",
+      });
+
       if (!ticket || !column) {
+        console.error("❌ Ticket or column not found");
         message.error("Failed to update ticket");
         return;
       }
 
       // Send PATCH request to update ticket column
-      await ticketService.updateTicket(ticketId, {
+      console.log("🚀 Sending PATCH request:", {
+        url: `/api/tickets/tickets/${ticketId}/`,
+        payload: { column: newColumnId },
+      });
+
+      const response = await ticketService.updateTicket(ticketId, {
         column: newColumnId,
       });
+
+      console.log("✅ PATCH response received:", response);
 
       // Update local state
       setTickets((prevTickets) =>
@@ -207,9 +226,10 @@ const Tickets: React.FC = () => {
         )
       );
 
+      console.log("✅ Local state updated");
       message.success(`Moved to ${column.name}`);
     } catch (error: any) {
-      console.error("Failed to update ticket:", error);
+      console.error("❌ Failed to update ticket:", error);
       message.error("Failed to update ticket");
     }
   };
