@@ -17,6 +17,7 @@ import {
 import { KanbanBoard } from "../components/KanbanBoard";
 import { getPriorityIcon } from "../components/PriorityIcons";
 import { TicketModal } from "../components/TicketModal";
+import { CreateTicketModal } from "../components/CreateTicketModal";
 import type { Ticket, TicketColumn } from "../types/ticket";
 import "./Tickets.css";
 
@@ -235,6 +236,7 @@ const Tickets: React.FC = () => {
     undefined
   );
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const columns: TableColumnsType<Ticket> = [
     {
@@ -410,7 +412,12 @@ const Tickets: React.FC = () => {
               onClick={() => setViewMode("kanban")}
             />
           </Space.Compact>
-          <Button type="primary" icon={<PlusOutlined />} size="small">
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            size="small"
+            onClick={() => setIsCreateModalOpen(true)}
+          >
             Create
           </Button>
         </div>
@@ -445,6 +452,16 @@ const Tickets: React.FC = () => {
         open={!!selectedTicket}
         onClose={() => setSelectedTicket(null)}
         ticket={selectedTicket}
+      />
+
+      {/* Create Ticket Modal */}
+      <CreateTicketModal
+        open={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={(_newTicket) => {
+          setIsCreateModalOpen(false);
+          // Optionally refresh the ticket list here
+        }}
       />
     </div>
   );

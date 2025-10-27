@@ -10,12 +10,7 @@ import {
   Space,
   Checkbox,
 } from "antd";
-import {
-  CloseOutlined,
-  MinusOutlined,
-  FullscreenExitOutlined,
-  EllipsisOutlined,
-} from "@ant-design/icons";
+import { CloseOutlined } from "@ant-design/icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCheckSquare,
@@ -112,21 +107,21 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
     <Modal
       open={open}
       onCancel={handleClose}
-      width={800}
+      width={680}
       footer={null}
       closeIcon={null}
-      style={{ top: 40 }}
+      style={{ top: 20 }}
       styles={{
         body: {
           padding: 0,
-          maxHeight: "calc(100vh - 120px)",
+          maxHeight: "calc(100vh - 80px)",
           overflow: "hidden",
         },
       }}
     >
       <div
         style={{
-          maxHeight: "calc(100vh - 120px)",
+          maxHeight: "calc(100vh - 80px)",
           overflow: "auto",
           display: "flex",
           flexDirection: "column",
@@ -135,7 +130,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
         {/* Header */}
         <div
           style={{
-            padding: "16px 24px",
+            padding: "12px 20px",
             borderBottom: "1px solid #dfe1e6",
             display: "flex",
             alignItems: "center",
@@ -149,7 +144,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
           <h1
             style={{
               margin: 0,
-              fontSize: "20px",
+              fontSize: "16px",
               fontWeight: 500,
               color: "#172b4d",
               display: "flex",
@@ -159,25 +154,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
           >
             Create {ticketType.charAt(0).toUpperCase() + ticketType.slice(1)}
           </h1>
-          <div style={{ display: "flex", gap: "8px" }}>
-            <Button
-              type="text"
-              size="small"
-              icon={<MinusOutlined />}
-              style={{ color: "#5e6c84" }}
-            />
-            <Button
-              type="text"
-              size="small"
-              icon={<FullscreenExitOutlined />}
-              style={{ color: "#5e6c84" }}
-            />
-            <Button
-              type="text"
-              size="small"
-              icon={<EllipsisOutlined />}
-              style={{ color: "#5e6c84" }}
-            />
+          <div style={{ display: "flex", gap: "4px" }}>
             <Button
               type="text"
               size="small"
@@ -189,7 +166,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
         </div>
 
         {/* Form Content */}
-        <div style={{ padding: "24px", flex: 1 }}>
+        <div style={{ padding: "16px 20px", flex: 1 }}>
           <Form
             form={form}
             layout="vertical"
@@ -199,27 +176,17 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               status: "New",
               priority: 3,
             }}
+            size="middle"
           >
-            <div style={{ marginBottom: "16px" }}>
-              <div style={{ color: "#5e6c84", fontSize: "12px" }}>
-                Required fields are marked with an asterisk{" "}
-                <span style={{ color: "#e5493a" }}>*</span>
-              </div>
-            </div>
-
             {/* Project */}
             <Form.Item
               label="Space"
               name="project"
               required
               rules={[{ required: true, message: "Project is required" }]}
+              style={{ marginBottom: "12px" }}
             >
-              <Select
-                placeholder="Select project"
-                size="large"
-                disabled
-                value={1}
-              >
+              <Select placeholder="Select project" disabled value={1}>
                 <Option value={1}>
                   <div
                     style={{
@@ -256,10 +223,10 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               name="type"
               required
               rules={[{ required: true, message: "Work type is required" }]}
+              style={{ marginBottom: "12px" }}
             >
               <Select
                 placeholder="Select type"
-                size="large"
                 onChange={(value) => setTicketType(value)}
               >
                 <Option value="task">
@@ -338,19 +305,14 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
             </Form.Item>
 
             {/* Status */}
-            <Form.Item label="Status" name="status">
-              <Select placeholder="Select status" size="large" disabled>
+            <Form.Item
+              label="Status"
+              name="status"
+              style={{ marginBottom: "12px" }}
+            >
+              <Select placeholder="Select status" disabled>
                 <Option value="New">To Do</Option>
               </Select>
-              <div
-                style={{
-                  fontSize: "12px",
-                  color: "#5e6c84",
-                  marginTop: "4px",
-                }}
-              >
-                This is the initial status upon creation
-              </div>
             </Form.Item>
 
             {/* Summary */}
@@ -359,20 +321,20 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               name="summary"
               required
               rules={[{ required: true, message: "Summary is required" }]}
+              style={{ marginBottom: "12px" }}
             >
-              <Input
-                placeholder="Enter a summary"
-                size="large"
-                style={{ fontSize: "14px" }}
-              />
+              <Input placeholder="Enter a summary" />
             </Form.Item>
 
             {/* Description */}
-            <Form.Item label="Description" name="description">
+            <Form.Item
+              label="Description"
+              name="description"
+              style={{ marginBottom: "12px" }}
+            >
               <TextArea
                 placeholder="Add description..."
-                autoSize={{ minRows: 4, maxRows: 10 }}
-                style={{ fontSize: "14px" }}
+                autoSize={{ minRows: 3, maxRows: 8 }}
               />
             </Form.Item>
 
@@ -380,17 +342,16 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               style={{
                 display: "grid",
                 gridTemplateColumns: "1fr 1fr",
-                gap: "16px",
+                gap: "12px",
               }}
             >
               {/* Assignee */}
-              <Form.Item label="Assignee" name="assignee">
-                <Select
-                  placeholder="Automatic"
-                  size="large"
-                  allowClear
-                  showSearch
-                >
+              <Form.Item
+                label="Assignee"
+                name="assignee"
+                style={{ marginBottom: "12px" }}
+              >
+                <Select placeholder="Automatic" allowClear showSearch>
                   <Option value={1}>
                     <div
                       style={{
@@ -421,29 +382,22 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                 </Select>
               </Form.Item>
 
-              {/* Labels */}
-              <Form.Item label="Labels" name="labels">
-                <Select
-                  mode="multiple"
-                  placeholder="Select label"
-                  size="large"
-                  allowClear
-                />
-              </Form.Item>
-
               {/* Parent */}
-              <Form.Item label="Parent" name="parent">
-                <Select
-                  placeholder="Select parent"
-                  size="large"
-                  allowClear
-                  showSearch
-                />
+              <Form.Item
+                label="Parent"
+                name="parent"
+                style={{ marginBottom: "12px" }}
+              >
+                <Select placeholder="Select parent" allowClear showSearch />
               </Form.Item>
 
               {/* Priority */}
-              <Form.Item label="Priority" name="priority">
-                <Select placeholder="Select priority" size="large">
+              <Form.Item
+                label="Priority"
+                name="priority"
+                style={{ marginBottom: "12px" }}
+              >
+                <Select placeholder="Select priority">
                   <Option value={1}>{getPriorityIcon(1)}</Option>
                   <Option value={2}>{getPriorityIcon(2)}</Option>
                   <Option value={3}>{getPriorityIcon(3)}</Option>
@@ -452,21 +406,27 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               </Form.Item>
 
               {/* Due date */}
-              <Form.Item label="Due date" name="dueDate">
+              <Form.Item
+                label="Due date"
+                name="dueDate"
+                style={{ marginBottom: "12px" }}
+              >
                 <DatePicker
                   style={{ width: "100%" }}
-                  size="large"
                   placeholder="Add due date"
                   format="YYYY-MM-DD"
                 />
               </Form.Item>
 
               {/* Tags */}
-              <Form.Item label="Tags" name="tags">
+              <Form.Item
+                label="Tags"
+                name="tags"
+                style={{ marginBottom: "12px" }}
+              >
                 <Select
                   mode="multiple"
                   placeholder="Add tags"
-                  size="large"
                   allowClear
                   options={[
                     { value: 1, label: "TechCorp Solutions" },
@@ -479,23 +439,25 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               </Form.Item>
 
               {/* Start date */}
-              <Form.Item label="Start date" name="startDate">
+              <Form.Item
+                label="Start date"
+                name="startDate"
+                style={{ marginBottom: "12px" }}
+              >
                 <DatePicker
                   style={{ width: "100%" }}
-                  size="large"
                   placeholder="Add date"
                   format="YYYY-MM-DD"
                 />
               </Form.Item>
 
               {/* Reporter */}
-              <Form.Item label="Reporter" name="reporter">
-                <Select
-                  placeholder="Select reporter"
-                  size="large"
-                  defaultValue={1}
-                  disabled
-                >
+              <Form.Item
+                label="Reporter"
+                name="reporter"
+                style={{ marginBottom: "12px" }}
+              >
+                <Select placeholder="Select reporter" defaultValue={1} disabled>
                   <Option value={1}>
                     <div
                       style={{
@@ -528,16 +490,21 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
             </div>
 
             {/* Attachment */}
-            <Form.Item label="Attachment" name="attachment">
+            <Form.Item
+              label="Attachment"
+              name="attachment"
+              style={{ marginBottom: "12px" }}
+            >
               <div
                 style={{
                   border: "2px dashed #dfe1e6",
                   borderRadius: "3px",
-                  padding: "16px",
+                  padding: "12px",
                   textAlign: "center",
                   color: "#5e6c84",
                   cursor: "pointer",
                   backgroundColor: "#fafbfc",
+                  fontSize: "13px",
                 }}
               >
                 Drop files to attach or{" "}
@@ -548,12 +515,15 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
             </Form.Item>
 
             {/* Linked Work items */}
-            <Form.Item label="Linked Work items" name="linkedItems">
+            <Form.Item
+              label="Linked Work items"
+              name="linkedItems"
+              style={{ marginBottom: "12px" }}
+            >
               <Space.Compact style={{ width: "100%" }}>
                 <Select
                   placeholder="blocks"
                   defaultValue="blocks"
-                  size="large"
                   style={{ width: "30%" }}
                 >
                   <Option value="blocks">blocks</Option>
@@ -564,7 +534,6 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                 <Select
                   mode="multiple"
                   placeholder="Type, search or paste URL"
-                  size="large"
                   style={{ width: "70%" }}
                   allowClear
                   showSearch
@@ -573,20 +542,16 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
             </Form.Item>
 
             {/* Flagged */}
-            <Form.Item name="flagged" valuePropName="checked">
+            <Form.Item
+              name="flagged"
+              valuePropName="checked"
+              style={{ marginBottom: 0 }}
+            >
               <Checkbox>
-                <span style={{ color: "#172b4d" }}>Impediment</span>
+                <span style={{ color: "#172b4d", fontSize: "13px" }}>
+                  Impediment
+                </span>
               </Checkbox>
-              <div
-                style={{
-                  fontSize: "12px",
-                  color: "#5e6c84",
-                  marginTop: "4px",
-                  marginLeft: "24px",
-                }}
-              >
-                Allows to flag issues with impediments.
-              </div>
             </Form.Item>
           </Form>
         </div>
@@ -594,7 +559,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
         {/* Footer */}
         <div
           style={{
-            padding: "16px 24px",
+            padding: "12px 20px",
             borderTop: "1px solid #dfe1e6",
             display: "flex",
             alignItems: "center",
@@ -608,15 +573,19 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
           <Checkbox
             checked={createAnother}
             onChange={(e) => setCreateAnother(e.target.checked)}
+            style={{ fontSize: "13px" }}
           >
             Create another
           </Checkbox>
-          <Space>
-            <Button onClick={handleClose}>Cancel</Button>
+          <Space size="small">
+            <Button onClick={handleClose} size="middle">
+              Cancel
+            </Button>
             <Button
               type="primary"
               onClick={() => form.submit()}
               loading={saving}
+              size="middle"
             >
               Create
             </Button>

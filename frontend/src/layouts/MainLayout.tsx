@@ -13,6 +13,7 @@ import {
   PlusOutlined,
 } from "@ant-design/icons";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 import type { MenuProps } from "antd";
 import "./MainLayout.css";
 
@@ -30,6 +31,18 @@ const MainLayout: React.FC = () => {
   const [collapsed, setCollapsed] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
+  const { logout, user } = useAuth();
+
+  const handleMenuClick: MenuProps["onClick"] = ({ key }) => {
+    if (key === "logout") {
+      logout();
+      navigate("/login");
+    } else if (key === "profile") {
+      navigate("/profile");
+    } else if (key === "settings") {
+      navigate("/settings");
+    }
+  };
 
   const navItems: NavItem[] = [
     {
@@ -324,7 +337,10 @@ const MainLayout: React.FC = () => {
                 />
               </div>
             </Tooltip>
-            <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
+            <Dropdown
+              menu={{ items: userMenuItems, onClick: handleMenuClick }}
+              placement="bottomRight"
+            >
               <Space size="small" style={{ cursor: "pointer" }}>
                 <Avatar
                   size="small"
@@ -334,7 +350,7 @@ const MainLayout: React.FC = () => {
                   icon={<UserOutlined />}
                 />
                 <Text strong style={{ fontSize: 13 }}>
-                  Admin
+                  {user?.username || "Admin"}
                 </Text>
               </Space>
             </Dropdown>

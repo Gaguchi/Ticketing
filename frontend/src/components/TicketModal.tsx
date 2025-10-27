@@ -599,33 +599,6 @@ export const TicketModal: React.FC<TicketModalProps> = ({
               </Button>
             </div>
 
-            {/* Labels */}
-            <div style={{ marginBottom: "16px" }}>
-              <div
-                style={{
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  color: "#5e6c84",
-                  marginBottom: "4px",
-                }}
-              >
-                Labels
-              </div>
-              <Button
-                type="text"
-                size="small"
-                style={{
-                  width: "100%",
-                  textAlign: "left",
-                  padding: "4px 8px",
-                  height: "auto",
-                  color: "#5e6c84",
-                }}
-              >
-                Add labels
-              </Button>
-            </div>
-
             {/* Parent */}
             <div style={{ marginBottom: "16px" }}>
               <div
