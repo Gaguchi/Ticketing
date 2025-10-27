@@ -134,6 +134,76 @@ const Tickets: React.FC = () => {
     }
   };
 
+  // Handle ticket move between columns in Kanban
+  const handleTicketMove = async (ticketId: number, newColumnId: number) => {
+    console.log("📋 Tickets.tsx: handleTicketMove called", {
+      ticketId,
+      newColumnId,
+    });
+
+    try {
+      // Find the ticket to get its current state
+      const ticket = tickets.find((t) => t.id === ticketId);
+      const column = kanbanColumns.find((c) => c.id === newColumnId);
+
+      console.log("📋 Tickets.tsx: Ticket and column info", {
+        ticket: ticket
+          ? {
+              id: ticket.id,
+              name: ticket.name,
+              currentColumn: ticket.colId,
+              currentColumnName: ticket.columnName,
+            }
+          : "not found",
+        newColumn: column ? { id: column.id, name: column.name } : "not found",
+      });
+
+      if (!ticket || !column) {
+        console.error("❌ Ticket or column not found");
+        message.error("Failed to update ticket");
+        return;
+      }
+
+      // Update the ticket's column via API
+      console.log("🚀 Tickets.tsx: Calling API to update ticket", {
+        ticketId,
+        payload: { column: newColumnId },
+      });
+
+      const updatedTicket = await ticketService.updateTicket(ticketId, {
+        column: newColumnId,
+      });
+
+      console.log("✅ Tickets.tsx: API response received", {
+        updatedTicket,
+        newColumn: updatedTicket.column,
+        newColumnName: updatedTicket.column_name,
+      });
+
+      // Update the local state to reflect the change
+      setTickets((prevTickets) =>
+        prevTickets.map((t) =>
+          t.id === ticketId
+            ? {
+                ...t,
+                column: newColumnId,
+                colId: newColumnId,
+                columnName: column.name,
+              }
+            : t
+        )
+      );
+
+      console.log("🎉 Tickets.tsx: Local state updated successfully");
+      message.success(`Moved to ${column.name}`);
+    } catch (error: any) {
+      console.error("❌ Tickets.tsx: Failed to update ticket column:", error);
+      message.error("Failed to update ticket");
+      // Refresh to revert the optimistic UI update
+      window.location.reload();
+    }
+  };
+
   const columns: TableColumnsType<Ticket> = [
     {
       title: "Work",
@@ -358,6 +428,7 @@ const Tickets: React.FC = () => {
             tickets={filteredTickets}
             columns={kanbanColumns}
             onTicketClick={handleTicketClick}
+            onTicketMove={handleTicketMove}
           />
         )}
       </div>

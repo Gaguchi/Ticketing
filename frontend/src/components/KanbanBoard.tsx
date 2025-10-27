@@ -33,12 +33,14 @@ interface KanbanBoardProps {
   tickets: Ticket[];
   columns: TicketColumn[];
   onTicketClick?: (ticket: Ticket) => void;
+  onTicketMove?: (ticketId: number, newColumnId: number) => void;
 }
 
 export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   tickets,
   columns,
   onTicketClick,
+  onTicketMove,
 }) => {
   const [data, setData] = useState<Ticket[] | null>(null);
   const [items, setItems] = useState<KanbanItems>({});
@@ -245,6 +247,21 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             overIndex
           ),
         }));
+      }
+
+      // Call the onTicketMove callback if the ticket moved to a different column
+      if (activeContainer !== overContainer && onTicketMove) {
+        const ticketId = parseInt(active.id.toString().replace("ticket-", ""));
+        const newColumnId = parseInt(overContainer.replace("column-", ""));
+
+        console.log("🎯 Kanban: Ticket moved", {
+          ticketId,
+          fromColumn: activeContainer,
+          toColumn: overContainer,
+          newColumnId,
+        });
+
+        onTicketMove(ticketId, newColumnId);
       }
     }
 
