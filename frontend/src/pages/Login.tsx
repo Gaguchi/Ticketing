@@ -37,16 +37,13 @@ const Login: React.FC = () => {
         localStorage.setItem("remember", "true");
       }
 
-      // Check if user has access to any projects (as lead or member)
+      // Check if user has access to any projects using the new endpoint
       try {
-        const { projectService } = await import("../services/project.service");
-        const hasProjects = await projectService.userHasProjects(
-          values.username
-        );
+        const userWithProjects = await authService.getCurrentUserWithProjects();
 
         // If user has projects (as lead or member), go to dashboard
         // Otherwise go to setup to create their first project
-        if (hasProjects) {
+        if (userWithProjects.has_projects) {
           navigate("/");
         } else {
           navigate("/setup");

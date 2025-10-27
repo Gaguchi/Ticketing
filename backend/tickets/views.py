@@ -119,15 +119,31 @@ def login_user(request):
 @permission_classes([IsAuthenticated])
 def get_current_user(request):
     """
-    Get current authenticated user
+    Get current authenticated user with their projects
     """
     user = request.user
+    
+    # Get projects where user is lead
+    lead_projects = Project.objects.filter(lead_username=user.username)
+    
+    # Get projects where user is a member
+    member_projects = user.project_memberships.all()
+    
+    # Combine and remove duplicates
+    all_projects = (lead_projects | member_projects).distinct()
+    
+    # Serialize projects
+    from .serializers import ProjectSerializer
+    projects_data = ProjectSerializer(all_projects, many=True).data
+    
     return Response({
         'id': user.id,
         'username': user.username,
         'email': user.email,
         'first_name': user.first_name,
         'last_name': user.last_name,
+        'projects': projects_data,
+        'has_projects': all_projects.exists(),
     })
 
 

@@ -39,6 +39,19 @@ export interface User {
   last_name: string;
 }
 
+export interface UserWithProjects extends User {
+  projects: Array<{
+    id: number;
+    key: string;
+    name: string;
+    description?: string;
+    lead_username?: string;
+    tickets_count: number;
+    columns_count: number;
+  }>;
+  has_projects: boolean;
+}
+
 class AuthService {
   private readonly ACCESS_TOKEN_KEY = 'access_token';
   private readonly REFRESH_TOKEN_KEY = 'refresh_token';
@@ -79,6 +92,13 @@ class AuthService {
    */
   async getCurrentUser(): Promise<User> {
     return await apiService.get<User>(API_ENDPOINTS.AUTH_ME);
+  }
+
+  /**
+   * Get current user with their projects
+   */
+  async getCurrentUserWithProjects(): Promise<UserWithProjects> {
+    return await apiService.get<UserWithProjects>(API_ENDPOINTS.AUTH_ME);
   }
 
   /**
