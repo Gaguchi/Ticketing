@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Button, Input, Select, Table, Tag, Space, message } from "antd";
+import { Button, Input, Select, Table, Tag, message } from "antd";
 import type { TableColumnsType } from "antd";
 import {
   PlusOutlined,
@@ -65,21 +65,64 @@ const Tickets: React.FC = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Get current project from localStorage
-        const projectData = localStorage.getItem("currentProject");
-        if (!projectData) {
-          message.warning(
-            "No project selected. Please select a project first."
-          );
+        // Fetch user's projects
+        const projectsResponse = await projectService.getProjects();
+        console.log("📦 Projects response:", projectsResponse);
+
+        // Handle both paginated and non-paginated responses
+        const projects: any[] = Array.isArray(projectsResponse)
+          ? projectsResponse
+          : (projectsResponse as any)?.results || [];
+
+        if (projects.length === 0) {
+          message.warning("No projects found. Please create a project first.");
           return;
         }
 
-        const project = JSON.parse(projectData);
+        // Use stored project if valid, otherwise find a project with columns
+        let project = null;
+        const storedProjectData = localStorage.getItem("currentProject");
+
+        if (storedProjectData && storedProjectData !== "undefined") {
+          try {
+            const storedProject = JSON.parse(storedProjectData);
+            // Check if stored project exists in user's projects
+            const foundProject = projects.find(
+              (p: any) => p.id === storedProject.id
+            );
+            if (foundProject) {
+              project = foundProject;
+              console.log("📌 Using stored project:", project);
+            }
+          } catch (parseError) {
+            console.warn("Failed to parse stored project");
+            localStorage.removeItem("currentProject");
+          }
+        }
+
+        // If no stored project, find the first project with columns
+        if (!project) {
+          // Try to find a project with columns_count > 0
+          project =
+            projects.find((p: any) => p.columns_count > 0) || projects[0];
+          console.log("📌 Auto-selected project:", project);
+        }
+
+        // Store current project for future use
+        localStorage.setItem("currentProject", JSON.stringify(project));
 
         // Fetch columns for the project
         const projectColumns = await projectService.getProjectColumns(
           project.id
         );
+        console.log("📊 Project columns:", projectColumns);
+
+        if (projectColumns.length === 0) {
+          message.warning(
+            `Project "${project.name}" has no columns. Please set up columns first.`
+          );
+        }
+
         setKanbanColumns(projectColumns);
 
         // Fetch tickets
@@ -136,51 +179,21 @@ const Tickets: React.FC = () => {
 
   // Handle ticket move between columns in Kanban
   const handleTicketMove = async (ticketId: number, newColumnId: number) => {
-    console.log("📋 Tickets.tsx: handleTicketMove called", {
-      ticketId,
-      newColumnId,
-    });
-
     try {
-      // Find the ticket to get its current state
       const ticket = tickets.find((t) => t.id === ticketId);
       const column = kanbanColumns.find((c) => c.id === newColumnId);
 
-      console.log("📋 Tickets.tsx: Ticket and column info", {
-        ticket: ticket
-          ? {
-              id: ticket.id,
-              name: ticket.name,
-              currentColumn: ticket.colId,
-              currentColumnName: ticket.columnName,
-            }
-          : "not found",
-        newColumn: column ? { id: column.id, name: column.name } : "not found",
-      });
-
       if (!ticket || !column) {
-        console.error("❌ Ticket or column not found");
         message.error("Failed to update ticket");
         return;
       }
 
-      // Update the ticket's column via API
-      console.log("🚀 Tickets.tsx: Calling API to update ticket", {
-        ticketId,
-        payload: { column: newColumnId },
-      });
-
-      const updatedTicket = await ticketService.updateTicket(ticketId, {
+      // Send PATCH request to update ticket column
+      await ticketService.updateTicket(ticketId, {
         column: newColumnId,
       });
 
-      console.log("✅ Tickets.tsx: API response received", {
-        updatedTicket,
-        newColumn: updatedTicket.column,
-        newColumnName: updatedTicket.column_name,
-      });
-
-      // Update the local state to reflect the change
+      // Update local state
       setTickets((prevTickets) =>
         prevTickets.map((t) =>
           t.id === ticketId
@@ -194,13 +207,10 @@ const Tickets: React.FC = () => {
         )
       );
 
-      console.log("🎉 Tickets.tsx: Local state updated successfully");
       message.success(`Moved to ${column.name}`);
     } catch (error: any) {
-      console.error("❌ Tickets.tsx: Failed to update ticket column:", error);
+      console.error("Failed to update ticket:", error);
       message.error("Failed to update ticket");
-      // Refresh to revert the optimistic UI update
-      window.location.reload();
     }
   };
 
@@ -370,18 +380,24 @@ const Tickets: React.FC = () => {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <Space.Compact size="small">
+          <div style={{ display: "flex" }}>
             <Button
               type={viewMode === "list" ? "primary" : "default"}
               icon={<UnorderedListOutlined />}
               onClick={() => setViewMode("list")}
+              style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
             />
             <Button
               type={viewMode === "kanban" ? "primary" : "default"}
               icon={<AppstoreOutlined />}
               onClick={() => setViewMode("kanban")}
+              style={{
+                borderTopLeftRadius: 0,
+                borderBottomLeftRadius: 0,
+                marginLeft: -1,
+              }}
             />
-          </Space.Compact>
+          </div>
           <Button
             type="primary"
             icon={<PlusOutlined />}

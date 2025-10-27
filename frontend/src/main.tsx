@@ -1,11 +1,18 @@
-import '@ant-design/v5-patch-for-react-19';
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import App from './App.tsx'
+import { unstableSetRender } from "antd";
+import { createRoot } from "react-dom/client";
+import type { Root } from "react-dom/client";
+import "./index.css";
+import App from "./App.tsx";
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-)
+// Configure Ant Design for React 19 compatibility
+unstableSetRender((node, container) => {
+  (container as any)._reactRoot ||= createRoot(container);
+  const root: Root = (container as any)._reactRoot;
+  root.render(node);
+  return async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    root.unmount();
+  };
+});
+
+createRoot(document.getElementById("root")!).render(<App />);

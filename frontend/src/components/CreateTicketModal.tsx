@@ -775,11 +775,15 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               name="linkedItems"
               style={{ marginBottom: "12px" }}
             >
-              <Space.Compact style={{ width: "100%" }}>
+              <div style={{ display: "flex", width: "100%" }}>
                 <Select
                   placeholder="blocks"
                   defaultValue="blocks"
-                  style={{ width: "30%" }}
+                  style={{
+                    width: "30%",
+                    borderTopRightRadius: 0,
+                    borderBottomRightRadius: 0,
+                  }}
                 >
                   <Option value="blocks">blocks</Option>
                   <Option value="is blocked by">is blocked by</Option>
@@ -789,11 +793,16 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                 <Select
                   mode="multiple"
                   placeholder="Type, search or paste URL"
-                  style={{ width: "70%" }}
+                  style={{
+                    width: "70%",
+                    borderTopLeftRadius: 0,
+                    borderBottomLeftRadius: 0,
+                    marginLeft: -1,
+                  }}
                   allowClear
                   showSearch
                 />
-              </Space.Compact>
+              </div>
             </Form.Item>
 
             {/* Flagged */}
