@@ -12,6 +12,8 @@ export interface APIError {
 }
 
 class APIService {
+  private isDevelopment = import.meta.env.DEV;
+
   /**
    * Get authorization header with JWT token
    */
@@ -21,12 +23,60 @@ class APIService {
   }
 
   /**
+   * Log API request details (only in development)
+   */
+  private logRequest(url: string, config: RequestInit) {
+    if (this.isDevelopment) {
+      console.group(`🌐 API Request: ${config.method || 'GET'} ${url}`);
+      console.log('URL:', url);
+      console.log('Method:', config.method || 'GET');
+      console.log('Headers:', config.headers);
+      if (config.body) {
+        console.log('Body:', JSON.parse(config.body as string));
+      }
+      console.log('Timestamp:', new Date().toISOString());
+      console.groupEnd();
+    }
+  }
+
+  /**
+   * Log API response details (only in development)
+   */
+  private logResponse(url: string, response: Response, data: any, duration: number) {
+    if (this.isDevelopment) {
+      const emoji = response.ok ? '✅' : '❌';
+      console.group(`${emoji} API Response: ${response.status} ${url}`);
+      console.log('Status:', response.status, response.statusText);
+      console.log('Duration:', `${duration}ms`);
+      console.log('Headers:', Object.fromEntries(response.headers.entries()));
+      console.log('Data:', data);
+      console.log('Timestamp:', new Date().toISOString());
+      console.groupEnd();
+    }
+  }
+
+  /**
+   * Log API error details (only in development)
+   */
+  private logError(url: string, error: any, duration: number) {
+    if (this.isDevelopment) {
+      console.group(`🔴 API Error: ${url}`);
+      console.error('Error:', error);
+      console.log('Duration:', `${duration}ms`);
+      console.log('Timestamp:', new Date().toISOString());
+      console.groupEnd();
+    }
+  }
+
+  /**
    * Generic fetch wrapper with error handling
    */
   private async request<T>(
     url: string,
     options: RequestInit = {}
   ): Promise<T> {
+    const startTime = performance.now();
+    
     const config: RequestInit = {
       ...options,
       headers: {
@@ -37,12 +87,19 @@ class APIService {
       credentials: API_CONFIG.withCredentials ? 'include' : 'same-origin',
     };
 
+    // Log the request
+    this.logRequest(url, config);
+
     try {
       const response = await fetch(url, config);
+      const duration = Math.round(performance.now() - startTime);
 
       if (!response.ok) {
         // Handle 401 Unauthorized - logout and redirect to login
         if (response.status === 401) {
+          const errorData = await response.json().catch(() => ({}));
+          this.logResponse(url, response, errorData, duration);
+          
           // Import dynamically to avoid circular dependencies
           const { default: authService } = await import('./auth.service');
           authService.logout();
@@ -55,6 +112,8 @@ class APIService {
         }
 
         const errorData = await response.json().catch(() => ({}));
+        this.logResponse(url, response, errorData, duration);
+        
         throw {
           message: errorData.detail || errorData.message || `HTTP Error: ${response.status}`,
           status: response.status,
@@ -64,11 +123,17 @@ class APIService {
 
       // Handle 204 No Content
       if (response.status === 204) {
+        this.logResponse(url, response, {}, duration);
         return {} as T;
       }
 
-      return await response.json();
+      const data = await response.json();
+      this.logResponse(url, response, data, duration);
+      return data;
     } catch (error) {
+      const duration = Math.round(performance.now() - startTime);
+      this.logError(url, error, duration);
+      
       if ((error as APIError).status) {
         throw error;
       }

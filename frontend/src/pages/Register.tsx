@@ -40,19 +40,23 @@ const Register: React.FC = () => {
       // Update auth context
       login(response.access, response.user);
 
-      // Check if user has existing projects
+      // Check if user has access to any projects (as lead or member)
       try {
         const { projectService } = await import("../services/project.service");
-        const projects = await projectService.getProjects();
+        const hasProjects = await projectService.userHasProjects(
+          values.username
+        );
 
-        // If user has projects, go to dashboard, otherwise go to setup
-        if (projects && projects.length > 0) {
+        // If user has projects (as lead or member), go to dashboard
+        // Otherwise go to setup to create their first project
+        if (hasProjects) {
           navigate("/");
         } else {
           navigate("/setup");
         }
       } catch (projectError) {
         // If there's an error checking projects, default to setup
+        console.error("Error checking projects:", projectError);
         navigate("/setup");
       }
     } catch (err: any) {

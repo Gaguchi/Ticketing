@@ -25,14 +25,32 @@ def health_check(request):
     """Health check endpoint"""
     import os
     from django.conf import settings
+    from django.db import connection
     
     # Check USE_HTTPS configuration
     use_https_env = os.getenv('USE_HTTPS', 'NOT_SET')
     use_https_resolved = use_https_env.lower() in ('true', '1', 'yes')
     
+    # Check database connection
+    db_status = 'unknown'
+    db_error = None
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+            db_status = 'connected'
+    except Exception as e:
+        db_status = 'error'
+        db_error = str(e)
+    
     return JsonResponse({
-        'status': 'healthy',
+        'status': 'healthy' if db_status == 'connected' else 'degraded',
         'service': 'backend',
+        'database': {
+            'status': db_status,
+            'host': settings.DATABASES['default']['HOST'],
+            'name': settings.DATABASES['default']['NAME'],
+            'error': db_error,
+        },
         'config': {
             'USE_HTTPS_env': use_https_env,
             'USE_HTTPS_resolved': use_https_resolved,
@@ -40,6 +58,7 @@ def health_check(request):
             'DEBUG': settings.DEBUG,
             'is_secure_request': request.is_secure(),
             'scheme': request.scheme,
+            'CORS_ALLOWED_ORIGINS': settings.CORS_ALLOWED_ORIGINS,
         }
     })
 

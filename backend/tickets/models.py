@@ -11,6 +11,7 @@ class Project(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
     lead_username = models.CharField(max_length=150, blank=True, null=True)  # Project lead
+    members = models.ManyToManyField(User, related_name='project_memberships', blank=True)  # Invited members
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -16,10 +16,17 @@ class ProjectSerializer(serializers.ModelSerializer):
     """Serializer for Project model"""
     tickets_count = serializers.SerializerMethodField()
     columns_count = serializers.SerializerMethodField()
+    members = UserSerializer(many=True, read_only=True)
+    member_usernames = serializers.ListField(
+        child=serializers.CharField(),
+        write_only=True,
+        required=False,
+        help_text="List of usernames to add as project members"
+    )
     
     class Meta:
         model = Project
-        fields = ['id', 'key', 'name', 'description', 'lead_username', 
+        fields = ['id', 'key', 'name', 'description', 'lead_username', 'members', 'member_usernames',
                   'tickets_count', 'columns_count', 'created_at', 'updated_at']
     
     def get_tickets_count(self, obj):
@@ -27,6 +34,32 @@ class ProjectSerializer(serializers.ModelSerializer):
     
     def get_columns_count(self, obj):
         return obj.columns.count()
+    
+    def create(self, validated_data):
+        member_usernames = validated_data.pop('member_usernames', [])
+        project = Project.objects.create(**validated_data)
+        
+        # Add members by username
+        if member_usernames:
+            users = User.objects.filter(username__in=member_usernames)
+            project.members.set(users)
+        
+        return project
+    
+    def update(self, instance, validated_data):
+        member_usernames = validated_data.pop('member_usernames', None)
+        
+        # Update basic fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        
+        # Update members if provided
+        if member_usernames is not None:
+            users = User.objects.filter(username__in=member_usernames)
+            instance.members.set(users)
+        
+        return instance
 
 
 class ColumnSerializer(serializers.ModelSerializer):

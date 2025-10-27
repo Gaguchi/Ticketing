@@ -12,6 +12,13 @@ export interface Project {
   name: string;
   description?: string;
   lead_username?: string;
+  members?: Array<{
+    id: number;
+    username: string;
+    email: string;
+    first_name: string;
+    last_name: string;
+  }>;
   tickets_count: number;
   columns_count: number;
   created_at: string;
@@ -73,6 +80,25 @@ class ProjectService {
    */
   async getProjectColumns(id: number): Promise<any[]> {
     return await apiService.get<any[]>(API_ENDPOINTS.PROJECT_COLUMNS(id));
+  }
+
+  /**
+   * Check if user has access to any projects (as lead or member)
+   * Returns true if user is lead or member of at least one project
+   */
+  async userHasProjects(username: string): Promise<boolean> {
+    try {
+      const projects = await this.getProjects();
+      
+      // Check if user is lead or member of any project
+      return projects.some(project => 
+        project.lead_username === username || 
+        (project.members && project.members.some(member => member.username === username))
+      );
+    } catch (error) {
+      console.error('Error checking user projects:', error);
+      return false;
+    }
   }
 }
 
