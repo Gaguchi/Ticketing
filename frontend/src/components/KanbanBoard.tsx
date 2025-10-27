@@ -12,6 +12,7 @@ import {
   useSensors,
   useSensor,
   MeasuringStrategy,
+  useDndMonitor,
 } from "@dnd-kit/core";
 import type {
   DragStartEvent,
@@ -285,6 +286,45 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     setClonedItems(null);
   };
 
+  // Monitor component to log all drag events
+  const DragMonitor = () => {
+    useDndMonitor({
+      onDragStart(event) {
+        console.log("🟢 DND Monitor - onDragStart:", {
+          activeId: event.active.id,
+          activeData: event.active.data.current,
+        });
+      },
+      onDragMove(event) {
+        console.log("🔵 DND Monitor - onDragMove:", {
+          activeId: event.active.id,
+          delta: event.delta,
+        });
+      },
+      onDragOver(event) {
+        console.log("🟡 DND Monitor - onDragOver:", {
+          activeId: event.active.id,
+          overId: event.over?.id,
+          overData: event.over?.data.current,
+        });
+      },
+      onDragEnd(event) {
+        console.log("🔴 DND Monitor - onDragEnd:", {
+          activeId: event.active.id,
+          overId: event.over?.id,
+          activeData: event.active.data.current,
+          overData: event.over?.data.current,
+        });
+      },
+      onDragCancel(event) {
+        console.log("⚪ DND Monitor - onDragCancel:", {
+          activeId: event.active.id,
+        });
+      },
+    });
+    return null;
+  };
+
   useEffect(() => {
     requestAnimationFrame(() => {
       recentlyMovedToNewContainer.current = false;
@@ -306,6 +346,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
+        <DragMonitor />
         <div className="kanban-container">
           <SortableContext
             items={containers}
