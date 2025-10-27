@@ -111,7 +111,7 @@ class Ticket(models.Model):
         ordering = ['-created_at']
 
     def __str__(self):
-        return f"{self.get_type_display()}-{self.id}: {self.name}"
+        return f"{self.project.key}-{self.id}: {self.name}"
 
     @property
     def comments_count(self):
@@ -242,3 +242,32 @@ class UserTag(models.Model):
 
     def __str__(self):
         return f"{self.user.username} → {self.tag.name}"
+
+
+class IssueLink(models.Model):
+    """
+    Links between tickets (issue links).
+    Represents relationships like 'blocks', 'is blocked by', 'relates to', 'duplicates'.
+    """
+    LINK_TYPE_CHOICES = [
+        ('blocks', 'Blocks'),
+        ('is_blocked_by', 'Is Blocked By'),
+        ('relates_to', 'Relates To'),
+        ('duplicates', 'Duplicates'),
+        ('is_duplicated_by', 'Is Duplicated By'),
+        ('causes', 'Causes'),
+        ('is_caused_by', 'Is Caused By'),
+    ]
+    
+    source_ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name='outward_links')
+    target_ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name='inward_links')
+    link_type = models.CharField(max_length=20, choices=LINK_TYPE_CHOICES)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_issue_links')
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = [['source_ticket', 'target_ticket', 'link_type']]
+        ordering = ['created_at']
+    
+    def __str__(self):
+        return f"{self.source_ticket.project.key}-{self.source_ticket.id} {self.link_type} {self.target_ticket.project.key}-{self.target_ticket.id}"

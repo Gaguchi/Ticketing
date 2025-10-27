@@ -32,6 +32,7 @@ import { getPriorityIcon } from "./PriorityIcons";
 import {
   ticketService,
   projectService,
+  tagService,
   type CreateTicketData,
 } from "../services";
 
@@ -99,6 +100,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
   const [saving, setSaving] = useState(false);
   const [currentProject, setCurrentProject] = useState<any>(null);
   const [actualColumnId, setActualColumnId] = useState<number | null>(null);
+  const [projectTags, setProjectTags] = useState<any[]>([]);
 
   // Load current project from localStorage when modal opens
   useEffect(() => {
@@ -160,6 +162,24 @@ export const TicketModal: React.FC<TicketModalProps> = ({
       setTags(ticket?.tags || []);
       setDueDate(ticket?.dueDate ? dayjs(ticket.dueDate) : null);
       setStartDate(ticket?.startDate ? dayjs(ticket.startDate) : null);
+
+      // Load project tags for autocomplete
+      const projectData = localStorage.getItem("currentProject");
+      if (projectData) {
+        try {
+          const project = JSON.parse(projectData);
+          tagService
+            .getTags(project.id)
+            .then((tags) => {
+              setProjectTags(tags);
+            })
+            .catch((error) => {
+              console.error("Failed to load tags:", error);
+            });
+        } catch (error) {
+          console.error("Failed to parse project data:", error);
+        }
+      }
     }
   }, [open, ticket]);
 
@@ -773,23 +793,22 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                 Tags
               </div>
               <Select
-                mode="multiple"
+                mode="tags"
                 value={tags}
                 onChange={(value) => setTags(value)}
                 size="small"
-                placeholder="Add tags"
+                placeholder="Type to add tags"
                 style={{ width: "100%" }}
-                options={[
-                  { value: 1, label: "TechCorp Solutions" },
-                  { value: 2, label: "RetailMax Inc" },
-                  { value: 3, label: "High Priority" },
-                  { value: 4, label: "StartupHub" },
-                  { value: 5, label: "DataFlow Systems" },
-                  { value: 6, label: "EduTech Platform" },
-                  { value: 7, label: "Enterprise Global" },
-                  { value: 8, label: "FinanceFlow" },
-                  { value: 9, label: "CloudServe Inc" },
-                ]}
+                filterOption={(input, option) =>
+                  (option?.label ?? "")
+                    .toLowerCase()
+                    .includes(input.toLowerCase())
+                }
+                options={projectTags.map((tag) => ({
+                  value: tag.name,
+                  label: tag.name,
+                }))}
+                tokenSeparators={[","]}
               />
             </div>
 

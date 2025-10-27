@@ -17,3 +17,6 @@ export type { CreateTicketData, UpdateTicketData, TicketListResponse } from './t
 
 export { columnService } from './column.service';
 export type { Column, CreateColumnData, ReorderColumnsData } from './column.service';
+
+export { tagService } from './tag.service';
+export type { Tag, CreateTagData } from './tag.service';

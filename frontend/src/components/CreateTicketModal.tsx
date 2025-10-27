@@ -25,6 +25,7 @@ import {
   ticketService,
   projectService,
   columnService,
+  tagService,
   type CreateTicketData,
 } from "../services";
 
@@ -66,6 +67,8 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
   const [currentProject, setCurrentProject] = useState<any>(null);
   const [actualColumnId, setActualColumnId] = useState<number | null>(null);
   const [creatingColumns, setCreatingColumns] = useState(false);
+  const [openTickets, setOpenTickets] = useState<any[]>([]);
+  const [projectTags, setProjectTags] = useState<any[]>([]);
 
   // Load current project and its columns from localStorage when modal opens
   useEffect(() => {
@@ -99,31 +102,46 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               } else {
                 console.warn("⚠️ No columns found in project");
                 console.groupEnd();
-                
+
                 // Offer to create default columns
                 Modal.confirm({
-                  title: 'No Columns Found',
-                  content: 'This project has no columns. Would you like to create default columns now?',
-                  okText: 'Create Columns',
-                  cancelText: 'Cancel',
+                  title: "No Columns Found",
+                  content:
+                    "This project has no columns. Would you like to create default columns now?",
+                  okText: "Create Columns",
+                  cancelText: "Cancel",
                   onOk: async () => {
                     setCreatingColumns(true);
                     try {
-                      const result = await columnService.createDefaults(project.id);
+                      const result = await columnService.createDefaults(
+                        project.id
+                      );
                       message.success(result.message);
-                      
+
                       // Set the first column as active
                       if (result.columns.length > 0) {
                         setActualColumnId(result.columns[0].id);
                       }
-                      
+
                       // Update project in localStorage
-                      const updatedProject = { ...project, columns_count: result.columns.length };
-                      localStorage.setItem("currentProject", JSON.stringify(updatedProject));
+                      const updatedProject = {
+                        ...project,
+                        columns_count: result.columns.length,
+                      };
+                      localStorage.setItem(
+                        "currentProject",
+                        JSON.stringify(updatedProject)
+                      );
                       setCurrentProject(updatedProject);
                     } catch (error: any) {
-                      console.error("❌ Failed to create default columns:", error);
-                      message.error(error.response?.data?.error || "Failed to create default columns");
+                      console.error(
+                        "❌ Failed to create default columns:",
+                        error
+                      );
+                      message.error(
+                        error.response?.data?.error ||
+                          "Failed to create default columns"
+                      );
                     } finally {
                       setCreatingColumns(false);
                     }
@@ -135,6 +153,36 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               console.error("❌ Failed to load project columns:", error);
               console.groupEnd();
               message.error("Failed to load project columns");
+            });
+
+          // Fetch open tickets for parent selection
+          ticketService
+            .getTickets()
+            .then((response) => {
+              const allTickets = response.results || [];
+              // Filter to current project and exclude done status
+              const projectTickets = allTickets.filter(
+                (t: any) => t.project === project.id && t.status !== "done"
+              );
+              setOpenTickets(projectTickets);
+              console.log(
+                "Fetched open tickets for parent selection:",
+                projectTickets.length
+              );
+            })
+            .catch((error) => {
+              console.error("❌ Failed to load open tickets:", error);
+            });
+
+          // Fetch project tags for autocomplete
+          tagService
+            .getTags(project.id)
+            .then((tags) => {
+              setProjectTags(tags);
+              console.log("Fetched project tags:", tags.length);
+            })
+            .catch((error) => {
+              console.error("❌ Failed to load project tags:", error);
             });
         } catch (error) {
           console.error("❌ Failed to parse project data:", error);
@@ -151,7 +199,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
 
   const handleSubmit = async (values: any) => {
     console.group("🎫 CreateTicketModal - handleSubmit");
-    console.log("Form values:", values);
+    console.log("Form values:", JSON.stringify(values, null, 2));
     console.log("Current project:", currentProject);
     console.log("Actual column ID:", actualColumnId);
     console.log("Passed column ID:", columnId);
@@ -166,7 +214,8 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
     if (!actualColumnId) {
       console.error("❌ No actual column ID!");
       message.error({
-        content: "This project has no columns. Please create a new project (the old one was created before columns were added automatically).",
+        content:
+          "This project has no columns. Please create a new project (the old one was created before columns were added automatically).",
         duration: 8,
       });
       console.groupEnd();
@@ -175,6 +224,43 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
 
     setSaving(true);
     try {
+      // Handle tags: create new tags if needed and get tag IDs
+      let tagIds: number[] = [];
+      if (values.tags && values.tags.length > 0) {
+        console.log("Processing tags:", values.tags);
+
+        for (const tagName of values.tags) {
+          // Check if tag exists in projectTags
+          let existingTag = projectTags.find(
+            (t: any) => t.name.toLowerCase() === tagName.toLowerCase()
+          );
+
+          if (!existingTag) {
+            // Create new tag
+            try {
+              console.log(`Creating new tag: ${tagName}`);
+              const newTag = await tagService.createTag({
+                name: tagName,
+                color: "#0052cc", // Default color
+                project: currentProject.id,
+              });
+              existingTag = newTag;
+              // Add to projectTags for next time
+              setProjectTags((prev) => [...prev, newTag]);
+            } catch (error) {
+              console.error(`Failed to create tag ${tagName}:`, error);
+              // Continue with other tags
+              continue;
+            }
+          }
+
+          if (existingTag) {
+            tagIds.push(existingTag.id);
+          }
+        }
+        console.log("Final tag IDs:", tagIds);
+      }
+
       const ticketData: CreateTicketData = {
         name: values.summary,
         description: values.description || "",
@@ -183,6 +269,9 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
         priority_id: values.priority || 3,
         column: actualColumnId, // Use the actual column ID from the project
         project: currentProject.id, // Use current project
+        assignee_ids: values.assignee ? [values.assignee] : undefined,
+        parent: values.parent || undefined,
+        tags: tagIds.length > 0 ? tagIds : undefined,
         due_date: values.dueDate
           ? dayjs(values.dueDate).format("YYYY-MM-DD")
           : undefined,
@@ -191,10 +280,16 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
           : undefined,
       };
 
-      console.log("📤 Ticket data to send:", ticketData);
+      console.log(
+        "📤 Ticket data to send:",
+        JSON.stringify(ticketData, null, 2)
+      );
 
       const newTicket = await ticketService.createTicket(ticketData);
-      console.log("✅ Ticket created successfully:", newTicket);
+      console.log(
+        "✅ Ticket created successfully:",
+        JSON.stringify(newTicket, null, 2)
+      );
       console.groupEnd();
       message.success("Ticket created successfully!");
 
@@ -513,7 +608,22 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                 name="parent"
                 style={{ marginBottom: "12px" }}
               >
-                <Select placeholder="Select parent" allowClear showSearch />
+                <Select
+                  placeholder="Select parent ticket"
+                  allowClear
+                  showSearch
+                  filterOption={(input, option) =>
+                    (option?.label ?? "")
+                      .toLowerCase()
+                      .includes(input.toLowerCase())
+                  }
+                  options={openTickets.map((ticket: any) => ({
+                    value: ticket.id,
+                    label: `${ticket.project_key || "TICK"}-${ticket.id}: ${
+                      ticket.name
+                    }`,
+                  }))}
+                />
               </Form.Item>
 
               {/* Priority */}
@@ -550,16 +660,20 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                 style={{ marginBottom: "12px" }}
               >
                 <Select
-                  mode="multiple"
-                  placeholder="Add tags"
+                  mode="tags"
+                  placeholder="Type to add tags (e.g., Nikora, Nokia, High Priority)"
                   allowClear
-                  options={[
-                    { value: 1, label: "TechCorp Solutions" },
-                    { value: 2, label: "RetailMax Inc" },
-                    { value: 3, label: "High Priority" },
-                    { value: 4, label: "StartupHub" },
-                    { value: 5, label: "DataFlow Systems" },
-                  ]}
+                  showSearch
+                  filterOption={(input, option) =>
+                    (option?.label ?? "")
+                      .toLowerCase()
+                      .includes(input.toLowerCase())
+                  }
+                  options={projectTags.map((tag) => ({
+                    value: tag.name,
+                    label: tag.name,
+                  }))}
+                  tokenSeparators={[","]}
                 />
               </Form.Item>
 

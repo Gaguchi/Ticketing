@@ -38,6 +38,10 @@ erDiagram
 
     Tag }o--o{ Contact : "associated with"
 
+    IssueLink }o--|| Ticket : "source"
+    IssueLink }o--|| Ticket : "target"
+    User ||--o{ IssueLink : "creates"
+
     User {
         bigint id PK
         string username UK
@@ -163,6 +167,15 @@ erDiagram
         bigint tag_id FK
         datetime added_at
         bigint added_by_id FK
+    }
+
+    IssueLink {
+        bigint id PK
+        bigint source_ticket_id FK
+        bigint target_ticket_id FK
+        string link_type "blocks|is_blocked_by|relates_to|duplicates|is_duplicated_by|causes|is_caused_by"
+        bigint created_by_id FK
+        datetime created_at
     }
 ```
 
@@ -455,6 +468,42 @@ Links users to tags (for team membership).
 
 ---
 
+### IssueLink
+
+Links between tickets representing relationships like "blocks", "relates to", "duplicates".
+
+**Fields:**
+
+- `id` (PK): Link ID
+- `source_ticket_id` (FK): Ticket creating the relationship
+- `target_ticket_id` (FK): Ticket being referenced
+- `link_type`: Type of relationship
+  - `blocks`: Source blocks target (e.g., "TICK-1 blocks TICK-2")
+  - `is_blocked_by`: Inverse of blocks
+  - `relates_to`: General relationship
+  - `duplicates`: Source duplicates target
+  - `is_duplicated_by`: Inverse of duplicates
+  - `causes`: Source causes target
+  - `is_caused_by`: Inverse of causes
+- `created_by_id` (FK): User who created the link
+- `created_at`: When link was created
+
+**Design Notes:**
+
+- One ticket can have multiple links to other tickets
+- Links are directional (source → target)
+- Inverse relationships can be auto-created (e.g., when A blocks B, also create B is_blocked_by A)
+- Links can cross projects (TICK-1 can block PROJ-5)
+- Prevents circular relationships in validation
+
+**Jira Equivalent:** `issuelink` table
+
+- Jira uses `issuelinktype` table to define custom link types
+- We use predefined link types for simplicity
+- Can be extended to support custom link types later
+
+---
+
 ## What We Removed from Jira
 
 To keep the schema simple and focused on tickets, we removed:
@@ -489,7 +538,7 @@ To keep the schema simple and focused on tickets, we removed:
 
 ### Advanced Features
 
-- `issuelink`, `issuelinktype` (link types like "blocks", "relates to")
+- ~~`issuelink`, `issuelinktype` (link types like "blocks", "relates to")~~ **← We added this with predefined link types!**
 - `label` table (using JSON array instead)
 - `resolution` table
 - ~~`changehistory`, `changeitem` (audit log)~~ **← We'll add a simplified version!**

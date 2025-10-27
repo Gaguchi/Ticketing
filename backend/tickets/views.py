@@ -8,13 +8,14 @@ from django.contrib.auth import authenticate
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import (
     Ticket, Column, Project, Comment, Attachment,
-    Tag, Contact, TagContact, UserTag, TicketTag
+    Tag, Contact, TagContact, UserTag, TicketTag, IssueLink
 )
 from .serializers import (
     TicketSerializer, TicketListSerializer, ColumnSerializer,
     ProjectSerializer, CommentSerializer, AttachmentSerializer,
     TagSerializer, TagListSerializer, ContactSerializer,
-    TagContactSerializer, UserTagSerializer, TicketTagSerializer
+    TagContactSerializer, UserTagSerializer, TicketTagSerializer,
+    IssueLinkSerializer
 )
 
 
@@ -504,3 +505,20 @@ class TicketTagViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         serializer.save(added_by=self.request.user if self.request.user.is_authenticated else None)
+
+
+class IssueLinkViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for IssueLink (ticket relationships like 'blocks', 'relates to', etc.)
+    """
+    queryset = IssueLink.objects.select_related(
+        'source_ticket', 'target_ticket', 
+        'source_ticket__project', 'target_ticket__project',
+        'created_by'
+    )
+    serializer_class = IssueLinkSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['source_ticket', 'target_ticket', 'link_type']
+    
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user if self.request.user.is_authenticated else None)

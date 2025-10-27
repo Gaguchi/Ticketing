@@ -2,7 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import (
     Ticket, Project, Column, Comment, Attachment,
-    Tag, Contact, TagContact, UserTag, TicketTag
+    Tag, Contact, TagContact, UserTag, TicketTag, IssueLink
 )
 
 
@@ -261,3 +261,28 @@ class TicketTagSerializer(serializers.ModelSerializer):
         model = TicketTag
         fields = ['id', 'ticket', 'tag', 'tag_id', 'added_at', 'added_by']
         read_only_fields = ['added_by', 'added_at']
+
+
+class IssueLinkSerializer(serializers.ModelSerializer):
+    """Serializer for IssueLink (ticket relationships)"""
+    source_ticket_key = serializers.SerializerMethodField()
+    target_ticket_key = serializers.SerializerMethodField()
+    source_ticket_name = serializers.CharField(source='source_ticket.name', read_only=True)
+    target_ticket_name = serializers.CharField(source='target_ticket.name', read_only=True)
+    created_by_username = serializers.CharField(source='created_by.username', read_only=True)
+    
+    class Meta:
+        model = IssueLink
+        fields = [
+            'id', 'source_ticket', 'target_ticket', 'link_type',
+            'source_ticket_key', 'target_ticket_key',
+            'source_ticket_name', 'target_ticket_name',
+            'created_by', 'created_by_username', 'created_at'
+        ]
+        read_only_fields = ['created_by', 'created_at']
+    
+    def get_source_ticket_key(self, obj):
+        return f"{obj.source_ticket.project.key}-{obj.source_ticket.id}"
+    
+    def get_target_ticket_key(self, obj):
+        return f"{obj.target_ticket.project.key}-{obj.target_ticket.id}"
