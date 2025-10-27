@@ -306,6 +306,30 @@ const Dashboard: React.FC = () => {
     setSelectedTicket(null);
   };
 
+  // Fetch full ticket details before opening modal
+  const handleTicketClick = async (ticket: Ticket) => {
+    try {
+      const fullTicket = await ticketService.getTicket(ticket.id);
+      // Map the full ticket data
+      const mappedTicket = {
+        ...fullTicket,
+        createdAt: fullTicket.created_at,
+        updatedAt: fullTicket.updated_at,
+        dueDate: fullTicket.due_date,
+        startDate: fullTicket.start_date,
+        priorityId: fullTicket.priority_id,
+        projectKey: fullTicket.project_key,
+        columnName: fullTicket.column_name,
+        commentsCount: fullTicket.comments_count,
+        tagsDetail: fullTicket.tags_detail,
+      };
+      setSelectedTicket(mappedTicket);
+    } catch (error: any) {
+      console.error("Failed to fetch ticket details:", error);
+      message.error("Failed to load ticket details");
+    }
+  };
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -339,7 +363,7 @@ const Dashboard: React.FC = () => {
             gap: "8px",
             cursor: "pointer",
           }}
-          onClick={() => setSelectedTicket(record)}
+          onClick={() => handleTicketClick(record)}
         >
           <FontAwesomeIcon
             icon={getTypeIcon(record.type).icon}
@@ -562,7 +586,7 @@ const Dashboard: React.FC = () => {
                         box={box}
                         filteredCount={filteredCount}
                         tickets={tickets}
-                        onTicketClick={setSelectedTicket}
+                        onTicketClick={handleTicketClick}
                       />
                     </div>
                   );
