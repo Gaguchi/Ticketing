@@ -230,13 +230,13 @@ const Dashboard: React.FC = () => {
     {
       id: "inProgress",
       title: "In Progress",
-      filter: (ticket) => ticket.status === "In Progress",
+      filter: (ticket) => ticket.status === "in_progress",
       color: "#fa8c16",
     },
     {
       id: "new",
       title: "New",
-      filter: (ticket) => ticket.status === "New",
+      filter: (ticket) => ticket.status === "new",
       color: "#52c41a",
     },
     {
@@ -395,9 +395,14 @@ const Dashboard: React.FC = () => {
       key: "status",
       width: 120,
       render: (status: string) => {
-        // Capitalize status from API (e.g., "new" -> "New")
-        const capitalizedStatus =
-          status.charAt(0).toUpperCase() + status.slice(1);
+        // Map status values to display format
+        const statusMap: Record<string, string> = {
+          new: "New",
+          in_progress: "In Progress",
+          review: "Review",
+          done: "Done",
+        };
+        const displayStatus = statusMap[status] || status.charAt(0).toUpperCase() + status.slice(1);
         const colorMap: Record<string, string> = {
           New: "blue",
           "In Progress": "orange",
@@ -405,7 +410,7 @@ const Dashboard: React.FC = () => {
           Done: "green",
         };
         return (
-          <Tag color={colorMap[capitalizedStatus]}>{capitalizedStatus}</Tag>
+          <Tag color={colorMap[displayStatus]}>{displayStatus}</Tag>
         );
       },
     },

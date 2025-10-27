@@ -688,7 +688,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                 size="small"
               >
                 <Option value="new">To Do</Option>
-                <Option value="in progress">In Progress</Option>
+                <Option value="in_progress">In Progress</Option>
                 <Option value="review">Review</Option>
                 <Option value="done">Done</Option>
               </Select>
