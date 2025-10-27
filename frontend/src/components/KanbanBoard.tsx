@@ -82,6 +82,16 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     ) => {
       const activeItems = items[activeContainer];
       const overItems = items[overContainer];
+
+      // Safety check: ensure both containers exist
+      if (!activeItems || !overItems) {
+        console.warn("Container items not found:", {
+          activeContainer,
+          overContainer,
+        });
+        return;
+      }
+
       const overIndex = overItems.indexOf(overId);
       const activeIndex = activeItems.indexOf(active.id);
 
@@ -307,11 +317,14 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
               );
               if (!column) return null;
 
+              // Safety check: ensure items exist for this container
+              const containerItems = items[containerId] || [];
+
               return (
                 <KanbanColumn
                   id={containerId}
                   key={containerId}
-                  items={items[containerId]}
+                  items={containerItems}
                   name={column.name}
                   tickets={data || []}
                   isSortingContainer={isSortingContainer}
@@ -361,28 +374,26 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           </div>
         </div>
         <DragOverlay>
-          {activeId ? (
-            containers.includes(activeId) ? (
-              <KanbanColumn
-                id={activeId}
-                items={items[activeId]}
-                name={
-                  columns.find((c) => `column-${c.id}` === activeId)?.name || ""
-                }
-                tickets={data || []}
-                dragOverlay
-                onTicketClick={onTicketClick}
-              />
-            ) : (
-              <TicketCard
-                id={activeId}
-                ticket={
-                  data?.find((d) => `ticket-${d.id}` === activeId) ||
-                  ({} as Ticket)
-                }
-                dragOverlay
-              />
-            )
+          {activeId && containers.includes(activeId) ? (
+            <KanbanColumn
+              id={activeId}
+              items={items[activeId] || []}
+              name={
+                columns.find((c) => `column-${c.id}` === activeId)?.name || ""
+              }
+              tickets={data || []}
+              dragOverlay
+              onTicketClick={onTicketClick}
+            />
+          ) : activeId ? (
+            <TicketCard
+              id={activeId}
+              ticket={
+                data?.find((d) => `ticket-${d.id}` === activeId) ||
+                ({} as Ticket)
+              }
+              dragOverlay
+            />
           ) : null}
         </DragOverlay>
       </DndContext>
