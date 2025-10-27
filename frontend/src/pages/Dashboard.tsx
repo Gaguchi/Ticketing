@@ -263,7 +263,7 @@ const Dashboard: React.FC = () => {
         startDate: ticket.start_date,
         // Priority field
         priorityId: ticket.priority_id,
-        // Project field  
+        // Project field
         projectKey: ticket.project_key,
         // Column field
         columnName: ticket.column_name,
