@@ -177,12 +177,17 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
           // Fetch project tags for autocomplete
           tagService
             .getTags(project.id)
-            .then((tags) => {
+            .then((response: any) => {
+              // Handle both array response and paginated response
+              const tags = Array.isArray(response)
+                ? response
+                : response.results || [];
               setProjectTags(tags);
               console.log("Fetched project tags:", tags.length);
             })
             .catch((error) => {
               console.error("❌ Failed to load project tags:", error);
+              setProjectTags([]); // Ensure it's always an array
             });
         } catch (error) {
           console.error("❌ Failed to parse project data:", error);
@@ -669,10 +674,14 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                       .toLowerCase()
                       .includes(input.toLowerCase())
                   }
-                  options={projectTags.map((tag) => ({
-                    value: tag.name,
-                    label: tag.name,
-                  }))}
+                  options={
+                    Array.isArray(projectTags)
+                      ? projectTags.map((tag) => ({
+                          value: tag.name,
+                          label: tag.name,
+                        }))
+                      : []
+                  }
                   tokenSeparators={[","]}
                 />
               </Form.Item>

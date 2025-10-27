@@ -170,11 +170,16 @@ export const TicketModal: React.FC<TicketModalProps> = ({
           const project = JSON.parse(projectData);
           tagService
             .getTags(project.id)
-            .then((tags) => {
+            .then((response: any) => {
+              // Handle both array response and paginated response
+              const tags = Array.isArray(response)
+                ? response
+                : response.results || [];
               setProjectTags(tags);
             })
             .catch((error) => {
               console.error("Failed to load tags:", error);
+              setProjectTags([]); // Ensure it's always an array
             });
         } catch (error) {
           console.error("Failed to parse project data:", error);
@@ -804,10 +809,14 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                     .toLowerCase()
                     .includes(input.toLowerCase())
                 }
-                options={projectTags.map((tag) => ({
-                  value: tag.name,
-                  label: tag.name,
-                }))}
+                options={
+                  Array.isArray(projectTags)
+                    ? projectTags.map((tag) => ({
+                        value: tag.name,
+                        label: tag.name,
+                      }))
+                    : []
+                }
                 tokenSeparators={[","]}
               />
             </div>
