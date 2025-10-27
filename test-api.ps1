@@ -7,10 +7,9 @@ Write-Host "======================================" -ForegroundColor Cyan
 Write-Host ""
 
 # Configuration
-$baseUrl = "http://localhost:8000"
-# Uncomment one of these to test from your network:
-# $baseUrl = "http://31.146.76.40:8000"  # Your public IP
-# $baseUrl = "http://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me"  # Dokploy production
+$baseUrl = "http://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me"
+# Uncomment to test locally instead:
+# $baseUrl = "http://localhost:8000"
 
 # Test 1: Health Check
 Write-Host "1. Testing Health Check..." -ForegroundColor Yellow

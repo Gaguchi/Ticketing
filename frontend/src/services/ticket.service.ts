@@ -14,6 +14,7 @@ export interface CreateTicketData {
   status: string;
   priority_id: number;
   column: number;
+  project: number;
   customer?: number;
   assignee_ids?: number[];
   parent?: number;

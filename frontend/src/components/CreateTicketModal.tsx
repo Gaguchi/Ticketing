@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Modal,
   Input,
@@ -58,8 +58,33 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
   const [saving, setSaving] = useState(false);
   const [createAnother, setCreateAnother] = useState(false);
   const [ticketType, setTicketType] = useState("task");
+  const [currentProject, setCurrentProject] = useState<any>(null);
+
+  // Load current project from localStorage when modal opens
+  useEffect(() => {
+    if (open) {
+      const projectData = localStorage.getItem("currentProject");
+      if (projectData) {
+        try {
+          const project = JSON.parse(projectData);
+          setCurrentProject(project);
+          form.setFieldValue("project", project.id);
+        } catch (error) {
+          console.error("Failed to load current project:", error);
+          message.error("Failed to load project information");
+        }
+      } else {
+        message.warning("No project selected. Please create a project first.");
+      }
+    }
+  }, [open, form]);
 
   const handleSubmit = async (values: any) => {
+    if (!currentProject) {
+      message.error("No project selected. Please create a project first.");
+      return;
+    }
+
     setSaving(true);
     try {
       const ticketData: CreateTicketData = {
@@ -69,6 +94,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
         status: values.status || "New",
         priority_id: values.priority || 3,
         column: columnId,
+        project: currentProject.id, // Use current project
         due_date: values.dueDate
           ? dayjs(values.dueDate).format("YYYY-MM-DD")
           : undefined,
@@ -83,9 +109,10 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
       onSuccess?.(newTicket);
 
       if (createAnother) {
-        // Reset form but keep type
+        // Reset form but keep type and project
         form.resetFields();
         form.setFieldValue("type", values.type);
+        form.setFieldValue("project", currentProject.id);
       } else {
         onClose();
       }
@@ -186,34 +213,38 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               rules={[{ required: true, message: "Project is required" }]}
               style={{ marginBottom: "12px" }}
             >
-              <Select placeholder="Select project" disabled value={1}>
-                <Option value={1}>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                    }}
-                  >
+              <Select placeholder="Select project" disabled>
+                {currentProject && (
+                  <Option value={currentProject.id}>
                     <div
                       style={{
-                        width: 24,
-                        height: 24,
-                        borderRadius: "3px",
-                        backgroundColor: "#0052cc",
                         display: "flex",
                         alignItems: "center",
-                        justifyContent: "center",
-                        color: "#fff",
-                        fontSize: "12px",
-                        fontWeight: 600,
+                        gap: "8px",
                       }}
                     >
-                      P
+                      <div
+                        style={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: "3px",
+                          backgroundColor: "#0052cc",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "#fff",
+                          fontSize: "12px",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {currentProject.key.substring(0, 2)}
+                      </div>
+                      <span>
+                        {currentProject.name} ({currentProject.key})
+                      </span>
                     </div>
-                    <span>Project (PROJ)</span>
-                  </div>
-                </Option>
+                  </Option>
+                )}
               </Select>
             </Form.Item>
 
