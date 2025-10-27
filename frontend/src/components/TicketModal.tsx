@@ -89,6 +89,9 @@ export const TicketModal: React.FC<TicketModalProps> = ({
   const [status, setStatus] = useState(ticket?.status || "new"); // Use lowercase status
   const [priority, setPriority] = useState(ticket?.priorityId || 3);
   const [tags, setTags] = useState<number[]>(ticket?.tags || []);
+  const [assignees, setAssignees] = useState<number[]>(
+    ticket?.assignees?.map((a: any) => a.id) || []
+  );
   const [dueDate, setDueDate] = useState<dayjs.Dayjs | null>(
     ticket?.dueDate ? dayjs(ticket.dueDate) : null
   );
@@ -160,6 +163,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
       setStatus(ticket?.status || "New");
       setPriority(ticket?.priorityId || 3);
       setTags(ticket?.tags || []);
+      setAssignees(ticket?.assignees?.map((a: any) => a.id) || []);
       setDueDate(ticket?.dueDate ? dayjs(ticket.dueDate) : null);
       setStartDate(ticket?.startDate ? dayjs(ticket.startDate) : null);
 
@@ -234,6 +238,8 @@ export const TicketModal: React.FC<TicketModalProps> = ({
           : ticket?.project || currentProject?.id || 1,
         due_date: dueDate ? dueDate.format("YYYY-MM-DD") : undefined,
         start_date: startDate ? startDate.format("YYYY-MM-DD") : undefined,
+        assignee_ids: assignees.length > 0 ? assignees : undefined,
+        tags: tags.length > 0 ? tags : undefined,
       };
 
       console.log("📤 Ticket data to send:", ticketData);
@@ -368,7 +374,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
               <span style={{ color: "#0052cc", fontWeight: 500 }}>
                 {isCreateMode
                   ? "NEW TICKET"
-                  : `${ticketType.toUpperCase()}-${ticket?.id}`}
+                  : `${ticket?.project_key || "TICK"}-${ticket?.id}`}
               </span>
             </div>
           </div>
@@ -682,23 +688,51 @@ export const TicketModal: React.FC<TicketModalProps> = ({
               >
                 Assignee
               </div>
-              <Button
-                type="text"
-                size="small"
-                style={{
-                  width: "100%",
-                  textAlign: "left",
-                  padding: "4px 8px",
-                  height: "auto",
-                  color: "#5e6c84",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                }}
-              >
-                <UserOutlined />
-                <span>Unassigned</span>
-              </Button>
+              {ticket?.assignees && ticket.assignees.length > 0 ? (
+                <div style={{ marginBottom: "8px" }}>
+                  {ticket.assignees.map((assignee: any) => (
+                    <div
+                      key={assignee.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        padding: "4px 8px",
+                      }}
+                    >
+                      <Avatar size={24} style={{ backgroundColor: "#0052cc" }}>
+                        {assignee.first_name?.[0] ||
+                          assignee.username?.[0]?.toUpperCase()}
+                        {assignee.last_name?.[0] ||
+                          assignee.username?.[1]?.toUpperCase()}
+                      </Avatar>
+                      <span style={{ fontSize: "14px", color: "#172b4d" }}>
+                        {assignee.first_name && assignee.last_name
+                          ? `${assignee.first_name} ${assignee.last_name}`
+                          : assignee.username}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <Button
+                  type="text"
+                  size="small"
+                  style={{
+                    width: "100%",
+                    textAlign: "left",
+                    padding: "4px 8px",
+                    height: "auto",
+                    color: "#5e6c84",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                  }}
+                >
+                  <UserOutlined />
+                  <span>Unassigned</span>
+                </Button>
+              )}
               <Button
                 type="link"
                 size="small"

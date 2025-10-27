@@ -211,6 +211,7 @@ const Dashboard: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(false);
+  const [networkError, setNetworkError] = useState(false);
 
   const [filterBoxes, setFilterBoxes] = useState<FilterBox[]>([
     {
@@ -249,12 +250,21 @@ const Dashboard: React.FC = () => {
   // Fetch tickets from API
   const fetchTickets = async () => {
     setLoading(true);
+    setNetworkError(false);
     try {
       const response = await ticketService.getTickets();
-      setTickets(response.results);
+      // Map API response fields to frontend format
+      const mappedTickets = response.results.map((ticket: any) => ({
+        ...ticket,
+        createdAt: ticket.created_at,
+        updatedAt: ticket.updated_at,
+      }));
+      setTickets(mappedTickets);
+      setNetworkError(false);
     } catch (error: any) {
       console.error("Failed to fetch tickets:", error);
-      message.error(error.message || "Failed to load tickets");
+      setNetworkError(true);
+      message.error(error.message || "Failed to load tickets. Please check your network connection.");
     } finally {
       setLoading(false);
     }
@@ -340,24 +350,20 @@ const Dashboard: React.FC = () => {
       ),
     },
     {
-      title: "Customer",
-      dataIndex: "customer",
-      key: "customer",
-      width: 180,
-    },
-    {
       title: "Status",
       dataIndex: "status",
       key: "status",
       width: 120,
       render: (status: string) => {
+        // Capitalize status from API (e.g., "new" -> "New")
+        const capitalizedStatus = status.charAt(0).toUpperCase() + status.slice(1);
         const colorMap: Record<string, string> = {
           New: "blue",
           "In Progress": "orange",
           Review: "purple",
           Done: "green",
         };
-        return <Tag color={colorMap[status]}>{status}</Tag>;
+        return <Tag color={colorMap[capitalizedStatus]}>{capitalizedStatus}</Tag>;
       },
     },
     {
@@ -373,12 +379,14 @@ const Dashboard: React.FC = () => {
       key: "urgency",
       width: 100,
       render: (urgency: string) => {
+        // Capitalize urgency from API (e.g., "high" -> "High")
+        const capitalizedUrgency = urgency ? urgency.charAt(0).toUpperCase() + urgency.slice(1) : "Normal";
         const colorMap: Record<string, string> = {
           High: "red",
           Normal: "orange",
           Low: "green",
         };
-        return <Tag color={colorMap[urgency]}>{urgency}</Tag>;
+        return <Tag color={colorMap[capitalizedUrgency]}>{capitalizedUrgency}</Tag>;
       },
     },
     {
@@ -387,13 +395,15 @@ const Dashboard: React.FC = () => {
       key: "importance",
       width: 120,
       render: (importance: string) => {
+        // Capitalize importance from API (e.g., "critical" -> "Critical")
+        const capitalizedImportance = importance ? importance.charAt(0).toUpperCase() + importance.slice(1) : "Normal";
         const colorMap: Record<string, string> = {
           Critical: "red",
           High: "orange",
           Normal: "blue",
           Low: "green",
         };
-        return <Tag color={colorMap[importance]}>{importance}</Tag>;
+        return <Tag color={colorMap[capitalizedImportance]}>{capitalizedImportance}</Tag>;
       },
     },
     {
@@ -401,6 +411,16 @@ const Dashboard: React.FC = () => {
       dataIndex: "createdAt",
       key: "createdAt",
       width: 120,
+      render: (createdAt: string) => {
+        if (!createdAt) return "-";
+        // Format: "Oct 27, 2025"
+        const date = new Date(createdAt);
+        return date.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        });
+      },
     },
   ];
 
@@ -422,6 +442,47 @@ const Dashboard: React.FC = () => {
       >
         <h1 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>Dashboard</h1>
       </div>
+
+      {/* Network Error Banner */}
+      {networkError && (
+        <div
+          style={{
+            backgroundColor: "#fff2e8",
+            borderBottom: "2px solid #ffa940",
+            padding: "12px 20px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <span
+              style={{
+                fontSize: "18px",
+                color: "#d46b08",
+              }}
+            >
+              ⚠️
+            </span>
+            <div>
+              <div style={{ fontWeight: 600, color: "#d46b08" }}>
+                Network Connection Error
+              </div>
+              <div style={{ fontSize: "13px", color: "#8c6c3c" }}>
+                Unable to connect to the backend server. Please check your network connection or contact support.
+              </div>
+            </div>
+          </div>
+          <Button
+            onClick={fetchTickets}
+            icon={<ReloadOutlined />}
+            loading={loading}
+            type="primary"
+          >
+            Retry
+          </Button>
+        </div>
+      )}
 
       <div
         style={{
