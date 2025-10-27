@@ -160,6 +160,39 @@ class ProjectViewSet(viewsets.ModelViewSet):
     ordering_fields = ['name', 'created_at']
     ordering = ['name']
     
+    def create(self, request, *args, **kwargs):
+        """
+        Override create to automatically add default columns to new projects
+        """
+        # Create the project using the parent create method
+        response = super().create(request, *args, **kwargs)
+        
+        # If project was created successfully, add default columns
+        if response.status_code == status.HTTP_201_CREATED:
+            project_id = response.data['id']
+            project = Project.objects.get(id=project_id)
+            
+            # Define default columns
+            default_columns = [
+                {'name': 'New', 'order': 1},
+                {'name': 'In Progress', 'order': 2},
+                {'name': 'Review', 'order': 3},
+                {'name': 'Done', 'order': 4},
+            ]
+            
+            # Create the columns
+            for col_data in default_columns:
+                Column.objects.create(
+                    project=project,
+                    name=col_data['name'],
+                    order=col_data['order']
+                )
+            
+            # Update the response to include columns_count
+            response.data['columns_count'] = 4
+        
+        return response
+    
     @action(detail=True, methods=['get'])
     def tickets(self, request, pk=None):
         """Get all tickets for this project"""

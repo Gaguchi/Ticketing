@@ -21,7 +21,11 @@ import {
 import dayjs from "dayjs";
 import type { Ticket } from "../types/ticket";
 import { getPriorityIcon } from "./PriorityIcons";
-import { ticketService, type CreateTicketData } from "../services";
+import {
+  ticketService,
+  projectService,
+  type CreateTicketData,
+} from "../services";
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -59,8 +63,9 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
   const [createAnother, setCreateAnother] = useState(false);
   const [ticketType, setTicketType] = useState("task");
   const [currentProject, setCurrentProject] = useState<any>(null);
+  const [actualColumnId, setActualColumnId] = useState<number | null>(null);
 
-  // Load current project from localStorage when modal opens
+  // Load current project and its columns from localStorage when modal opens
   useEffect(() => {
     if (open) {
       const projectData = localStorage.getItem("currentProject");
@@ -69,6 +74,26 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
           const project = JSON.parse(projectData);
           setCurrentProject(project);
           form.setFieldValue("project", project.id);
+
+          // Fetch project columns to get the actual first column ID
+          projectService
+            .getProjectColumns(project.id)
+            .then((columns) => {
+              if (columns.length > 0) {
+                // Use the first column or the specified columnId if it exists in this project
+                const targetColumn =
+                  columns.find((col: any) => col.id === columnId) || columns[0];
+                setActualColumnId(targetColumn.id);
+              } else {
+                message.warning(
+                  "No columns found in project. Please create columns first."
+                );
+              }
+            })
+            .catch((error) => {
+              console.error("Failed to load project columns:", error);
+              message.error("Failed to load project columns");
+            });
         } catch (error) {
           console.error("Failed to load current project:", error);
           message.error("Failed to load project information");
@@ -77,11 +102,18 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
         message.warning("No project selected. Please create a project first.");
       }
     }
-  }, [open, form]);
+  }, [open, form, columnId]);
 
   const handleSubmit = async (values: any) => {
     if (!currentProject) {
       message.error("No project selected. Please create a project first.");
+      return;
+    }
+
+    if (!actualColumnId) {
+      message.error(
+        "No valid column found. Please create columns for your project first."
+      );
       return;
     }
 
@@ -91,9 +123,9 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
         name: values.summary,
         description: values.description || "",
         type: values.type,
-        status: values.status || "New",
+        status: values.status || "new", // Use lowercase status
         priority_id: values.priority || 3,
-        column: columnId,
+        column: actualColumnId, // Use the actual column ID from the project
         project: currentProject.id, // Use current project
         due_date: values.dueDate
           ? dayjs(values.dueDate).format("YYYY-MM-DD")
@@ -200,7 +232,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
             onFinish={handleSubmit}
             initialValues={{
               type: "task",
-              status: "New",
+              status: "new", // Use lowercase status
               priority: 3,
             }}
             size="middle"

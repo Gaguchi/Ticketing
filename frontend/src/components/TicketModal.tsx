@@ -29,7 +29,11 @@ import {
 import dayjs from "dayjs";
 import type { Ticket } from "../types/ticket";
 import { getPriorityIcon } from "./PriorityIcons";
-import { ticketService, type CreateTicketData } from "../services";
+import {
+  ticketService,
+  projectService,
+  type CreateTicketData,
+} from "../services";
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -81,7 +85,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
   const [title, setTitle] = useState(ticket?.name || "");
   const [description, setDescription] = useState(ticket?.description || "");
   const [ticketType, setTicketType] = useState(ticket?.type || "task");
-  const [status, setStatus] = useState(ticket?.status || "New");
+  const [status, setStatus] = useState(ticket?.status || "new"); // Use lowercase status
   const [priority, setPriority] = useState(ticket?.priorityId || 3);
   const [tags, setTags] = useState<number[]>(ticket?.tags || []);
   const [dueDate, setDueDate] = useState<dayjs.Dayjs | null>(
@@ -94,6 +98,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
   const [activeTab, setActiveTab] = useState("comments");
   const [saving, setSaving] = useState(false);
   const [currentProject, setCurrentProject] = useState<any>(null);
+  const [actualColumnId, setActualColumnId] = useState<number | null>(null);
 
   // Load current project from localStorage when modal opens
   useEffect(() => {
@@ -103,12 +108,26 @@ export const TicketModal: React.FC<TicketModalProps> = ({
         try {
           const project = JSON.parse(projectData);
           setCurrentProject(project);
+
+          // Fetch project columns to get the actual column ID
+          projectService
+            .getProjectColumns(project.id)
+            .then((columns) => {
+              if (columns.length > 0) {
+                const targetColumn =
+                  columns.find((col: any) => col.id === columnId) || columns[0];
+                setActualColumnId(targetColumn.id);
+              }
+            })
+            .catch((error) => {
+              console.error("Failed to load project columns:", error);
+            });
         } catch (error) {
           console.error("Failed to load current project:", error);
         }
       }
     }
-  }, [open, isCreateMode]);
+  }, [open, isCreateMode, columnId]);
 
   // Reset form when ticket changes
   useEffect(() => {
@@ -148,7 +167,9 @@ export const TicketModal: React.FC<TicketModalProps> = ({
         type: ticketType,
         status,
         priority_id: priority,
-        column: columnId || ticket?.column || 1, // Default to column 1 if not provided
+        column: isCreateMode
+          ? actualColumnId || columnId || 1
+          : ticket?.column || 1,
         project: isCreateMode
           ? currentProject.id
           : ticket?.project || currentProject?.id || 1,
