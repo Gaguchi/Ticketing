@@ -68,52 +68,78 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
   // Load current project and its columns from localStorage when modal opens
   useEffect(() => {
     if (open) {
+      console.group("🔧 CreateTicketModal - Loading project and columns");
+      console.log("Modal opened with columnId:", columnId);
+
       const projectData = localStorage.getItem("currentProject");
+      console.log("Project data from localStorage:", projectData);
+
       if (projectData) {
         try {
           const project = JSON.parse(projectData);
+          console.log("Parsed project:", project);
           setCurrentProject(project);
           form.setFieldValue("project", project.id);
 
           // Fetch project columns to get the actual first column ID
+          console.log("Fetching columns for project ID:", project.id);
           projectService
             .getProjectColumns(project.id)
             .then((columns) => {
+              console.log("Fetched columns:", columns);
               if (columns.length > 0) {
                 // Use the first column or the specified columnId if it exists in this project
                 const targetColumn =
                   columns.find((col: any) => col.id === columnId) || columns[0];
+                console.log("Selected column:", targetColumn);
                 setActualColumnId(targetColumn.id);
+                console.groupEnd();
               } else {
+                console.warn("⚠️ No columns found in project");
+                console.groupEnd();
                 message.warning(
                   "No columns found in project. Please create columns first."
                 );
               }
             })
             .catch((error) => {
-              console.error("Failed to load project columns:", error);
+              console.error("❌ Failed to load project columns:", error);
+              console.groupEnd();
               message.error("Failed to load project columns");
             });
         } catch (error) {
-          console.error("Failed to load current project:", error);
+          console.error("❌ Failed to parse project data:", error);
+          console.groupEnd();
           message.error("Failed to load project information");
         }
       } else {
+        console.warn("⚠️ No project data in localStorage");
+        console.groupEnd();
         message.warning("No project selected. Please create a project first.");
       }
     }
   }, [open, form, columnId]);
 
   const handleSubmit = async (values: any) => {
+    console.group("🎫 CreateTicketModal - handleSubmit");
+    console.log("Form values:", values);
+    console.log("Current project:", currentProject);
+    console.log("Actual column ID:", actualColumnId);
+    console.log("Passed column ID:", columnId);
+
     if (!currentProject) {
+      console.error("❌ No current project!");
       message.error("No project selected. Please create a project first.");
+      console.groupEnd();
       return;
     }
 
     if (!actualColumnId) {
+      console.error("❌ No actual column ID!");
       message.error(
         "No valid column found. Please create columns for your project first."
       );
+      console.groupEnd();
       return;
     }
 
@@ -135,7 +161,11 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
           : undefined,
       };
 
+      console.log("📤 Ticket data to send:", ticketData);
+
       const newTicket = await ticketService.createTicket(ticketData);
+      console.log("✅ Ticket created successfully:", newTicket);
+      console.groupEnd();
       message.success("Ticket created successfully!");
 
       onSuccess?.(newTicket);
@@ -149,7 +179,9 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
         onClose();
       }
     } catch (error: any) {
-      console.error("Failed to create ticket:", error);
+      console.error("❌ Failed to create ticket:", error);
+      console.error("Error details:", error.details || error.response || error);
+      console.groupEnd();
       message.error(error.message || "Failed to create ticket");
     } finally {
       setSaving(false);
