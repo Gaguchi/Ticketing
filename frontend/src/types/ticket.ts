@@ -12,7 +12,10 @@ export interface Ticket {
   // Relationships
   project: number;
   project_key?: string;
+  projectKey?: string; // Alias for backward compatibility
   column: number;
+  column_name?: string;
+  columnName?: string; // Alias for backward compatibility
   colId?: number; // Alias for backward compatibility
   assignees?: number[];
   assigneeIds?: number[]; // Alias for backward compatibility
@@ -20,6 +23,8 @@ export interface Ticket {
   reporter?: number;
   parent?: number;
   tags?: number[];
+  tags_detail?: any[];
+  tagsDetail?: any[]; // Alias for backward compatibility
   tag_names?: string[];
   
   // Metadata
@@ -33,6 +38,7 @@ export interface Ticket {
   created_at: string;
   createdAt?: string; // Alias for backward compatibility
   updated_at: string;
+  updatedAt?: string; // Alias for backward compatibility
 }
 
 export interface TicketColumn {

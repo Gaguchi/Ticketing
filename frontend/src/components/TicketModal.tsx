@@ -160,7 +160,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
       setTitle(ticket?.name || "");
       setDescription(ticket?.description || "");
       setTicketType(ticket?.type || "task");
-      setStatus(ticket?.status || "New");
+      setStatus(ticket?.status || "new"); // Keep lowercase - backend expects lowercase
       setPriority(ticket?.priorityId || 3);
       setTags(ticket?.tags || []);
       setAssignees(ticket?.assignees?.map((a: any) => a.id) || []);
@@ -669,10 +669,10 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                 style={{ width: "100%" }}
                 size="small"
               >
-                <Option value="New">To Do</Option>
-                <Option value="In Progress">In Progress</Option>
-                <Option value="Review">Review</Option>
-                <Option value="Done">Done</Option>
+                <Option value="new">To Do</Option>
+                <Option value="in progress">In Progress</Option>
+                <Option value="review">Review</Option>
+                <Option value="done">Done</Option>
               </Select>
             </div>
 
@@ -928,7 +928,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
               </Button>
             </div>
 
-            {/* Timestamps */}
+            {/* Created/Updated Dates */}
             {!isCreateMode && ticket && (
               <div
                 style={{
@@ -940,8 +940,18 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                   gap: "4px",
                 }}
               >
-                <div>Created {ticket.created_at || ticket.createdAt}</div>
-                <div>Updated {ticket.updated_at}</div>
+                <div>
+                  Created{" "}
+                  {ticket.createdAt
+                    ? dayjs(ticket.createdAt).format("MMM D, YYYY [at] h:mm A")
+                    : "Unknown"}
+                </div>
+                <div>
+                  Updated{" "}
+                  {ticket.updatedAt
+                    ? dayjs(ticket.updatedAt).format("MMM D, YYYY [at] h:mm A")
+                    : "Unknown"}
+                </div>
               </div>
             )}
 

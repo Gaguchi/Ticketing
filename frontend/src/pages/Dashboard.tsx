@@ -253,11 +253,24 @@ const Dashboard: React.FC = () => {
     setNetworkError(false);
     try {
       const response = await ticketService.getTickets();
-      // Map API response fields to frontend format
+      // Map ALL API response fields from snake_case to camelCase
       const mappedTickets = response.results.map((ticket: any) => ({
         ...ticket,
+        // Date fields
         createdAt: ticket.created_at,
         updatedAt: ticket.updated_at,
+        dueDate: ticket.due_date,
+        startDate: ticket.start_date,
+        // Priority field
+        priorityId: ticket.priority_id,
+        // Project field  
+        projectKey: ticket.project_key,
+        // Column field
+        columnName: ticket.column_name,
+        // Comments count
+        commentsCount: ticket.comments_count,
+        // Tags detail
+        tagsDetail: ticket.tags_detail,
       }));
       setTickets(mappedTickets);
       setNetworkError(false);
