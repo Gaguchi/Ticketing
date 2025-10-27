@@ -11,7 +11,7 @@ export interface CreateTicketData {
   name: string;
   description?: string;
   type: string;
-  status: string;
+  status?: string; // Optional: backend can derive from column
   priority_id: number;
   column: number;
   project: number;

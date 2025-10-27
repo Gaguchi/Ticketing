@@ -69,6 +69,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
   const [creatingColumns, setCreatingColumns] = useState(false);
   const [openTickets, setOpenTickets] = useState<any[]>([]);
   const [projectTags, setProjectTags] = useState<any[]>([]);
+  const [projectColumns, setProjectColumns] = useState<any[]>([]);
 
   // Load current project and its columns from localStorage when modal opens
   useEffect(() => {
@@ -92,12 +93,15 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
             .getProjectColumns(project.id)
             .then((columns) => {
               console.log("Fetched columns:", columns);
+              setProjectColumns(columns);
               if (columns.length > 0) {
                 // Use the first column or the specified columnId if it exists in this project
                 const targetColumn =
                   columns.find((col: any) => col.id === columnId) || columns[0];
                 console.log("Selected column:", targetColumn);
                 setActualColumnId(targetColumn.id);
+                // Set default column value in form
+                form.setFieldValue("column", targetColumn.id);
                 console.groupEnd();
               } else {
                 console.warn("⚠️ No columns found in project");
@@ -270,9 +274,8 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
         name: values.summary,
         description: values.description || "",
         type: values.type,
-        status: values.status || "new", // Use lowercase status
         priority_id: values.priority || 3,
-        column: actualColumnId, // Use the actual column ID from the project
+        column: values.column || actualColumnId, // Use selected column from form or the actual column ID
         project: currentProject.id, // Use current project
         assignee_ids: values.assignee ? [values.assignee] : undefined,
         parent: values.parent || undefined,
@@ -529,14 +532,18 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               </Select>
             </Form.Item>
 
-            {/* Status */}
+            {/* Column/Status */}
             <Form.Item
-              label="Status"
-              name="status"
+              label="Column"
+              name="column"
               style={{ marginBottom: "12px" }}
             >
-              <Select placeholder="Select status" disabled>
-                <Option value="New">To Do</Option>
+              <Select placeholder="Select column">
+                {projectColumns.map((col) => (
+                  <Option key={col.id} value={col.id}>
+                    {col.name}
+                  </Option>
+                ))}
               </Select>
             </Form.Item>
 

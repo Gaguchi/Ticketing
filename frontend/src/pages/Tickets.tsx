@@ -181,17 +181,20 @@ const Tickets: React.FC = () => {
     },
     {
       title: "Status",
-      dataIndex: "status",
-      key: "status",
+      dataIndex: "column_name",
+      key: "column_name",
       width: 120,
-      render: (status: string) => {
+      render: (column_name: string) => {
         const colorMap: Record<string, string> = {
+          "To Do": "blue",
           New: "blue",
           "In Progress": "orange",
           Review: "purple",
           Done: "green",
         };
-        return <Tag color={colorMap[status]}>{status}</Tag>;
+        return (
+          <Tag color={colorMap[column_name] || "default"}>{column_name}</Tag>
+        );
       },
     },
     {
@@ -244,7 +247,7 @@ const Tickets: React.FC = () => {
       ticket.tag_names?.some((tag) =>
         tag.toLowerCase().includes(searchText.toLowerCase())
       );
-    const matchesStatus = !filterStatus || ticket.status === filterStatus;
+    const matchesStatus = !filterStatus || ticket.column_name === filterStatus;
     return matchesSearch && matchesStatus;
   });
 
@@ -287,10 +290,11 @@ const Tickets: React.FC = () => {
                 width: 140,
               }}
             >
-              <Option value="New">New</Option>
-              <Option value="In Progress">In Progress</Option>
-              <Option value="Review">Review</Option>
-              <Option value="Done">Done</Option>
+              {kanbanColumns.map((col) => (
+                <Option key={col.id} value={col.name}>
+                  {col.name}
+                </Option>
+              ))}
             </Select>
           </div>
         </div>

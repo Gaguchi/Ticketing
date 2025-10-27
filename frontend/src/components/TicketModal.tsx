@@ -86,7 +86,9 @@ export const TicketModal: React.FC<TicketModalProps> = ({
   const [title, setTitle] = useState(ticket?.name || "");
   const [description, setDescription] = useState(ticket?.description || "");
   const [ticketType, setTicketType] = useState(ticket?.type || "task");
-  const [status, setStatus] = useState(ticket?.status || "new"); // Use lowercase status
+  const [selectedColumn, setSelectedColumn] = useState(
+    ticket?.column || columnId || 1
+  );
   const [priority, setPriority] = useState(ticket?.priorityId || 3);
   const [tags, setTags] = useState<number[]>(ticket?.tags || []);
   const [assignees, setAssignees] = useState<number[]>(
@@ -104,6 +106,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
   const [currentProject, setCurrentProject] = useState<any>(null);
   const [actualColumnId, setActualColumnId] = useState<number | null>(null);
   const [projectTags, setProjectTags] = useState<any[]>([]);
+  const [projectColumns, setProjectColumns] = useState<any[]>([]);
 
   // Load current project from localStorage when modal opens
   useEffect(() => {
@@ -128,11 +131,13 @@ export const TicketModal: React.FC<TicketModalProps> = ({
             .getProjectColumns(project.id)
             .then((columns) => {
               console.log("Fetched columns:", columns);
+              setProjectColumns(columns);
               if (columns.length > 0) {
                 const targetColumn =
                   columns.find((col: any) => col.id === columnId) || columns[0];
                 console.log("Selected column:", targetColumn);
                 setActualColumnId(targetColumn.id);
+                setSelectedColumn(targetColumn.id);
                 console.groupEnd();
               } else {
                 console.warn("⚠️ No columns found");
@@ -166,7 +171,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
       setTitle(ticket?.name || "");
       setDescription(ticket?.description || "");
       setTicketType(ticket?.type || "task");
-      setStatus(ticket?.status || "new"); // Keep lowercase - backend expects lowercase
+      setSelectedColumn(ticket?.column || 1);
       setPriority(ticket?.priorityId || 3);
       setTags(ticket?.tags || []);
       setAssignees(ticket?.assignees?.map((a: any) => a.id) || []);
@@ -185,11 +190,24 @@ export const TicketModal: React.FC<TicketModalProps> = ({
       );
       console.groupEnd();
 
-      // Load project tags for autocomplete
+      // Load project tags and columns for autocomplete
       const projectData = localStorage.getItem("currentProject");
       if (projectData) {
         try {
           const project = JSON.parse(projectData);
+          setCurrentProject(project);
+
+          // Load columns
+          projectService
+            .getProjectColumns(project.id)
+            .then((columns) => {
+              setProjectColumns(columns);
+            })
+            .catch((error) => {
+              console.error("Failed to load columns:", error);
+            });
+
+          // Load tags
           tagService
             .getTags(project.id)
             .then((response: any) => {
@@ -246,11 +264,8 @@ export const TicketModal: React.FC<TicketModalProps> = ({
         name: title,
         description,
         type: ticketType,
-        status,
         priority_id: priority,
-        column: isCreateMode
-          ? actualColumnId || columnId || 1
-          : ticket?.column || 1,
+        column: selectedColumn,
         project: isCreateMode
           ? currentProject.id
           : ticket?.project || currentProject?.id || 1,
@@ -682,15 +697,16 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                 Status
               </div>
               <Select
-                value={status}
-                onChange={setStatus}
+                value={selectedColumn}
+                onChange={setSelectedColumn}
                 style={{ width: "100%" }}
                 size="small"
               >
-                <Option value="new">To Do</Option>
-                <Option value="in_progress">In Progress</Option>
-                <Option value="review">Review</Option>
-                <Option value="done">Done</Option>
+                {projectColumns.map((col) => (
+                  <Option key={col.id} value={col.id}>
+                    {col.name}
+                  </Option>
+                ))}
               </Select>
             </div>
 

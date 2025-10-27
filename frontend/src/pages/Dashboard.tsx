@@ -230,13 +230,13 @@ const Dashboard: React.FC = () => {
     {
       id: "inProgress",
       title: "In Progress",
-      filter: (ticket) => ticket.status === "in_progress",
+      filter: (ticket) => ticket.column_name === "In Progress",
       color: "#fa8c16",
     },
     {
-      id: "new",
-      title: "New",
-      filter: (ticket) => ticket.status === "new",
+      id: "toDo",
+      title: "To Do",
+      filter: (ticket) => ticket.column_name === "To Do",
       color: "#52c41a",
     },
     {
@@ -391,26 +391,20 @@ const Dashboard: React.FC = () => {
     },
     {
       title: "Status",
-      dataIndex: "status",
-      key: "status",
+      dataIndex: "column_name",
+      key: "column_name",
       width: 120,
-      render: (status: string) => {
-        // Map status values to display format
-        const statusMap: Record<string, string> = {
-          new: "New",
-          in_progress: "In Progress",
-          review: "Review",
-          done: "Done",
-        };
-        const displayStatus =
-          statusMap[status] || status.charAt(0).toUpperCase() + status.slice(1);
+      render: (column_name: string) => {
         const colorMap: Record<string, string> = {
+          "To Do": "blue",
           New: "blue",
           "In Progress": "orange",
           Review: "purple",
           Done: "green",
         };
-        return <Tag color={colorMap[displayStatus]}>{displayStatus}</Tag>;
+        return (
+          <Tag color={colorMap[column_name] || "default"}>{column_name}</Tag>
+        );
       },
     },
     {
