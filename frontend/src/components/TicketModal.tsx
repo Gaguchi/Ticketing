@@ -162,7 +162,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
       console.log("Description:", ticket?.description);
       console.log("Due date:", ticket?.dueDate);
       console.log("Assignees:", ticket?.assignees);
-      
+
       setTitle(ticket?.name || "");
       setDescription(ticket?.description || "");
       setTicketType(ticket?.type || "task");
@@ -172,11 +172,17 @@ export const TicketModal: React.FC<TicketModalProps> = ({
       setAssignees(ticket?.assignees?.map((a: any) => a.id) || []);
       setDueDate(ticket?.dueDate ? dayjs(ticket.dueDate) : null);
       setStartDate(ticket?.startDate ? dayjs(ticket.startDate) : null);
-      
+
       console.log("States set:");
       console.log("- Description state:", ticket?.description || "");
-      console.log("- Due date state:", ticket?.dueDate ? dayjs(ticket.dueDate) : null);
-      console.log("- Assignees state:", ticket?.assignees?.map((a: any) => a.id) || []);
+      console.log(
+        "- Due date state:",
+        ticket?.dueDate ? dayjs(ticket.dueDate) : null
+      );
+      console.log(
+        "- Assignees state:",
+        ticket?.assignees?.map((a: any) => a.id) || []
+      );
       console.groupEnd();
 
       // Load project tags for autocomplete
