@@ -26,7 +26,6 @@ import {
 import update from "immutability-helper";
 import { KanbanColumn } from "./KanbanColumn";
 import { TicketCard } from "./TicketCard";
-import ClientOnlyPortal from "./ClientOnlyPortal";
 import type { Ticket, TicketColumn, KanbanItems } from "../types/ticket";
 
 interface KanbanBoardProps {
@@ -361,34 +360,31 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             </span>
           </div>
         </div>
-        <ClientOnlyPortal selector=".kanban">
-          <DragOverlay>
-            {activeId ? (
-              containers.includes(activeId) ? (
-                <KanbanColumn
-                  id={activeId}
-                  items={items[activeId]}
-                  name={
-                    columns.find((c) => `column-${c.id}` === activeId)?.name ||
-                    ""
-                  }
-                  tickets={data || []}
-                  dragOverlay
-                  onTicketClick={onTicketClick}
-                />
-              ) : (
-                <TicketCard
-                  id={activeId}
-                  ticket={
-                    data?.find((d) => `ticket-${d.id}` === activeId) ||
-                    ({} as Ticket)
-                  }
-                  dragOverlay
-                />
-              )
-            ) : null}
-          </DragOverlay>
-        </ClientOnlyPortal>
+        <DragOverlay>
+          {activeId ? (
+            containers.includes(activeId) ? (
+              <KanbanColumn
+                id={activeId}
+                items={items[activeId]}
+                name={
+                  columns.find((c) => `column-${c.id}` === activeId)?.name || ""
+                }
+                tickets={data || []}
+                dragOverlay
+                onTicketClick={onTicketClick}
+              />
+            ) : (
+              <TicketCard
+                id={activeId}
+                ticket={
+                  data?.find((d) => `ticket-${d.id}` === activeId) ||
+                  ({} as Ticket)
+                }
+                dragOverlay
+              />
+            )
+          ) : null}
+        </DragOverlay>
       </DndContext>
     </div>
   );
