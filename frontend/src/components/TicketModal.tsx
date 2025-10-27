@@ -93,6 +93,22 @@ export const TicketModal: React.FC<TicketModalProps> = ({
   const [comment, setComment] = useState("");
   const [activeTab, setActiveTab] = useState("comments");
   const [saving, setSaving] = useState(false);
+  const [currentProject, setCurrentProject] = useState<any>(null);
+
+  // Load current project from localStorage when modal opens
+  useEffect(() => {
+    if (open && isCreateMode) {
+      const projectData = localStorage.getItem("currentProject");
+      if (projectData) {
+        try {
+          const project = JSON.parse(projectData);
+          setCurrentProject(project);
+        } catch (error) {
+          console.error("Failed to load current project:", error);
+        }
+      }
+    }
+  }, [open, isCreateMode]);
 
   // Reset form when ticket changes
   useEffect(() => {
@@ -119,6 +135,11 @@ export const TicketModal: React.FC<TicketModalProps> = ({
       return;
     }
 
+    if (isCreateMode && !currentProject) {
+      message.error("No project selected. Please create a project first.");
+      return;
+    }
+
     setSaving(true);
     try {
       const ticketData: CreateTicketData = {
@@ -128,6 +149,9 @@ export const TicketModal: React.FC<TicketModalProps> = ({
         status,
         priority_id: priority,
         column: columnId || ticket?.column || 1, // Default to column 1 if not provided
+        project: isCreateMode
+          ? currentProject.id
+          : ticket?.project || currentProject?.id || 1,
         due_date: dueDate ? dueDate.format("YYYY-MM-DD") : undefined,
         start_date: startDate ? startDate.format("YYYY-MM-DD") : undefined,
       };

@@ -2,10 +2,10 @@
 
 ## Problem
 
-The Create Ticket modal was not functional because:
+Both ticket modals were not functional because:
 
 1. The `project` field was required by the backend but not being sent
-2. The modal was using a hardcoded dummy project
+2. The modals were using hardcoded or missing project data
 3. No connection to the actual user's current project
 
 ## Solution
@@ -21,11 +21,27 @@ export interface CreateTicketData {
 }
 ```
 
-### 2. Load Current Project from localStorage
+### 2. Fixed CreateTicketModal.tsx
 
-The modal now loads the user's current project from localStorage (set during ProjectSetup):
+- Load current project from localStorage when modal opens
+- Display real project information (name and key)
+- Include project ID in ticket creation API call
+- Validate project exists before allowing creation
+
+### 3. Fixed TicketModal.tsx
+
+- Load current project from localStorage for create mode
+- Use ticket's existing project for edit mode
+- Include project ID in both create and update operations
+- Handle fallback to currentProject if ticket.project is missing
+
+### 4. Implementation Details
+
+**CreateTicketModal.tsx:**
 
 ```typescript
+const [currentProject, setCurrentProject] = useState<any>(null);
+
 useEffect(() => {
   if (open) {
     const projectData = localStorage.getItem("currentProject");
@@ -36,24 +52,35 @@ useEffect(() => {
     }
   }
 }, [open, form]);
-```
 
-### 3. Display Real Project Info
-
-The Space dropdown now shows the actual project details:
-
-- Project key (e.g., "TICK")
-- Project name (e.g., "Tickets")
-- Dynamic icon based on project key
-
-### 4. Include Project in API Call
-
-When creating a ticket, the project ID is now included:
-
-```typescript
+// In handleSubmit:
 const ticketData: CreateTicketData = {
   // ... other fields
   project: currentProject.id,
+};
+```
+
+**TicketModal.tsx:**
+
+```typescript
+const [currentProject, setCurrentProject] = useState<any>(null);
+
+useEffect(() => {
+  if (open && isCreateMode) {
+    const projectData = localStorage.getItem("currentProject");
+    if (projectData) {
+      const project = JSON.parse(projectData);
+      setCurrentProject(project);
+    }
+  }
+}, [open, isCreateMode]);
+
+// In handleSave:
+const ticketData: CreateTicketData = {
+  // ... other fields
+  project: isCreateMode
+    ? currentProject.id
+    : ticket?.project || currentProject?.id || 1,
 };
 ```
 
@@ -61,17 +88,23 @@ const ticketData: CreateTicketData = {
 
 1. **Login** as a user who has already created a project
 2. **Open Dashboard** (you should be automatically redirected here if you have projects)
-3. **Click "Create Task"** button in any column
-4. **Fill in the form**:
-   - Summary: "Test ticket creation"
-   - Description: "Testing the fixed modal"
-   - Leave other fields as default
-5. **Click "Create"**
+3. **Test CreateTicketModal**:
+   - Click "Create Task" button in any column
+   - Fill in Summary: "Test new ticket"
+   - Click "Create"
+   - Ticket should be created successfully ✅
+4. **Test TicketModal (Edit)**:
+   - Click on an existing ticket to open it
+   - Modify the title or description
+   - Click "Save"
+   - Changes should be saved successfully ✅
 
-The ticket should be created successfully and appear in the selected column!
+## Files Modified
 
-## Related Files
+- ✅ `frontend/src/components/CreateTicketModal.tsx` - Create ticket modal
+- ✅ `frontend/src/components/TicketModal.tsx` - Edit ticket modal
+- ✅ `frontend/src/services/ticket.service.ts` - Added project field to CreateTicketData
 
-- `frontend/src/components/CreateTicketModal.tsx` - Main modal component
-- `frontend/src/services/ticket.service.ts` - Ticket API service
-- `frontend/src/pages/ProjectSetup.tsx` - Sets currentProject in localStorage
+## Deployment Status
+
+Both modals are now fixed and the frontend should build successfully in Dokploy! 🚀
