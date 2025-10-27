@@ -264,7 +264,10 @@ const Dashboard: React.FC = () => {
     } catch (error: any) {
       console.error("Failed to fetch tickets:", error);
       setNetworkError(true);
-      message.error(error.message || "Failed to load tickets. Please check your network connection.");
+      message.error(
+        error.message ||
+          "Failed to load tickets. Please check your network connection."
+      );
     } finally {
       setLoading(false);
     }
@@ -356,14 +359,17 @@ const Dashboard: React.FC = () => {
       width: 120,
       render: (status: string) => {
         // Capitalize status from API (e.g., "new" -> "New")
-        const capitalizedStatus = status.charAt(0).toUpperCase() + status.slice(1);
+        const capitalizedStatus =
+          status.charAt(0).toUpperCase() + status.slice(1);
         const colorMap: Record<string, string> = {
           New: "blue",
           "In Progress": "orange",
           Review: "purple",
           Done: "green",
         };
-        return <Tag color={colorMap[capitalizedStatus]}>{capitalizedStatus}</Tag>;
+        return (
+          <Tag color={colorMap[capitalizedStatus]}>{capitalizedStatus}</Tag>
+        );
       },
     },
     {
@@ -380,13 +386,17 @@ const Dashboard: React.FC = () => {
       width: 100,
       render: (urgency: string) => {
         // Capitalize urgency from API (e.g., "high" -> "High")
-        const capitalizedUrgency = urgency ? urgency.charAt(0).toUpperCase() + urgency.slice(1) : "Normal";
+        const capitalizedUrgency = urgency
+          ? urgency.charAt(0).toUpperCase() + urgency.slice(1)
+          : "Normal";
         const colorMap: Record<string, string> = {
           High: "red",
           Normal: "orange",
           Low: "green",
         };
-        return <Tag color={colorMap[capitalizedUrgency]}>{capitalizedUrgency}</Tag>;
+        return (
+          <Tag color={colorMap[capitalizedUrgency]}>{capitalizedUrgency}</Tag>
+        );
       },
     },
     {
@@ -396,14 +406,20 @@ const Dashboard: React.FC = () => {
       width: 120,
       render: (importance: string) => {
         // Capitalize importance from API (e.g., "critical" -> "Critical")
-        const capitalizedImportance = importance ? importance.charAt(0).toUpperCase() + importance.slice(1) : "Normal";
+        const capitalizedImportance = importance
+          ? importance.charAt(0).toUpperCase() + importance.slice(1)
+          : "Normal";
         const colorMap: Record<string, string> = {
           Critical: "red",
           High: "orange",
           Normal: "blue",
           Low: "green",
         };
-        return <Tag color={colorMap[capitalizedImportance]}>{capitalizedImportance}</Tag>;
+        return (
+          <Tag color={colorMap[capitalizedImportance]}>
+            {capitalizedImportance}
+          </Tag>
+        );
       },
     },
     {
@@ -469,7 +485,8 @@ const Dashboard: React.FC = () => {
                 Network Connection Error
               </div>
               <div style={{ fontSize: "13px", color: "#8c6c3c" }}>
-                Unable to connect to the backend server. Please check your network connection or contact support.
+                Unable to connect to the backend server. Please check your
+                network connection or contact support.
               </div>
             </div>
           </div>
