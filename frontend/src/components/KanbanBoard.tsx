@@ -222,7 +222,15 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   }
 
   function handleDragEnd({ active, over }: DragEndEvent) {
+    console.log("🎯 handleDragEnd called:", {
+      activeId: active.id,
+      overId: over?.id,
+      activeData: active.data.current,
+      overData: over?.data.current,
+    });
+
     if (!over) {
+      console.log("❌ No over target, canceling");
       setActiveId(null);
       return;
     }
@@ -236,17 +244,28 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     }
 
     const activeContainer = findContainer(active.id as string);
+    console.log("📍 Active container found:", activeContainer);
 
     if (!activeContainer) {
+      console.log("❌ No active container found");
       setActiveId(null);
       return;
     }
 
     const overContainer = findContainer(over.id as string);
+    console.log("📍 Over container found:", overContainer);
 
     if (overContainer) {
       const activeIndex = items[activeContainer].indexOf(active.id as string);
       const overIndex = items[overContainer].indexOf(over.id as string);
+
+      console.log("📊 Container comparison:", {
+        activeContainer,
+        overContainer,
+        areEqual: activeContainer === overContainer,
+        activeIndex,
+        overIndex,
+      });
 
       if (activeIndex !== overIndex) {
         setItems((items) => ({
@@ -264,14 +283,24 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         const ticketId = parseInt(active.id.toString().replace("ticket-", ""));
         const newColumnId = parseInt(overContainer.replace("column-", ""));
 
-        console.log("🎯 Kanban: Ticket moved", {
+        console.log("✅ Calling onTicketMove:", {
           ticketId,
+          newColumnId,
           fromColumn: activeContainer,
           toColumn: overContainer,
-          newColumnId,
         });
 
         onTicketMove(ticketId, newColumnId);
+      } else {
+        console.log("⚠️ NOT calling onTicketMove:", {
+          reason:
+            activeContainer === overContainer
+              ? "Same container"
+              : "No callback",
+          activeContainer,
+          overContainer,
+          hasCallback: !!onTicketMove,
+        });
       }
     }
 
