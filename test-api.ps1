@@ -9,7 +9,7 @@ Write-Host ""
 # Configuration
 $baseUrl = "http://localhost:8000"
 # Uncomment one of these to test from your network:
-# $baseUrl = "http://192.168.100.6:8000"  # Your local IP
+# $baseUrl = "http://31.146.76.40:8000"  # Your public IP
 # $baseUrl = "http://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me"  # Dokploy production
 
 # Test 1: Health Check
