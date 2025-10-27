@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Button, Input, Select, Table, Tag, Space } from "antd";
+import React, { useState, useEffect } from "react";
+import { Button, Input, Select, Table, Tag, Space, message } from "antd";
 import type { TableColumnsType } from "antd";
 import {
   PlusOutlined,
@@ -18,6 +18,7 @@ import { KanbanBoard } from "../components/KanbanBoard";
 import { getPriorityIcon } from "../components/PriorityIcons";
 import { TicketModal } from "../components/TicketModal";
 import { CreateTicketModal } from "../components/CreateTicketModal";
+import { ticketService, projectService } from "../services";
 import type { Ticket, TicketColumn } from "../types/ticket";
 import "./Tickets.css";
 
@@ -45,190 +46,6 @@ const formatTicketId = (projectKey?: string, id?: number) => {
   return `${key}-${id}`;
 };
 
-// Mock data
-const mockTickets: Ticket[] = [
-  {
-    id: 1,
-    project: 1,
-    project_key: "PROJ",
-    column: 1,
-    colId: 1,
-    name: "Website homepage not loading for mobile users",
-    priority_id: 4,
-    priorityId: 4,
-    following: true,
-    assignee_ids: [1, 2],
-    assigneeIds: [1, 2],
-    tags: [1, 3],
-    tag_names: ["TechCorp Solutions", "High Priority"],
-    status: "New",
-    created_at: "2025-10-15",
-    createdAt: "2025-10-15",
-    updated_at: "2025-10-15",
-    urgency: "High",
-    importance: "Critical",
-    type: "bug",
-  },
-  {
-    id: 2,
-    project: 1,
-    project_key: "PROJ",
-    column: 2,
-    colId: 2,
-    name: "Integrate payment gateway with new API",
-    priority_id: 2,
-    priorityId: 2,
-    assignee_ids: [1],
-    assigneeIds: [1],
-    tags: [2],
-    tag_names: ["RetailMax Inc"],
-    status: "In Progress",
-    created_at: "2025-10-14",
-    createdAt: "2025-10-14",
-    updated_at: "2025-10-14",
-    urgency: "Normal",
-    importance: "High",
-    type: "task",
-  },
-  {
-    id: 3,
-    project: 1,
-    project_key: "PROJ",
-    column: 2,
-    colId: 2,
-    name: "Fix typo in user registration email",
-    priority_id: 3,
-    priorityId: 3,
-    assignee_ids: [2],
-    assigneeIds: [2],
-    tags: [4],
-    tag_names: ["StartupHub"],
-    status: "In Progress",
-    created_at: "2025-10-13",
-    createdAt: "2025-10-13",
-    updated_at: "2025-10-13",
-    urgency: "Low",
-    importance: "Normal",
-    type: "bug",
-  },
-  {
-    id: 4,
-    project: 1,
-    project_key: "PROJ",
-    column: 2,
-    colId: 2,
-    name: "Improve database query performance",
-    priority_id: 2,
-    priorityId: 2,
-    following: true,
-    commentsCount: 3,
-    assignee_ids: [1, 2, 3],
-    assigneeIds: [1, 2, 3],
-    tags: [5],
-    tag_names: ["DataFlow Systems"],
-    status: "In Progress",
-    created_at: "2025-10-12",
-    createdAt: "2025-10-12",
-    updated_at: "2025-10-12",
-    urgency: "Normal",
-    importance: "High",
-    type: "story",
-  },
-  {
-    id: 5,
-    project: 1,
-    project_key: "PROJ",
-    column: 3,
-    colId: 3,
-    name: "Update user documentation",
-    priority_id: 1,
-    priorityId: 1,
-    assignee_ids: [2],
-    assigneeIds: [2],
-    tags: [6],
-    tag_names: ["EduTech Platform"],
-    status: "Review",
-    created_at: "2025-10-11",
-    createdAt: "2025-10-11",
-    updated_at: "2025-10-11",
-    urgency: "Low",
-    importance: "Low",
-    type: "task",
-  },
-  {
-    id: 6,
-    project: 1,
-    project_key: "PROJ",
-    column: 1,
-    colId: 1,
-    name: "Cannot login with SSO credentials",
-    priority_id: 4,
-    priorityId: 4,
-    commentsCount: 11,
-    assignee_ids: [1, 3],
-    assigneeIds: [1, 3],
-    tags: [7],
-    tag_names: ["Enterprise Global"],
-    status: "New",
-    created_at: "2025-10-10",
-    createdAt: "2025-10-10",
-    updated_at: "2025-10-10",
-    urgency: "High",
-    importance: "Critical",
-    type: "bug",
-  },
-  {
-    id: 7,
-    project: 1,
-    project_key: "PROJ",
-    column: 4,
-    colId: 4,
-    name: "Migrate legacy authentication system",
-    priority_id: 3,
-    priorityId: 3,
-    assignee_ids: [3],
-    assigneeIds: [3],
-    tags: [8],
-    tag_names: ["FinanceFlow"],
-    status: "Done",
-    created_at: "2025-10-09",
-    createdAt: "2025-10-09",
-    updated_at: "2025-10-09",
-    urgency: "Normal",
-    importance: "High",
-    type: "epic",
-  },
-  {
-    id: 8,
-    project: 1,
-    project_key: "PROJ",
-    column: 1,
-    colId: 1,
-    name: "Server returning 500 errors intermittently",
-    priority_id: 4,
-    priorityId: 4,
-    commentsCount: 8,
-    assignee_ids: [1, 2, 3],
-    assigneeIds: [1, 2, 3],
-    tags: [9],
-    tag_names: ["CloudServe Inc"],
-    status: "New",
-    created_at: "2025-10-08",
-    createdAt: "2025-10-08",
-    updated_at: "2025-10-08",
-    urgency: "High",
-    importance: "Critical",
-    type: "bug",
-  },
-];
-
-const mockColumns: TicketColumn[] = [
-  { id: 1, name: "New", project: 1, order: 1 },
-  { id: 2, name: "In Progress", project: 1, order: 2 },
-  { id: 3, name: "Review", project: 1, order: 3 },
-  { id: 4, name: "Done", project: 1, order: 4 },
-];
-
 const Tickets: React.FC = () => {
   const [viewMode, setViewMode] = useState<"list" | "kanban">("kanban");
   const [searchText, setSearchText] = useState("");
@@ -237,6 +54,85 @@ const Tickets: React.FC = () => {
   );
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+  // Real data from API
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [kanbanColumns, setKanbanColumns] = useState<TicketColumn[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // Fetch tickets and columns on mount
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        // Get current project from localStorage
+        const projectData = localStorage.getItem("currentProject");
+        if (!projectData) {
+          message.warning(
+            "No project selected. Please select a project first."
+          );
+          return;
+        }
+
+        const project = JSON.parse(projectData);
+
+        // Fetch columns for the project
+        const projectColumns = await projectService.getProjectColumns(
+          project.id
+        );
+        setKanbanColumns(projectColumns);
+
+        // Fetch tickets
+        const response = await ticketService.getTickets();
+        // Map API response fields
+        const mappedTickets = response.results.map((ticket: any) => ({
+          ...ticket,
+          createdAt: ticket.created_at,
+          updatedAt: ticket.updated_at,
+          dueDate: ticket.due_date,
+          startDate: ticket.start_date,
+          priorityId: ticket.priority_id,
+          projectKey: ticket.project_key,
+          columnName: ticket.column_name,
+          commentsCount: ticket.comments_count,
+          tagsDetail: ticket.tags_detail,
+          colId: ticket.column, // Map column to colId for KanbanBoard
+        }));
+        setTickets(mappedTickets);
+      } catch (error: any) {
+        console.error("Failed to fetch data:", error);
+        message.error("Failed to load tickets");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Fetch full ticket details before opening modal
+  const handleTicketClick = async (ticket: Ticket) => {
+    try {
+      const fullTicket = await ticketService.getTicket(ticket.id);
+      // Map the full ticket data
+      const mappedTicket = {
+        ...fullTicket,
+        createdAt: fullTicket.created_at,
+        updatedAt: fullTicket.updated_at,
+        dueDate: fullTicket.due_date,
+        startDate: fullTicket.start_date,
+        priorityId: fullTicket.priority_id,
+        projectKey: fullTicket.project_key,
+        columnName: fullTicket.column_name,
+        commentsCount: fullTicket.comments_count,
+        tagsDetail: fullTicket.tags_detail,
+      };
+      setSelectedTicket(mappedTicket);
+    } catch (error: any) {
+      console.error("Failed to fetch ticket details:", error);
+      message.error("Failed to load ticket details");
+    }
+  };
 
   const columns: TableColumnsType<Ticket> = [
     {
@@ -342,7 +238,7 @@ const Tickets: React.FC = () => {
     },
   ];
 
-  const filteredTickets = mockTickets.filter((ticket) => {
+  const filteredTickets = tickets.filter((ticket) => {
     const matchesSearch =
       ticket.name.toLowerCase().includes(searchText.toLowerCase()) ||
       ticket.tag_names?.some((tag) =>
@@ -425,7 +321,18 @@ const Tickets: React.FC = () => {
 
       {/* Content */}
       <div style={{ flex: 1, overflow: "hidden" }}>
-        {viewMode === "list" ? (
+        {loading ? (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              height: "100%",
+            }}
+          >
+            Loading tickets...
+          </div>
+        ) : viewMode === "list" ? (
           <Table
             columns={columns}
             dataSource={filteredTickets}
@@ -437,12 +344,16 @@ const Tickets: React.FC = () => {
               showTotal: (total) => `Total ${total} tickets`,
             }}
             scroll={{ y: "calc(100vh - 260px)" }}
+            onRow={(record) => ({
+              onClick: () => handleTicketClick(record),
+              style: { cursor: "pointer" },
+            })}
           />
         ) : (
           <KanbanBoard
             tickets={filteredTickets}
-            columns={mockColumns}
-            onTicketClick={setSelectedTicket}
+            columns={kanbanColumns}
+            onTicketClick={handleTicketClick}
           />
         )}
       </div>
