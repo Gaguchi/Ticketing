@@ -24,6 +24,7 @@ import { getPriorityIcon } from "./PriorityIcons";
 import {
   ticketService,
   projectService,
+  columnService,
   type CreateTicketData,
 } from "../services";
 
@@ -64,6 +65,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
   const [ticketType, setTicketType] = useState("task");
   const [currentProject, setCurrentProject] = useState<any>(null);
   const [actualColumnId, setActualColumnId] = useState<number | null>(null);
+  const [creatingColumns, setCreatingColumns] = useState(false);
 
   // Load current project and its columns from localStorage when modal opens
   useEffect(() => {
@@ -97,9 +99,36 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               } else {
                 console.warn("⚠️ No columns found in project");
                 console.groupEnd();
-                message.warning(
-                  "No columns found in project. Please create columns first."
-                );
+                
+                // Offer to create default columns
+                Modal.confirm({
+                  title: 'No Columns Found',
+                  content: 'This project has no columns. Would you like to create default columns now?',
+                  okText: 'Create Columns',
+                  cancelText: 'Cancel',
+                  onOk: async () => {
+                    setCreatingColumns(true);
+                    try {
+                      const result = await columnService.createDefaults(project.id);
+                      message.success(result.message);
+                      
+                      // Set the first column as active
+                      if (result.columns.length > 0) {
+                        setActualColumnId(result.columns[0].id);
+                      }
+                      
+                      // Update project in localStorage
+                      const updatedProject = { ...project, columns_count: result.columns.length };
+                      localStorage.setItem("currentProject", JSON.stringify(updatedProject));
+                      setCurrentProject(updatedProject);
+                    } catch (error: any) {
+                      console.error("❌ Failed to create default columns:", error);
+                      message.error(error.response?.data?.error || "Failed to create default columns");
+                    } finally {
+                      setCreatingColumns(false);
+                    }
+                  },
+                });
               }
             })
             .catch((error) => {
@@ -136,9 +165,10 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
 
     if (!actualColumnId) {
       console.error("❌ No actual column ID!");
-      message.error(
-        "No valid column found. Please create columns for your project first."
-      );
+      message.error({
+        content: "This project has no columns. Please create a new project (the old one was created before columns were added automatically).",
+        duration: 8,
+      });
       console.groupEnd();
       return;
     }
@@ -679,7 +709,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
             <Button
               type="primary"
               onClick={() => form.submit()}
-              loading={saving}
+              loading={saving || creatingColumns}
               size="middle"
             >
               Create

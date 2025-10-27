@@ -68,6 +68,16 @@ class ColumnService {
   async reorderColumns(data: ReorderColumnsData): Promise<void> {
     return apiService.post(API_ENDPOINTS.COLUMN_REORDER, data);
   }
+
+  /**
+   * Create default columns for a project
+   */
+  async createDefaults(projectId: number): Promise<{ message: string; columns: Column[] }> {
+    return apiService.post<{ message: string; columns: Column[] }>(
+      API_ENDPOINTS.COLUMN_CREATE_DEFAULTS,
+      { project_id: projectId }
+    );
+  }
 }
 
 export const columnService = new ColumnService();

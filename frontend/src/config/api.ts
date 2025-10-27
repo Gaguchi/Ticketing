@@ -30,6 +30,7 @@ export const API_ENDPOINTS = {
   COLUMNS: `${API_BASE_URL}/api/tickets/columns/`,
   COLUMN_DETAIL: (id: number) => `${API_BASE_URL}/api/tickets/columns/${id}/`,
   COLUMN_REORDER: `${API_BASE_URL}/api/tickets/columns/reorder/`,
+  COLUMN_CREATE_DEFAULTS: `${API_BASE_URL}/api/tickets/columns/create_defaults/`,
   
   // Comments
   COMMENTS: `${API_BASE_URL}/api/tickets/comments/`,

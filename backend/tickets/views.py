@@ -258,6 +258,64 @@ class ColumnViewSet(viewsets.ModelViewSet):
     """
     queryset = Column.objects.all()
     serializer_class = ColumnSerializer
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ['project']
+    ordering_fields = ['order', 'created_at']
+    ordering = ['order']
+    
+    @action(detail=False, methods=['post'])
+    def create_defaults(self, request):
+        """
+        Create default columns for a project
+        Usage: POST /api/tickets/columns/create_defaults/ with {"project_id": 1}
+        """
+        project_id = request.data.get('project_id')
+        
+        if not project_id:
+            return Response(
+                {'error': 'project_id is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            project = Project.objects.get(id=project_id)
+        except Project.DoesNotExist:
+            return Response(
+                {'error': 'Project not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Check if project already has columns
+        existing_columns = Column.objects.filter(project=project).count()
+        if existing_columns > 0:
+            return Response(
+                {'error': f'Project already has {existing_columns} columns'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Define default columns
+        default_columns = [
+            {'name': 'New', 'order': 1},
+            {'name': 'In Progress', 'order': 2},
+            {'name': 'Review', 'order': 3},
+            {'name': 'Done', 'order': 4},
+        ]
+        
+        # Create the columns
+        created_columns = []
+        for col_data in default_columns:
+            column = Column.objects.create(
+                project=project,
+                name=col_data['name'],
+                order=col_data['order']
+            )
+            created_columns.append(column)
+        
+        serializer = ColumnSerializer(created_columns, many=True)
+        return Response({
+            'message': f'Created {len(created_columns)} default columns',
+            'columns': serializer.data
+        }, status=status.HTTP_201_CREATED)
     
     @action(detail=False, methods=['post'])
     def reorder(self, request):
