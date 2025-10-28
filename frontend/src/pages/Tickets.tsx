@@ -60,6 +60,9 @@ const Tickets: React.FC = () => {
   const [kanbanColumns, setKanbanColumns] = useState<TicketColumn[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Track pending API requests for optimistic updates
+  const [pendingUpdates, setPendingUpdates] = useState<Set<number>>(new Set());
+
   // Fetch tickets and columns on mount
   useEffect(() => {
     const fetchData = async () => {
@@ -177,60 +180,88 @@ const Tickets: React.FC = () => {
     }
   };
 
-  // Handle ticket move between columns in Kanban
+  // Handle ticket move between columns in Kanban with optimistic updates
   const handleTicketMove = async (ticketId: number, newColumnId: number) => {
     console.log("🎯 handleTicketMove called:", { ticketId, newColumnId });
 
+    const ticket = tickets.find((t) => t.id === ticketId);
+    const column = kanbanColumns.find((c) => c.id === newColumnId);
+
+    console.log("📋 Ticket info:", {
+      ticket: ticket
+        ? { id: ticket.id, name: ticket.name, currentColumn: ticket.colId }
+        : "NOT FOUND",
+      targetColumn: column ? { id: column.id, name: column.name } : "NOT FOUND",
+    });
+
+    if (!ticket || !column) {
+      console.error("❌ Ticket or column not found");
+      message.error("Failed to update ticket");
+      return;
+    }
+
+    // Store previous state for rollback
+    const previousColumnId = ticket.colId;
+    const previousColumnName = ticket.columnName;
+
+    // Mark as pending
+    setPendingUpdates((prev) => new Set(prev).add(ticketId));
+
+    // OPTIMISTIC UPDATE: Update UI immediately
+    console.log("⚡ Optimistic update: Updating UI immediately");
+    setTickets((prevTickets) =>
+      prevTickets.map((t) =>
+        t.id === ticketId
+          ? {
+              ...t,
+              column: newColumnId,
+              colId: newColumnId,
+              columnName: column.name,
+            }
+          : t
+      )
+    );
+
+    // Send PATCH request in the background (non-blocking)
+    console.log("🚀 Queuing PATCH request:", {
+      url: `/api/tickets/tickets/${ticketId}/`,
+      payload: { column: newColumnId },
+    });
+
     try {
-      const ticket = tickets.find((t) => t.id === ticketId);
-      const column = kanbanColumns.find((c) => c.id === newColumnId);
-
-      console.log("📋 Ticket info:", {
-        ticket: ticket
-          ? { id: ticket.id, name: ticket.name, currentColumn: ticket.colId }
-          : "NOT FOUND",
-        targetColumn: column
-          ? { id: column.id, name: column.name }
-          : "NOT FOUND",
-      });
-
-      if (!ticket || !column) {
-        console.error("❌ Ticket or column not found");
-        message.error("Failed to update ticket");
-        return;
-      }
-
-      // Send PATCH request to update ticket column
-      console.log("🚀 Sending PATCH request:", {
-        url: `/api/tickets/tickets/${ticketId}/`,
-        payload: { column: newColumnId },
-      });
-
       const response = await ticketService.updateTicket(ticketId, {
         column: newColumnId,
       });
 
       console.log("✅ PATCH response received:", response);
-
-      // Update local state
-      setTickets((prevTickets) =>
-        prevTickets.map((t) =>
-          t.id === ticketId
-            ? {
-                ...t,
-                column: newColumnId,
-                colId: newColumnId,
-                columnName: column.name,
-              }
-            : t
-        )
-      );
-
-      console.log("✅ Local state updated");
-      message.success(`Moved to ${column.name}`);
+      message.success(`Moved to ${column.name}`, 1);
     } catch (error: any) {
-      console.error("❌ Failed to update ticket:", error);
-      message.error("Failed to update ticket");
+      // ROLLBACK: Revert optimistic update on error
+      console.error("❌ Failed to update ticket, rolling back:", error);
+
+      if (previousColumnId !== undefined && previousColumnName !== undefined) {
+        setTickets((prevTickets) =>
+          prevTickets.map((t) =>
+            t.id === ticketId
+              ? {
+                  ...t,
+                  column: previousColumnId,
+                  colId: previousColumnId,
+                  columnName: previousColumnName,
+                }
+              : t
+          )
+        );
+      }
+
+      message.error("Failed to update ticket - changes reverted");
+    } finally {
+      // Remove from pending
+      setPendingUpdates((prev) => {
+        const next = new Set(prev);
+        next.delete(ticketId);
+        return next;
+      });
     }
   };
 
@@ -352,140 +383,184 @@ const Tickets: React.FC = () => {
   });
 
   return (
-    <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-      {/* Simplified Header - Jira Style */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "16px 20px",
-          borderBottom: "1px solid #e8e8e8",
-          backgroundColor: "#fff",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-          <h1 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>Board</h1>
+    <>
+      <style>
+        {`
+          @keyframes pulse {
+            0%, 100% {
+              opacity: 1;
+            }
+            50% {
+              opacity: 0.3;
+            }
+          }
+        `}
+      </style>
+      <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+        {/* Simplified Header - Jira Style */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "16px 20px",
+            borderBottom: "1px solid #e8e8e8",
+            backgroundColor: "#fff",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+            <h1 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>Board</h1>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <Input
+                placeholder="Search"
+                prefix={<SearchOutlined style={{ color: "#5e6c84" }} />}
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                style={{
+                  width: 200,
+                  backgroundColor: "#f4f5f7",
+                  border: "1px solid #dfe1e6",
+                  borderRadius: "3px",
+                }}
+                size="small"
+              />
+              <Select
+                placeholder="Filter"
+                allowClear
+                value={filterStatus}
+                onChange={setFilterStatus}
+                size="small"
+                style={{
+                  width: 140,
+                }}
+              >
+                {kanbanColumns.map((col) => (
+                  <Option key={col.id} value={col.name}>
+                    {col.name}
+                  </Option>
+                ))}
+              </Select>
+            </div>
+          </div>
+
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <Input
-              placeholder="Search"
-              prefix={<SearchOutlined style={{ color: "#5e6c84" }} />}
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              style={{
-                width: 200,
-                backgroundColor: "#f4f5f7",
-                border: "1px solid #dfe1e6",
-                borderRadius: "3px",
-              }}
+            {/* Pending Updates Indicator */}
+            {pendingUpdates.size > 0 && (
+              <div
+                style={{
+                  fontSize: "12px",
+                  color: "#0052cc",
+                  padding: "4px 8px",
+                  backgroundColor: "#deebff",
+                  borderRadius: "3px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                }}
+              >
+                <span
+                  style={{
+                    display: "inline-block",
+                    width: "8px",
+                    height: "8px",
+                    borderRadius: "50%",
+                    backgroundColor: "#0052cc",
+                    animation: "pulse 1.5s ease-in-out infinite",
+                  }}
+                />
+                Syncing {pendingUpdates.size}{" "}
+                {pendingUpdates.size === 1 ? "ticket" : "tickets"}...
+              </div>
+            )}
+
+            <div style={{ display: "flex" }}>
+              <Button
+                type={viewMode === "list" ? "primary" : "default"}
+                icon={<UnorderedListOutlined />}
+                onClick={() => setViewMode("list")}
+                style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
+              />
+              <Button
+                type={viewMode === "kanban" ? "primary" : "default"}
+                icon={<AppstoreOutlined />}
+                onClick={() => setViewMode("kanban")}
+                style={{
+                  borderTopLeftRadius: 0,
+                  borderBottomLeftRadius: 0,
+                  marginLeft: -1,
+                }}
+              />
+            </div>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
               size="small"
-            />
-            <Select
-              placeholder="Filter"
-              allowClear
-              value={filterStatus}
-              onChange={setFilterStatus}
-              size="small"
+              onClick={() => setIsCreateModalOpen(true)}
+            >
+              Create
+            </Button>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div style={{ flex: 1, overflow: "hidden" }}>
+          {loading ? (
+            <div
               style={{
-                width: 140,
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                height: "100%",
               }}
             >
-              {kanbanColumns.map((col) => (
-                <Option key={col.id} value={col.name}>
-                  {col.name}
-                </Option>
-              ))}
-            </Select>
-          </div>
-        </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <div style={{ display: "flex" }}>
-            <Button
-              type={viewMode === "list" ? "primary" : "default"}
-              icon={<UnorderedListOutlined />}
-              onClick={() => setViewMode("list")}
-              style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
-            />
-            <Button
-              type={viewMode === "kanban" ? "primary" : "default"}
-              icon={<AppstoreOutlined />}
-              onClick={() => setViewMode("kanban")}
-              style={{
-                borderTopLeftRadius: 0,
-                borderBottomLeftRadius: 0,
-                marginLeft: -1,
+              Loading tickets...
+            </div>
+          ) : viewMode === "list" ? (
+            <Table
+              columns={columns}
+              dataSource={filteredTickets}
+              rowKey="id"
+              size="small"
+              pagination={{
+                pageSize: 20,
+                showSizeChanger: true,
+                showTotal: (total) => `Total ${total} tickets`,
               }}
+              scroll={{ y: "calc(100vh - 260px)" }}
+              onRow={(record) => ({
+                onClick: () => handleTicketClick(record),
+                style: { cursor: "pointer" },
+              })}
             />
-          </div>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            size="small"
-            onClick={() => setIsCreateModalOpen(true)}
-          >
-            Create
-          </Button>
+          ) : (
+            <KanbanBoard
+              tickets={filteredTickets}
+              columns={kanbanColumns}
+              onTicketClick={handleTicketClick}
+              onTicketMove={handleTicketMove}
+              pendingUpdates={pendingUpdates}
+            />
+          )}
         </div>
+
+        {/* Ticket Modal */}
+        <TicketModal
+          open={!!selectedTicket}
+          onClose={() => setSelectedTicket(null)}
+          ticket={selectedTicket}
+        />
+
+        {/* Create Ticket Modal */}
+        <CreateTicketModal
+          open={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+          onSuccess={(_newTicket) => {
+            setIsCreateModalOpen(false);
+            // Optionally refresh the ticket list here
+          }}
+        />
       </div>
-
-      {/* Content */}
-      <div style={{ flex: 1, overflow: "hidden" }}>
-        {loading ? (
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              height: "100%",
-            }}
-          >
-            Loading tickets...
-          </div>
-        ) : viewMode === "list" ? (
-          <Table
-            columns={columns}
-            dataSource={filteredTickets}
-            rowKey="id"
-            size="small"
-            pagination={{
-              pageSize: 20,
-              showSizeChanger: true,
-              showTotal: (total) => `Total ${total} tickets`,
-            }}
-            scroll={{ y: "calc(100vh - 260px)" }}
-            onRow={(record) => ({
-              onClick: () => handleTicketClick(record),
-              style: { cursor: "pointer" },
-            })}
-          />
-        ) : (
-          <KanbanBoard
-            tickets={filteredTickets}
-            columns={kanbanColumns}
-            onTicketClick={handleTicketClick}
-            onTicketMove={handleTicketMove}
-          />
-        )}
-      </div>
-
-      {/* Ticket Modal */}
-      <TicketModal
-        open={!!selectedTicket}
-        onClose={() => setSelectedTicket(null)}
-        ticket={selectedTicket}
-      />
-
-      {/* Create Ticket Modal */}
-      <CreateTicketModal
-        open={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onSuccess={(_newTicket) => {
-          setIsCreateModalOpen(false);
-          // Optionally refresh the ticket list here
-        }}
-      />
-    </div>
+    </>
   );
 };
 

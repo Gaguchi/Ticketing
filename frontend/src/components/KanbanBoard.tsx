@@ -34,6 +34,7 @@ interface KanbanBoardProps {
   columns: TicketColumn[];
   onTicketClick?: (ticket: Ticket) => void;
   onTicketMove?: (ticketId: number, newColumnId: number) => void;
+  pendingUpdates?: Set<number>; // Track pending updates
 }
 
 export const KanbanBoard: React.FC<KanbanBoardProps> = ({
@@ -41,11 +42,13 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   columns,
   onTicketClick,
   onTicketMove,
+  pendingUpdates = new Set(),
 }) => {
   const [data, setData] = useState<Ticket[] | null>(null);
   const [items, setItems] = useState<KanbanItems>({});
   const [containers, setContainers] = useState<string[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [activeContainer, setActiveContainer] = useState<string | null>(null); // Track original container
   const lastOverId = useRef<string | null>(null);
   const recentlyMovedToNewContainer = useRef(false);
   const isSortingContainer = activeId ? containers.includes(activeId) : false;
@@ -198,6 +201,12 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   function handleDragStart({ active }: DragStartEvent) {
     setActiveId(active.id as string);
     setClonedItems(items);
+
+    // Save the original container where the drag started
+    const container = findContainer(active.id as string);
+    setActiveContainer(container || null);
+
+    console.log("🟢 handleDragStart - Original container:", container);
   }
 
   function handleDragOver({ active, over }: DragOverEvent) {
@@ -232,6 +241,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     if (!over) {
       console.log("❌ No over target, canceling");
       setActiveId(null);
+      setActiveContainer(null);
       return;
     }
 
@@ -243,91 +253,71 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       });
     }
 
-    const activeContainer = findContainer(active.id as string);
-    console.log("📍 Active container found:", activeContainer);
+    // Use the saved original container and find the final container
+    const originalContainer = activeContainer;
+    const finalContainer =
+      over.id in items ? over.id : findContainer(over.id as string);
 
-    if (!activeContainer) {
-      console.log("❌ No active container found");
+    console.log("📍 Container movement:", {
+      originalContainer,
+      finalContainer,
+      movedBetweenColumns: originalContainer !== finalContainer,
+    });
+
+    if (!originalContainer || !finalContainer) {
+      console.log("❌ Missing container information");
       setActiveId(null);
+      setActiveContainer(null);
       return;
     }
 
-    const overContainer = findContainer(over.id as string);
-    console.log("📍 Over container found:", overContainer);
-
-    // Get the sortable container IDs from the drag event data
-    const activeSortableContainer = active.data.current?.sortable?.containerId;
-    const overSortableContainer = over.data.current?.sortable?.containerId;
-
-    console.log("📍 Sortable containers from event:", {
-      activeSortableContainer,
-      overSortableContainer,
-      containersDifferent: activeSortableContainer !== overSortableContainer,
-    });
-
-    if (overContainer) {
-      const activeIndex = items[activeContainer].indexOf(active.id as string);
-      const overIndex = items[overContainer].indexOf(over.id as string);
-
-      console.log("📊 Container comparison:", {
-        activeContainer,
-        overContainer,
-        areEqual: activeContainer === overContainer,
-        activeSortableContainer,
-        overSortableContainer,
-        sortableContainersEqual:
-          activeSortableContainer === overSortableContainer,
-        activeIndex,
-        overIndex,
-      });
+    if (finalContainer) {
+      const activeIndex = items[finalContainer].indexOf(active.id as string);
+      const overIndex = items[finalContainer].indexOf(over.id as string);
 
       if (activeIndex !== overIndex) {
         setItems((items) => ({
           ...items,
-          [overContainer]: arrayMove(
-            items[overContainer],
+          [finalContainer]: arrayMove(
+            items[finalContainer],
             activeIndex,
             overIndex
           ),
         }));
       }
 
-      // Use the sortable container IDs to detect cross-column moves
-      if (
-        activeSortableContainer &&
-        overSortableContainer &&
-        activeSortableContainer !== overSortableContainer &&
-        onTicketMove
-      ) {
+      // Detect cross-column move using the original container vs final container
+      if (originalContainer !== finalContainer && onTicketMove) {
         const ticketId = parseInt(active.id.toString().replace("ticket-", ""));
-        const newColumnId = parseInt(overContainer.replace("column-", ""));
+        const newColumnId = parseInt(
+          finalContainer.toString().replace("column-", "")
+        );
 
-        console.log("✅ Calling onTicketMove (containers changed):", {
+        console.log("✅ Calling onTicketMove (moved between columns):", {
           ticketId,
           newColumnId,
-          fromSortableContainer: activeSortableContainer,
-          toSortableContainer: overSortableContainer,
-          fromColumn: activeContainer,
-          toColumn: overContainer,
+          fromColumn: originalContainer,
+          toColumn: finalContainer,
         });
 
         onTicketMove(ticketId, newColumnId);
       } else {
         console.log("⚠️ NOT calling onTicketMove:", {
           reason:
-            activeSortableContainer === overSortableContainer
-              ? "Same sortable container"
+            originalContainer === finalContainer
+              ? "Same container - reordering within column"
               : !onTicketMove
-              ? "No callback"
-              : "Missing container data",
-          activeSortableContainer,
-          overSortableContainer,
+              ? "No callback provided"
+              : "Unknown",
+          originalContainer,
+          finalContainer,
           hasCallback: !!onTicketMove,
         });
       }
     }
 
     setActiveId(null);
+    setActiveContainer(null);
   }
 
   const handleDragCancel = () => {
@@ -335,6 +325,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       setItems(clonedItems);
     }
     setActiveId(null);
+    setActiveContainer(null);
     setClonedItems(null);
   };
 
@@ -422,6 +413,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                   tickets={data || []}
                   isSortingContainer={isSortingContainer}
                   onTicketClick={onTicketClick}
+                  pendingUpdates={pendingUpdates}
                 />
               );
             })}
