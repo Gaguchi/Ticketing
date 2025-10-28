@@ -255,6 +255,16 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     const overContainer = findContainer(over.id as string);
     console.log("📍 Over container found:", overContainer);
 
+    // Get the sortable container IDs from the drag event data
+    const activeSortableContainer = active.data.current?.sortable?.containerId;
+    const overSortableContainer = over.data.current?.sortable?.containerId;
+
+    console.log("📍 Sortable containers from event:", {
+      activeSortableContainer,
+      overSortableContainer,
+      containersDifferent: activeSortableContainer !== overSortableContainer,
+    });
+
     if (overContainer) {
       const activeIndex = items[activeContainer].indexOf(active.id as string);
       const overIndex = items[overContainer].indexOf(over.id as string);
@@ -263,6 +273,10 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         activeContainer,
         overContainer,
         areEqual: activeContainer === overContainer,
+        activeSortableContainer,
+        overSortableContainer,
+        sortableContainersEqual:
+          activeSortableContainer === overSortableContainer,
         activeIndex,
         overIndex,
       });
@@ -278,14 +292,21 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         }));
       }
 
-      // Call the onTicketMove callback if the ticket moved to a different column
-      if (activeContainer !== overContainer && onTicketMove) {
+      // Use the sortable container IDs to detect cross-column moves
+      if (
+        activeSortableContainer &&
+        overSortableContainer &&
+        activeSortableContainer !== overSortableContainer &&
+        onTicketMove
+      ) {
         const ticketId = parseInt(active.id.toString().replace("ticket-", ""));
         const newColumnId = parseInt(overContainer.replace("column-", ""));
 
-        console.log("✅ Calling onTicketMove:", {
+        console.log("✅ Calling onTicketMove (containers changed):", {
           ticketId,
           newColumnId,
+          fromSortableContainer: activeSortableContainer,
+          toSortableContainer: overSortableContainer,
           fromColumn: activeContainer,
           toColumn: overContainer,
         });
@@ -294,11 +315,13 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       } else {
         console.log("⚠️ NOT calling onTicketMove:", {
           reason:
-            activeContainer === overContainer
-              ? "Same container"
-              : "No callback",
-          activeContainer,
-          overContainer,
+            activeSortableContainer === overSortableContainer
+              ? "Same sortable container"
+              : !onTicketMove
+              ? "No callback"
+              : "Missing container data",
+          activeSortableContainer,
+          overSortableContainer,
           hasCallback: !!onTicketMove,
         });
       }
