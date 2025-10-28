@@ -60,8 +60,8 @@ const Tickets: React.FC = () => {
   const [kanbanColumns, setKanbanColumns] = useState<TicketColumn[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Track pending API requests for optimistic updates
-  const [pendingUpdates, setPendingUpdates] = useState<Set<number>>(new Set());
+  // Track pending API requests for optimistic updates (used internally, no visual indicator)
+  const [, setPendingUpdates] = useState<Set<number>>(new Set());
 
   // Fetch tickets and columns on mount
   useEffect(() => {
@@ -495,7 +495,6 @@ const Tickets: React.FC = () => {
             columns={kanbanColumns}
             onTicketClick={handleTicketClick}
             onTicketMove={handleTicketMove}
-            pendingUpdates={pendingUpdates}
           />
         )}
       </div>

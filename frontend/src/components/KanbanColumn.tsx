@@ -18,7 +18,6 @@ interface KanbanColumnProps {
   isSortingContainer?: boolean;
   dragOverlay?: boolean;
   onTicketClick?: (ticket: Ticket) => void;
-  pendingUpdates?: Set<number>; // Track pending ticket updates
 }
 
 export const KanbanColumn: React.FC<KanbanColumnProps> = ({
@@ -29,7 +28,6 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
   isSortingContainer,
   dragOverlay,
   onTicketClick,
-  pendingUpdates = new Set(),
 }) => {
   const {
     attributes,
@@ -109,7 +107,6 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
           {items.map((item) => {
             const ticket = tickets.find((t) => `ticket-${t.id}` === item);
             if (!ticket) return null;
-            const isPending = pendingUpdates.has(ticket.id);
             return (
               <TicketCard
                 id={item}
@@ -117,7 +114,6 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
                 ticket={ticket}
                 disabled={isSortingContainer}
                 onClick={onTicketClick}
-                isPending={isPending}
               />
             );
           })}

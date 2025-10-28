@@ -19,7 +19,6 @@ interface TicketCardProps {
   disabled?: boolean;
   dragOverlay?: boolean;
   onClick?: (ticket: Ticket) => void;
-  isPending?: boolean; // Visual indicator for pending updates
 }
 
 const getTypeIcon = (type?: string) => {
@@ -49,7 +48,6 @@ export const TicketCard: React.FC<TicketCardProps> = ({
   disabled,
   dragOverlay,
   onClick,
-  isPending = false,
 }) => {
   const {
     setNodeRef,

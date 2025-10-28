@@ -34,7 +34,6 @@ interface KanbanBoardProps {
   columns: TicketColumn[];
   onTicketClick?: (ticket: Ticket) => void;
   onTicketMove?: (ticketId: number, newColumnId: number) => void;
-  pendingUpdates?: Set<number>; // Track pending updates
 }
 
 export const KanbanBoard: React.FC<KanbanBoardProps> = ({
@@ -42,7 +41,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   columns,
   onTicketClick,
   onTicketMove,
-  pendingUpdates = new Set(),
 }) => {
   const [data, setData] = useState<Ticket[] | null>(null);
   const [items, setItems] = useState<KanbanItems>({});
@@ -413,7 +411,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                   tickets={data || []}
                   isSortingContainer={isSortingContainer}
                   onTicketClick={onTicketClick}
-                  pendingUpdates={pendingUpdates}
                 />
               );
             })}
