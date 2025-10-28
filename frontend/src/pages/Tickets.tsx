@@ -234,7 +234,6 @@ const Tickets: React.FC = () => {
       });
 
       console.log("✅ PATCH response received:", response);
-      message.success(`Moved to ${column.name}`, 1);
     } catch (error: any) {
       // ROLLBACK: Revert optimistic update on error
       console.error("❌ Failed to update ticket, rolling back:", error);
@@ -383,184 +382,141 @@ const Tickets: React.FC = () => {
   });
 
   return (
-    <>
-      <style>
-        {`
-          @keyframes pulse {
-            0%, 100% {
-              opacity: 1;
-            }
-            50% {
-              opacity: 0.3;
-            }
-          }
-        `}
-      </style>
-      <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-        {/* Simplified Header - Jira Style */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "16px 20px",
-            borderBottom: "1px solid #e8e8e8",
-            backgroundColor: "#fff",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-            <h1 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>Board</h1>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <Input
-                placeholder="Search"
-                prefix={<SearchOutlined style={{ color: "#5e6c84" }} />}
-                value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
-                style={{
-                  width: 200,
-                  backgroundColor: "#f4f5f7",
-                  border: "1px solid #dfe1e6",
-                  borderRadius: "3px",
-                }}
-                size="small"
-              />
-              <Select
-                placeholder="Filter"
-                allowClear
-                value={filterStatus}
-                onChange={setFilterStatus}
-                size="small"
-                style={{
-                  width: 140,
-                }}
-              >
-                {kanbanColumns.map((col) => (
-                  <Option key={col.id} value={col.name}>
-                    {col.name}
-                  </Option>
-                ))}
-              </Select>
-            </div>
-          </div>
-
+    <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+      {/* Simplified Header - Jira Style */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "16px 20px",
+          borderBottom: "1px solid #e8e8e8",
+          backgroundColor: "#fff",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+          <h1 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>Board</h1>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            {/* Pending Updates Indicator */}
-            {pendingUpdates.size > 0 && (
-              <div
-                style={{
-                  fontSize: "12px",
-                  color: "#0052cc",
-                  padding: "4px 8px",
-                  backgroundColor: "#deebff",
-                  borderRadius: "3px",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                }}
-              >
-                <span
-                  style={{
-                    display: "inline-block",
-                    width: "8px",
-                    height: "8px",
-                    borderRadius: "50%",
-                    backgroundColor: "#0052cc",
-                    animation: "pulse 1.5s ease-in-out infinite",
-                  }}
-                />
-                Syncing {pendingUpdates.size}{" "}
-                {pendingUpdates.size === 1 ? "ticket" : "tickets"}...
-              </div>
-            )}
-
-            <div style={{ display: "flex" }}>
-              <Button
-                type={viewMode === "list" ? "primary" : "default"}
-                icon={<UnorderedListOutlined />}
-                onClick={() => setViewMode("list")}
-                style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
-              />
-              <Button
-                type={viewMode === "kanban" ? "primary" : "default"}
-                icon={<AppstoreOutlined />}
-                onClick={() => setViewMode("kanban")}
-                style={{
-                  borderTopLeftRadius: 0,
-                  borderBottomLeftRadius: 0,
-                  marginLeft: -1,
-                }}
-              />
-            </div>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
+            <Input
+              placeholder="Search"
+              prefix={<SearchOutlined style={{ color: "#5e6c84" }} />}
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              style={{
+                width: 200,
+                backgroundColor: "#f4f5f7",
+                border: "1px solid #dfe1e6",
+                borderRadius: "3px",
+              }}
               size="small"
-              onClick={() => setIsCreateModalOpen(true)}
+            />
+            <Select
+              placeholder="Filter"
+              allowClear
+              value={filterStatus}
+              onChange={setFilterStatus}
+              size="small"
+              style={{
+                width: 140,
+              }}
             >
-              Create
-            </Button>
+              {kanbanColumns.map((col) => (
+                <Option key={col.id} value={col.name}>
+                  {col.name}
+                </Option>
+              ))}
+            </Select>
           </div>
         </div>
 
-        {/* Content */}
-        <div style={{ flex: 1, overflow: "hidden" }}>
-          {loading ? (
-            <div
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <div style={{ display: "flex" }}>
+            <Button
+              type={viewMode === "list" ? "primary" : "default"}
+              icon={<UnorderedListOutlined />}
+              onClick={() => setViewMode("list")}
+              style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
+            />
+            <Button
+              type={viewMode === "kanban" ? "primary" : "default"}
+              icon={<AppstoreOutlined />}
+              onClick={() => setViewMode("kanban")}
               style={{
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                height: "100%",
+                borderTopLeftRadius: 0,
+                borderBottomLeftRadius: 0,
+                marginLeft: -1,
               }}
-            >
-              Loading tickets...
-            </div>
-          ) : viewMode === "list" ? (
-            <Table
-              columns={columns}
-              dataSource={filteredTickets}
-              rowKey="id"
-              size="small"
-              pagination={{
-                pageSize: 20,
-                showSizeChanger: true,
-                showTotal: (total) => `Total ${total} tickets`,
-              }}
-              scroll={{ y: "calc(100vh - 260px)" }}
-              onRow={(record) => ({
-                onClick: () => handleTicketClick(record),
-                style: { cursor: "pointer" },
-              })}
             />
-          ) : (
-            <KanbanBoard
-              tickets={filteredTickets}
-              columns={kanbanColumns}
-              onTicketClick={handleTicketClick}
-              onTicketMove={handleTicketMove}
-              pendingUpdates={pendingUpdates}
-            />
-          )}
+          </div>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            size="small"
+            onClick={() => setIsCreateModalOpen(true)}
+          >
+            Create
+          </Button>
         </div>
-
-        {/* Ticket Modal */}
-        <TicketModal
-          open={!!selectedTicket}
-          onClose={() => setSelectedTicket(null)}
-          ticket={selectedTicket}
-        />
-
-        {/* Create Ticket Modal */}
-        <CreateTicketModal
-          open={isCreateModalOpen}
-          onClose={() => setIsCreateModalOpen(false)}
-          onSuccess={(_newTicket) => {
-            setIsCreateModalOpen(false);
-            // Optionally refresh the ticket list here
-          }}
-        />
       </div>
-    </>
+
+      {/* Content */}
+      <div style={{ flex: 1, overflow: "hidden" }}>
+        {loading ? (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              height: "100%",
+            }}
+          >
+            Loading tickets...
+          </div>
+        ) : viewMode === "list" ? (
+          <Table
+            columns={columns}
+            dataSource={filteredTickets}
+            rowKey="id"
+            size="small"
+            pagination={{
+              pageSize: 20,
+              showSizeChanger: true,
+              showTotal: (total) => `Total ${total} tickets`,
+            }}
+            scroll={{ y: "calc(100vh - 260px)" }}
+            onRow={(record) => ({
+              onClick: () => handleTicketClick(record),
+              style: { cursor: "pointer" },
+            })}
+          />
+        ) : (
+          <KanbanBoard
+            tickets={filteredTickets}
+            columns={kanbanColumns}
+            onTicketClick={handleTicketClick}
+            onTicketMove={handleTicketMove}
+            pendingUpdates={pendingUpdates}
+          />
+        )}
+      </div>
+
+      {/* Ticket Modal */}
+      <TicketModal
+        open={!!selectedTicket}
+        onClose={() => setSelectedTicket(null)}
+        ticket={selectedTicket}
+      />
+
+      {/* Create Ticket Modal */}
+      <CreateTicketModal
+        open={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={(_newTicket) => {
+          setIsCreateModalOpen(false);
+          // Optionally refresh the ticket list here
+        }}
+      />
+    </div>
   );
 };
 

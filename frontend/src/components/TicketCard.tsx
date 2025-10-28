@@ -69,16 +69,16 @@ export const TicketCard: React.FC<TicketCardProps> = ({
   const style: React.CSSProperties = {
     transform: CSS.Translate.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : isPending ? 0.7 : 1,
+    opacity: isDragging ? 0.5 : 1,
     boxShadow: dragOverlay
       ? "0 4px 8px rgba(9,30,66,0.25)"
       : "0 1px 2px rgba(9,30,66,0.2)",
-    border: isPending ? "1px dashed #0052cc" : "none",
+    border: "none",
     cursor: dragOverlay ? "grabbing" : "pointer",
     touchAction: "manipulation",
     padding: "8px 10px",
     borderRadius: "3px",
-    backgroundColor: isPending ? "#deebff" : "#fff",
+    backgroundColor: "#fff",
     marginBottom: "8px",
   };
 
