@@ -7,7 +7,6 @@ import {
   Card,
   Typography,
   Space,
-  Divider,
 } from "antd";
 import {
   SearchOutlined,
@@ -18,7 +17,6 @@ import {
 } from "@ant-design/icons";
 
 const { Text } = Typography;
-const { TextArea } = Input;
 
 // Dummy data for chat conversations
 const conversations = [
