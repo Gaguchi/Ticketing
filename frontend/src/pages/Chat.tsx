@@ -1,13 +1,5 @@
 import React, { useState } from "react";
-import {
-  Input,
-  Avatar,
-  Badge,
-  List,
-  Card,
-  Typography,
-  Space,
-} from "antd";
+import { Input, Avatar, Badge, List, Card, Typography, Space } from "antd";
 import {
   SearchOutlined,
   SendOutlined,
