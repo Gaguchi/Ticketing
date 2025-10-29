@@ -7,8 +7,6 @@ import {
   SmileOutlined,
   PaperClipOutlined,
   PlayCircleOutlined,
-  AudioOutlined,
-  FileImageOutlined,
   CaretRightOutlined,
 } from "@ant-design/icons";
 
