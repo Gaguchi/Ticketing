@@ -73,82 +73,341 @@ const conversations = [
   },
 ];
 
-// Dummy messages for active chat
-const dummyMessages = [
-  {
-    id: 1,
-    senderId: 2,
-    senderName: "Mike Chen",
-    content: "Hey! Did you get a chance to review the designs?",
-    timestamp: "10:23 AM",
-    isMine: false,
-    type: "text",
-  },
-  {
-    id: 2,
-    senderId: 1,
-    senderName: "You",
-    content: "Yes! They look great. Just a few minor tweaks needed.",
-    timestamp: "10:25 AM",
-    isMine: true,
-    type: "text",
-  },
-  {
-    id: 3,
-    senderId: 2,
-    senderName: "Mike Chen",
-    content: "Here's the updated mockup",
-    timestamp: "10:26 AM",
-    isMine: false,
-    type: "image",
-    imageUrl:
-      "https://via.placeholder.com/400x300/1890ff/ffffff?text=Design+Mockup",
-  },
-  {
-    id: 4,
-    senderId: 1,
-    senderName: "You",
-    content:
-      "The main navigation could use a bit more spacing, and maybe we could increase the contrast on the CTAs?",
-    timestamp: "10:27 AM",
-    isMine: true,
-    type: "text",
-  },
-  {
-    id: 5,
-    senderId: 2,
-    senderName: "Mike Chen",
-    content: "",
-    timestamp: "10:28 AM",
-    isMine: false,
-    type: "voice",
-    duration: "0:45",
-  },
-  {
-    id: 6,
-    senderId: 1,
-    senderName: "You",
-    content: "Perfect! Thanks for the quick response",
-    timestamp: "10:29 AM",
-    isMine: true,
-    type: "text",
-  },
-  {
-    id: 7,
-    senderId: 2,
-    senderName: "Mike Chen",
-    content: "Demo of the new animation",
-    timestamp: "10:30 AM",
-    isMine: false,
-    type: "video",
-    videoUrl:
-      "https://via.placeholder.com/400x300/52c41a/ffffff?text=Video+Demo",
-  },
-];
+// Different message sets for each conversation
+const conversationMessages: { [key: number]: any[] } = {
+  1: [
+    // Sarah Johnson - Design discussion
+    {
+      id: 1,
+      senderId: 2,
+      senderName: "Sarah Johnson",
+      content: "Hey! Did you get a chance to review the designs?",
+      timestamp: "10:23 AM",
+      isMine: false,
+      type: "text",
+    },
+    {
+      id: 2,
+      senderId: 1,
+      senderName: "You",
+      content: "Yes! They look great. Just a few minor tweaks needed.",
+      timestamp: "10:25 AM",
+      isMine: true,
+      type: "text",
+    },
+    {
+      id: 3,
+      senderId: 2,
+      senderName: "Sarah Johnson",
+      content: "Here's the updated mockup",
+      timestamp: "10:26 AM",
+      isMine: false,
+      type: "image",
+      imageUrl: "https://picsum.photos/seed/mockup1/400/300",
+    },
+    {
+      id: 4,
+      senderId: 1,
+      senderName: "You",
+      content:
+        "The main navigation could use a bit more spacing, and maybe we could increase the contrast on the CTAs?",
+      timestamp: "10:27 AM",
+      isMine: true,
+      type: "text",
+    },
+    {
+      id: 5,
+      senderId: 2,
+      senderName: "Sarah Johnson",
+      content: "",
+      timestamp: "10:28 AM",
+      isMine: false,
+      type: "voice",
+      duration: "0:45",
+    },
+    {
+      id: 6,
+      senderId: 1,
+      senderName: "You",
+      content: "Perfect! Thanks for the quick response",
+      timestamp: "10:29 AM",
+      isMine: true,
+      type: "text",
+    },
+  ],
+  2: [
+    // Development Team - Technical discussion
+    {
+      id: 1,
+      senderId: 3,
+      senderName: "Alex Rivera",
+      content: "The API integration is complete! ✅",
+      timestamp: "9:15 AM",
+      isMine: false,
+      type: "text",
+    },
+    {
+      id: 2,
+      senderId: 4,
+      senderName: "Jordan Lee",
+      content: "Great work! Did you update the documentation?",
+      timestamp: "9:17 AM",
+      isMine: false,
+      type: "text",
+    },
+    {
+      id: 3,
+      senderId: 3,
+      senderName: "Alex Rivera",
+      content: "Yes, here's the updated API docs",
+      timestamp: "9:18 AM",
+      isMine: false,
+      type: "image",
+      imageUrl: "https://picsum.photos/seed/apidocs/400/300",
+    },
+    {
+      id: 4,
+      senderId: 1,
+      senderName: "You",
+      content: "Looks good! When can we deploy to staging?",
+      timestamp: "9:20 AM",
+      isMine: true,
+      type: "text",
+    },
+    {
+      id: 5,
+      senderId: 3,
+      senderName: "Alex Rivera",
+      content: "We can deploy this afternoon. I'll run the test suite first.",
+      timestamp: "9:22 AM",
+      isMine: false,
+      type: "text",
+    },
+  ],
+  3: [
+    // Mike Chen - Quick check-in
+    {
+      id: 1,
+      senderId: 2,
+      senderName: "Mike Chen",
+      content: "Quick question about the timeline",
+      timestamp: "2:45 PM",
+      isMine: false,
+      type: "text",
+    },
+    {
+      id: 2,
+      senderId: 1,
+      senderName: "You",
+      content: "Sure, what's up?",
+      timestamp: "2:46 PM",
+      isMine: true,
+      type: "text",
+    },
+    {
+      id: 3,
+      senderId: 2,
+      senderName: "Mike Chen",
+      content:
+        "Can we push the delivery to next week? Need more time for testing.",
+      timestamp: "2:47 PM",
+      isMine: false,
+      type: "text",
+    },
+    {
+      id: 4,
+      senderId: 1,
+      senderName: "You",
+      content: "That should be fine. Let me check with the client.",
+      timestamp: "2:48 PM",
+      isMine: true,
+      type: "text",
+    },
+    {
+      id: 5,
+      senderId: 1,
+      senderName: "You",
+      content: "Client approved the extension. Thanks for the heads up!",
+      timestamp: "3:15 PM",
+      isMine: true,
+      type: "text",
+    },
+    {
+      id: 6,
+      senderId: 2,
+      senderName: "Mike Chen",
+      content: "Thanks for the quick turnaround! 🙏",
+      timestamp: "3:16 PM",
+      isMine: false,
+      type: "text",
+    },
+  ],
+  4: [
+    // Design Review - Group chat
+    {
+      id: 1,
+      senderId: 5,
+      senderName: "Emily Parker",
+      content: "Love the new color scheme! 🎨",
+      timestamp: "Yesterday",
+      isMine: false,
+      type: "text",
+    },
+    {
+      id: 2,
+      senderId: 1,
+      senderName: "You",
+      content: "Thanks! Here's the full palette",
+      timestamp: "Yesterday",
+      isMine: true,
+      type: "image",
+      imageUrl: "https://picsum.photos/seed/palette/400/300",
+    },
+    {
+      id: 3,
+      senderId: 6,
+      senderName: "David Kim",
+      content: "The contrast ratio looks perfect for accessibility",
+      timestamp: "Yesterday",
+      isMine: false,
+      type: "text",
+    },
+    {
+      id: 4,
+      senderId: 5,
+      senderName: "Emily Parker",
+      content: "Quick walkthrough of the design system",
+      timestamp: "Yesterday",
+      isMine: false,
+      type: "video",
+      videoUrl: "https://picsum.photos/seed/designvideo/400/300",
+    },
+    {
+      id: 5,
+      senderId: 1,
+      senderName: "You",
+      content: "Excellent presentation! Let's move forward with this.",
+      timestamp: "Yesterday",
+      isMine: true,
+      type: "text",
+    },
+  ],
+  5: [
+    // Rachel Adams - Meeting request
+    {
+      id: 1,
+      senderId: 7,
+      senderName: "Rachel Adams",
+      content: "Hi! Do you have time for a quick call tomorrow?",
+      timestamp: "Yesterday",
+      isMine: false,
+      type: "text",
+    },
+    {
+      id: 2,
+      senderId: 1,
+      senderName: "You",
+      content: "Sure! What time works for you?",
+      timestamp: "Yesterday",
+      isMine: true,
+      type: "text",
+    },
+    {
+      id: 3,
+      senderId: 7,
+      senderName: "Rachel Adams",
+      content: "How about 2 PM? Should take about 30 minutes.",
+      timestamp: "Yesterday",
+      isMine: false,
+      type: "text",
+    },
+    {
+      id: 4,
+      senderId: 1,
+      senderName: "You",
+      content: "Perfect! I'll send you a calendar invite.",
+      timestamp: "Yesterday",
+      isMine: true,
+      type: "text",
+    },
+    {
+      id: 5,
+      senderId: 7,
+      senderName: "Rachel Adams",
+      content: "",
+      timestamp: "Yesterday",
+      isMine: false,
+      type: "voice",
+      duration: "1:23",
+    },
+    {
+      id: 6,
+      senderId: 1,
+      senderName: "You",
+      content: "Got it, see you tomorrow!",
+      timestamp: "Yesterday",
+      isMine: true,
+      type: "text",
+    },
+  ],
+  6: [
+    // Project Alpha - Group updates
+    {
+      id: 1,
+      senderId: 8,
+      senderName: "John Martinez",
+      content: "Meeting notes uploaded to drive 📄",
+      timestamp: "Yesterday",
+      isMine: false,
+      type: "text",
+    },
+    {
+      id: 2,
+      senderId: 9,
+      senderName: "Lisa Chen",
+      content: "Thanks! I've added my action items.",
+      timestamp: "Yesterday",
+      isMine: false,
+      type: "text",
+    },
+    {
+      id: 3,
+      senderId: 1,
+      senderName: "You",
+      content: "Here's the project roadmap for Q4",
+      timestamp: "Yesterday",
+      isMine: true,
+      type: "image",
+      imageUrl: "https://picsum.photos/seed/roadmap/400/300",
+    },
+    {
+      id: 4,
+      senderId: 8,
+      senderName: "John Martinez",
+      content: "Demo of the prototype",
+      timestamp: "Yesterday",
+      isMine: false,
+      type: "video",
+      videoUrl: "https://picsum.photos/seed/prototype/400/300",
+    },
+    {
+      id: 5,
+      senderId: 9,
+      senderName: "Lisa Chen",
+      content: "This is looking really solid! Great progress team 🎉",
+      timestamp: "Yesterday",
+      isMine: false,
+      type: "text",
+    },
+  ],
+};
 
 const Chat: React.FC = () => {
   const [activeChat, setActiveChat] = useState(conversations[0]);
   const [messageInput, setMessageInput] = useState("");
+
+  // Get messages for the active conversation
+  const currentMessages = conversationMessages[activeChat.id] || [];
 
   return (
     <div
@@ -356,7 +615,7 @@ const Chat: React.FC = () => {
             }}
           >
             <Space direction="vertical" size={16} style={{ width: "100%" }}>
-              {dummyMessages.map((message) => (
+              {currentMessages.map((message) => (
                 <div
                   key={message.id}
                   style={{

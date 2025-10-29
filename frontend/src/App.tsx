@@ -8,6 +8,7 @@ import ProjectSetup from "./pages/ProjectSetup";
 import Dashboard from "./pages/Dashboard";
 import Tickets from "./pages/Tickets";
 import Chat from "./pages/Chat";
+import Settings from "./pages/Settings";
 
 function App() {
   return (
@@ -41,7 +42,7 @@ function App() {
             <Route path="tickets" element={<Tickets />} />
             <Route path="chat" element={<Chat />} />
             <Route path="contacts" element={<div>Contacts Page</div>} />
-            <Route path="settings" element={<div>Settings Page</div>} />
+            <Route path="settings" element={<Settings />} />
           </Route>
 
           {/* Catch all */}
