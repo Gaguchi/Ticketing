@@ -12,8 +12,8 @@ Write-Host "🔄 Database Reset Utility" -ForegroundColor Cyan
 Write-Host "=========================" -ForegroundColor Cyan
 Write-Host ""
 
-# Change to backend directory
-Set-Location -Path "$PSScriptRoot\backend"
+# Already in backend directory
+Set-Location -Path "$PSScriptRoot"
 
 # Build the command
 $command = "python manage.py reset_db"

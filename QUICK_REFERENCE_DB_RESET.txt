@@ -6,15 +6,19 @@
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   Basic Reset:
+  cd backend
   .\reset_db.ps1
 
   Reset + Superuser:
+  cd backend
   .\reset_db.ps1 -CreateSuperuser
 
   Skip Confirmation:
+  cd backend
   .\reset_db.ps1 -CreateSuperuser -NoInput
 
   Load Fixtures:
+  cd backend
   .\reset_db.ps1 -CreateSuperuser -LoadFixtures
 
 
@@ -59,9 +63,10 @@
 🎯 TYPICAL WORKFLOW
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  1. .\reset_db.ps1 -CreateSuperuser
-  2. Visit http://localhost:8000/admin
-  3. Login with admin/admin123
-  4. Create your test data
-  5. Start developing!
+  1. cd backend
+  2. .\reset_db.ps1 -CreateSuperuser
+  3. Visit http://localhost:8000/admin
+  4. Login with admin/admin123
+  5. Create your test data
+  6. Start developing!
 

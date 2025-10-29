@@ -5,24 +5,28 @@
 ### Basic Reset (with confirmation)
 
 ```powershell
+cd backend
 .\reset_db.ps1
 ```
 
 ### Reset + Create Superuser
 
 ```powershell
+cd backend
 .\reset_db.ps1 -CreateSuperuser
 ```
 
 ### Reset + Superuser + Load Fixtures
 
 ```powershell
+cd backend
 .\reset_db.ps1 -CreateSuperuser -LoadFixtures
 ```
 
 ### Skip Confirmation Prompt
 
 ```powershell
+cd backend
 .\reset_db.ps1 -CreateSuperuser -NoInput
 ```
 
@@ -68,6 +72,7 @@ When using `-CreateSuperuser`:
 
 ```powershell
 # 1. Reset database with fresh superuser
+cd backend
 .\reset_db.ps1 -CreateSuperuser
 
 # 2. Login to admin panel

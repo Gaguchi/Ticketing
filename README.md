@@ -65,6 +65,7 @@ Need a fresh start? Reset the database:
 
 ```powershell
 # Simple reset with confirmation
+cd backend
 .\reset_db.ps1
 
 # Reset + create default superuser (admin/admin123)

@@ -17,11 +17,12 @@ A safe, development-only command to reset the database:
 
 ### 2. PowerShell Script
 
-**File**: `reset_db.ps1` (in project root)
+**File**: `backend/reset_db.ps1`
 
 Convenient wrapper for quick database resets:
 
 ```powershell
+cd backend
 .\reset_db.ps1 -CreateSuperuser
 ```
 
@@ -54,6 +55,7 @@ Added quick start section for database reset
 ### Quick Reset with Superuser
 
 ```powershell
+cd backend
 .\reset_db.ps1 -CreateSuperuser
 ```
 
@@ -125,6 +127,7 @@ Host: 31.97.181.167
 
 ```powershell
 # Clean slate with admin user
+cd backend
 .\reset_db.ps1 -CreateSuperuser
 ```
 
@@ -132,6 +135,7 @@ Host: 31.97.181.167
 
 ```powershell
 # Reset without confirmation (CI/CD)
+cd backend
 .\reset_db.ps1 -CreateSuperuser -NoInput
 ```
 
@@ -139,6 +143,7 @@ Host: 31.97.181.167
 
 ```powershell
 # Reset + load fixtures
+cd backend
 .\reset_db.ps1 -CreateSuperuser -LoadFixtures
 ```
 
