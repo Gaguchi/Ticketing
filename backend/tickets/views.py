@@ -383,11 +383,12 @@ class TicketViewSet(viewsets.ModelViewSet):
     
     Access Control:
     - Superusers: See all tickets
+    - Project Members: See tickets from their projects
     - IT Admins: See tickets for companies they're assigned to
     - Company Users: See only their company's tickets
     """
     queryset = Ticket.objects.select_related('company', 'column', 'project', 'reporter').prefetch_related('assignees', 'tags')
-    permission_classes = [IsAuthenticated, IsSuperuserOrCompanyMember]
+    permission_classes = [IsAuthenticated]  # Basic authentication only, filtering handled in get_queryset
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'type', 'priority_id', 'column', 'project', 'tags', 'company']
     search_fields = ['name', 'description']
