@@ -2,7 +2,7 @@
 ║                   DATABASE RESET QUICK REFERENCE                ║
 ╚════════════════════════════════════════════════════════════════╝
 
-📋 POWERSHELL SCRIPT (Recommended)
+📋 WINDOWS (PowerShell)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   Basic Reset:
@@ -20,6 +20,30 @@
   Load Fixtures:
   cd backend
   .\reset_db.ps1 -CreateSuperuser -LoadFixtures
+
+
+📋 LINUX/MAC (Bash)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  First Time (Make Executable):
+  cd backend
+  chmod +x reset_db.sh
+
+  Basic Reset:
+  cd backend
+  ./reset_db.sh
+
+  Reset + Superuser:
+  cd backend
+  ./reset_db.sh --create-superuser
+
+  Skip Confirmation:
+  cd backend
+  ./reset_db.sh --create-superuser --no-input
+
+  Load Fixtures:
+  cd backend
+  ./reset_db.sh --create-superuser --load-fixtures
 
 
 📋 DJANGO COMMAND
@@ -63,10 +87,20 @@
 🎯 TYPICAL WORKFLOW
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  Windows:
   1. cd backend
   2. .\reset_db.ps1 -CreateSuperuser
   3. Visit http://localhost:8000/admin
   4. Login with admin/admin123
   5. Create your test data
   6. Start developing!
+
+  Linux/Mac:
+  1. cd backend
+  2. chmod +x reset_db.sh (first time only)
+  3. ./reset_db.sh --create-superuser
+  4. Visit http://localhost:8000/admin
+  5. Login with admin/admin123
+  6. Create your test data
+  7. Start developing!
 

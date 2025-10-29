@@ -2,32 +2,71 @@
 
 ## Usage
 
-### Basic Reset (with confirmation)
+### Windows (PowerShell)
+
+#### Basic Reset (with confirmation)
 
 ```powershell
 cd backend
 .\reset_db.ps1
 ```
 
-### Reset + Create Superuser
+#### Reset + Create Superuser
 
 ```powershell
 cd backend
 .\reset_db.ps1 -CreateSuperuser
 ```
 
-### Reset + Superuser + Load Fixtures
+#### Reset + Superuser + Load Fixtures
 
 ```powershell
 cd backend
 .\reset_db.ps1 -CreateSuperuser -LoadFixtures
 ```
 
-### Skip Confirmation Prompt
+#### Skip Confirmation Prompt
 
 ```powershell
 cd backend
 .\reset_db.ps1 -CreateSuperuser -NoInput
+```
+
+### Linux/Mac (Bash)
+
+#### First Time Setup
+
+```bash
+cd backend
+chmod +x reset_db.sh
+```
+
+#### Basic Reset (with confirmation)
+
+```bash
+cd backend
+./reset_db.sh
+```
+
+#### Reset + Create Superuser
+
+```bash
+cd backend
+./reset_db.sh --create-superuser
+```
+
+#### Reset + Superuser + Load Fixtures
+
+```bash
+cd backend
+./reset_db.sh --create-superuser --load-fixtures
+```
+
+#### Skip Confirmation Prompt
+
+```bash
+cd backend
+./reset_db.sh --create-superuser --no-input
 ```
 
 ## Direct Django Command
@@ -70,10 +109,27 @@ When using `-CreateSuperuser`:
 
 ## Example Workflow
 
+**Windows:**
+
 ```powershell
 # 1. Reset database with fresh superuser
 cd backend
 .\reset_db.ps1 -CreateSuperuser
+
+# 2. Login to admin panel
+# Visit: http://localhost:8000/admin
+# Username: admin
+# Password: admin123
+
+# 3. Start fresh development!
+```
+
+**Linux/Mac:**
+
+```bash
+# 1. Reset database with fresh superuser
+cd backend
+./reset_db.sh --create-superuser
 
 # 2. Login to admin panel
 # Visit: http://localhost:8000/admin

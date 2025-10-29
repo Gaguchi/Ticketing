@@ -15,15 +15,27 @@ A safe, development-only command to reset the database:
 - ✅ Safety checks (only works with DEBUG=True)
 - ✅ Confirmation prompts
 
-### 2. PowerShell Script
+### 2. Shell Scripts
 
-**File**: `backend/reset_db.ps1`
+**Files**:
 
-Convenient wrapper for quick database resets:
+- `backend/reset_db.ps1` (Windows PowerShell)
+- `backend/reset_db.sh` (Linux/Mac Bash)
+
+Convenient wrappers for quick database resets:
+
+**Windows:**
 
 ```powershell
 cd backend
 .\reset_db.ps1 -CreateSuperuser
+```
+
+**Linux/Mac:**
+
+```bash
+cd backend
+./reset_db.sh --create-superuser
 ```
 
 ### 3. Documentation
@@ -54,9 +66,18 @@ Added quick start section for database reset
 
 ### Quick Reset with Superuser
 
+**Windows:**
+
 ```powershell
 cd backend
 .\reset_db.ps1 -CreateSuperuser
+```
+
+**Linux/Mac:**
+
+```bash
+cd backend
+./reset_db.sh --create-superuser
 ```
 
 ### Django Command Directly
@@ -125,26 +146,50 @@ Host: 31.97.181.167
 
 ### Fresh Start
 
+**Windows:**
+
 ```powershell
-# Clean slate with admin user
 cd backend
 .\reset_db.ps1 -CreateSuperuser
 ```
 
+**Linux/Mac:**
+
+```bash
+cd backend
+./reset_db.sh --create-superuser
+```
+
 ### Automated Testing
 
+**Windows:**
+
 ```powershell
-# Reset without confirmation (CI/CD)
 cd backend
 .\reset_db.ps1 -CreateSuperuser -NoInput
 ```
 
+**Linux/Mac:**
+
+```bash
+cd backend
+./reset_db.sh --create-superuser --no-input
+```
+
 ### Load Test Data
 
+**Windows:**
+
 ```powershell
-# Reset + load fixtures
 cd backend
 .\reset_db.ps1 -CreateSuperuser -LoadFixtures
+```
+
+**Linux/Mac:**
+
+```bash
+cd backend
+./reset_db.sh --create-superuser --load-fixtures
 ```
 
 ## 📝 Notes

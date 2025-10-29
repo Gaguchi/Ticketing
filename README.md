@@ -63,19 +63,22 @@ python manage.py runserver
 
 Need a fresh start? Reset the database:
 
+**Windows (PowerShell):**
+
 ```powershell
-# Simple reset with confirmation
 cd backend
-.\reset_db.ps1
-
-# Reset + create default superuser (admin/admin123)
 .\reset_db.ps1 -CreateSuperuser
-
-# Skip confirmation (use with caution!)
-.\reset_db.ps1 -CreateSuperuser -NoInput
 ```
 
-Or use Django directly:
+**Linux/Mac (Bash):**
+
+```bash
+cd backend
+chmod +x reset_db.sh  # First time only
+./reset_db.sh --create-superuser
+```
+
+**Django directly:**
 
 ```bash
 cd backend
