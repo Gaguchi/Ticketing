@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { Button, Input, Select, Table, Tag, message } from "antd";
+import { Button, Input, Select, Table, Tag, message, Segmented } from "antd";
 import type { TableColumnsType } from "antd";
 import {
   PlusOutlined,
   SearchOutlined,
   AppstoreOutlined,
   UnorderedListOutlined,
+  ClockCircleOutlined,
 } from "@ant-design/icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -15,6 +16,7 @@ import {
   faBolt,
 } from "@fortawesome/free-solid-svg-icons";
 import { KanbanBoard } from "../components/KanbanBoard";
+import { DeadlineView } from "../components/DeadlineView";
 import { getPriorityIcon } from "../components/PriorityIcons";
 import { TicketModal } from "../components/TicketModal";
 import { CreateTicketModal } from "../components/CreateTicketModal";
@@ -47,7 +49,9 @@ const formatTicketId = (projectKey?: string, id?: number) => {
 };
 
 const Tickets: React.FC = () => {
-  const [viewMode, setViewMode] = useState<"list" | "kanban">("kanban");
+  const [viewMode, setViewMode] = useState<"list" | "kanban" | "deadline">(
+    "kanban"
+  );
   const [searchText, setSearchText] = useState("");
   const [filterStatus, setFilterStatus] = useState<string | undefined>(
     undefined
@@ -430,24 +434,21 @@ const Tickets: React.FC = () => {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <div style={{ display: "flex" }}>
-            <Button
-              type={viewMode === "list" ? "primary" : "default"}
-              icon={<UnorderedListOutlined />}
-              onClick={() => setViewMode("list")}
-              style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
-            />
-            <Button
-              type={viewMode === "kanban" ? "primary" : "default"}
-              icon={<AppstoreOutlined />}
-              onClick={() => setViewMode("kanban")}
-              style={{
-                borderTopLeftRadius: 0,
-                borderBottomLeftRadius: 0,
-                marginLeft: -1,
-              }}
-            />
-          </div>
+          <Segmented
+            value={viewMode}
+            onChange={(value) =>
+              setViewMode(value as "list" | "kanban" | "deadline")
+            }
+            options={[
+              { label: "List", value: "list", icon: <UnorderedListOutlined /> },
+              { label: "Kanban", value: "kanban", icon: <AppstoreOutlined /> },
+              {
+                label: "Deadline",
+                value: "deadline",
+                icon: <ClockCircleOutlined />,
+              },
+            ]}
+          />
           <Button
             type="primary"
             icon={<PlusOutlined />}
@@ -489,12 +490,18 @@ const Tickets: React.FC = () => {
               style: { cursor: "pointer" },
             })}
           />
-        ) : (
+        ) : viewMode === "kanban" ? (
           <KanbanBoard
             tickets={filteredTickets}
             columns={kanbanColumns}
             onTicketClick={handleTicketClick}
             onTicketMove={handleTicketMove}
+          />
+        ) : (
+          <DeadlineView
+            tickets={filteredTickets}
+            columns={kanbanColumns}
+            onTicketClick={handleTicketClick}
           />
         )}
       </div>

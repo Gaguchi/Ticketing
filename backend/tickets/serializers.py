@@ -146,6 +146,7 @@ class TicketListSerializer(serializers.ModelSerializer):
             'id', 'name', 'type', 'status', 'priority_id',
             'urgency', 'importance', 'project', 'project_key', 'column', 'column_name',
             'assignee_ids', 'following', 'comments_count', 'tag_names',
+            'due_date', 'start_date',
             'created_at', 'updated_at'
         ]
     
