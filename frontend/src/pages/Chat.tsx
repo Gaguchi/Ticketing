@@ -6,6 +6,10 @@ import {
   UserOutlined,
   SmileOutlined,
   PaperClipOutlined,
+  PlayCircleOutlined,
+  AudioOutlined,
+  FileImageOutlined,
+  CaretRightOutlined,
 } from "@ant-design/icons";
 
 const { Text } = Typography;
@@ -76,10 +80,11 @@ const dummyMessages = [
   {
     id: 1,
     senderId: 2,
-    senderName: "Sarah Johnson",
+    senderName: "Mike Chen",
     content: "Hey! Did you get a chance to review the designs?",
     timestamp: "10:23 AM",
     isMine: false,
+    type: "text",
   },
   {
     id: 2,
@@ -88,14 +93,18 @@ const dummyMessages = [
     content: "Yes! They look great. Just a few minor tweaks needed.",
     timestamp: "10:25 AM",
     isMine: true,
+    type: "text",
   },
   {
     id: 3,
     senderId: 2,
-    senderName: "Sarah Johnson",
-    content: "Awesome! What changes did you have in mind?",
+    senderName: "Mike Chen",
+    content: "Here's the updated mockup",
     timestamp: "10:26 AM",
     isMine: false,
+    type: "image",
+    imageUrl:
+      "https://via.placeholder.com/400x300/1890ff/ffffff?text=Design+Mockup",
   },
   {
     id: 4,
@@ -105,22 +114,37 @@ const dummyMessages = [
       "The main navigation could use a bit more spacing, and maybe we could increase the contrast on the CTAs?",
     timestamp: "10:27 AM",
     isMine: true,
+    type: "text",
   },
   {
     id: 5,
     senderId: 2,
-    senderName: "Sarah Johnson",
-    content: "Got it! I'll make those adjustments.",
+    senderName: "Mike Chen",
+    content: "",
     timestamp: "10:28 AM",
     isMine: false,
+    type: "voice",
+    duration: "0:45",
   },
   {
     id: 6,
+    senderId: 1,
+    senderName: "You",
+    content: "Perfect! Thanks for the quick response",
+    timestamp: "10:29 AM",
+    isMine: true,
+    type: "text",
+  },
+  {
+    id: 7,
     senderId: 2,
-    senderName: "Sarah Johnson",
-    content: "Sure, I'll send you the updated mockups by EOD",
+    senderName: "Mike Chen",
+    content: "Demo of the new animation",
     timestamp: "10:30 AM",
     isMine: false,
+    type: "video",
+    videoUrl:
+      "https://via.placeholder.com/400x300/52c41a/ffffff?text=Video+Demo",
   },
 ];
 
@@ -131,7 +155,7 @@ const Chat: React.FC = () => {
   return (
     <div
       style={{
-        height: "100vh",
+        height: "calc(100vh - 64px)", // Subtract header height
         display: "flex",
         flexDirection: "column",
         backgroundColor: "#f5f5f5",
@@ -362,7 +386,13 @@ const Chat: React.FC = () => {
                         size="small"
                         styles={{
                           body: {
-                            padding: "10px 14px",
+                            padding:
+                              message.type === "image" ||
+                              message.type === "video"
+                                ? "4px"
+                                : message.type === "voice"
+                                ? "8px 12px"
+                                : "10px 14px",
                             backgroundColor: message.isMine
                               ? "#1890ff"
                               : "#fff",
@@ -378,15 +408,160 @@ const Chat: React.FC = () => {
                             : "0 1px 2px rgba(0,0,0,0.05)",
                         }}
                       >
-                        <Text
-                          style={{
-                            color: message.isMine ? "#fff" : "#172b4d",
-                            fontSize: 14,
-                            lineHeight: "20px",
-                          }}
-                        >
-                          {message.content}
-                        </Text>
+                        {message.type === "text" && (
+                          <Text
+                            style={{
+                              color: message.isMine ? "#fff" : "#172b4d",
+                              fontSize: 14,
+                              lineHeight: "20px",
+                            }}
+                          >
+                            {message.content}
+                          </Text>
+                        )}
+
+                        {message.type === "image" && (
+                          <div>
+                            {message.content && (
+                              <Text
+                                style={{
+                                  color: message.isMine ? "#fff" : "#172b4d",
+                                  fontSize: 14,
+                                  display: "block",
+                                  padding: "6px 10px",
+                                }}
+                              >
+                                {message.content}
+                              </Text>
+                            )}
+                            <img
+                              src={message.imageUrl}
+                              alt="Shared image"
+                              style={{
+                                width: "100%",
+                                maxWidth: 400,
+                                borderRadius: 8,
+                                cursor: "pointer",
+                              }}
+                            />
+                          </div>
+                        )}
+
+                        {message.type === "video" && (
+                          <div>
+                            {message.content && (
+                              <Text
+                                style={{
+                                  color: message.isMine ? "#fff" : "#172b4d",
+                                  fontSize: 14,
+                                  display: "block",
+                                  padding: "6px 10px",
+                                }}
+                              >
+                                {message.content}
+                              </Text>
+                            )}
+                            <div
+                              style={{
+                                position: "relative",
+                                width: "100%",
+                                maxWidth: 400,
+                                borderRadius: 8,
+                                overflow: "hidden",
+                                cursor: "pointer",
+                              }}
+                            >
+                              <img
+                                src={message.videoUrl}
+                                alt="Video thumbnail"
+                                style={{ width: "100%", display: "block" }}
+                              />
+                              <div
+                                style={{
+                                  position: "absolute",
+                                  top: "50%",
+                                  left: "50%",
+                                  transform: "translate(-50%, -50%)",
+                                  backgroundColor: "rgba(0,0,0,0.6)",
+                                  borderRadius: "50%",
+                                  width: 56,
+                                  height: 56,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                }}
+                              >
+                                <PlayCircleOutlined
+                                  style={{ fontSize: 32, color: "#fff" }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {message.type === "voice" && (
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 12,
+                              minWidth: 200,
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: 36,
+                                height: 36,
+                                borderRadius: "50%",
+                                backgroundColor: message.isMine
+                                  ? "rgba(255,255,255,0.2)"
+                                  : "#f0f5ff",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                cursor: "pointer",
+                              }}
+                            >
+                              <CaretRightOutlined
+                                style={{
+                                  fontSize: 16,
+                                  color: message.isMine ? "#fff" : "#1890ff",
+                                }}
+                              />
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <div
+                                style={{
+                                  height: 2,
+                                  backgroundColor: message.isMine
+                                    ? "rgba(255,255,255,0.3)"
+                                    : "#e8e8e8",
+                                  borderRadius: 2,
+                                  position: "relative",
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    height: 2,
+                                    width: "40%",
+                                    backgroundColor: message.isMine
+                                      ? "#fff"
+                                      : "#1890ff",
+                                    borderRadius: 2,
+                                  }}
+                                />
+                              </div>
+                            </div>
+                            <Text
+                              style={{
+                                fontSize: 12,
+                                color: message.isMine ? "#fff" : "#8c8c8c",
+                              }}
+                            >
+                              {message.duration}
+                            </Text>
+                          </div>
+                        )}
                       </Card>
                       <Text
                         style={{
