@@ -7,14 +7,12 @@ import {
   Switch,
   Divider,
   Space,
-  Form,
   Button,
   message,
   Tabs,
 } from "antd";
 import {
   BgColorsOutlined,
-  FontSizeOutlined,
   BellOutlined,
   GlobalOutlined,
   SafetyOutlined,
@@ -22,7 +20,6 @@ import {
 } from "@ant-design/icons";
 
 const { Title, Text } = Typography;
-const { Option } = Select;
 
 const Settings: React.FC = () => {
   const [theme, setTheme] = useState<"light" | "dark">("light");
