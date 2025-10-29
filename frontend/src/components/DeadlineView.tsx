@@ -250,21 +250,17 @@ const DeadlineColumn: React.FC<{
                   </Text>
 
                   {/* Priority */}
-                  {ticket.priority && (
-                    <FontAwesomeIcon
-                      icon={getPriorityIcon(ticket.priority).icon}
-                      style={{
-                        fontSize: 12,
-                        color: getPriorityIcon(ticket.priority).color,
-                      }}
-                    />
+                  {(ticket.priorityId || ticket.priority_id) && (
+                    <span style={{ fontSize: 12 }}>
+                      {getPriorityIcon(ticket.priorityId || ticket.priority_id!)}
+                    </span>
                   )}
                 </Space>
 
                 {/* Assignees */}
                 {ticket.assignees && ticket.assignees.length > 0 && (
                   <Avatar.Group maxCount={2} size={20}>
-                    {ticket.assignees.map((assignee, idx) => (
+                    {ticket.assignees.map((_, idx) => (
                       <Avatar
                         key={idx}
                         size={20}
