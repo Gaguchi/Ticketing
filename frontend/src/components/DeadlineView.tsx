@@ -252,7 +252,9 @@ const DeadlineColumn: React.FC<{
                   {/* Priority */}
                   {(ticket.priorityId || ticket.priority_id) && (
                     <span style={{ fontSize: 12 }}>
-                      {getPriorityIcon(ticket.priorityId || ticket.priority_id!)}
+                      {getPriorityIcon(
+                        ticket.priorityId || ticket.priority_id!
+                      )}
                     </span>
                   )}
                 </Space>
