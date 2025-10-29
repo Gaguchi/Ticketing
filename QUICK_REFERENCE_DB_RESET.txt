@@ -1,0 +1,67 @@
+╔════════════════════════════════════════════════════════════════╗
+║                   DATABASE RESET QUICK REFERENCE                ║
+╚════════════════════════════════════════════════════════════════╝
+
+📋 POWERSHELL SCRIPT (Recommended)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Basic Reset:
+  .\reset_db.ps1
+
+  Reset + Superuser:
+  .\reset_db.ps1 -CreateSuperuser
+
+  Skip Confirmation:
+  .\reset_db.ps1 -CreateSuperuser -NoInput
+
+  Load Fixtures:
+  .\reset_db.ps1 -CreateSuperuser -LoadFixtures
+
+
+📋 DJANGO COMMAND
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  cd backend
+  python manage.py reset_db --create-superuser
+
+
+🔐 DEFAULT CREDENTIALS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Username: admin
+  Password: admin123
+  Email:    admin@example.com
+
+
+🛡️ SAFETY FEATURES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ✅ Only works when DEBUG=True
+  ✅ Requires confirmation (unless --no-input)
+  ✅ Shows clear warnings
+  ✅ Prevents production use
+
+
+📚 DOCUMENTATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Full Guide: docs/setup/DATABASE_RESET.md
+  Summary:    DATABASE_RESET_IMPLEMENTATION.md
+
+
+⚠️ WARNING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  This will DELETE ALL DATA in the database!
+  Only use in development environments!
+
+
+🎯 TYPICAL WORKFLOW
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  1. .\reset_db.ps1 -CreateSuperuser
+  2. Visit http://localhost:8000/admin
+  3. Login with admin/admin123
+  4. Create your test data
+  5. Start developing!
+

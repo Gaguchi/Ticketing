@@ -7,6 +7,7 @@ Welcome to the Ticketing System documentation! This directory contains all proje
 ```
 docs/
 ├── README.md                           # This file
+├── SYSTEM_ARCHITECTURE.md              # Complete system architecture guide ⭐ START HERE
 ├── architecture.md                     # Frontend architecture
 ├── project-overview.md                 # High-level project overview
 ├── requirements.md                     # Project requirements
@@ -30,7 +31,8 @@ docs/
 │
 ├── setup/                              # Setup & Configuration
 │   ├── ENVIRONMENT_VARIABLES.md       # Environment variables reference
-│   └── ENV_SETUP.md                   # Environment setup guide
+│   ├── ENV_SETUP.md                   # Environment setup guide
+│   └── DATABASE_RESET.md              # Database reset guide (development)
 │
 ├── troubleshooting/                    # Troubleshooting Guides
 │   ├── API_TROUBLESHOOTING.md         # API issues
@@ -61,22 +63,28 @@ docs/
 
 ### For Developers
 
-1. **Frontend Architecture**
+1. **System Architecture** ⭐ **START HERE**
+
+   - Read: `SYSTEM_ARCHITECTURE.md` - Complete guide to Projects, Users, and Tickets
+   - Understand: Data models, relationships, and workflows
+
+2. **Frontend Architecture**
 
    - Read: `architecture.md` - Complete frontend component documentation
 
-2. **API Development**
+3. **API Development**
 
    - Read: `api/API_REFERENCE.md` - Complete API documentation
    - Import: `api/Ticketing_API.postman_collection.json` into Postman
    - Test: Use super-secret-key authentication for quick testing
 
-3. **Environment Setup**
+4. **Environment Setup**
 
    - Follow: `setup/ENV_SETUP.md`
    - Reference: `setup/ENVIRONMENT_VARIABLES.md`
+   - Reset Database: `setup/DATABASE_RESET.md` (development only)
 
-4. **Deployment**
+5. **Deployment**
    - Check: `deployment/DEPLOYMENT_CHECKLIST.md`
    - Follow: `deployment/DOKPLOY_DEPLOYMENT.md`
 
@@ -123,6 +131,7 @@ docs/
 | ---------------------------------------------------------- | ----------------------------------- |
 | [ENV_SETUP.md](setup/ENV_SETUP.md)                         | Environment setup instructions      |
 | [ENVIRONMENT_VARIABLES.md](setup/ENVIRONMENT_VARIABLES.md) | All environment variables explained |
+| [DATABASE_RESET.md](setup/DATABASE_RESET.md)               | Database reset guide (development)  |
 
 ### Troubleshooting
 

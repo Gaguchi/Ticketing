@@ -59,6 +59,30 @@ python manage.py createsuperuser
 python manage.py runserver
 ```
 
+### Database Reset (Development Only)
+
+Need a fresh start? Reset the database:
+
+```powershell
+# Simple reset with confirmation
+.\reset_db.ps1
+
+# Reset + create default superuser (admin/admin123)
+.\reset_db.ps1 -CreateSuperuser
+
+# Skip confirmation (use with caution!)
+.\reset_db.ps1 -CreateSuperuser -NoInput
+```
+
+Or use Django directly:
+
+```bash
+cd backend
+python manage.py reset_db --create-superuser
+```
+
+📖 See [Database Reset Guide](docs/setup/DATABASE_RESET.md) for more options.
+
 ### Frontend Setup
 
 ```bash

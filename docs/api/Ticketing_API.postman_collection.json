@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "ticketing-system-api",
 		"name": "Ticketing System API",
-		"description": "Complete API collection for the Ticketing System with authentication, tickets, projects, tags, contacts, and more.\n\n## Authentication\n\nThis collection is pre-configured to use the **Super Secret Key** authentication method for all requests. The `X-Super-Secret-Key` header is automatically added to every request.\n\n### Authentication Methods Available:\n\n1. **Super Secret Key** (Default - Pre-configured)\n   - Header: `X-Super-Secret-Key: dev-super-secret-key-12345`\n   - Automatically added to all requests\n   - Perfect for testing without login\n   - ⚠️ **Development/Testing Only - Never use in production!**\n\n2. **JWT Bearer Token** (Optional)\n   - Login to get access token\n   - Add to Authorization header: `Bearer <token>`\n   - Can be used instead of super-secret-key\n\n## Getting Started\n\n1. **Import this collection** into Postman\n2. **Set environment variable** (optional):\n   - `base_url`: http://31.97.181.167/api\n3. **Start testing!** All requests will work immediately with super-secret-key\n\n## Environment Variables\n\nThe collection includes these variables:\n- `base_url`: http://31.97.181.167/api\n- `super_secret_key`: dev-super-secret-key-12345 (pre-configured)\n- `access_token`: (optional - auto-set after login)\n- `refresh_token`: (optional - auto-set after login)",
+		"description": "Complete API collection for the Ticketing System with authentication, tickets, projects, tags, contacts, and more.\n\n## Authentication\n\nThis collection is pre-configured to use the **Super Secret Key** authentication method for all requests. The `X-Super-Secret-Key` header is automatically added to every request.\n\n### Authentication Methods Available:\n\n1. **Super Secret Key** (Default - Pre-configured)\n   - Header: `X-Super-Secret-Key: dev-super-secret-key-12345`\n   - Automatically added to all requests\n   - Perfect for testing without login\n   - ⚠️ **Development/Testing Only - Never use in production!**\n\n2. **JWT Bearer Token** (Optional)\n   - Login to get access token\n   - Add to Authorization header: `Bearer <token>`\n   - Can be used instead of super-secret-key\n\n## Getting Started\n\n1. **Import this collection** into Postman\n2. **Set environment variable** (optional):\n   - `base_url`: http://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me/api\n3. **Start testing!** All requests will work immediately with super-secret-key\n\n## Environment Variables\n\nThe collection includes these variables:\n- `base_url`: http://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me/api\n- `super_secret_key`: dev-super-secret-key-12345 (pre-configured)\n- `access_token`: (optional - auto-set after login)\n- `refresh_token`: (optional - auto-set after login)",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
@@ -817,7 +817,7 @@
 	"variable": [
 		{
 			"key": "base_url",
-			"value": "http://31.97.181.167/api",
+			"value": "http://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me/api",
 			"type": "string"
 		},
 		{
