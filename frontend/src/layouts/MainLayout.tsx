@@ -11,6 +11,7 @@ import {
   LogoutOutlined,
   BellOutlined,
   PlusOutlined,
+  MessageOutlined,
 } from "@ant-design/icons";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -56,6 +57,12 @@ const MainLayout: React.FC = () => {
       icon: <InboxOutlined />,
       label: "Tickets",
       path: "/tickets",
+    },
+    {
+      key: "/chat",
+      icon: <MessageOutlined />,
+      label: "Chat",
+      path: "/chat",
     },
     {
       key: "/customers",

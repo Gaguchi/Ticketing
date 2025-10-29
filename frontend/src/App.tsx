@@ -7,6 +7,7 @@ import Register from "./pages/Register";
 import ProjectSetup from "./pages/ProjectSetup";
 import Dashboard from "./pages/Dashboard";
 import Tickets from "./pages/Tickets";
+import Chat from "./pages/Chat";
 
 function App() {
   return (
@@ -38,6 +39,7 @@ function App() {
           >
             <Route index element={<Dashboard />} />
             <Route path="tickets" element={<Tickets />} />
+            <Route path="chat" element={<Chat />} />
             <Route path="contacts" element={<div>Contacts Page</div>} />
             <Route path="settings" element={<div>Settings Page</div>} />
           </Route>
