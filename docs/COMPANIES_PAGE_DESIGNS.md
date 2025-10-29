@@ -5,9 +5,11 @@ This document outlines three different design approaches for the Companies page,
 ## 🎨 Design Option 1: Illustration with Gradient Background
 
 ### Empty State
+
 **Visual Style:** Modern, welcoming, gradient background
 
 **Features:**
+
 - Full-page centered card with gradient purple background
 - Large icon (80px) in primary blue
 - Clear call-to-action button (48px height)
@@ -17,6 +19,7 @@ This document outlines three different design approaches for the Companies page,
 - Clean, modern aesthetic
 
 **Best For:**
+
 - First-time users who need guidance
 - Professional IT service companies
 - When you want to make a strong visual impression
@@ -24,6 +27,7 @@ This document outlines three different design approaches for the Companies page,
 **Code Location:** `EmptyStateOption1` in `Companies.tsx`
 
 **To Activate:**
+
 ```typescript
 if (companies.length === 0) {
   return <EmptyStateOption1 />;
@@ -35,9 +39,11 @@ if (companies.length === 0) {
 ## 📋 Design Option 2: Quick Setup Guide
 
 ### Empty State
+
 **Visual Style:** Educational, step-by-step approach
 
 **Features:**
+
 - Centered empty state with dashed border card
 - Large empty icon (100px)
 - Two action buttons: "Create Company" + "Watch Tutorial"
@@ -48,6 +54,7 @@ if (companies.length === 0) {
 - Educational focus
 
 **Best For:**
+
 - Users who prefer step-by-step instructions
 - When you want to reduce support questions
 - Teams that value documentation
@@ -55,6 +62,7 @@ if (companies.length === 0) {
 **Code Location:** `EmptyStateOption2` in `Companies.tsx`
 
 **To Activate:**
+
 ```typescript
 if (companies.length === 0) {
   return <EmptyStateOption2 />;
@@ -66,9 +74,11 @@ if (companies.length === 0) {
 ## ⚡ Design Option 3: Minimal Clean
 
 ### Empty State
+
 **Visual Style:** Simple, no-nonsense approach
 
 **Features:**
+
 - Full-page centered content
 - Large icon (120px) in light gray
 - Minimal text
@@ -76,6 +86,7 @@ if (companies.length === 0) {
 - Fastest to implement and lightest weight
 
 **Best For:**
+
 - Power users who don't need guidance
 - Minimalist design preference
 - When performance is critical
@@ -83,6 +94,7 @@ if (companies.length === 0) {
 **Code Location:** `EmptyStateOption3` in `Companies.tsx`
 
 **To Activate:**
+
 ```typescript
 if (companies.length === 0) {
   return <EmptyStateOption3 />;
@@ -94,7 +106,9 @@ if (companies.length === 0) {
 ## 📊 With Data: List View vs Grid View
 
 ### List View (Default)
+
 **Features:**
+
 - Statistics cards at top (4 metrics):
   - Total Companies
   - Total IT Admins
@@ -112,13 +126,16 @@ if (companies.length === 0) {
 - Sortable and filterable columns
 
 **Best For:**
+
 - Viewing many companies at once
 - Detailed data comparison
 - Desktop/large screens
 - Power users
 
 ### Grid View
+
 **Features:**
+
 - Compact header with search
 - Card-based layout (responsive grid)
 - Each card shows:
@@ -130,17 +147,21 @@ if (companies.length === 0) {
 - Hover effects
 
 **Best For:**
+
 - Visual browsing
 - Tablet/mobile devices
 - Quick overview
 - Users who prefer cards over tables
 
 **Toggle Between Views:**
+
 ```typescript
 const [viewMode, setViewMode] = useState<"list" | "grid">("list");
 
 // Render logic
-{viewMode === "list" ? <ListView /> : <GridView />}
+{
+  viewMode === "list" ? <ListView /> : <GridView />;
+}
 ```
 
 ---
@@ -148,6 +169,7 @@ const [viewMode, setViewMode] = useState<"list" | "grid">("list");
 ## 🔧 Features Common to All Designs
 
 ### Create/Edit Modal
+
 - Clean form with validation
 - Company name (required)
 - Description (required, textarea)
@@ -155,17 +177,20 @@ const [viewMode, setViewMode] = useState<"list" | "grid">("list");
 - Large inputs for better UX
 
 ### Company Actions (Dropdown Menu)
+
 1. Edit Company
 2. Manage Admins
 3. Manage Users
 4. Delete Company (danger action with confirmation)
 
 ### Search & Filter
+
 - Real-time search across name and description
 - Case-insensitive matching
 - Clear button to reset
 
 ### Statistics Display
+
 - Color-coded icons for different metrics
 - Consistent styling across views
 - Responsive layout
@@ -175,24 +200,28 @@ const [viewMode, setViewMode] = useState<"list" | "grid">("list");
 ## 💡 Recommendations
 
 ### Choose **Option 1** if:
+
 - You want maximum visual impact
 - First-time user experience is critical
 - You have a modern, design-forward brand
 - Target audience is non-technical clients
 
 ### Choose **Option 2** if:
+
 - User education is important
 - You want to reduce support tickets
 - Users might be unfamiliar with the system
 - You value clear onboarding
 
 ### Choose **Option 3** if:
+
 - Users are technical/experienced
 - You prefer minimal design
 - Performance is a priority
 - You want the fastest load times
 
 ### For the Data View:
+
 - **Start with List View** as default (better for data-heavy use)
 - **Provide Grid View toggle** for flexibility
 - Grid view is better for mobile/tablet
@@ -219,6 +248,7 @@ Simply uncomment the design you prefer!
 ## 📱 Responsive Behavior
 
 All designs are fully responsive:
+
 - **Mobile (< 576px):** Single column grid, simplified cards
 - **Tablet (576-992px):** 2 column grid, compact stats
 - **Desktop (> 992px):** Full layout with all features

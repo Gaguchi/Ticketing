@@ -10,6 +10,7 @@ import {
   Modal,
   Form,
   Select,
+  Empty,
   Dropdown,
   Avatar,
   Row,
@@ -30,6 +31,7 @@ import {
   MoreOutlined,
   BuildOutlined,
   FileTextOutlined,
+  RocketOutlined,
   AppstoreOutlined,
   UnorderedListOutlined,
 } from "@ant-design/icons";
@@ -61,7 +63,7 @@ interface Company {
   }>;
 }
 
-const Companies: React.FC = () => {
+const CompaniesOption2: React.FC = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState("");
@@ -78,93 +80,9 @@ const Companies: React.FC = () => {
     setLoading(true);
     try {
       // TODO: Replace with actual API call
-      // const response = await api.get('/companies/');
-      // setCompanies(response.data);
-
-      // Mock data for demonstration
+      // For now, simulating empty state
       setTimeout(() => {
-        setCompanies([
-          {
-            id: 1,
-            name: "Acme Corporation",
-            description: "Manufacturing and industrial supplies client",
-            ticket_count: 24,
-            admin_count: 2,
-            user_count: 8,
-            project_count: 3,
-            admins: [
-              {
-                id: 1,
-                email: "john@it.com",
-                first_name: "John",
-                last_name: "Doe",
-              },
-              {
-                id: 2,
-                email: "jane@it.com",
-                first_name: "Jane",
-                last_name: "Smith",
-              },
-            ],
-            users: [
-              {
-                id: 3,
-                email: "user1@acme.com",
-                first_name: "Bob",
-                last_name: "Wilson",
-              },
-              {
-                id: 4,
-                email: "user2@acme.com",
-                first_name: "Alice",
-                last_name: "Johnson",
-              },
-            ],
-          },
-          {
-            id: 2,
-            name: "Nokia Finland",
-            description: "Telecommunications infrastructure client",
-            ticket_count: 12,
-            admin_count: 1,
-            user_count: 5,
-            project_count: 2,
-            admins: [
-              {
-                id: 1,
-                email: "john@it.com",
-                first_name: "John",
-                last_name: "Doe",
-              },
-            ],
-            users: [
-              {
-                id: 5,
-                email: "user1@nokia.com",
-                first_name: "Erik",
-                last_name: "Svensson",
-              },
-            ],
-          },
-          {
-            id: 3,
-            name: "TechStart Inc",
-            description: "Software development startup",
-            ticket_count: 8,
-            admin_count: 1,
-            user_count: 3,
-            project_count: 1,
-            admins: [
-              {
-                id: 2,
-                email: "jane@it.com",
-                first_name: "Jane",
-                last_name: "Smith",
-              },
-            ],
-            users: [],
-          },
-        ]);
+        setCompanies([]);
         setLoading(false);
       }, 500);
     } catch (error) {
@@ -354,116 +272,8 @@ const Companies: React.FC = () => {
   );
 
   // ============================================
-  // DESIGN OPTION 1: Empty State with Illustration
+  // DESIGN OPTION 2: Empty State with Quick Setup
   // ============================================
-  const EmptyStateOption1 = () => (
-    <div
-      style={{
-        minHeight: "calc(100vh - 48px)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-      }}
-    >
-      <Card
-        style={{
-          maxWidth: 600,
-          textAlign: "center",
-          borderRadius: 16,
-          boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
-        }}
-      >
-        <div style={{ padding: "40px 20px" }}>
-          <div
-            style={{
-              fontSize: 80,
-              marginBottom: 24,
-              color: "#1890ff",
-            }}
-          >
-            <BuildOutlined />
-          </div>
-          <Title level={2} style={{ marginBottom: 16 }}>
-            Welcome to Company Management
-          </Title>
-          <Paragraph
-            style={{
-              fontSize: 16,
-              color: "#595959",
-              marginBottom: 32,
-            }}
-          >
-            Companies allow you to organize your IT services for multiple
-            clients. Each company can have its own admins, users, projects, and
-            tickets.
-          </Paragraph>
-
-          <Space direction="vertical" size="large" style={{ width: "100%" }}>
-            <Button
-              type="primary"
-              size="large"
-              icon={<PlusOutlined />}
-              onClick={handleCreateCompany}
-              style={{
-                height: 48,
-                fontSize: 16,
-                borderRadius: 8,
-              }}
-            >
-              Create Your First Company
-            </Button>
-
-            <div style={{ marginTop: 32 }}>
-              <Text type="secondary" style={{ fontSize: 14 }}>
-                What you can do with companies:
-              </Text>
-              <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-                <Col span={12}>
-                  <Card size="small" style={{ background: "#f0f5ff" }}>
-                    <Space>
-                      <TeamOutlined
-                        style={{ fontSize: 24, color: "#1890ff" }}
-                      />
-                      <div>
-                        <Text strong>Manage Teams</Text>
-                        <br />
-                        <Text type="secondary" style={{ fontSize: 12 }}>
-                          Organize users
-                        </Text>
-                      </div>
-                    </Space>
-                  </Card>
-                </Col>
-                <Col span={12}>
-                  <Card size="small" style={{ background: "#f6ffed" }}>
-                    <Space>
-                      <FileTextOutlined
-                        style={{ fontSize: 24, color: "#52c41a" }}
-                      />
-                      <div>
-                        <Text strong>Track Tickets</Text>
-                        <br />
-                        <Text type="secondary" style={{ fontSize: 12 }}>
-                          Per company
-                        </Text>
-                      </div>
-                    </Space>
-                  </Card>
-                </Col>
-              </Row>
-            </div>
-          </Space>
-        </div>
-      </Card>
-    </div>
-  );
-
-  /* ============================================
-     DESIGN OPTION 2: Empty State with Quick Setup
-     ============================================
-     Uncomment this function to use the Quick Setup Guide design:
-     
   const EmptyStateOption2 = () => (
     <div style={{ padding: 24, maxWidth: 800, margin: "0 auto" }}>
       <Card
@@ -606,52 +416,6 @@ const Companies: React.FC = () => {
       </Card>
     </div>
   );
-  */
-
-  /* ============================================
-     DESIGN OPTION 3: Minimal Empty State
-     ============================================
-     Uncomment this function to use the Minimal design:
-     
-  const EmptyStateOption3 = () => (
-    <div
-      style={{
-        minHeight: "calc(100vh - 48px)",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 24,
-      }}
-    >
-      <BuildOutlined
-        style={{ fontSize: 120, color: "#e6e6e6", marginBottom: 24 }}
-      />
-      <Title level={2} style={{ color: "#8c8c8c" }}>
-        No Companies Found
-      </Title>
-      <Paragraph
-        style={{
-          color: "#bfbfbf",
-          marginBottom: 32,
-          maxWidth: 400,
-          textAlign: "center",
-        }}
-      >
-        Create a company to start organizing your IT services for different
-        clients
-      </Paragraph>
-      <Button
-        type="primary"
-        size="large"
-        icon={<PlusOutlined />}
-        onClick={handleCreateCompany}
-      >
-        Create Company
-      </Button>
-    </div>
-  );
-  */
 
   // ============================================
   // LIST VIEW (With Data)
@@ -912,10 +676,9 @@ const Companies: React.FC = () => {
     );
   }
 
-  // Choose which empty state to show
-  // To use alternative designs, uncomment EmptyStateOption2 or EmptyStateOption3 above
+  // Show empty state (Design Option 2: Quick Setup Guide)
   if (companies.length === 0) {
-    return <EmptyStateOption1 />;
+    return <EmptyStateOption2 />;
   }
 
   // Render with data
@@ -978,4 +741,4 @@ const Companies: React.FC = () => {
   );
 };
 
-export default Companies;
+export default CompaniesOption2;
