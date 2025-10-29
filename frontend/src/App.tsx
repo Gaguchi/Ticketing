@@ -9,6 +9,7 @@ import ProjectSetup from "./pages/ProjectSetup";
 import Dashboard from "./pages/Dashboard";
 import Tickets from "./pages/Tickets";
 import Chat from "./pages/Chat";
+import Companies from "./pages/Companies";
 import Settings from "./pages/Settings";
 
 function App() {
@@ -43,7 +44,7 @@ function App() {
               <Route index element={<Dashboard />} />
               <Route path="tickets" element={<Tickets />} />
               <Route path="chat" element={<Chat />} />
-              <Route path="contacts" element={<div>Contacts Page</div>} />
+              <Route path="companies" element={<Companies />} />
               <Route path="settings" element={<Settings />} />
             </Route>
 

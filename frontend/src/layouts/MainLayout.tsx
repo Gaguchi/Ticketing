@@ -65,10 +65,10 @@ const MainLayout: React.FC = () => {
       path: "/chat",
     },
     {
-      key: "/customers",
+      key: "/companies",
       icon: <TeamOutlined />,
-      label: "Customers",
-      path: "/customers",
+      label: "Companies",
+      path: "/companies",
     },
     {
       key: "/settings",
