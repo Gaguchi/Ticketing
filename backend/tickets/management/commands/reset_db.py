@@ -37,13 +37,22 @@ class Command(BaseCommand):
             action='store_true',
             help='Load initial fixtures after reset',
         )
+        parser.add_argument(
+            '--force-dev',
+            action='store_true',
+            help='Force run in development mode (bypasses DEBUG check - use with caution!)',
+        )
 
     def handle(self, *args, **options):
-        # Safety check - only allow in DEBUG mode
-        if not settings.DEBUG:
+        # Safety check - only allow in DEBUG mode or with --force-dev flag
+        if not settings.DEBUG and not options.get('force_dev'):
             raise CommandError(
                 '❌ Database reset is only allowed when DEBUG=True\n'
-                'This prevents accidental data loss in production.'
+                'This prevents accidental data loss in production.\n\n'
+                'If you are sure this is a development environment, you can:\n'
+                '  1. Set DEBUG=True in your .env file (recommended), OR\n'
+                '  2. Use --force-dev flag (use with extreme caution!)\n'
+                '\n⚠️  NEVER use this command on production data!'
             )
 
         # Confirmation prompt

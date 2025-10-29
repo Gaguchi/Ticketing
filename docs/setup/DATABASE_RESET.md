@@ -73,9 +73,21 @@ cd backend
 
 You can also use the Django management command directly:
 
-```powershell
+```bash
 cd backend
 python manage.py reset_db --create-superuser
+```
+
+### All Command Options
+
+```bash
+python manage.py reset_db [options]
+
+Options:
+  --no-input            Skip confirmation prompts
+  --create-superuser    Create default superuser (admin/admin123)
+  --load-fixtures       Load JSON fixtures from backend/fixtures/
+  --force-dev           Force run in dev mode (bypasses DEBUG check)
 ```
 
 ## Options
@@ -96,9 +108,33 @@ When using `-CreateSuperuser`:
 
 ## Safety Features
 
-- Only works when `DEBUG=True` in settings
-- Requires confirmation before proceeding (unless `-NoInput` is used)
+- Only works when `DEBUG=True` in settings (or with `--force-dev` flag)
+- Requires confirmation before proceeding (unless `--no-input` is used)
 - Shows clear warnings before deleting data
+
+### Important: DEBUG Setting
+
+The command requires `DEBUG=True` in your environment. If you see this error:
+
+```
+❌ Database reset is only allowed when DEBUG=True
+```
+
+**Option 1 (Recommended)**: Set `DEBUG=True` in your `.env` file:
+
+```bash
+DEBUG=True
+```
+
+Then restart your server and run the command again.
+
+**Option 2 (Use with caution)**: Force development mode:
+
+```bash
+python manage.py reset_db --create-superuser --force-dev
+```
+
+⚠️ **Warning**: `--force-dev` bypasses the safety check. Only use this if you're absolutely sure you're in a development environment!
 
 ## What It Does
 

@@ -96,6 +96,29 @@ Options:
   --no-input            Skip confirmation prompts
   --create-superuser    Create default superuser (admin/admin123)
   --load-fixtures       Load JSON fixtures from backend/fixtures/
+  --force-dev           Force run in dev mode (bypasses DEBUG check)
+```
+
+### ⚠️ DEBUG Requirement
+
+The command requires `DEBUG=True` in your environment for safety.
+
+**If you get this error:**
+
+```
+❌ Database reset is only allowed when DEBUG=True
+```
+
+**Solution 1 (Recommended)**: Add to your `.env` file:
+
+```bash
+DEBUG=True
+```
+
+**Solution 2**: Use the force flag (development only!):
+
+```bash
+python manage.py reset_db --create-superuser --force-dev
 ```
 
 ## 🔐 Default Superuser Credentials

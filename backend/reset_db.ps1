@@ -4,7 +4,8 @@
 param(
     [switch]$CreateSuperuser,
     [switch]$LoadFixtures,
-    [switch]$NoInput
+    [switch]$NoInput,
+    [switch]$ForceDev
 )
 
 Write-Host ""
@@ -28,6 +29,10 @@ if ($LoadFixtures) {
 
 if ($NoInput) {
     $command += " --no-input"
+}
+
+if ($ForceDev) {
+    $command += " --force-dev"
 }
 
 # Execute the command

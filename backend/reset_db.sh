@@ -13,6 +13,7 @@ NC='\033[0m' # No Color
 CREATE_SUPERUSER=false
 LOAD_FIXTURES=false
 NO_INPUT=false
+FORCE_DEV=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -28,9 +29,13 @@ while [[ $# -gt 0 ]]; do
             NO_INPUT=true
             shift
             ;;
+        --force-dev)
+            FORCE_DEV=true
+            shift
+            ;;
         *)
             echo -e "${RED}Unknown option: $1${NC}"
-            echo "Usage: $0 [--create-superuser] [--load-fixtures] [--no-input]"
+            echo "Usage: $0 [--create-superuser] [--load-fixtures] [--no-input] [--force-dev]"
             exit 1
             ;;
     esac
@@ -54,6 +59,10 @@ fi
 
 if [ "$NO_INPUT" = true ]; then
     COMMAND="$COMMAND --no-input"
+fi
+
+if [ "$FORCE_DEV" = true ]; then
+    COMMAND="$COMMAND --force-dev"
 fi
 
 # Execute the command
