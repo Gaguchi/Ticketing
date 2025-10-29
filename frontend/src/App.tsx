@@ -10,8 +10,6 @@ import Dashboard from "./pages/Dashboard";
 import Tickets from "./pages/Tickets";
 import Chat from "./pages/Chat";
 import Companies from "./pages/Companies";
-import CompaniesOption2 from "./pages/CompaniesOption2";
-import CompaniesOption3 from "./pages/CompaniesOption3";
 import Settings from "./pages/Settings";
 
 function App() {
@@ -47,8 +45,6 @@ function App() {
               <Route path="tickets" element={<Tickets />} />
               <Route path="chat" element={<Chat />} />
               <Route path="companies" element={<Companies />} />
-              <Route path="companies-option2" element={<CompaniesOption2 />} />
-              <Route path="companies-option3" element={<CompaniesOption3 />} />
               <Route path="settings" element={<Settings />} />
             </Route>
 

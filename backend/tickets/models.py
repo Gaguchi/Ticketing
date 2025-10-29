@@ -9,6 +9,9 @@ class Company(models.Model):
     """
     name = models.CharField(max_length=255, unique=True)
     description = models.TextField(blank=True, null=True)
+    logo = models.ImageField(upload_to='company_logos/', blank=True, null=True, help_text='Company logo image')
+    primary_contact_email = models.EmailField(blank=True, null=True, help_text='Primary contact email for this company')
+    phone = models.CharField(max_length=50, blank=True, null=True, help_text='Company phone number')
     
     # Admins are IT staff assigned to manage this company's tickets
     admins = models.ManyToManyField(
