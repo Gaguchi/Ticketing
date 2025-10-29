@@ -3,21 +3,25 @@
 ## Usage
 
 ### Basic Reset (with confirmation)
+
 ```powershell
 .\reset_db.ps1
 ```
 
 ### Reset + Create Superuser
+
 ```powershell
 .\reset_db.ps1 -CreateSuperuser
 ```
 
 ### Reset + Superuser + Load Fixtures
+
 ```powershell
 .\reset_db.ps1 -CreateSuperuser -LoadFixtures
 ```
 
 ### Skip Confirmation Prompt
+
 ```powershell
 .\reset_db.ps1 -CreateSuperuser -NoInput
 ```
@@ -40,6 +44,7 @@ python manage.py reset_db --create-superuser
 ## Default Superuser Credentials
 
 When using `-CreateSuperuser`:
+
 - **Username**: admin
 - **Password**: admin123
 - **Email**: admin@example.com
@@ -76,12 +81,15 @@ When using `-CreateSuperuser`:
 ## Troubleshooting
 
 ### Permission Denied
+
 ```powershell
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
 
 ### Database Connection Error
+
 Check your `.env` file has correct database credentials:
+
 ```
 DB_HOST=31.97.181.167
 DB_PORT=5433
@@ -91,4 +99,5 @@ DB_PASSWORD=your_password
 ```
 
 ### Command Not Found
+
 Make sure you're in the project root directory and Python is in your PATH.
