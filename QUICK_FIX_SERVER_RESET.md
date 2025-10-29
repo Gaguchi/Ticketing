@@ -16,17 +16,20 @@ This prevents accidental data loss in production.
 Since this is a development server, add `DEBUG=True` to your environment:
 
 **In your `.env` file:**
+
 ```bash
 DEBUG=True
 ```
 
 **Or export it directly:**
+
 ```bash
 export DEBUG=True
 python manage.py reset_db --create-superuser
 ```
 
 **Or set it inline:**
+
 ```bash
 DEBUG=True python manage.py reset_db --create-superuser
 ```
@@ -75,6 +78,7 @@ Password: admin123
 ⚠️ **NEVER run database reset commands on production!**
 
 The safety check exists for a reason. If you need to reset a production database:
+
 1. Take a full backup first
 2. Use proper migration rollback procedures
 3. Consider manual SQL scripts instead

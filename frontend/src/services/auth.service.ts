@@ -37,6 +37,22 @@ export interface User {
   email: string;
   first_name: string;
   last_name: string;
+  companies?: Company[];
+  administered_companies?: Company[];
+  member_companies?: Company[];
+  has_companies?: boolean;
+  is_it_admin?: boolean;
+  is_superuser?: boolean;
+}
+
+export interface Company {
+  id: number;
+  name: string;
+  description?: string;
+  ticket_count?: number;
+  admin_count?: number;
+  user_count?: number;
+  admin_names?: string;
 }
 
 export interface UserWithProjects extends User {

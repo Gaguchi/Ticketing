@@ -1,16 +1,74 @@
 from django.contrib import admin
 from .models import (
     Ticket, Column, Project, Comment, Attachment,
-    Tag, Contact, TagContact, UserTag, TicketTag
+    Tag, Contact, TagContact, UserTag, TicketTag, Company
 )
+
+
+@admin.register(Company)
+class CompanyAdmin(admin.ModelAdmin):
+    list_display = ['name', 'admin_count', 'user_count', 'ticket_count', 'created_at']
+    search_fields = ['name', 'description']
+    list_filter = ['created_at']
+    filter_horizontal = ['admins', 'users']
+    readonly_fields = ['created_at', 'updated_at', 'ticket_count', 'admin_count', 'user_count']
+    
+    fieldsets = (
+        ('Company Information', {
+            'fields': ('name', 'description')
+        }),
+        ('IT Staff (Admins)', {
+            'fields': ('admins',),
+            'description': 'IT staff who manage tickets for this company'
+        }),
+        ('Company Users', {
+            'fields': ('users',),
+            'description': 'Client company employees who can access their tickets'
+        }),
+        ('Statistics', {
+            'fields': ('ticket_count', 'admin_count', 'user_count'),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def admin_count(self, obj):
+        return obj.admin_count
+    admin_count.short_description = 'IT Admins'
+    
+    def user_count(self, obj):
+        return obj.user_count
+    user_count.short_description = 'Users'
 
 
 @admin.register(Project)
 class ProjectAdmin(admin.ModelAdmin):
     list_display = ['key', 'name', 'lead_username', 'created_at']
     search_fields = ['key', 'name', 'description', 'lead_username']
-    list_filter = ['created_at']
+    list_filter = ['created_at', 'companies']
+    filter_horizontal = ['members', 'companies']
     readonly_fields = ['created_at', 'updated_at']
+    
+    fieldsets = (
+        ('Project Information', {
+            'fields': ('key', 'name', 'description', 'lead_username')
+        }),
+        ('Members', {
+            'fields': ('members',),
+            'description': 'Users who are members of this project'
+        }),
+        ('Companies', {
+            'fields': ('companies',),
+            'description': 'Client companies associated with this project'
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
 
 
 @admin.register(Column)
@@ -25,22 +83,25 @@ class ColumnAdmin(admin.ModelAdmin):
 
 @admin.register(Ticket)
 class TicketAdmin(admin.ModelAdmin):
-    list_display = ['id', 'name', 'type', 'status', 'priority_id', 'column', 'project', 'created_at']
-    list_filter = ['type', 'status', 'priority_id', 'urgency', 'importance', 'project', 'created_at']
+    list_display = ['id', 'name', 'type', 'status', 'priority_id', 'company', 'column', 'project', 'created_at']
+    list_filter = ['type', 'status', 'priority_id', 'urgency', 'importance', 'company', 'project', 'created_at']
     search_fields = ['name', 'description']
     filter_horizontal = ['assignees']
-    autocomplete_fields = ['project', 'reporter', 'parent']
+    autocomplete_fields = ['company', 'project', 'reporter', 'parent']
     readonly_fields = ['created_at', 'updated_at']
     
     fieldsets = (
         ('Basic Information', {
             'fields': ('name', 'description', 'type', 'status')
         }),
+        ('Company & Project', {
+            'fields': ('company', 'project', 'column')
+        }),
         ('Priority & Urgency', {
             'fields': ('priority_id', 'urgency', 'importance')
         }),
         ('Relationships', {
-            'fields': ('column', 'project', 'assignees', 'reporter', 'parent')
+            'fields': ('assignees', 'reporter', 'parent')
         }),
         ('Additional Details', {
             'fields': ('following', 'due_date', 'start_date')

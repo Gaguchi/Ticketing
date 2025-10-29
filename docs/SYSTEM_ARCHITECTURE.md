@@ -1,10 +1,10 @@
 # Ticketing System - Complete Architecture Guide
 
 > **Last Updated**: October 29, 2025  
-> **Version**: 1.0  
-> **Status**: Current Implementation
+> **Version**: 2.0  
+> **Status**: Current Implementation with Multi-Tenant Company Support
 
-This document provides a clear, comprehensive understanding of how the Ticketing System works - focusing on **Projects**, **Users**, and **Tickets** as the core entities.
+This document provides a clear, comprehensive understanding of how the Ticketing System works - focusing on **Projects**, **Companies**, **Users**, and **Tickets** as the core entities.
 
 ---
 
@@ -14,34 +14,38 @@ This document provides a clear, comprehensive understanding of how the Ticketing
 2. [System Architecture Overview](#system-architecture-overview)
 3. [Data Model](#data-model)
 4. [User System](#user-system)
-5. [Project System](#project-system)
-6. [Ticket System](#ticket-system)
-7. [Tag System](#tag-system)
-8. [Workflow & Permissions](#workflow--permissions)
-9. [API Architecture](#api-architecture)
-10. [Frontend Architecture](#frontend-architecture)
+5. [Company System](#company-system)
+6. [Project System](#project-system)
+7. [Ticket System](#ticket-system)
+8. [Tag System](#tag-system)
+9. [Workflow & Permissions](#workflow--permissions)
+10. [API Architecture](#api-architecture)
+11. [Frontend Architecture](#frontend-architecture)
 
 ---
 
 ## Core Concepts
 
-### The Three Pillars
+### The Four Pillars
 
-The entire system is built on three foundational entities:
+The entire system is built on four foundational entities:
 
 1. **Users** - People who interact with the system
-2. **Projects** - Containers that organize work and teams
-3. **Tickets** - Units of work within projects
+2. **Companies** - Client organizations being serviced
+3. **Projects** - Containers that organize work and teams
+4. **Tickets** - Units of work within projects
 
 ```
-User ──belongs to──> Project ──contains──> Tickets ──assigned to──> Users
+User ──manages──> Company ──associated with──> Project ──contains──> Tickets
+     ──member of──>                                      ──optional──> Company
 ```
 
 ### Key Principles
 
-- **Project-Centric**: Everything belongs to a project
-- **User Roles**: Django's built-in User model with project memberships
-- **Flexible Organization**: Tags and columns provide additional structure
+- **Project-Centric**: Projects are the main workspace
+- **Company Support**: Projects can be associated with multiple client companies
+- **Flexible Tickets**: Tickets can be general project tickets or company-specific
+- **User Roles**: IT staff manage companies, company users access their tickets
 - **Kanban Workflow**: Tickets move through columns (workflow stages)
 - **Multi-Assignment**: Tickets can have multiple assignees
 
@@ -91,46 +95,60 @@ User ──belongs to──> Project ──contains──> Tickets ──assigne
 │ password    │
 └─────────────┘
       │ │
-      │ └──────────────┐
-      │                │ members (M2M)
+      │ └──────────────────────────────┐
+      │                                 │ members (M2M)
+      │         ┌──────────────┐        │
+      │         │   Company    │        │ admins/users (M2M)
+      │         │──────────────│        │
+      │         │ id           │◄───────┤
+      │         │ name         │        │
+      │         │ description  │        │
+      │         │ admins (M2M) │────────┘
+      │         │ users (M2M)  │────────┐
+      │         └──────────────┘        │
+      │                │                │
+      │                │ companies (M2M)│
+      │                ↓                │
+      │         ┌─────────────┐         │
+      │         │   Project   │         │
+      │         │─────────────│         │
+      │         │ id          │         │
+      │         │ key         │◄────────┼──────────┐
+      │         │ name        │         │          │ project (FK)
+      │         │ description │         │          │
+      │         │ lead_user   │         │          │
+      │         │ members     │─────────┘          │
+      │         │ companies   │────────────────────┘
+      │         └─────────────┘
+      │                │
+      │                │ columns
       │                ↓
       │         ┌─────────────┐
-      │         │   Project   │
+      │         │   Column    │
       │         │─────────────│
       │         │ id          │
-      │         │ key         │◄────────────┐
-      │         │ name        │             │ project (FK)
-      │         │ description │             │
-      │         │ lead_user   │             │
-      │         └─────────────┘             │
-      │                │                    │
-      │                │ columns            │
-      │                ↓                    │
-      │         ┌─────────────┐             │
-      │         │   Column    │             │
-      │         │─────────────│             │
-      │         │ id          │             │
-      │         │ name        │◄────────┐   │
-      │         │ order       │         │   │
-      │         │ color       │         │   │
-      │         │ project_id  │─────────┘   │
-      │         └─────────────┘             │
-      │                │                    │
-      │                │ tickets            │
-      │                ↓                    │
-      │         ┌─────────────┐             │
-      │         │   Ticket    │             │
-      │         │─────────────│             │
-      │         │ id          │             │
-      │         │ name        │             │
-      │         │ description │             │
+      │         │ name        │◄────────┐
+      │         │ order       │         │
+      │         │ color       │         │
+      │         │ project_id  │─────────┘
+      │         └─────────────┘
+      │                │
+      │                │ tickets
+      │                ↓
+      │         ┌─────────────┐
+      │         │   Ticket    │
+      │         │─────────────│
+      │         │ id          │
+      │         │ name        │
+      │         │ description │
       │         │ type        │ task/bug/story/epic
-      │         │ status      │             │
-      │         │ priority_id │ 1-4         │
-      │         │ urgency     │             │
-      │         │ importance  │             │
-      │         │ column_id   │─────────────┘
-      │         │ project_id  │─────────────────┘
+      │         │ status      │
+      │         │ priority_id │ 1-4
+      │         │ urgency     │
+      │         │ importance  │
+      │         │ project_id  │─────────────────┐
+      │         │ company_id  │─ (optional) ────┼──> Company
+      │         │ column_id   │─────────────────┘
       │         │ reporter_id │──┐
       │         │ parent_id   │  │ (self-reference for subtasks)
       │         │ due_date    │  │
@@ -194,16 +212,17 @@ User ──belongs to──> Project ──contains──> Tickets ──assigne
 
 ### Core Models
 
-| Model          | Purpose                        | Key Fields                                                 |
-| -------------- | ------------------------------ | ---------------------------------------------------------- |
-| **User**       | System users (Django built-in) | username, email, password, is_superuser                    |
-| **Project**    | Workspace container            | key (unique), name, lead_username, members (M2M)           |
-| **Column**     | Kanban workflow stage          | name, order, color, project (FK)                           |
-| **Ticket**     | Work item                      | name, type, status, priority_id, project (FK), column (FK) |
-| **Tag**        | Organizational label           | name, color, project (FK)                                  |
-| **Comment**    | Ticket discussion              | content, ticket (FK), user (FK)                            |
-| **Attachment** | File upload                    | file, ticket (FK), uploaded_by (FK)                        |
-| **Contact**    | External contact               | name, email, phone, title                                  |
+| Model          | Purpose                        | Key Fields                                                           |
+| -------------- | ------------------------------ | -------------------------------------------------------------------- |
+| **User**       | System users (Django built-in) | username, email, password, is_superuser                              |
+| **Company**    | Client organization            | name, description, admins (M2M), users (M2M)                         |
+| **Project**    | Workspace container            | key (unique), name, lead_username, members (M2M), companies (M2M)    |
+| **Column**     | Kanban workflow stage          | name, order, color, project (FK)                                     |
+| **Ticket**     | Work item                      | name, type, status, priority_id, project (FK), company (FK optional) |
+| **Tag**        | Organizational label           | name, color, project (FK)                                            |
+| **Comment**    | Ticket discussion              | content, ticket (FK), user (FK)                                      |
+| **Attachment** | File upload                    | file, ticket (FK), uploaded_by (FK)                                  |
+| **Contact**    | External contact               | name, email, phone, title                                            |
 
 ---
 
@@ -271,10 +290,99 @@ User:
 
 While there are no explicit role models, user permissions are determined by:
 
-- **Superuser** (`is_superuser=True`): Can manage tags, all projects
+- **Superuser** (`is_superuser=True`): Can manage tags, all projects, all companies
+- **IT Admin** (company admin): Can manage assigned companies and their tickets
+- **Company User** (company member): Can view/work on their company's tickets
 - **Project Member**: Can create tickets, view project data
 - **Ticket Assignee**: Can update assigned tickets
 - **Ticket Reporter**: Created the ticket
+
+---
+
+## Company System
+
+### Company Model
+
+```python
+Company:
+  - id (auto)
+  - name (unique) - e.g., "Acme Corp", "Nokia", "Enterprise Client"
+  - description (optional) - Company details
+  - admins (M2M to User) - IT staff managing this company
+  - users (M2M to User) - Client company employees
+  - created_at
+  - updated_at
+```
+
+### Company Purpose
+
+**Companies represent client organizations being serviced:**
+
+1. **Client Organization**: Represents external companies (customers)
+2. **IT Staff Assignment**: Admins are IT staff who manage company tickets
+3. **User Access**: Company users are client employees who can see their tickets
+4. **Project Association**: Companies can be linked to multiple projects
+5. **Ticket Tagging**: Tickets can be optionally tagged with a company
+
+### Company Relationships
+
+```
+Company:
+  ├─ admins (M2M) ──> IT Staff Users
+  │   - Manage company tickets
+  │   - Auto-assigned to company-specific tickets
+  │
+  ├─ users (M2M) ──> Client Company Users
+  │   - Can view/create tickets for their company
+  │   - Access restricted to their company's data
+  │
+  └─ projects (M2M) ──> Projects
+      - Company work happens within these projects
+      - Projects can serve multiple companies
+```
+
+### Company Use Cases
+
+**Example 1: IT Service Company**
+
+```
+Company: "Acme Corp"
+├─ Admins: [john@itcompany.com, jane@itcompany.com]  (IT staff)
+├─ Users: [alice@acmecorp.com, bob@acmecorp.com]     (Client employees)
+├─ Projects: ["Customer Support", "Development"]
+└─ Tickets:
+   ├─ SUPP-1: "Login issue" (company: Acme Corp)
+   ├─ SUPP-5: "Feature request" (company: Acme Corp)
+   └─ DEV-3: "Bug fix" (company: Acme Corp)
+```
+
+**Example 2: General Project Tickets**
+
+```
+Project: "Internal Tools"
+├─ Companies: [] (none associated)
+└─ Tickets:
+   ├─ TOOL-1: "Update documentation" (company: null)
+   └─ TOOL-2: "Refactor code" (company: null)
+```
+
+### Company-Based Filtering
+
+**Automatic Access Control:**
+
+- **Superusers**: See all tickets across all companies
+- **IT Admins**: See tickets from companies they admin
+- **Company Users**: See only their company's tickets
+- **Project Members**: See all project tickets (if not company-specific)
+
+### Company Admin Features
+
+**IT Admins can:**
+
+- View all tickets for their assigned companies
+- Automatically get assigned to new company-specific tickets
+- Manage company users
+- Associate companies with projects
 
 ---
 
@@ -290,6 +398,7 @@ Project:
   - description (optional)
   - lead_username (optional) - Username of project lead
   - members (M2M to User) - Project team members
+  - companies (M2M to Company) - Associated client companies
   - created_at
   - updated_at
 ```
@@ -300,9 +409,10 @@ Project:
 
 1. Group related tickets together
 2. Define team membership (who can access)
-3. Provide namespace for ticket IDs (e.g., `DEMO-1`, `BUG-42`)
-4. Own columns (kanban workflow)
-5. Own tags (organizational labels)
+3. Can serve multiple client companies
+4. Provide namespace for ticket IDs (e.g., `DEMO-1`, `BUG-42`)
+5. Own columns (kanban workflow)
+6. Own tags (organizational labels)
 
 ### Project Lifecycle
 
@@ -313,16 +423,18 @@ Project:
 
 2. Project Setup
    - Add members: Update project.members M2M
+   - Add companies: Update project.companies M2M
    - Create columns: POST /api/tickets/columns/
    - Create tags: POST /api/tickets/tags/ (superuser only)
 
 3. Daily Use
    - Users create tickets within project
+   - Tickets can be tagged with specific companies
    - Tickets move through columns
    - Tags organize tickets
 
 4. Project Isolation
-   - Users only see projects they're members of
+   - Users see projects they're members of OR projects linked to their companies
    - Tickets belong to one project only
    - Columns and tags are project-specific
 ```
@@ -332,7 +444,8 @@ Project:
 ```
 Project: "Customer Support"
 ├─ Key: "SUPP"
-├─ Members: [user1, user2, user3]
+├─ Members: [user1, user2, user3]  (IT staff)
+├─ Companies: [Acme Corp, Nokia, TechStart]  (Clients)
 ├─ Columns:
 │  ├─ To Do (order: 0)
 │  ├─ In Progress (order: 1)
@@ -343,9 +456,10 @@ Project: "Customer Support"
 │  ├─ "Bug" (issue type)
 │  └─ "Feature Request"
 └─ Tickets:
-   ├─ SUPP-1: "Login not working"
-   ├─ SUPP-2: "Add dark mode"
-   └─ SUPP-3: "Slow dashboard loading"
+   ├─ SUPP-1: "Login not working" (company: Acme Corp)
+   ├─ SUPP-2: "Add dark mode" (company: Nokia)
+   ├─ SUPP-3: "Slow dashboard" (company: null - general)
+   └─ SUPP-4: "Server maintenance" (company: null - general)
 ```
 
 ---
@@ -369,7 +483,8 @@ Ticket:
   - importance - low | normal | high | critical
 
   # Relationships
-  - project (FK) - Which project owns this ticket
+  - project (FK) - Which project owns this ticket (Required)
+  - company (FK, optional, nullable) - Which company this ticket is for
   - column (FK) - Current workflow stage
   - assignees (M2M) - Who is working on it
   - reporter (FK) - Who created it
@@ -385,6 +500,13 @@ Ticket:
   - created_at
   - updated_at
 ```
+
+**Ticket-Company Relationship:**
+
+- **company = null**: General project ticket (internal work, infrastructure, etc.)
+- **company = Company**: Company-specific ticket (client work)
+- When a company-specific ticket is created, it is automatically assigned to all admins of that company
+- Users can see tickets from projects they're members of OR projects linked to their companies
 
 ### Ticket Types
 
@@ -419,7 +541,7 @@ Ticket:
 ### Ticket Workflow
 
 ```
-1. Ticket Creation
+1. Ticket Creation (General Project Ticket)
    POST /api/tickets/tickets/
    {
      "name": "Fix login bug",
@@ -432,6 +554,18 @@ Ticket:
      "tag_names": ["backend", "security"],
      "due_date": "2025-11-01"
    }
+
+1b. Ticket Creation (Company-Specific Ticket)
+   POST /api/tickets/tickets/
+   {
+     "name": "Setup VPN for Acme Corp",
+     "type": "task",
+     "priority_id": 3,
+     "company": 1,  // Acme Corp company ID
+     "column": 1,
+     "tag_names": ["networking", "client-work"]
+   }
+   // Automatically assigns to all admins of Acme Corp
 
 2. Ticket moves through columns (drag & drop in Kanban)
    PATCH /api/tickets/tickets/1/
@@ -546,44 +680,90 @@ Tag:
 
 ```
 Superuser:
-  ✓ Full access to all projects, tickets, tags
-  ✓ Can create/edit/delete tags
+  ✓ Full access to all projects, tickets, companies, tags
+  ✓ Can create/edit/delete tags and companies
   ✓ Can manage any ticket
   ✓ System administration
 
+IT Admin (Company Admin):
+  ✓ View all projects linked to their companies
+  ✓ View company-specific tickets in those projects
+  ✓ Auto-assigned to new company-specific tickets
+  ✓ Can manage company users
+  ✓ Can create/update/delete their companies
+  ✗ Cannot manage tags (view only)
+  ✗ Cannot access unrelated projects
+
+Company User:
+  ✓ View projects linked to their companies
+  ✓ View company-specific tickets (read-only for their company)
+  ✓ Create tickets for their company
+  ✗ Cannot manage companies
+  ✗ Cannot access unrelated projects
+
 Project Member:
-  ✓ View all tickets in their projects
+  ✓ View all tickets in their projects (general + company-specific)
   ✓ Create tickets in their projects
   ✓ Update tickets they're assigned to
   ✗ Cannot manage tags (view only)
+  ✗ Cannot manage companies
   ✗ Cannot access other projects
 
 Non-Member:
   ✗ Cannot see project
   ✗ Cannot access tickets
+  ✗ Cannot see companies
 ```
 
 ### Data Isolation
 
 **Project-Level Isolation:**
 
-- Users only see projects they're members of
-- API filters tickets/columns/tags by user's projects
+- Users see projects they're members of OR projects linked to their companies
+- API filters tickets/columns/tags by user's accessible projects
 - Cross-project references not allowed
+
+**Company-Level Isolation:**
+
+- Company admins can manage their company's users and tickets
+- Company users can only view their company's tickets
+- Tickets can be general (no company) or company-specific
+- Auto-assignment: Company-specific tickets automatically assigned to company admins
 
 **Implementation:**
 
 ```python
-# In ViewSets
+# In TicketViewSet
 def get_queryset(self):
     user = self.request.user
     if user.is_superuser:
         return Ticket.objects.all()
-    else:
-        # Only tickets from user's projects
-        return Ticket.objects.filter(
-            project__members=user
-        )
+
+    # Get projects where user is a member
+    member_projects = Project.objects.filter(members=user)
+
+    # Get companies where user is admin or member
+    user_companies = Company.objects.filter(
+        Q(admins=user) | Q(users=user)
+    )
+
+    # Get projects associated with user's companies
+    company_projects = Project.objects.filter(
+        companies__in=user_companies
+    )
+
+    # Combine both sets
+    all_project_ids = set(member_projects.values_list('id', flat=True)) | \
+                      set(company_projects.values_list('id', flat=True))
+
+    return Ticket.objects.filter(project_id__in=all_project_ids)
+
+def perform_create(self, serializer):
+    ticket = serializer.save(reporter=self.request.user)
+
+    # Auto-assign company-specific tickets to company admins
+    if ticket.company and ticket.company.admins.exists():
+        ticket.assignees.set(ticket.company.admins.all())
 ```
 
 ---
@@ -616,7 +796,40 @@ Header: X-Super-Secret-Key: dev-super-secret-key-12345
 POST   /tickets/auth/register/      - Register new user + project
 POST   /tickets/auth/login/          - Login and get tokens
 POST   /tickets/auth/token/refresh/  - Refresh access token
-GET    /tickets/auth/me/             - Get current user info
+GET    /tickets/auth/me/             - Get current user info (includes company info)
+```
+
+#### Companies
+
+```
+GET    /tickets/companies/           - List companies (filtered by user access)
+POST   /tickets/companies/           - Create company (superuser/IT admin)
+GET    /tickets/companies/{id}/      - Get company details
+PATCH  /tickets/companies/{id}/      - Update company (superuser/company admin)
+DELETE /tickets/companies/{id}/      - Delete company (superuser/company admin)
+POST   /tickets/companies/{id}/assign_admin/ - Add IT admin to company
+POST   /tickets/companies/{id}/remove_admin/ - Remove IT admin from company
+POST   /tickets/companies/{id}/assign_user/  - Add company user
+POST   /tickets/companies/{id}/remove_user/  - Remove company user
+GET    /tickets/companies/{id}/tickets/      - List all tickets for company
+```
+
+**Company Response:**
+
+```json
+{
+  "id": 1,
+  "name": "Acme Corp",
+  "description": "Manufacturing client",
+  "admins": [{ "id": 2, "email": "admin@it.com", "first_name": "John" }],
+  "users": [{ "id": 5, "email": "user@acme.com", "first_name": "Jane" }],
+  "ticket_count": 15,
+  "admin_count": 2,
+  "user_count": 10,
+  "project_count": 3,
+  "admin_ids": [2, 3],
+  "user_ids": [5, 6, 7]
+}
 ```
 
 #### Projects
@@ -625,8 +838,24 @@ GET    /tickets/auth/me/             - Get current user info
 GET    /tickets/projects/            - List user's projects
 POST   /tickets/projects/            - Create new project
 GET    /tickets/projects/{id}/       - Get project details
-PATCH  /tickets/projects/{id}/       - Update project
+PATCH  /tickets/projects/{id}/       - Update project (includes companies)
 DELETE /tickets/projects/{id}/       - Delete project
+```
+
+**Project Response (includes companies):**
+
+```json
+{
+  "id": 1,
+  "name": "IT Services",
+  "key": "ITS",
+  "companies": [
+    { "id": 1, "name": "Acme Corp", "ticket_count": 15 },
+    { "id": 2, "name": "Nokia", "ticket_count": 8 }
+  ],
+  "company_ids": [1, 2],
+  "member_count": 5
+}
 ```
 
 #### Tickets
@@ -726,6 +955,8 @@ GET /tickets/tickets/?status=in_progress&priority_id=4&search=login&ordering=-cr
 
 ```
 App.tsx (Root)
+├── CompanyProvider (Context)
+│
 ├── Dashboard Page
 │   ├── Filter Boxes (draggable)
 │   │   ├── Unassigned Tickets
@@ -738,7 +969,7 @@ App.tsx (Root)
 │
 ├── Tickets Page
 │   ├── View Toggle (List/Kanban)
-│   ├── Search & Filters
+│   ├── Search & Filters (includes company filter)
 │   ├── Table View (Jira-style)
 │   └── Kanban View
 │       ├── KanbanBoard
@@ -746,6 +977,12 @@ App.tsx (Root)
 │       │       └── TicketCard (for each Ticket)
 │       │           └── TicketModal (on click)
 │       └── Add Column Button
+│
+├── Companies Page (planned)
+│   ├── Company List
+│   ├── Company Details
+│   ├── Admin Management
+│   └── User Management
 │
 ├── Customers Page (placeholder)
 └── Settings Page (placeholder)
@@ -787,11 +1024,28 @@ App.tsx (Root)
 
 ### State Management
 
-Currently using React hooks:
+**Current Implementation:**
 
 - `useState` for component state
 - `useEffect` for data fetching
 - Props drilling for shared state
+- **CompanyContext** for company-related state
+
+**CompanyContext** (Implemented):
+
+```typescript
+interface CompanyContextType {
+  selectedCompany: Company | null;
+  availableCompanies: Company[];
+  isITAdmin: boolean;
+  hasCompanies: boolean;
+  setSelectedCompany: (company: Company | null) => void;
+}
+
+// Provides company state to entire app
+// Persists selected company to localStorage
+// Used for filtering tickets by company
+```
 
 **Future**: Context API or Zustand for global state
 
@@ -831,32 +1085,42 @@ Currently using React hooks:
 2. **View Dashboard**
 
    - Sees filter boxes (Unassigned, Assigned to Me, etc.)
-   - Sees all tickets in their projects
+   - Sees all tickets in their projects OR projects linked to their companies
 
 3. **Create Ticket**
 
    - Opens Tickets page
    - Clicks "Create Ticket"
    - Fills form: name, type, priority, assigns users, adds tags
+   - **Optional:** Select company (if IT admin creating client ticket)
+   - If company selected → Auto-assigned to company admins
    - Ticket appears in first column
 
-4. **Work on Ticket**
+4. **Company Management** (IT Admin Only)
+
+   - Navigate to Companies page
+   - Create new company: "Acme Corp"
+   - Add IT admins (can manage tickets)
+   - Add company users (clients can view tickets)
+   - Link company to projects
+
+5. **Work on Ticket**
 
    - Drag ticket to "In Progress" column
    - Add comments: "Working on this now"
    - Upload screenshot attachment
    - Update assignees if needed
 
-5. **Complete Ticket**
+6. **Complete Ticket**
 
    - Drag to "Done" column
    - Status auto-updates
    - Comment: "Resolved - deployed to production"
 
-6. **Organize with Tags**
+7. **Organize with Tags**
    - Superuser creates tag: "VIP Customer"
    - Add tag to important tickets
-   - Filter tickets by tag
+   - Filter tickets by tag and/or company
 
 ### System Flow
 
@@ -865,22 +1129,33 @@ Currently using React hooks:
 │  User    │────>│  Project  │────>│  Ticket  │
 └──────────┘     └───────────┘     └──────────┘
      │                 │                  │
-     │                 │                  │
-     ↓                 ↓                  ↓
+     │                 ↓                  ↓
+     │            ┌─────────┐      ┌───────────┐
+     └───────────>│ Company │<─────│ (optional)│
+                  └─────────┘      └───────────┘
+     │
+     ↓
  JWT Auth         Workspace          Work Item
  Permissions      Container          Management
  Project          Columns            Comments
  Membership       Tags               Attachments
-                  Members            Assignments
+ Company Roles    Members            Assignments
+ (IT Admin/User)  Companies          Company Link
 ```
 
 ### Key Relationships
 
 ```
-User ─┬─ member of ──> Projects
+User ─┬─ member of ──> Projects ─┬─> has ──> Tickets
+      │                          │
+      ├─ admin of ──> Companies ─┤
+      │                          │
+      └─ user of ──> Companies ──┘
       │
       └─ assigned to ─> Tickets ──> belongs to ──> Project
-                          │
+                          │                             │
+                          ├─ for company ──> Company ───┘
+                          │                   (optional)
                           ├─ in column ──> Column ──> Project
                           │
                           ├─ has tags ──> Tags ──> Project
@@ -888,6 +1163,36 @@ User ─┬─ member of ──> Projects
                           ├─ has comments ──> Comments
                           │
                           └─ has attachments ──> Attachments
+```
+
+### Multi-Tenant Access Flow
+
+**Example: IT Admin manages tickets for multiple companies**
+
+```
+IT Admin (John) is:
+  - Admin of Company A (Acme Corp)
+  - Admin of Company B (Nokia)
+  - Member of Project "IT Services"
+
+Project "IT Services" is linked to:
+  - Company A
+  - Company B
+
+John can see tickets:
+  1. General project tickets (company = null)
+  2. Company A tickets (company = A)
+  3. Company B tickets (company = B)
+
+When John creates ticket for Company A:
+  → Auto-assigned to all Company A admins
+  → Company A users can view it (read-only)
+  → Other project members can also see it
+
+When John creates general ticket:
+  → Only project members can see it
+  → No company filtering
+  → Manual assignment
 ```
 
 ---

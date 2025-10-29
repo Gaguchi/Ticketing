@@ -2,16 +2,73 @@ from django.db import models
 from django.contrib.auth.models import User
 
 
+class Company(models.Model):
+    """
+    Company model representing client companies serviced by the IT business.
+    Each company is isolated and has its own tickets, admins, and users.
+    """
+    name = models.CharField(max_length=255, unique=True)
+    description = models.TextField(blank=True, null=True)
+    
+    # Admins are IT staff assigned to manage this company's tickets
+    admins = models.ManyToManyField(
+        User, 
+        related_name='administered_companies', 
+        blank=True,
+        help_text='IT staff who manage tickets for this company'
+    )
+    
+    # Users are client company employees who can view/create tickets
+    users = models.ManyToManyField(
+        User, 
+        related_name='member_companies', 
+        blank=True,
+        help_text='Client company users who can access their company tickets'
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['name']
+        verbose_name_plural = 'Companies'
+
+    def __str__(self):
+        return self.name
+    
+    @property
+    def ticket_count(self):
+        """Return the number of tickets specifically assigned to this company"""
+        return self.tickets.count()
+    
+    @property
+    def project_count(self):
+        """Return the number of projects this company is associated with"""
+        return self.projects.count()
+    
+    @property
+    def admin_count(self):
+        """Return the number of admins assigned to this company"""
+        return self.admins.count()
+    
+    @property
+    def user_count(self):
+        """Return the number of users in this company"""
+        return self.users.count()
+
+
 class Project(models.Model):
     """
     Project model following Jira's pattern.
     Each project has a unique key (e.g., 'BUG', 'PROJ') used for issue keys.
+    Projects can have multiple companies attached for client-specific work.
     """
     key = models.CharField(max_length=10, unique=True)  # e.g., "PROJ", "BUG"
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
     lead_username = models.CharField(max_length=150, blank=True, null=True)  # Project lead
     members = models.ManyToManyField(User, related_name='project_memberships', blank=True)  # Invited members
+    companies = models.ManyToManyField('Company', related_name='projects', blank=True, help_text='Companies associated with this project')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -92,6 +149,14 @@ class Ticket(models.Model):
     
     # Relationships
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='tickets')
+    company = models.ForeignKey(
+        Company, 
+        on_delete=models.CASCADE, 
+        related_name='tickets',
+        null=True,
+        blank=True,
+        help_text='Optional: Client company this ticket is specific to. Leave blank for general project tickets.'
+    )
     column = models.ForeignKey(Column, on_delete=models.CASCADE, related_name='tickets')
     assignees = models.ManyToManyField(User, related_name='assigned_tickets', blank=True)
     reporter = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='reported_tickets')

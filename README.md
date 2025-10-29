@@ -1,6 +1,6 @@
 # Ticketing System
 
-A modern, Jira-inspired ticketing system built with Django REST Framework and React.
+A modern, Jira-inspired ticketing system with multi-tenant company support built with Django REST Framework and React.
 
 ## 📁 Project Structure
 
@@ -168,6 +168,9 @@ curl -H "X-Super-Secret-Key: dev-super-secret-key-12345" \
 
 - ✅ Jira-style Kanban board with drag-and-drop
 - ✅ Ticket management (CRUD operations)
+- ✅ **Multi-tenant company support** - IT services managing multiple client companies
+- ✅ **Company-based ticket organization** - General and company-specific tickets
+- ✅ **Role-based access control** - IT Admins, Company Users, Project Members
 - ✅ Tag-based organization
 - ✅ Contact management
 - ✅ Comments and attachments
@@ -196,6 +199,18 @@ Base URL: `http://31.97.181.167/api`
 - `PATCH /tickets/tickets/{id}/` - Update ticket
 - `DELETE /tickets/tickets/{id}/` - Delete ticket
 - `POST /tickets/tickets/{id}/toggle_follow/` - Toggle follow
+
+### Companies
+
+- `GET /tickets/companies/` - List companies
+- `POST /tickets/companies/` - Create company
+- `GET /tickets/companies/{id}/` - Get company
+- `PATCH /tickets/companies/{id}/` - Update company
+- `DELETE /tickets/companies/{id}/` - Delete company
+- `POST /tickets/companies/{id}/assign_admin/` - Add IT admin
+- `POST /tickets/companies/{id}/remove_admin/` - Remove IT admin
+- `POST /tickets/companies/{id}/assign_user/` - Add company user
+- `POST /tickets/companies/{id}/remove_user/` - Remove company user
 
 ### Projects, Columns, Tags, Contacts, Comments, Attachments
 
@@ -282,5 +297,5 @@ This project is proprietary and confidential.
 
 ---
 
-**Version**: 1.0.0  
-**Last Updated**: October 29, 2025
+**Version**: 2.0.0  
+**Last Updated**: January 24, 2025

@@ -5,17 +5,22 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
+from django.db.models import Q
 from django_filters.rest_framework import DjangoFilterBackend
+from .permissions import (
+    IsSuperuserOrCompanyAdmin, IsCompanyAdmin, IsCompanyMember,
+    IsSuperuserOrCompanyMember, IsCompanyAdminOrReadOnly
+)
 from .models import (
     Ticket, Column, Project, Comment, Attachment,
-    Tag, Contact, TagContact, UserTag, TicketTag, IssueLink
+    Tag, Contact, TagContact, UserTag, TicketTag, IssueLink, Company
 )
 from .serializers import (
     TicketSerializer, TicketListSerializer, ColumnSerializer,
     ProjectSerializer, CommentSerializer, AttachmentSerializer,
     TagSerializer, TagListSerializer, ContactSerializer,
     TagContactSerializer, UserTagSerializer, TicketTagSerializer,
-    IssueLinkSerializer
+    IssueLinkSerializer, CompanySerializer, CompanyListSerializer
 )
 
 
@@ -120,7 +125,7 @@ def login_user(request):
 @permission_classes([IsAuthenticated])
 def get_current_user(request):
     """
-    Get current authenticated user with their projects
+    Get current authenticated user with their projects and companies
     """
     user = request.user
     
@@ -133,9 +138,15 @@ def get_current_user(request):
     # Combine and remove duplicates
     all_projects = (lead_projects | member_projects).distinct()
     
-    # Serialize projects
-    from .serializers import ProjectSerializer
+    # Get companies where user is admin or member
+    admin_companies = user.administered_companies.all()
+    member_companies = user.member_companies.all()
+    all_companies = (admin_companies | member_companies).distinct()
+    
+    # Serialize data
+    from .serializers import ProjectSerializer, CompanyListSerializer
     projects_data = ProjectSerializer(all_projects, many=True).data
+    companies_data = CompanyListSerializer(all_companies, many=True).data
     
     return Response({
         'id': user.id,
@@ -143,12 +154,167 @@ def get_current_user(request):
         'email': user.email,
         'first_name': user.first_name,
         'last_name': user.last_name,
+        'is_superuser': user.is_superuser,
         'projects': projects_data,
         'has_projects': all_projects.exists(),
+        'companies': companies_data,
+        'administered_companies': CompanyListSerializer(admin_companies, many=True).data,
+        'member_companies': CompanyListSerializer(member_companies, many=True).data,
+        'has_companies': all_companies.exists(),
+        'is_it_admin': admin_companies.exists(),
     })
 
 
 # ==================== ViewSets ====================
+
+class CompanyViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for Company CRUD operations.
+    Handles multi-tenant company management for IT business servicing multiple clients.
+    
+    Permissions:
+    - Superusers: Full access to all companies
+    - IT Admins: Can view/edit companies they're assigned to
+    - Company Users: Read-only access to their own company
+    """
+    queryset = Company.objects.all()
+    permission_classes = [IsAuthenticated, IsCompanyAdminOrReadOnly]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['name', 'description']
+    ordering_fields = ['name', 'created_at', 'ticket_count']
+    ordering = ['name']
+    
+    def get_serializer_class(self):
+        """Use list serializer for list view, full serializer for others"""
+        if self.action == 'list':
+            return CompanyListSerializer
+        return CompanySerializer
+    
+    def get_queryset(self):
+        """
+        Filter companies based on user role:
+        - Superusers see all companies
+        - IT Admins see companies they're assigned to
+        - Company Users see only their company
+        """
+        user = self.request.user
+        
+        if user.is_superuser:
+            return Company.objects.all()
+        
+        # Get companies where user is an admin or a member
+        return Company.objects.filter(
+            Q(admins=user) | Q(users=user)
+        ).distinct()
+    
+    @action(detail=True, methods=['post'])
+    def assign_admin(self, request, pk=None):
+        """Assign an IT admin to this company"""
+        company = self.get_object()
+        user_id = request.data.get('user_id')
+        
+        if not user_id:
+            return Response(
+                {'error': 'user_id is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            user = User.objects.get(id=user_id)
+            company.admins.add(user)
+            return Response({
+                'message': f'{user.username} assigned as admin to {company.name}',
+                'company': CompanySerializer(company).data
+            })
+        except User.DoesNotExist:
+            return Response(
+                {'error': 'User not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+    
+    @action(detail=True, methods=['post'])
+    def remove_admin(self, request, pk=None):
+        """Remove an IT admin from this company"""
+        company = self.get_object()
+        user_id = request.data.get('user_id')
+        
+        if not user_id:
+            return Response(
+                {'error': 'user_id is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            user = User.objects.get(id=user_id)
+            company.admins.remove(user)
+            return Response({
+                'message': f'{user.username} removed from {company.name} admins',
+                'company': CompanySerializer(company).data
+            })
+        except User.DoesNotExist:
+            return Response(
+                {'error': 'User not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+    
+    @action(detail=True, methods=['post'])
+    def assign_user(self, request, pk=None):
+        """Assign a company user to this company"""
+        company = self.get_object()
+        user_id = request.data.get('user_id')
+        
+        if not user_id:
+            return Response(
+                {'error': 'user_id is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            user = User.objects.get(id=user_id)
+            company.users.add(user)
+            return Response({
+                'message': f'{user.username} assigned to {company.name}',
+                'company': CompanySerializer(company).data
+            })
+        except User.DoesNotExist:
+            return Response(
+                {'error': 'User not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+    
+    @action(detail=True, methods=['post'])
+    def remove_user(self, request, pk=None):
+        """Remove a company user from this company"""
+        company = self.get_object()
+        user_id = request.data.get('user_id')
+        
+        if not user_id:
+            return Response(
+                {'error': 'user_id is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            user = User.objects.get(id=user_id)
+            company.users.remove(user)
+            return Response({
+                'message': f'{user.username} removed from {company.name}',
+                'company': CompanySerializer(company).data
+            })
+        except User.DoesNotExist:
+            return Response(
+                {'error': 'User not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+    
+    @action(detail=True, methods=['get'])
+    def tickets(self, request, pk=None):
+        """Get all tickets for this company"""
+        company = self.get_object()
+        tickets = company.tickets.all()
+        serializer = TicketListSerializer(tickets, many=True)
+        return Response(serializer.data)
+
 
 class ProjectViewSet(viewsets.ModelViewSet):
     """
@@ -213,11 +379,17 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
 class TicketViewSet(viewsets.ModelViewSet):
     """
-    ViewSet for Ticket CRUD operations
+    ViewSet for Ticket CRUD operations with company-based filtering.
+    
+    Access Control:
+    - Superusers: See all tickets
+    - IT Admins: See tickets for companies they're assigned to
+    - Company Users: See only their company's tickets
     """
-    queryset = Ticket.objects.select_related('column', 'project', 'reporter').prefetch_related('assignees', 'tags')
+    queryset = Ticket.objects.select_related('company', 'column', 'project', 'reporter').prefetch_related('assignees', 'tags')
+    permission_classes = [IsAuthenticated, IsSuperuserOrCompanyMember]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['status', 'type', 'priority_id', 'column', 'project', 'tags']
+    filterset_fields = ['status', 'type', 'priority_id', 'column', 'project', 'tags', 'company']
     search_fields = ['name', 'description']
     ordering_fields = ['created_at', 'updated_at', 'priority_id', 'due_date']
     ordering = ['-created_at']
@@ -226,6 +398,52 @@ class TicketViewSet(viewsets.ModelViewSet):
         if self.action == 'list':
             return TicketListSerializer
         return TicketSerializer
+    
+    def get_queryset(self):
+        """
+        Filter tickets based on user's project/company access:
+        - Superusers: All tickets
+        - Project members: Tickets from their projects
+        - Company admins/users: Tickets from projects associated with their companies
+        """
+        user = self.request.user
+        
+        # Superusers see everything
+        if user.is_superuser:
+            return Ticket.objects.select_related('company', 'column', 'project', 'reporter').prefetch_related('assignees', 'tags')
+        
+        # Get projects where user is a member
+        member_projects = Project.objects.filter(members=user).values_list('id', flat=True)
+        
+        # Get companies where user is admin or member
+        user_companies = Company.objects.filter(
+            Q(admins=user) | Q(users=user)
+        ).values_list('id', flat=True)
+        
+        # Get projects associated with those companies
+        company_projects = Project.objects.filter(
+            companies__id__in=user_companies
+        ).values_list('id', flat=True)
+        
+        # Combine both project sets
+        all_project_ids = set(member_projects) | set(company_projects)
+        
+        # Filter tickets by those projects
+        return Ticket.objects.filter(
+            project_id__in=all_project_ids
+        ).select_related('company', 'column', 'project', 'reporter').prefetch_related('assignees', 'tags')
+    
+    def perform_create(self, serializer):
+        """
+        When creating a ticket with a company, automatically assign it to all admins of that company.
+        """
+        ticket = serializer.save(reporter=self.request.user)
+        
+        # Auto-assign to company admins if ticket has a company
+        if ticket.company:
+            company_admins = ticket.company.admins.all()
+            if company_admins.exists():
+                ticket.assignees.set(company_admins)
     
     @action(detail=True, methods=['post'])
     def move_to_column(self, request, pk=None):

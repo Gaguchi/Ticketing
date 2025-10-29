@@ -2,14 +2,128 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import (
     Ticket, Project, Column, Comment, Attachment,
-    Tag, Contact, TagContact, UserTag, TicketTag, IssueLink
+    Tag, Contact, TagContact, UserTag, TicketTag, IssueLink, Company
 )
 
 
 class UserSerializer(serializers.ModelSerializer):
+    administered_companies = serializers.SerializerMethodField()
+    member_companies = serializers.SerializerMethodField()
+    has_companies = serializers.SerializerMethodField()
+    is_it_admin = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = User
+        fields = [
+            'id', 'username', 'email', 'first_name', 'last_name',
+            'administered_companies', 'member_companies',
+            'has_companies', 'is_it_admin'
+        ]
+    
+    def get_administered_companies(self, obj):
+        """Companies where this user is an IT admin"""
+        companies = obj.administered_companies.all()
+        return [{'id': c.id, 'name': c.name} for c in companies]
+    
+    def get_member_companies(self, obj):
+        """Companies where this user is a member"""
+        companies = obj.member_companies.all()
+        return [{'id': c.id, 'name': c.name} for c in companies]
+    
+    def get_has_companies(self, obj):
+        """Check if user has any company associations"""
+        return obj.administered_companies.exists() or obj.member_companies.exists()
+    
+    def get_is_it_admin(self, obj):
+        """Check if user is an IT admin for any company"""
+        return obj.administered_companies.exists()
+
+
+class UserSimpleSerializer(serializers.ModelSerializer):
+    """Lightweight user serializer without company info to avoid circular references"""
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'first_name', 'last_name']
+
+
+class CompanySerializer(serializers.ModelSerializer):
+    """Serializer for Company model with full details"""
+    admins = UserSimpleSerializer(many=True, read_only=True)
+    users = UserSimpleSerializer(many=True, read_only=True)
+    admin_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        write_only=True,
+        required=False,
+        help_text='List of user IDs to assign as admins'
+    )
+    user_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        write_only=True,
+        required=False,
+        help_text='List of user IDs to assign as company users'
+    )
+    ticket_count = serializers.IntegerField(read_only=True)
+    admin_count = serializers.IntegerField(read_only=True)
+    user_count = serializers.IntegerField(read_only=True)
+    
+    class Meta:
+        model = Company
+        fields = [
+            'id', 'name', 'description',
+            'admins', 'admin_ids', 'admin_count',
+            'users', 'user_ids', 'user_count',
+            'ticket_count',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['created_at', 'updated_at']
+    
+    def create(self, validated_data):
+        admin_ids = validated_data.pop('admin_ids', [])
+        user_ids = validated_data.pop('user_ids', [])
+        
+        company = Company.objects.create(**validated_data)
+        
+        if admin_ids:
+            company.admins.set(admin_ids)
+        if user_ids:
+            company.users.set(user_ids)
+        
+        return company
+    
+    def update(self, instance, validated_data):
+        admin_ids = validated_data.pop('admin_ids', None)
+        user_ids = validated_data.pop('user_ids', None)
+        
+        instance.name = validated_data.get('name', instance.name)
+        instance.description = validated_data.get('description', instance.description)
+        instance.save()
+        
+        if admin_ids is not None:
+            instance.admins.set(admin_ids)
+        if user_ids is not None:
+            instance.users.set(user_ids)
+        
+        return instance
+
+
+class CompanyListSerializer(serializers.ModelSerializer):
+    """Lightweight serializer for listing companies"""
+    ticket_count = serializers.IntegerField(read_only=True)
+    admin_count = serializers.IntegerField(read_only=True)
+    user_count = serializers.IntegerField(read_only=True)
+    admin_names = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Company
+        fields = [
+            'id', 'name', 'description',
+            'ticket_count', 'admin_count', 'user_count',
+            'admin_names', 'created_at'
+        ]
+    
+    def get_admin_names(self, obj):
+        return [f"{admin.first_name} {admin.last_name}".strip() or admin.username 
+                for admin in obj.admins.all()[:3]]  # Show first 3 admins
 
 
 class ProjectSerializer(serializers.ModelSerializer):
@@ -23,11 +137,20 @@ class ProjectSerializer(serializers.ModelSerializer):
         required=False,
         help_text="List of usernames to add as project members"
     )
+    companies = CompanyListSerializer(many=True, read_only=True)
+    company_ids = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=Company.objects.all(),
+        source='companies',
+        write_only=True,
+        required=False,
+        help_text="List of company IDs to associate with this project"
+    )
     
     class Meta:
         model = Project
         fields = ['id', 'key', 'name', 'description', 'lead_username', 'members', 'member_usernames',
-                  'tickets_count', 'columns_count', 'created_at', 'updated_at']
+                  'companies', 'company_ids', 'tickets_count', 'columns_count', 'created_at', 'updated_at']
     
     def get_tickets_count(self, obj):
         return obj.tickets.count()
@@ -37,6 +160,7 @@ class ProjectSerializer(serializers.ModelSerializer):
     
     def create(self, validated_data):
         member_usernames = validated_data.pop('member_usernames', [])
+        companies = validated_data.pop('companies', [])
         project = Project.objects.create(**validated_data)
         
         # Add members by username
@@ -44,10 +168,15 @@ class ProjectSerializer(serializers.ModelSerializer):
             users = User.objects.filter(username__in=member_usernames)
             project.members.set(users)
         
+        # Add companies
+        if companies:
+            project.companies.set(companies)
+        
         return project
     
     def update(self, instance, validated_data):
         member_usernames = validated_data.pop('member_usernames', None)
+        companies = validated_data.pop('companies', None)
         
         # Update basic fields
         for attr, value in validated_data.items():
@@ -58,6 +187,12 @@ class ProjectSerializer(serializers.ModelSerializer):
         if member_usernames is not None:
             users = User.objects.filter(username__in=member_usernames)
             instance.members.set(users)
+        
+        # Update companies if provided
+        if companies is not None:
+            instance.companies.set(companies)
+        
+        return instance
         
         return instance
 
@@ -105,6 +240,7 @@ class TicketSerializer(serializers.ModelSerializer):
     reporter = UserSerializer(read_only=True)
     project_key = serializers.CharField(source='project.key', read_only=True)
     column_name = serializers.CharField(source='column.name', read_only=True)
+    company_name = serializers.CharField(source='company.name', read_only=True)
     comments_count = serializers.IntegerField(read_only=True)
     subtasks = serializers.SerializerMethodField()
     tags_detail = serializers.SerializerMethodField()
@@ -114,6 +250,7 @@ class TicketSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'name', 'description', 'type', 'status',
             'priority_id', 'urgency', 'importance',
+            'company', 'company_name',
             'project', 'project_key', 'column', 'column_name',
             'assignees', 'assignee_ids', 'reporter',
             'parent', 'subtasks', 'following', 'tags', 'tags_detail',
@@ -137,6 +274,7 @@ class TicketListSerializer(serializers.ModelSerializer):
     assignee_ids = serializers.SerializerMethodField()
     project_key = serializers.CharField(source='project.key', read_only=True)
     column_name = serializers.CharField(source='column.name', read_only=True)
+    company_name = serializers.CharField(source='company.name', read_only=True)
     comments_count = serializers.IntegerField(read_only=True)
     tag_names = serializers.SerializerMethodField()
     
@@ -144,7 +282,9 @@ class TicketListSerializer(serializers.ModelSerializer):
         model = Ticket
         fields = [
             'id', 'name', 'type', 'status', 'priority_id',
-            'urgency', 'importance', 'project', 'project_key', 'column', 'column_name',
+            'urgency', 'importance',
+            'company', 'company_name',
+            'project', 'project_key', 'column', 'column_name',
             'assignee_ids', 'following', 'comments_count', 'tag_names',
             'due_date', 'start_date',
             'created_at', 'updated_at'
