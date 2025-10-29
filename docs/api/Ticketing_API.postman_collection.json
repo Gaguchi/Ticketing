@@ -1,0 +1,839 @@
+{
+	"info": {
+		"_postman_id": "ticketing-system-api",
+		"name": "Ticketing System API",
+		"description": "Complete API collection for the Ticketing System with authentication, tickets, projects, tags, contacts, and more.\n\n## Authentication\n\nThis collection is pre-configured to use the **Super Secret Key** authentication method for all requests. The `X-Super-Secret-Key` header is automatically added to every request.\n\n### Authentication Methods Available:\n\n1. **Super Secret Key** (Default - Pre-configured)\n   - Header: `X-Super-Secret-Key: dev-super-secret-key-12345`\n   - Automatically added to all requests\n   - Perfect for testing without login\n   - ⚠️ **Development/Testing Only - Never use in production!**\n\n2. **JWT Bearer Token** (Optional)\n   - Login to get access token\n   - Add to Authorization header: `Bearer <token>`\n   - Can be used instead of super-secret-key\n\n## Getting Started\n\n1. **Import this collection** into Postman\n2. **Set environment variable** (optional):\n   - `base_url`: http://31.97.181.167/api\n3. **Start testing!** All requests will work immediately with super-secret-key\n\n## Environment Variables\n\nThe collection includes these variables:\n- `base_url`: http://31.97.181.167/api\n- `super_secret_key`: dev-super-secret-key-12345 (pre-configured)\n- `access_token`: (optional - auto-set after login)\n- `refresh_token`: (optional - auto-set after login)",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Register User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set('access_token', response.tokens.access);",
+									"    pm.environment.set('refresh_token', response.tokens.refresh);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"testuser\",\n    \"email\": \"testuser@example.com\",\n    \"password\": \"SecurePass123!\",\n    \"password_confirm\": \"SecurePass123!\",\n    \"first_name\": \"Test\",\n    \"last_name\": \"User\",\n    \"project_key\": \"DEMO\",\n    \"project_name\": \"Demo Project\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/tickets/auth/register/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tickets",
+								"auth",
+								"register",
+								""
+							]
+						},
+						"description": "Register a new user and automatically setup their default project. Returns JWT tokens."
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set('access_token', response.tokens.access);",
+									"    pm.environment.set('refresh_token', response.tokens.refresh);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"admin\",\n    \"password\": \"admin\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/tickets/auth/login/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tickets",
+								"auth",
+								"login",
+								""
+							]
+						},
+						"description": "Login with username and password. Returns JWT access and refresh tokens."
+					},
+					"response": []
+				},
+				{
+					"name": "Refresh Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set('access_token', response.access);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"refresh\": \"{{refresh_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/tickets/auth/token/refresh/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tickets",
+								"auth",
+								"token",
+								"refresh",
+								""
+							]
+						},
+						"description": "Get a new access token using the refresh token."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Current User",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tickets/auth/me/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tickets",
+								"auth",
+								"me",
+								""
+							]
+						},
+						"description": "Get information about the currently authenticated user."
+					},
+					"response": []
+				}
+			],
+			"description": "Authentication endpoints for user registration, login, and token management."
+		},
+		{
+			"name": "Tickets",
+			"item": [
+				{
+					"name": "List Tickets",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tickets/tickets/?page=1&page_size=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tickets",
+								"tickets",
+								""
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "20"
+								},
+								{
+									"key": "search",
+									"value": "homepage",
+									"disabled": true
+								},
+								{
+									"key": "status",
+									"value": "in_progress",
+									"disabled": true
+								},
+								{
+									"key": "type",
+									"value": "bug",
+									"disabled": true
+								},
+								{
+									"key": "priority_id",
+									"value": "4",
+									"disabled": true
+								},
+								{
+									"key": "column",
+									"value": "1",
+									"disabled": true
+								},
+								{
+									"key": "ordering",
+									"value": "-created_at",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get a paginated list of tickets with optional filtering and search."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Ticket",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Fix login page error\",\n    \"description\": \"Users are getting a 500 error when trying to log in\",\n    \"type\": \"bug\",\n    \"priority_id\": 3,\n    \"urgency\": \"high\",\n    \"importance\": \"high\",\n    \"column\": 1,\n    \"assignee_ids\": [1],\n    \"tag_names\": [\"backend\", \"authentication\"],\n    \"due_date\": \"2025-10-25\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/tickets/tickets/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tickets",
+								"tickets",
+								""
+							]
+						},
+						"description": "Create a new ticket with assignees and tags."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Ticket Detail",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tickets/tickets/1/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tickets",
+								"tickets",
+								"1",
+								""
+							]
+						},
+						"description": "Get detailed information about a specific ticket."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Ticket (PATCH)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"column\": 2,\n    \"assignee_ids\": [1, 2]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/tickets/tickets/1/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tickets",
+								"tickets",
+								"1",
+								""
+							]
+						},
+						"description": "Partially update a ticket. Only send the fields you want to change."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Ticket",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tickets/tickets/1/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tickets",
+								"tickets",
+								"1",
+								""
+							]
+						},
+						"description": "Delete a ticket permanently."
+					},
+					"response": []
+				},
+				{
+					"name": "Toggle Follow Ticket",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tickets/tickets/1/toggle_follow/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tickets",
+								"tickets",
+								"1",
+								"toggle_follow",
+								""
+							]
+						},
+						"description": "Toggle following status for a ticket."
+					},
+					"response": []
+				}
+			],
+			"description": "Ticket management endpoints for CRUD operations."
+		},
+		{
+			"name": "Projects",
+			"item": [
+				{
+					"name": "List Projects",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tickets/projects/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tickets",
+								"projects",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Project",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"New Project\",\n    \"key\": \"NP\",\n    \"description\": \"Project description\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/tickets/projects/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tickets",
+								"projects",
+								""
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Columns",
+			"item": [
+				{
+					"name": "List Columns",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tickets/columns/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tickets",
+								"columns",
+								""
+							]
+						},
+						"description": "Get all kanban columns for the user's project."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Column",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Testing\",\n    \"order\": 3,\n    \"color\": \"#9c27b0\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/tickets/columns/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tickets",
+								"columns",
+								""
+							]
+						},
+						"description": "Create a new kanban column."
+					},
+					"response": []
+				},
+				{
+					"name": "Reorder Columns",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"order\": [\n        {\"id\": 1, \"order\": 0},\n        {\"id\": 3, \"order\": 1},\n        {\"id\": 2, \"order\": 2},\n        {\"id\": 4, \"order\": 3}\n    ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/tickets/columns/reorder/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tickets",
+								"columns",
+								"reorder",
+								""
+							]
+						},
+						"description": "Reorder kanban columns."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Tags",
+			"item": [
+				{
+					"name": "List Tags",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tickets/tags/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tickets",
+								"tags",
+								""
+							]
+						},
+						"description": "Get all tags (project-specific organizational units)."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Tag",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Nokia\",\n    \"description\": \"Nokia telecommunications tickets\",\n    \"color\": \"#0052cc\",\n    \"project\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/tickets/tags/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tickets",
+								"tags",
+								""
+							]
+						},
+						"description": "Create a new tag. Only superadmins can create tags."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Tag Details",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tickets/tags/1/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tickets",
+								"tags",
+								"1",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Add Contact to Tag",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"contact_id\": 1,\n    \"role\": \"Primary Contact\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/tickets/tags/1/add_contact/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tickets",
+								"tags",
+								"1",
+								"add_contact",
+								""
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Contacts",
+			"item": [
+				{
+					"name": "List Contacts",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tickets/contacts/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tickets",
+								"contacts",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Contact",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Giorgi Beridze\",\n    \"email\": \"g.beridze@example.com\",\n    \"phone\": \"+995 555 123 456\",\n    \"title\": \"IT Manager\",\n    \"department\": \"IT Department\",\n    \"description\": \"Primary technical contact\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/tickets/contacts/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tickets",
+								"contacts",
+								""
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Comments",
+			"item": [
+				{
+					"name": "List Comments",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tickets/comments/?ticket=1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tickets",
+								"comments",
+								""
+							],
+							"query": [
+								{
+									"key": "ticket",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Get comments for a specific ticket."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Comment",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"ticket\": 1,\n    \"content\": \"This has been fixed and deployed to production.\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/tickets/comments/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tickets",
+								"comments",
+								""
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Attachments",
+			"item": [
+				{
+					"name": "Upload Attachment",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "ticket",
+									"value": "1",
+									"type": "text"
+								},
+								{
+									"key": "file",
+									"type": "file",
+									"src": []
+								},
+								{
+									"key": "filename",
+									"value": "screenshot.png",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/tickets/attachments/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tickets",
+								"attachments",
+								""
+							]
+						},
+						"description": "Upload a file attachment to a ticket."
+					},
+					"response": []
+				},
+				{
+					"name": "List Attachments",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tickets/attachments/?ticket=1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tickets",
+								"attachments",
+								""
+							],
+							"query": [
+								{
+									"key": "ticket",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"auth": {
+		"type": "apikey",
+		"apikey": [
+			{
+				"key": "value",
+				"value": "{{super_secret_key}}",
+				"type": "string"
+			},
+			{
+				"key": "key",
+				"value": "X-Super-Secret-Key",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://31.97.181.167/api",
+			"type": "string"
+		},
+		{
+			"key": "access_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "refresh_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "super_secret_key",
+			"value": "dev-super-secret-key-12345",
+			"type": "string"
+		}
+	]
+}

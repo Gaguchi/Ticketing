@@ -15,6 +15,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-change-this-in-production-12345')
 
+# Super secret key for testing/development - bypasses JWT authentication
+# WARNING: Only use this in development! Remove in production!
+SUPER_SECRET_KEY = os.getenv('SUPER_SECRET_KEY', 'dev-super-secret-key-12345')
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
@@ -133,6 +137,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # REST Framework settings
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
+        'tickets.authentication.SuperSecretKeyAuthentication',  # Check super secret key first
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
