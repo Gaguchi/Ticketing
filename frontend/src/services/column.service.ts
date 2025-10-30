@@ -5,33 +5,37 @@
 
 import { apiService } from './api.service';
 import { API_ENDPOINTS } from '../config/api';
-
-export interface Column {
-  id: number;
-  name: string;
-  order: number;
-  color?: string;
-  tickets_count: number;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface CreateColumnData {
-  name: string;
-  order?: number;
-  color?: string;
-}
-
-export interface ReorderColumnsData {
-  column_orders: { id: number; order: number }[];
-}
+import type {
+  Column,
+  CreateColumnData,
+  UpdateColumnData,
+  ReorderColumnsData,
+  PaginatedResponse,
+  PaginationParams,
+} from '../types/api';
 
 class ColumnService {
   /**
-   * Get all columns
+   * Get all columns with pagination
    */
-  async getColumns(): Promise<Column[]> {
-    return apiService.get<Column[]>(API_ENDPOINTS.COLUMNS);
+  async getColumns(params?: PaginationParams): Promise<PaginatedResponse<Column>> {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.page_size) queryParams.append('page_size', params.page_size.toString());
+    
+    const url = queryParams.toString()
+      ? `${API_ENDPOINTS.COLUMNS}?${queryParams.toString()}`
+      : API_ENDPOINTS.COLUMNS;
+    
+    return apiService.get<PaginatedResponse<Column>>(url);
+  }
+
+  /**
+   * Get all columns (unpaginated)
+   */
+  async getAllColumns(): Promise<Column[]> {
+    const response = await this.getColumns({ page_size: 1000 });
+    return response.results;
   }
 
   /**
@@ -51,7 +55,7 @@ class ColumnService {
   /**
    * Update a column
    */
-  async updateColumn(id: number, data: Partial<CreateColumnData>): Promise<Column> {
+  async updateColumn(id: number, data: UpdateColumnData): Promise<Column> {
     return apiService.patch<Column>(API_ENDPOINTS.COLUMN_DETAIL(id), data);
   }
 
@@ -67,16 +71,6 @@ class ColumnService {
    */
   async reorderColumns(data: ReorderColumnsData): Promise<void> {
     return apiService.post(API_ENDPOINTS.COLUMN_REORDER, data);
-  }
-
-  /**
-   * Create default columns for a project
-   */
-  async createDefaults(projectId: number): Promise<{ message: string; columns: Column[] }> {
-    return apiService.post<{ message: string; columns: Column[] }>(
-      API_ENDPOINTS.COLUMN_CREATE_DEFAULTS,
-      { project_id: projectId }
-    );
   }
 }
 

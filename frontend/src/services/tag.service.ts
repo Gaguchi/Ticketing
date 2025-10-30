@@ -5,36 +5,38 @@
 
 import { apiService } from './api.service';
 import { API_ENDPOINTS } from '../config/api';
-
-export interface Tag {
-  id: number;
-  name: string;
-  description?: string;
-  color: string;
-  project: number;
-  project_name?: string;
-  tickets_count?: number;
-  contacts_count?: number;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface CreateTagData {
-  name: string;
-  description?: string;
-  color?: string;
-  project: number;
-}
+import type {
+  Tag,
+  CreateTagData,
+  UpdateTagData,
+  AddContactToTagData,
+  PaginatedResponse,
+  PaginationParams,
+} from '../types/api';
 
 class TagService {
   /**
-   * Get all tags (optionally filtered by project)
+   * Get all tags with pagination (optionally filtered by project)
    */
-  async getTags(projectId?: number): Promise<Tag[]> {
-    const url = projectId 
-      ? `${API_ENDPOINTS.TAGS}?project=${projectId}`
+  async getTags(projectId?: number, params?: PaginationParams): Promise<PaginatedResponse<Tag>> {
+    const queryParams = new URLSearchParams();
+    if (projectId) queryParams.append('project', projectId.toString());
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.page_size) queryParams.append('page_size', params.page_size.toString());
+    
+    const url = queryParams.toString()
+      ? `${API_ENDPOINTS.TAGS}?${queryParams.toString()}`
       : API_ENDPOINTS.TAGS;
-    return apiService.get<Tag[]>(url);
+    
+    return apiService.get<PaginatedResponse<Tag>>(url);
+  }
+
+  /**
+   * Get all tags (unpaginated)
+   */
+  async getAllTags(projectId?: number): Promise<Tag[]> {
+    const response = await this.getTags(projectId, { page_size: 1000 });
+    return response.results;
   }
 
   /**
@@ -54,7 +56,7 @@ class TagService {
   /**
    * Update a tag
    */
-  async updateTag(id: number, data: Partial<CreateTagData>): Promise<Tag> {
+  async updateTag(id: number, data: UpdateTagData): Promise<Tag> {
     return apiService.patch<Tag>(API_ENDPOINTS.TAG_DETAIL(id), data);
   }
 
@@ -63,6 +65,20 @@ class TagService {
    */
   async deleteTag(id: number): Promise<void> {
     return apiService.delete(API_ENDPOINTS.TAG_DETAIL(id));
+  }
+
+  /**
+   * Add contact to tag
+   */
+  async addContact(id: number, data: AddContactToTagData): Promise<Tag> {
+    return apiService.post<Tag>(API_ENDPOINTS.TAG_ADD_CONTACT(id), data);
+  }
+
+  /**
+   * Remove contact from tag
+   */
+  async removeContact(id: number, contactId: number): Promise<Tag> {
+    return apiService.post<Tag>(API_ENDPOINTS.TAG_REMOVE_CONTACT(id), { contact_id: contactId });
   }
 }
 

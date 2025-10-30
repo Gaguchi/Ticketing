@@ -27,7 +27,7 @@ import {
 import update from "immutability-helper";
 import { KanbanColumn } from "./KanbanColumn";
 import { TicketCard } from "./TicketCard";
-import type { Ticket, TicketColumn, KanbanItems } from "../types/ticket";
+import type { Ticket, TicketColumn, KanbanItems } from "../types/api";
 
 interface KanbanBoardProps {
   tickets: Ticket[];
@@ -62,7 +62,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       });
 
       tickets.forEach((d) => {
-        const columnKey = `column-${d.colId}`;
+        const columnKey = `column-${d.column}`;
         if (!(columnKey in cols)) {
           cols[columnKey] = [];
         }

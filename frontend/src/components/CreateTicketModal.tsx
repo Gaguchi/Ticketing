@@ -19,16 +19,10 @@ import {
   faBolt,
 } from "@fortawesome/free-solid-svg-icons";
 import dayjs from "dayjs";
-import type { Ticket } from "../types/ticket";
 import { getPriorityIcon } from "./PriorityIcons";
 import { useProject } from "../contexts/ProjectContext";
-import {
-  ticketService,
-  projectService,
-  columnService,
-  tagService,
-  type CreateTicketData,
-} from "../services";
+import { ticketService, projectService, tagService } from "../services";
+import type { Ticket, CreateTicketData } from "../types/api";
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -67,7 +61,6 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
   const [ticketType, setTicketType] = useState("task");
   const { selectedProject } = useProject();
   const [actualColumnId, setActualColumnId] = useState<number | null>(null);
-  const [creatingColumns, setCreatingColumns] = useState(false);
   const [openTickets, setOpenTickets] = useState<any[]>([]);
   const [projectTags, setProjectTags] = useState<any[]>([]);
   const [projectColumns, setProjectColumns] = useState<any[]>([]);
@@ -101,36 +94,10 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
             console.warn("⚠️ No columns found in project");
             console.groupEnd();
 
-            // Offer to create default columns
-            Modal.confirm({
-              title: "No Columns Found",
-              content:
-                "This project has no columns. Would you like to create default columns now?",
-              okText: "Create Columns",
-              cancelText: "Cancel",
-              onOk: async () => {
-                setCreatingColumns(true);
-                try {
-                  const result = await columnService.createDefaults(
-                    selectedProject.id
-                  );
-                  message.success(result.message);
-
-                  // Set the first column as active
-                  if (result.columns.length > 0) {
-                    setActualColumnId(result.columns[0].id);
-                  }
-                } catch (error: any) {
-                  console.error("❌ Failed to create default columns:", error);
-                  message.error(
-                    error.response?.data?.error ||
-                      "Failed to create default columns"
-                  );
-                } finally {
-                  setCreatingColumns(false);
-                }
-              },
-            });
+            // No columns available - inform user
+            message.warning(
+              "This project has no columns. Please set up columns for this project first."
+            );
           }
         })
         .catch((error) => {
@@ -141,7 +108,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
 
       // Fetch open tickets for parent selection
       ticketService
-        .getTickets(selectedProject.id)
+        .getTickets({ project: selectedProject.id })
         .then((response) => {
           const allTickets = response.results || [];
           // Filter to exclude done status
@@ -248,6 +215,8 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
         description: values.description || "",
         type: values.type,
         priority_id: values.priority || 3,
+        urgency: values.urgency || "medium",
+        importance: values.importance || "medium",
         column: values.column || actualColumnId, // Use selected column from form or the actual column ID
         project: selectedProject.id, // Use selected project from context
         assignee_ids: values.assignee ? [values.assignee] : undefined,
@@ -625,6 +594,36 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                 </Select>
               </Form.Item>
 
+              {/* Urgency */}
+              <Form.Item
+                label="Urgency"
+                name="urgency"
+                initialValue="medium"
+                style={{ marginBottom: "12px" }}
+              >
+                <Select placeholder="Select urgency">
+                  <Option value="low">Low</Option>
+                  <Option value="medium">Medium</Option>
+                  <Option value="high">High</Option>
+                  <Option value="critical">Critical</Option>
+                </Select>
+              </Form.Item>
+
+              {/* Importance */}
+              <Form.Item
+                label="Importance"
+                name="importance"
+                initialValue="medium"
+                style={{ marginBottom: "12px" }}
+              >
+                <Select placeholder="Select importance">
+                  <Option value="low">Low</Option>
+                  <Option value="medium">Medium</Option>
+                  <Option value="high">High</Option>
+                  <Option value="critical">Critical</Option>
+                </Select>
+              </Form.Item>
+
               {/* Due date */}
               <Form.Item
                 label="Due date"
@@ -821,7 +820,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
             <Button
               type="primary"
               onClick={() => form.submit()}
-              loading={saving || creatingColumns}
+              loading={saving}
               size="middle"
             >
               Create

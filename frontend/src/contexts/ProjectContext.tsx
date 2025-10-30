@@ -1,18 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import { useAuth } from "./AuthContext";
-
-interface Project {
-  id: number;
-  key: string;
-  name: string;
-  description?: string;
-  lead_username?: string;
-  created_at?: string;
-  updated_at?: string;
-  members?: number[];
-  companies?: number[];
-}
+import type { Project } from "../types/api";
 
 interface ProjectContextType {
   selectedProject: Project | null;

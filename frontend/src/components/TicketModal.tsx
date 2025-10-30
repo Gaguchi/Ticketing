@@ -27,14 +27,15 @@ import {
   faBolt,
 } from "@fortawesome/free-solid-svg-icons";
 import dayjs from "dayjs";
-import type { Ticket } from "../types/ticket";
 import { getPriorityIcon } from "./PriorityIcons";
-import {
-  ticketService,
-  projectService,
-  tagService,
-  type CreateTicketData,
-} from "../services";
+import { ticketService, projectService, tagService } from "../services";
+import type {
+  Ticket,
+  CreateTicketData,
+  TicketUrgency,
+  TicketImportance,
+  Project,
+} from "../types/api";
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -89,72 +90,96 @@ export const TicketModal: React.FC<TicketModalProps> = ({
   const [selectedColumn, setSelectedColumn] = useState(
     ticket?.column || columnId || 1
   );
-  const [priority, setPriority] = useState(ticket?.priorityId || 3);
+  const [priority, setPriority] = useState(ticket?.priority_id || 3);
+  const [urgency, setUrgency] = useState<TicketUrgency>(
+    (ticket?.urgency as TicketUrgency) || "medium"
+  );
+  const [importance, setImportance] = useState<TicketImportance>(
+    (ticket?.importance as TicketImportance) || "medium"
+  );
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(
+    ticket?.project || null
+  );
   const [tags, setTags] = useState<number[]>(ticket?.tags || []);
   const [assignees, setAssignees] = useState<number[]>(
     ticket?.assignees?.map((a: any) => a.id) || []
   );
   const [dueDate, setDueDate] = useState<dayjs.Dayjs | null>(
-    ticket?.dueDate ? dayjs(ticket.dueDate) : null
+    ticket?.due_date ? dayjs(ticket.due_date) : null
   );
   const [startDate, setStartDate] = useState<dayjs.Dayjs | null>(
-    ticket?.startDate ? dayjs(ticket.startDate) : null
+    ticket?.start_date ? dayjs(ticket.start_date) : null
   );
   const [comment, setComment] = useState("");
   const [activeTab, setActiveTab] = useState("comments");
   const [saving, setSaving] = useState(false);
   const [currentProject, setCurrentProject] = useState<any>(null);
+  const [availableProjects, setAvailableProjects] = useState<Project[]>([]);
   const [actualColumnId, setActualColumnId] = useState<number | null>(null);
   const [projectTags, setProjectTags] = useState<any[]>([]);
   const [projectColumns, setProjectColumns] = useState<any[]>([]);
 
   // Load current project from localStorage when modal opens
   useEffect(() => {
-    if (open && isCreateMode) {
-      console.group(
-        "🔧 TicketModal - Loading project and columns (CREATE mode)"
-      );
-      console.log("Modal opened with columnId:", columnId);
+    if (open) {
+      // Load all available projects
+      projectService
+        .getAllProjects()
+        .then((projects) => {
+          setAvailableProjects(projects);
+        })
+        .catch((error) => {
+          console.error("Failed to load projects:", error);
+        });
 
-      const projectData = localStorage.getItem("currentProject");
-      console.log("Project data from localStorage:", projectData);
+      if (isCreateMode) {
+        console.group(
+          "🔧 TicketModal - Loading project and columns (CREATE mode)"
+        );
+        console.log("Modal opened with columnId:", columnId);
 
-      if (projectData) {
-        try {
-          const project = JSON.parse(projectData);
-          console.log("Parsed project:", project);
-          setCurrentProject(project);
+        const projectData = localStorage.getItem("currentProject");
+        console.log("Project data from localStorage:", projectData);
 
-          // Fetch project columns to get the actual column ID
-          console.log("Fetching columns for project ID:", project.id);
-          projectService
-            .getProjectColumns(project.id)
-            .then((columns) => {
-              console.log("Fetched columns:", columns);
-              setProjectColumns(columns);
-              if (columns.length > 0) {
-                const targetColumn =
-                  columns.find((col: any) => col.id === columnId) || columns[0];
-                console.log("Selected column:", targetColumn);
-                setActualColumnId(targetColumn.id);
-                setSelectedColumn(targetColumn.id);
+        if (projectData) {
+          try {
+            const project = JSON.parse(projectData);
+            console.log("Parsed project:", project);
+            setCurrentProject(project);
+            setSelectedProjectId(project.id);
+
+            // Fetch project columns to get the actual column ID
+            console.log("Fetching columns for project ID:", project.id);
+            projectService
+              .getProjectColumns(project.id)
+              .then((columns) => {
+                console.log("Fetched columns:", columns);
+                setProjectColumns(columns);
+                if (columns.length > 0) {
+                  const targetColumn =
+                    columns.find((col: any) => col.id === columnId) ||
+                    columns[0];
+                  console.log("Selected column:", targetColumn);
+                  setActualColumnId(targetColumn.id);
+                  setSelectedColumn(targetColumn.id);
+                  console.groupEnd();
+                } else {
+                  console.warn("⚠️ No columns found");
+                  console.groupEnd();
+                }
+              })
+              .catch((error) => {
+                console.error("❌ Failed to load project columns:", error);
                 console.groupEnd();
-              } else {
-                console.warn("⚠️ No columns found");
-                console.groupEnd();
-              }
-            })
-            .catch((error) => {
-              console.error("❌ Failed to load project columns:", error);
-              console.groupEnd();
-            });
-        } catch (error) {
-          console.error("❌ Failed to parse project data:", error);
+              });
+          } catch (error) {
+            console.error("❌ Failed to parse project data:", error);
+            console.groupEnd();
+          }
+        } else {
+          console.warn("⚠️ No project data in localStorage");
           console.groupEnd();
         }
-      } else {
-        console.warn("⚠️ No project data in localStorage");
-        console.groupEnd();
       }
     }
   }, [open, isCreateMode, columnId]);
@@ -165,24 +190,27 @@ export const TicketModal: React.FC<TicketModalProps> = ({
       console.group("🎫 TicketModal - Loading ticket data");
       console.log("Ticket object:", ticket);
       console.log("Description:", ticket?.description);
-      console.log("Due date:", ticket?.dueDate);
+      console.log("Due date:", ticket?.due_date);
       console.log("Assignees:", ticket?.assignees);
 
       setTitle(ticket?.name || "");
       setDescription(ticket?.description || "");
       setTicketType(ticket?.type || "task");
       setSelectedColumn(ticket?.column || 1);
-      setPriority(ticket?.priorityId || 3);
+      setPriority(ticket?.priority_id || 3);
+      setUrgency((ticket?.urgency as TicketUrgency) || "medium");
+      setImportance((ticket?.importance as TicketImportance) || "medium");
+      setSelectedProjectId(ticket?.project || null);
       setTags(ticket?.tags || []);
       setAssignees(ticket?.assignees?.map((a: any) => a.id) || []);
-      setDueDate(ticket?.dueDate ? dayjs(ticket.dueDate) : null);
-      setStartDate(ticket?.startDate ? dayjs(ticket.startDate) : null);
+      setDueDate(ticket?.due_date ? dayjs(ticket.due_date) : null);
+      setStartDate(ticket?.start_date ? dayjs(ticket.start_date) : null);
 
       console.log("States set:");
       console.log("- Description state:", ticket?.description || "");
       console.log(
         "- Due date state:",
-        ticket?.dueDate ? dayjs(ticket.dueDate) : null
+        ticket?.due_date ? dayjs(ticket.due_date) : null
       );
       console.log(
         "- Assignees state:",
@@ -228,6 +256,29 @@ export const TicketModal: React.FC<TicketModalProps> = ({
     }
   }, [open, ticket]);
 
+  const handleProjectChange = async (projectId: number) => {
+    setSelectedProjectId(projectId);
+
+    // Load columns for the new project
+    try {
+      const columns = await projectService.getProjectColumns(projectId);
+      setProjectColumns(columns);
+      if (columns.length > 0) {
+        setSelectedColumn(columns[0].id);
+      }
+
+      // Load tags for the new project
+      const tagsResponse = await tagService.getTags(projectId);
+      const tags = Array.isArray(tagsResponse)
+        ? tagsResponse
+        : tagsResponse.results || [];
+      setProjectTags(tags);
+    } catch (error) {
+      console.error("Failed to load project data:", error);
+      message.error("Failed to load project columns and tags");
+    }
+  };
+
   const handleSave = async () => {
     console.group("🎫 TicketModal - handleSave");
     console.log("Mode:", isCreateMode ? "CREATE" : "EDIT");
@@ -265,10 +316,14 @@ export const TicketModal: React.FC<TicketModalProps> = ({
         description,
         type: ticketType,
         priority_id: priority,
+        urgency,
+        importance,
         column: selectedColumn,
-        project: isCreateMode
-          ? currentProject.id
-          : ticket?.project || currentProject?.id || 1,
+        project:
+          selectedProjectId ||
+          (isCreateMode
+            ? currentProject.id
+            : ticket?.project || currentProject?.id || 1),
         due_date: dueDate ? dueDate.format("YYYY-MM-DD") : undefined,
         start_date: startDate ? startDate.format("YYYY-MM-DD") : undefined,
         assignee_ids: assignees.length > 0 ? assignees : undefined,
@@ -684,6 +739,35 @@ export const TicketModal: React.FC<TicketModalProps> = ({
               />
             </div>
 
+            {/* Project Selection */}
+            {isCreateMode && (
+              <div style={{ marginBottom: "16px" }}>
+                <div
+                  style={{
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    color: "#5e6c84",
+                    marginBottom: "4px",
+                  }}
+                >
+                  Project
+                </div>
+                <Select
+                  value={selectedProjectId}
+                  onChange={handleProjectChange}
+                  style={{ width: "100%" }}
+                  size="small"
+                  placeholder="Select project"
+                >
+                  {availableProjects.map((proj) => (
+                    <Option key={proj.id} value={proj.id}>
+                      {proj.key} - {proj.name}
+                    </Option>
+                  ))}
+                </Select>
+              </div>
+            )}
+
             {/* Status */}
             <div style={{ marginBottom: "16px" }}>
               <div
@@ -832,6 +916,56 @@ export const TicketModal: React.FC<TicketModalProps> = ({
               </Select>
             </div>
 
+            {/* Urgency */}
+            <div style={{ marginBottom: "16px" }}>
+              <div
+                style={{
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  color: "#5e6c84",
+                  marginBottom: "4px",
+                }}
+              >
+                Urgency
+              </div>
+              <Select
+                value={urgency}
+                onChange={setUrgency}
+                style={{ width: "100%" }}
+                size="small"
+              >
+                <Option value="low">Low</Option>
+                <Option value="medium">Medium</Option>
+                <Option value="high">High</Option>
+                <Option value="critical">Critical</Option>
+              </Select>
+            </div>
+
+            {/* Importance */}
+            <div style={{ marginBottom: "16px" }}>
+              <div
+                style={{
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  color: "#5e6c84",
+                  marginBottom: "4px",
+                }}
+              >
+                Importance
+              </div>
+              <Select
+                value={importance}
+                onChange={setImportance}
+                style={{ width: "100%" }}
+                size="small"
+              >
+                <Option value="low">Low</Option>
+                <Option value="medium">Medium</Option>
+                <Option value="high">High</Option>
+                <Option value="critical">Critical</Option>
+              </Select>
+            </div>
+
             {/* Due date */}
             <div style={{ marginBottom: "16px" }}>
               <div
@@ -976,14 +1110,14 @@ export const TicketModal: React.FC<TicketModalProps> = ({
               >
                 <div>
                   Created{" "}
-                  {ticket.createdAt
-                    ? dayjs(ticket.createdAt).format("MMM D, YYYY [at] h:mm A")
+                  {ticket.created_at
+                    ? dayjs(ticket.created_at).format("MMM D, YYYY [at] h:mm A")
                     : "Unknown"}
                 </div>
                 <div>
                   Updated{" "}
-                  {ticket.updatedAt
-                    ? dayjs(ticket.updatedAt).format("MMM D, YYYY [at] h:mm A")
+                  {ticket.updated_at
+                    ? dayjs(ticket.updated_at).format("MMM D, YYYY [at] h:mm A")
                     : "Unknown"}
                 </div>
               </div>

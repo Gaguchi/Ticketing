@@ -35,10 +35,11 @@ const Register: React.FC = () => {
         first_name: values.firstName,
         last_name: values.lastName,
         password: values.password,
+        password_confirm: values.confirmPassword,
       });
 
       // Update auth context
-      login(response.access, response.user);
+      login(response.tokens.access, response.user);
 
       // Check if user has access to any projects using the new endpoint
       try {

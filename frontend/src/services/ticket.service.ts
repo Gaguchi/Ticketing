@@ -5,44 +5,49 @@
 
 import { apiService } from './api.service';
 import { API_ENDPOINTS } from '../config/api';
-import type { Ticket } from '../types/ticket';
-
-export interface CreateTicketData {
-  name: string;
-  description?: string;
-  type: string;
-  status?: string; // Optional: backend can derive from column
-  priority_id: number;
-  column: number;
-  project: number;
-  customer?: number;
-  assignee_ids?: number[];
-  parent?: number;
-  tags?: number[];
-  due_date?: string;
-  start_date?: string;
-}
-
-export interface UpdateTicketData extends Partial<CreateTicketData> {
-  id: number;
-}
-
-export interface TicketListResponse {
-  count: number;
-  next: string | null;
-  previous: string | null;
-  results: Ticket[];
-}
+import type {
+  Ticket,
+  CreateTicketData,
+  UpdateTicketData,
+  TicketFilterParams,
+  PaginatedResponse,
+  ToggleFollowResponse,
+} from '../types/api';
 
 class TicketService {
   /**
-   * Get all tickets (optionally filtered by project)
+   * Get all tickets with optional filtering and pagination
    */
-  async getTickets(projectId?: number): Promise<TicketListResponse> {
-    const url = projectId 
-      ? `${API_ENDPOINTS.TICKETS}?project=${projectId}`
+  async getTickets(params?: TicketFilterParams): Promise<PaginatedResponse<Ticket>> {
+    const queryParams = new URLSearchParams();
+    
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.page_size) queryParams.append('page_size', params.page_size.toString());
+    if (params?.search) queryParams.append('search', params.search);
+    if (params?.status) queryParams.append('status', params.status);
+    if (params?.type) queryParams.append('type', params.type);
+    if (params?.priority_id) queryParams.append('priority_id', params.priority_id.toString());
+    if (params?.column) queryParams.append('column', params.column.toString());
+    if (params?.company) queryParams.append('company', params.company.toString());
+    if (params?.project) queryParams.append('project', params.project.toString());
+    if (params?.assignee) queryParams.append('assignee', params.assignee.toString());
+    if (params?.reporter) queryParams.append('reporter', params.reporter.toString());
+    if (params?.tag) queryParams.append('tag', params.tag.toString());
+    if (params?.ordering) queryParams.append('ordering', params.ordering);
+    
+    const url = queryParams.toString()
+      ? `${API_ENDPOINTS.TICKETS}?${queryParams.toString()}`
       : API_ENDPOINTS.TICKETS;
-    return apiService.get<TicketListResponse>(url);
+    
+    return apiService.get<PaginatedResponse<Ticket>>(url);
+  }
+
+  /**
+   * Get all tickets for a project (unpaginated)
+   */
+  async getAllProjectTickets(projectId: number): Promise<Ticket[]> {
+    const response = await this.getTickets({ project: projectId, page_size: 1000 });
+    return response.results;
   }
 
   /**
@@ -62,7 +67,7 @@ class TicketService {
   /**
    * Update a ticket
    */
-  async updateTicket(id: number, data: Partial<CreateTicketData>): Promise<Ticket> {
+  async updateTicket(id: number, data: UpdateTicketData): Promise<Ticket> {
     return apiService.patch<Ticket>(API_ENDPOINTS.TICKET_DETAIL(id), data);
   }
 
@@ -74,19 +79,19 @@ class TicketService {
   }
 
   /**
-   * Move ticket to a different column
+   * Move ticket to a different column (using PATCH to update column field)
    */
   async moveTicket(id: number, columnId: number): Promise<Ticket> {
-    return apiService.post<Ticket>(API_ENDPOINTS.TICKET_MOVE(id), {
-      column_id: columnId,
+    return apiService.patch<Ticket>(API_ENDPOINTS.TICKET_DETAIL(id), {
+      column: columnId,
     });
   }
 
   /**
    * Toggle follow status for a ticket
    */
-  async toggleFollow(id: number): Promise<{ following: boolean }> {
-    return apiService.post<{ following: boolean }>(
+  async toggleFollow(id: number): Promise<ToggleFollowResponse> {
+    return apiService.post<ToggleFollowResponse>(
       API_ENDPOINTS.TICKET_FOLLOW(id)
     );
   }

@@ -164,6 +164,23 @@ class APIService {
   }
 
   /**
+   * POST request with FormData (for file uploads)
+   */
+  async postFormData<T>(url: string, formData: FormData): Promise<T> {
+    // Don't set Content-Type header for FormData - browser will set it with boundary
+    const authHeader = this.getAuthHeader();
+    
+    return this.request<T>(url, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        ...authHeader,
+        // Don't include Content-Type for FormData
+      },
+    });
+  }
+
+  /**
    * PUT request
    */
   async put<T>(url: string, data: any): Promise<T> {

@@ -11,7 +11,7 @@ import {
   faBolt,
 } from "@fortawesome/free-solid-svg-icons";
 import { getPriorityIcon } from "./PriorityIcons";
-import type { Ticket } from "../types/ticket";
+import type { Ticket } from "../types/api";
 
 interface TicketCardProps {
   id: string;
@@ -143,18 +143,18 @@ export const TicketCard: React.FC<TicketCardProps> = ({
                 </span>
               </Space>
               {ticket.following && <EyeOutlined style={{ fontSize: "14px" }} />}
-              {ticket.commentsCount && ticket.commentsCount > 0 && (
+              {ticket.comments_count && ticket.comments_count > 0 && (
                 <Space size={4}>
                   <MessageOutlined style={{ fontSize: "14px" }} />
-                  <span>{ticket.commentsCount}</span>
+                  <span>{ticket.comments_count}</span>
                 </Space>
               )}
             </Space>
           </Col>
           <Col>
             <Space align="center" size={6}>
-              {getPriorityIcon(ticket.priorityId ?? ticket.priority_id ?? 3)}
-              {ticket.assigneeIds && ticket.assigneeIds.length > 0 && (
+              {getPriorityIcon(ticket.priority_id ?? 3)}
+              {ticket.assignees && ticket.assignees.length > 0 && (
                 <Avatar.Group
                   size={20}
                   max={{
@@ -166,10 +166,10 @@ export const TicketCard: React.FC<TicketCardProps> = ({
                     },
                   }}
                 >
-                  {ticket.assigneeIds.map((userId: number) => (
+                  {ticket.assignees.map((user) => (
                     <Avatar
                       icon={<UserOutlined />}
-                      key={userId}
+                      key={user.id}
                       size={20}
                       style={{ backgroundColor: "#0052cc" }}
                     />

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { authService, type User } from "../services/auth.service";
+import { authService } from "../services/auth.service";
+import type { User } from "../types/api";
 
 interface AuthContextType {
   user: User | null;
@@ -21,16 +22,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check for stored auth on mount
-    const storedToken = authService.getAccessToken();
-    const storedUser = authService.getUser();
+    // Check for stored auth on mount and fetch fresh user data
+    const initAuth = async () => {
+      const storedToken = authService.getAccessToken();
+      const storedUser = authService.getUser();
 
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser(storedUser);
-    }
+      if (storedToken && storedUser) {
+        setToken(storedToken);
+        setUser(storedUser);
 
-    setLoading(false);
+        // Fetch fresh user data from API to get updated projects/companies
+        try {
+          const freshUser = await authService.getCurrentUser();
+          setUser(freshUser);
+          localStorage.setItem("user", JSON.stringify(freshUser));
+        } catch (error) {
+          console.error("Failed to fetch fresh user data:", error);
+          // Keep the stored user if API call fails
+        }
+      }
+
+      setLoading(false);
+    };
+
+    initAuth();
   }, []);
 
   const login = (newToken: string, newUser: User) => {

@@ -1,3 +1,24 @@
+/**
+ * @deprecated
+ * This file is DEPRECATED. Do not import from this file.
+ * 
+ * All types have been migrated to types/api.ts which matches the actual API structure.
+ * 
+ * Migration guide:
+ * - Ticket → import { Ticket } from "../types/api"
+ * - TicketColumn → import { TicketColumn } from "../types/api"
+ * - KanbanItems → import { KanbanItems } from "../types/api"
+ * - Project, Tag, Contact → import from "../types/api"
+ * 
+ * This file is kept for reference only and can be safely deleted.
+ */
+
+// The following types are now in types/api.ts:
+// - Ticket (with actual API field names: assignees: User[], priority_id, etc.)
+// - TicketColumn
+// - KanbanItems
+// - Project, Tag, Contact, and all other API types
+
 export interface Ticket {
   id: number;
   name: string;

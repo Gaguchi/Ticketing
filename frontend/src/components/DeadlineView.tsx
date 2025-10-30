@@ -9,7 +9,7 @@ import {
   faBolt,
 } from "@fortawesome/free-solid-svg-icons";
 import { getPriorityIcon } from "./PriorityIcons";
-import type { Ticket, TicketColumn } from "../types/ticket";
+import type { Ticket, TicketColumn } from "../types/api";
 
 const { Text } = Typography;
 
@@ -65,8 +65,6 @@ const categorizeByDeadline = (tickets: Ticket[]) => {
   tickets.forEach((ticket) => {
     // Check if completed first
     if (
-      ticket.columnName?.toLowerCase() === "done" ||
-      ticket.columnName?.toLowerCase() === "completed" ||
       ticket.column_name?.toLowerCase() === "done" ||
       ticket.column_name?.toLowerCase() === "completed"
     ) {
@@ -74,8 +72,8 @@ const categorizeByDeadline = (tickets: Ticket[]) => {
       return;
     }
 
-    // Check both dueDate and due_date properties
-    const dueDateValue = ticket.dueDate || ticket.due_date;
+    // Check due_date property
+    const dueDateValue = ticket.due_date;
 
     if (!dueDateValue) {
       categories.noDeadline.push(ticket);
@@ -191,7 +189,7 @@ const DeadlineColumn: React.FC<{
               </div>
 
               {/* Due Date - Prominent Display */}
-              {(ticket.dueDate || ticket.due_date) && (
+              {ticket.due_date && (
                 <div
                   style={{
                     display: "flex",
@@ -207,9 +205,7 @@ const DeadlineColumn: React.FC<{
                 >
                   <ClockCircleOutlined style={{ fontSize: 12 }} />
                   <Text style={{ fontSize: 12, fontWeight: 500 }}>
-                    {new Date(
-                      ticket.dueDate || ticket.due_date!
-                    ).toLocaleDateString("en-US", {
+                    {new Date(ticket.due_date).toLocaleDateString("en-US", {
                       weekday: "short",
                       month: "short",
                       day: "numeric",
@@ -243,18 +239,13 @@ const DeadlineColumn: React.FC<{
                   <Text
                     style={{ fontSize: 11, color: "#5e6c84", fontWeight: 500 }}
                   >
-                    {formatTicketId(
-                      ticket.projectKey || ticket.project_key,
-                      ticket.id
-                    )}
+                    {formatTicketId(ticket.project_key, ticket.id)}
                   </Text>
 
                   {/* Priority */}
-                  {(ticket.priorityId || ticket.priority_id) && (
+                  {ticket.priority_id && (
                     <span style={{ fontSize: 12 }}>
-                      {getPriorityIcon(
-                        ticket.priorityId || ticket.priority_id!
-                      )}
+                      {getPriorityIcon(ticket.priority_id)}
                     </span>
                   )}
                 </Space>
@@ -275,10 +266,10 @@ const DeadlineColumn: React.FC<{
               </div>
 
               {/* Tags */}
-              {ticket.tag_names && ticket.tag_names.length > 0 && (
+              {ticket.tags_detail && ticket.tags_detail.length > 0 && (
                 <div style={{ marginTop: 8 }}>
                   <Space size={4} wrap>
-                    {ticket.tag_names.slice(0, 2).map((tag, idx) => (
+                    {ticket.tags_detail.slice(0, 2).map((tag, idx) => (
                       <Tag
                         key={idx}
                         style={{
@@ -288,10 +279,10 @@ const DeadlineColumn: React.FC<{
                           borderRadius: 2,
                         }}
                       >
-                        {tag}
+                        {tag.name}
                       </Tag>
                     ))}
-                    {ticket.tag_names.length > 2 && (
+                    {ticket.tags_detail.length > 2 && (
                       <Tag
                         style={{
                           fontSize: 10,
@@ -300,7 +291,7 @@ const DeadlineColumn: React.FC<{
                           borderRadius: 2,
                         }}
                       >
-                        +{ticket.tag_names.length - 2}
+                        +{ticket.tags_detail.length - 2}
                       </Tag>
                     )}
                   </Space>

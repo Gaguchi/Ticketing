@@ -5,78 +5,13 @@
 
 import { apiService } from './api.service';
 import { API_ENDPOINTS } from '../config/api';
-
-export interface LoginCredentials {
-  username: string;
-  password: string;
-}
-
-export interface RegisterData {
-  username: string;
-  email: string;
-  password: string;
-  first_name?: string;
-  last_name?: string;
-}
-
-export interface AuthResponse {
-  user: {
-    id: number;
-    username: string;
-    email: string;
-    first_name: string;
-    last_name: string;
-  };
-  access: string;
-  refresh: string;
-}
-
-export interface User {
-  id: number;
-  username: string;
-  email: string;
-  first_name: string;
-  last_name: string;
-  companies?: Company[];
-  administered_companies?: Company[];
-  member_companies?: Company[];
-  has_companies?: boolean;
-  is_it_admin?: boolean;
-  is_superuser?: boolean;
-  projects?: Array<{
-    id: number;
-    key: string;
-    name: string;
-    description?: string;
-    lead_username?: string;
-    tickets_count?: number;
-    columns_count?: number;
-  }>;
-  has_projects?: boolean;
-}
-
-export interface Company {
-  id: number;
-  name: string;
-  description?: string;
-  ticket_count?: number;
-  admin_count?: number;
-  user_count?: number;
-  admin_names?: string;
-}
-
-export interface UserWithProjects extends User {
-  projects: Array<{
-    id: number;
-    key: string;
-    name: string;
-    description?: string;
-    lead_username?: string;
-    tickets_count: number;
-    columns_count: number;
-  }>;
-  has_projects: boolean;
-}
+import type {
+  LoginCredentials,
+  RegisterData,
+  AuthResponse,
+  User,
+  RefreshTokenResponse,
+} from '../types/api';
 
 class AuthService {
   private readonly ACCESS_TOKEN_KEY = 'access_token';
@@ -92,7 +27,7 @@ class AuthService {
       credentials
     );
     
-    this.setTokens(response.access, response.refresh);
+    this.setTokens(response.tokens.access, response.tokens.refresh);
     this.setUser(response.user);
     
     return response;
@@ -107,7 +42,7 @@ class AuthService {
       data
     );
     
-    this.setTokens(response.access, response.refresh);
+    this.setTokens(response.tokens.access, response.tokens.refresh);
     this.setUser(response.user);
     
     return response;
@@ -123,8 +58,8 @@ class AuthService {
   /**
    * Get current user with their projects
    */
-  async getCurrentUserWithProjects(): Promise<UserWithProjects> {
-    return await apiService.get<UserWithProjects>(API_ENDPOINTS.AUTH_ME);
+  async getCurrentUserWithProjects(): Promise<User> {
+    return await apiService.get<User>(API_ENDPOINTS.AUTH_ME);
   }
 
   /**
@@ -190,7 +125,7 @@ class AuthService {
       throw new Error('No refresh token available');
     }
 
-    const response = await apiService.post<{ access: string }>(
+    const response = await apiService.post<RefreshTokenResponse>(
       API_ENDPOINTS.AUTH_TOKEN_REFRESH,
       { refresh: refreshToken }
     );

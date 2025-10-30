@@ -23,14 +23,12 @@ export const API_ENDPOINTS = {
   // Tickets
   TICKETS: `${API_BASE_URL}/api/tickets/tickets/`,
   TICKET_DETAIL: (id: number) => `${API_BASE_URL}/api/tickets/tickets/${id}/`,
-  TICKET_MOVE: (id: number) => `${API_BASE_URL}/api/tickets/tickets/${id}/move_to_column/`,
   TICKET_FOLLOW: (id: number) => `${API_BASE_URL}/api/tickets/tickets/${id}/toggle_follow/`,
   
   // Columns
   COLUMNS: `${API_BASE_URL}/api/tickets/columns/`,
   COLUMN_DETAIL: (id: number) => `${API_BASE_URL}/api/tickets/columns/${id}/`,
   COLUMN_REORDER: `${API_BASE_URL}/api/tickets/columns/reorder/`,
-  COLUMN_CREATE_DEFAULTS: `${API_BASE_URL}/api/tickets/columns/create_defaults/`,
   
   // Comments
   COMMENTS: `${API_BASE_URL}/api/tickets/comments/`,

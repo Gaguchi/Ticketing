@@ -31,7 +31,7 @@ import { getPriorityIcon } from "../components/PriorityIcons";
 import { TicketModal } from "../components/TicketModal";
 import { CreateTicketModal } from "../components/CreateTicketModal";
 import { useProject } from "../contexts/ProjectContext";
-import type { Ticket } from "../types/ticket";
+import type { Ticket } from "../types/api";
 import type { TableColumnsType } from "antd";
 import { ticketService } from "../services";
 
@@ -218,14 +218,14 @@ const Dashboard: React.FC = () => {
     {
       id: "unassigned",
       title: "Unassigned",
-      filter: (ticket) =>
-        !ticket.assigneeIds || ticket.assigneeIds.length === 0,
+      filter: (ticket) => !ticket.assignees || ticket.assignees.length === 0,
       color: "#ff4d4f",
     },
     {
       id: "myTickets",
       title: "Assigned to Me",
-      filter: (ticket) => ticket.assigneeIds?.includes(1) || false,
+      filter: (ticket) =>
+        ticket.assignees?.some((user) => user.id === 1) || false,
       color: "#1890ff",
     },
     {
@@ -243,7 +243,7 @@ const Dashboard: React.FC = () => {
     {
       id: "critical",
       title: "Critical Priority",
-      filter: (ticket) => ticket.priorityId === 4,
+      filter: (ticket) => ticket.priority_id === 4,
       color: "#e5493a",
     },
   ]);
@@ -258,27 +258,11 @@ const Dashboard: React.FC = () => {
     setLoading(true);
     setNetworkError(false);
     try {
-      const response = await ticketService.getTickets(selectedProject.id);
-      // Map ALL API response fields from snake_case to camelCase
-      const mappedTickets = response.results.map((ticket: any) => ({
-        ...ticket,
-        // Date fields
-        createdAt: ticket.created_at,
-        updatedAt: ticket.updated_at,
-        dueDate: ticket.due_date,
-        startDate: ticket.start_date,
-        // Priority field
-        priorityId: ticket.priority_id,
-        // Project field
-        projectKey: ticket.project_key,
-        // Column field
-        columnName: ticket.column_name,
-        // Comments count
-        commentsCount: ticket.comments_count,
-        // Tags detail
-        tagsDetail: ticket.tags_detail,
-      }));
-      setTickets(mappedTickets);
+      const response = await ticketService.getTickets({
+        project: selectedProject.id,
+      });
+      // Use tickets directly from API response (no mapping needed)
+      setTickets(response.results);
       setNetworkError(false);
     } catch (error: any) {
       console.error("Failed to fetch tickets:", error);
@@ -320,20 +304,7 @@ const Dashboard: React.FC = () => {
   const handleTicketClick = async (ticket: Ticket) => {
     try {
       const fullTicket = await ticketService.getTicket(ticket.id);
-      // Map the full ticket data
-      const mappedTicket = {
-        ...fullTicket,
-        createdAt: fullTicket.created_at,
-        updatedAt: fullTicket.updated_at,
-        dueDate: fullTicket.due_date,
-        startDate: fullTicket.start_date,
-        priorityId: fullTicket.priority_id,
-        projectKey: fullTicket.project_key,
-        columnName: fullTicket.column_name,
-        commentsCount: fullTicket.comments_count,
-        tagsDetail: fullTicket.tags_detail,
-      };
-      setSelectedTicket(mappedTicket);
+      setSelectedTicket(fullTicket);
     } catch (error: any) {
       console.error("Failed to fetch ticket details:", error);
       message.error("Failed to load ticket details");
@@ -419,10 +390,10 @@ const Dashboard: React.FC = () => {
     },
     {
       title: "Priority",
-      dataIndex: "priorityId",
-      key: "priorityId",
+      dataIndex: "priority_id",
+      key: "priority_id",
       width: 100,
-      render: (priorityId: number) => getPriorityIcon(priorityId),
+      render: (priority_id: number) => getPriorityIcon(priority_id),
     },
     {
       title: "Urgency",
@@ -469,13 +440,13 @@ const Dashboard: React.FC = () => {
     },
     {
       title: "Created",
-      dataIndex: "createdAt",
-      key: "createdAt",
+      dataIndex: "created_at",
+      key: "created_at",
       width: 120,
-      render: (createdAt: string) => {
-        if (!createdAt) return "-";
+      render: (created_at: string) => {
+        if (!created_at) return "-";
         // Format: "Oct 27, 2025"
-        const date = new Date(createdAt);
+        const date = new Date(created_at);
         return date.toLocaleDateString("en-US", {
           month: "short",
           day: "numeric",

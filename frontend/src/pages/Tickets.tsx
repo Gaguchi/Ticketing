@@ -22,7 +22,7 @@ import { TicketModal } from "../components/TicketModal";
 import { CreateTicketModal } from "../components/CreateTicketModal";
 import { useProject } from "../contexts/ProjectContext";
 import { ticketService, projectService } from "../services";
-import type { Ticket, TicketColumn } from "../types/ticket";
+import type { Ticket, TicketColumn } from "../types/api";
 import "./Tickets.css";
 
 const { Option } = Select;
@@ -97,22 +97,10 @@ const Tickets: React.FC = () => {
         setKanbanColumns(projectColumns);
 
         // Fetch tickets for the project
-        const response = await ticketService.getTickets(selectedProject.id);
-        // Map API response fields
-        const mappedTickets = response.results.map((ticket: any) => ({
-          ...ticket,
-          createdAt: ticket.created_at,
-          updatedAt: ticket.updated_at,
-          dueDate: ticket.due_date,
-          startDate: ticket.start_date,
-          priorityId: ticket.priority_id,
-          projectKey: ticket.project_key,
-          columnName: ticket.column_name,
-          commentsCount: ticket.comments_count,
-          tagsDetail: ticket.tags_detail,
-          colId: ticket.column, // Map column to colId for KanbanBoard
-        }));
-        setTickets(mappedTickets);
+        const response = await ticketService.getTickets({
+          project: selectedProject.id,
+        });
+        setTickets(response.results);
       } catch (error: any) {
         console.error("Failed to fetch data:", error);
         message.error("Failed to load tickets");
@@ -128,20 +116,7 @@ const Tickets: React.FC = () => {
   const handleTicketClick = async (ticket: Ticket) => {
     try {
       const fullTicket = await ticketService.getTicket(ticket.id);
-      // Map the full ticket data
-      const mappedTicket = {
-        ...fullTicket,
-        createdAt: fullTicket.created_at,
-        updatedAt: fullTicket.updated_at,
-        dueDate: fullTicket.due_date,
-        startDate: fullTicket.start_date,
-        priorityId: fullTicket.priority_id,
-        projectKey: fullTicket.project_key,
-        columnName: fullTicket.column_name,
-        commentsCount: fullTicket.comments_count,
-        tagsDetail: fullTicket.tags_detail,
-      };
-      setSelectedTicket(mappedTicket);
+      setSelectedTicket(fullTicket);
     } catch (error: any) {
       console.error("Failed to fetch ticket details:", error);
       message.error("Failed to load ticket details");
@@ -157,7 +132,7 @@ const Tickets: React.FC = () => {
 
     console.log("📋 Ticket info:", {
       ticket: ticket
-        ? { id: ticket.id, name: ticket.name, currentColumn: ticket.colId }
+        ? { id: ticket.id, name: ticket.name, currentColumn: ticket.column }
         : "NOT FOUND",
       targetColumn: column ? { id: column.id, name: column.name } : "NOT FOUND",
     });
@@ -169,8 +144,8 @@ const Tickets: React.FC = () => {
     }
 
     // Store previous state for rollback
-    const previousColumnId = ticket.colId;
-    const previousColumnName = ticket.columnName;
+    const previousColumnId = ticket.column;
+    const previousColumnName = ticket.column_name;
 
     // Mark as pending
     setPendingUpdates((prev) => new Set(prev).add(ticketId));
@@ -183,8 +158,7 @@ const Tickets: React.FC = () => {
           ? {
               ...t,
               column: newColumnId,
-              colId: newColumnId,
-              columnName: column.name,
+              column_name: column.name,
             }
           : t
       )
@@ -213,8 +187,7 @@ const Tickets: React.FC = () => {
               ? {
                   ...t,
                   column: previousColumnId,
-                  colId: previousColumnId,
-                  columnName: previousColumnName,
+                  column_name: previousColumnName,
                 }
               : t
           )
@@ -342,8 +315,8 @@ const Tickets: React.FC = () => {
   const filteredTickets = tickets.filter((ticket) => {
     const matchesSearch =
       ticket.name.toLowerCase().includes(searchText.toLowerCase()) ||
-      ticket.tag_names?.some((tag) =>
-        tag.toLowerCase().includes(searchText.toLowerCase())
+      ticket.tags_detail?.some((tag) =>
+        tag.name.toLowerCase().includes(searchText.toLowerCase())
       );
     const matchesStatus = !filterStatus || ticket.column_name === filterStatus;
     return matchesSearch && matchesStatus;

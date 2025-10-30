@@ -3,20 +3,38 @@
  * Exports all service modules
  */
 
+// Core API Service
 export { apiService } from './api.service';
-export type { APIError } from './api.service';
 
+// Authentication Service
 export { authService } from './auth.service';
-export type { LoginCredentials, RegisterData, AuthResponse, User } from './auth.service';
 
+// Project Service
 export { projectService } from './project.service';
-export type { Project, CreateProjectData } from './project.service';
 
+// Ticket Service
 export { ticketService } from './ticket.service';
-export type { CreateTicketData, UpdateTicketData, TicketListResponse } from './ticket.service';
 
+// Column Service
 export { columnService } from './column.service';
-export type { Column, CreateColumnData, ReorderColumnsData } from './column.service';
 
+// Tag Service
 export { tagService } from './tag.service';
-export type { Tag, CreateTagData } from './tag.service';
+
+// Contact Service
+export { contactService } from './contact.service';
+
+// Comment Service
+export { commentService } from './comment.service';
+
+// Attachment Service
+export { attachmentService } from './attachment.service';
+
+// Company Service
+export { companyService } from './company.service';
+
+// User Management Service
+export { userService } from './user.service';
+
+// Re-export all types from centralized types/api.ts
+export type * from '../types/api';

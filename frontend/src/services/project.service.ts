@@ -5,39 +5,36 @@
 
 import { apiService } from './api.service';
 import { API_ENDPOINTS } from '../config/api';
-
-export interface Project {
-  id: number;
-  key: string;
-  name: string;
-  description?: string;
-  lead_username?: string;
-  members?: Array<{
-    id: number;
-    username: string;
-    email: string;
-    first_name: string;
-    last_name: string;
-  }>;
-  tickets_count: number;
-  columns_count: number;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface CreateProjectData {
-  key: string;
-  name: string;
-  description?: string;
-  lead_username?: string;
-}
+import type {
+  Project,
+  CreateProjectData,
+  UpdateProjectData,
+  PaginatedResponse,
+  PaginationParams,
+} from '../types/api';
 
 class ProjectService {
   /**
-   * Get all projects
+   * Get all projects with pagination
    */
-  async getProjects(): Promise<Project[]> {
-    return await apiService.get<Project[]>(API_ENDPOINTS.PROJECTS);
+  async getProjects(params?: PaginationParams): Promise<PaginatedResponse<Project>> {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.page_size) queryParams.append('page_size', params.page_size.toString());
+    
+    const url = queryParams.toString()
+      ? `${API_ENDPOINTS.PROJECTS}?${queryParams.toString()}`
+      : API_ENDPOINTS.PROJECTS;
+    
+    return await apiService.get<PaginatedResponse<Project>>(url);
+  }
+
+  /**
+   * Get all projects (unpaginated - fetches all results)
+   */
+  async getAllProjects(): Promise<Project[]> {
+    const response = await this.getProjects({ page_size: 1000 });
+    return response.results;
   }
 
   /**
@@ -57,7 +54,7 @@ class ProjectService {
   /**
    * Update project
    */
-  async updateProject(id: number, data: Partial<CreateProjectData>): Promise<Project> {
+  async updateProject(id: number, data: UpdateProjectData): Promise<Project> {
     return await apiService.patch<Project>(API_ENDPOINTS.PROJECT_DETAIL(id), data);
   }
 
@@ -88,7 +85,7 @@ class ProjectService {
    */
   async userHasProjects(username: string): Promise<boolean> {
     try {
-      const projects = await this.getProjects();
+      const projects = await this.getAllProjects();
       
       // Check if user is lead or member of any project
       return projects.some(project => 

@@ -8,7 +8,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { Button } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import { TicketCard } from "./TicketCard";
-import type { Ticket } from "../types/ticket";
+import type { Ticket } from "../types/api";
 
 interface KanbanColumnProps {
   id: string;

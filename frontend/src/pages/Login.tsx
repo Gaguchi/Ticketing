@@ -31,7 +31,7 @@ const Login: React.FC = () => {
       });
 
       // Update auth context
-      login(response.access, response.user);
+      login(response.tokens.access, response.user);
 
       if (values.remember) {
         localStorage.setItem("remember", "true");
