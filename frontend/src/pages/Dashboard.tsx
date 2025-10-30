@@ -30,6 +30,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { getPriorityIcon } from "../components/PriorityIcons";
 import { TicketModal } from "../components/TicketModal";
 import { CreateTicketModal } from "../components/CreateTicketModal";
+import { useProject } from "../contexts/ProjectContext";
 import type { Ticket } from "../types/ticket";
 import type { TableColumnsType } from "antd";
 import { ticketService } from "../services";
@@ -249,10 +250,15 @@ const Dashboard: React.FC = () => {
 
   // Fetch tickets from API
   const fetchTickets = async () => {
+    if (!selectedProject) {
+      setTickets([]);
+      return;
+    }
+
     setLoading(true);
     setNetworkError(false);
     try {
-      const response = await ticketService.getTickets();
+      const response = await ticketService.getTickets(selectedProject.id);
       // Map ALL API response fields from snake_case to camelCase
       const mappedTickets = response.results.map((ticket: any) => ({
         ...ticket,
@@ -286,10 +292,14 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  // Load tickets on mount
+  // Load tickets on mount and when project changes
+  const { selectedProject } = useProject();
+
   useEffect(() => {
-    fetchTickets();
-  }, []);
+    if (selectedProject) {
+      fetchTickets();
+    }
+  }, [selectedProject]);
 
   // Handle ticket creation success
   const handleTicketCreated = (newTicket: Ticket) => {

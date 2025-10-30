@@ -43,6 +43,16 @@ export interface User {
   has_companies?: boolean;
   is_it_admin?: boolean;
   is_superuser?: boolean;
+  projects?: Array<{
+    id: number;
+    key: string;
+    name: string;
+    description?: string;
+    lead_username?: string;
+    tickets_count?: number;
+    columns_count?: number;
+  }>;
+  has_projects?: boolean;
 }
 
 export interface Company {

@@ -1,5 +1,13 @@
 import React, { useState } from "react";
-import { Layout, Avatar, Dropdown, Space, Typography, Tooltip } from "antd";
+import {
+  Layout,
+  Avatar,
+  Dropdown,
+  Space,
+  Typography,
+  Tooltip,
+  Select,
+} from "antd";
 import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
@@ -13,9 +21,11 @@ import {
   PlusOutlined,
   MessageOutlined,
   UsergroupAddOutlined,
+  ProjectOutlined,
 } from "@ant-design/icons";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { useProject } from "../contexts/ProjectContext";
 import type { MenuProps } from "antd";
 import "./MainLayout.css";
 
@@ -34,6 +44,8 @@ const MainLayout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { logout, user } = useAuth();
+  const { selectedProject, availableProjects, setSelectedProject } =
+    useProject();
 
   const handleMenuClick: MenuProps["onClick"] = ({ key }) => {
     if (key === "logout") {
@@ -318,6 +330,30 @@ const MainLayout: React.FC = () => {
             )}
           </div>
           <Space size="middle">
+            {/* Project Selector */}
+            {availableProjects.length > 0 && (
+              <Space size="small">
+                <ProjectOutlined style={{ fontSize: 16, color: "#595959" }} />
+                <Select
+                  value={selectedProject?.id}
+                  onChange={(value) => {
+                    const project = availableProjects.find(
+                      (p) => p.id === value
+                    );
+                    if (project) {
+                      setSelectedProject(project);
+                    }
+                  }}
+                  style={{ minWidth: 150 }}
+                  size="small"
+                  placeholder="Select Project"
+                  options={availableProjects.map((project) => ({
+                    label: `${project.key} - ${project.name}`,
+                    value: project.id,
+                  }))}
+                />
+              </Space>
+            )}
             <Tooltip title="Notifications">
               <div
                 style={{

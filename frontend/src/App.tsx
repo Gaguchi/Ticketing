@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { CompanyProvider } from "./contexts/CompanyContext";
+import { ProjectProvider } from "./contexts/ProjectContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import MainLayout from "./layouts/MainLayout";
 import Login from "./pages/Login";
@@ -17,43 +18,45 @@ function App() {
   return (
     <AuthProvider>
       <CompanyProvider>
-        <BrowserRouter>
-          <Routes>
-            {/* Public routes */}
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+        <ProjectProvider>
+          <BrowserRouter>
+            <Routes>
+              {/* Public routes */}
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
 
-            {/* Project setup (protected) */}
-            <Route
-              path="/setup"
-              element={
-                <ProtectedRoute>
-                  <ProjectSetup />
-                </ProtectedRoute>
-              }
-            />
+              {/* Project setup (protected) */}
+              <Route
+                path="/setup"
+                element={
+                  <ProtectedRoute>
+                    <ProjectSetup />
+                  </ProtectedRoute>
+                }
+              />
 
-            {/* Protected routes */}
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <MainLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<Dashboard />} />
-              <Route path="tickets" element={<Tickets />} />
-              <Route path="chat" element={<Chat />} />
-              <Route path="companies" element={<Companies />} />
-              <Route path="users" element={<Users />} />
-              <Route path="settings" element={<Settings />} />
-            </Route>
+              {/* Protected routes */}
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute>
+                    <MainLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<Dashboard />} />
+                <Route path="tickets" element={<Tickets />} />
+                <Route path="chat" element={<Chat />} />
+                <Route path="companies" element={<Companies />} />
+                <Route path="users" element={<Users />} />
+                <Route path="settings" element={<Settings />} />
+              </Route>
 
-            {/* Catch all */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </BrowserRouter>
+              {/* Catch all */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </BrowserRouter>
+        </ProjectProvider>
       </CompanyProvider>
     </AuthProvider>
   );

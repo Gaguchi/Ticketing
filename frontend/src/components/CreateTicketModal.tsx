@@ -21,6 +21,7 @@ import {
 import dayjs from "dayjs";
 import type { Ticket } from "../types/ticket";
 import { getPriorityIcon } from "./PriorityIcons";
+import { useProject } from "../contexts/ProjectContext";
 import {
   ticketService,
   projectService,
@@ -64,158 +65,130 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
   const [saving, setSaving] = useState(false);
   const [createAnother, setCreateAnother] = useState(false);
   const [ticketType, setTicketType] = useState("task");
-  const [currentProject, setCurrentProject] = useState<any>(null);
+  const { selectedProject } = useProject();
   const [actualColumnId, setActualColumnId] = useState<number | null>(null);
   const [creatingColumns, setCreatingColumns] = useState(false);
   const [openTickets, setOpenTickets] = useState<any[]>([]);
   const [projectTags, setProjectTags] = useState<any[]>([]);
   const [projectColumns, setProjectColumns] = useState<any[]>([]);
 
-  // Load current project and its columns from localStorage when modal opens
+  // Load project columns when modal opens or project changes
   useEffect(() => {
-    if (open) {
+    if (open && selectedProject) {
       console.group("🔧 CreateTicketModal - Loading project and columns");
       console.log("Modal opened with columnId:", columnId);
+      console.log("Selected project:", selectedProject);
 
-      const projectData = localStorage.getItem("currentProject");
-      console.log("Project data from localStorage:", projectData);
+      form.setFieldValue("project", selectedProject.id);
 
-      if (projectData) {
-        try {
-          const project = JSON.parse(projectData);
-          console.log("Parsed project:", project);
-          setCurrentProject(project);
-          form.setFieldValue("project", project.id);
+      // Fetch project columns to get the actual first column ID
+      console.log("Fetching columns for project ID:", selectedProject.id);
+      projectService
+        .getProjectColumns(selectedProject.id)
+        .then((columns) => {
+          console.log("Fetched columns:", columns);
+          setProjectColumns(columns);
+          if (columns.length > 0) {
+            // Use the first column or the specified columnId if it exists in this project
+            const targetColumn =
+              columns.find((col: any) => col.id === columnId) || columns[0];
+            console.log("Selected column:", targetColumn);
+            setActualColumnId(targetColumn.id);
+            // Set default column value in form
+            form.setFieldValue("column", targetColumn.id);
+            console.groupEnd();
+          } else {
+            console.warn("⚠️ No columns found in project");
+            console.groupEnd();
 
-          // Fetch project columns to get the actual first column ID
-          console.log("Fetching columns for project ID:", project.id);
-          projectService
-            .getProjectColumns(project.id)
-            .then((columns) => {
-              console.log("Fetched columns:", columns);
-              setProjectColumns(columns);
-              if (columns.length > 0) {
-                // Use the first column or the specified columnId if it exists in this project
-                const targetColumn =
-                  columns.find((col: any) => col.id === columnId) || columns[0];
-                console.log("Selected column:", targetColumn);
-                setActualColumnId(targetColumn.id);
-                // Set default column value in form
-                form.setFieldValue("column", targetColumn.id);
-                console.groupEnd();
-              } else {
-                console.warn("⚠️ No columns found in project");
-                console.groupEnd();
+            // Offer to create default columns
+            Modal.confirm({
+              title: "No Columns Found",
+              content:
+                "This project has no columns. Would you like to create default columns now?",
+              okText: "Create Columns",
+              cancelText: "Cancel",
+              onOk: async () => {
+                setCreatingColumns(true);
+                try {
+                  const result = await columnService.createDefaults(
+                    selectedProject.id
+                  );
+                  message.success(result.message);
 
-                // Offer to create default columns
-                Modal.confirm({
-                  title: "No Columns Found",
-                  content:
-                    "This project has no columns. Would you like to create default columns now?",
-                  okText: "Create Columns",
-                  cancelText: "Cancel",
-                  onOk: async () => {
-                    setCreatingColumns(true);
-                    try {
-                      const result = await columnService.createDefaults(
-                        project.id
-                      );
-                      message.success(result.message);
-
-                      // Set the first column as active
-                      if (result.columns.length > 0) {
-                        setActualColumnId(result.columns[0].id);
-                      }
-
-                      // Update project in localStorage
-                      const updatedProject = {
-                        ...project,
-                        columns_count: result.columns.length,
-                      };
-                      localStorage.setItem(
-                        "currentProject",
-                        JSON.stringify(updatedProject)
-                      );
-                      setCurrentProject(updatedProject);
-                    } catch (error: any) {
-                      console.error(
-                        "❌ Failed to create default columns:",
-                        error
-                      );
-                      message.error(
-                        error.response?.data?.error ||
-                          "Failed to create default columns"
-                      );
-                    } finally {
-                      setCreatingColumns(false);
-                    }
-                  },
-                });
-              }
-            })
-            .catch((error) => {
-              console.error("❌ Failed to load project columns:", error);
-              console.groupEnd();
-              message.error("Failed to load project columns");
+                  // Set the first column as active
+                  if (result.columns.length > 0) {
+                    setActualColumnId(result.columns[0].id);
+                  }
+                } catch (error: any) {
+                  console.error("❌ Failed to create default columns:", error);
+                  message.error(
+                    error.response?.data?.error ||
+                      "Failed to create default columns"
+                  );
+                } finally {
+                  setCreatingColumns(false);
+                }
+              },
             });
-
-          // Fetch open tickets for parent selection
-          ticketService
-            .getTickets()
-            .then((response) => {
-              const allTickets = response.results || [];
-              // Filter to current project and exclude done status
-              const projectTickets = allTickets.filter(
-                (t: any) => t.project === project.id && t.status !== "done"
-              );
-              setOpenTickets(projectTickets);
-              console.log(
-                "Fetched open tickets for parent selection:",
-                projectTickets.length
-              );
-            })
-            .catch((error) => {
-              console.error("❌ Failed to load open tickets:", error);
-            });
-
-          // Fetch project tags for autocomplete
-          tagService
-            .getTags(project.id)
-            .then((response: any) => {
-              // Handle both array response and paginated response
-              const tags = Array.isArray(response)
-                ? response
-                : response.results || [];
-              setProjectTags(tags);
-              console.log("Fetched project tags:", tags.length);
-            })
-            .catch((error) => {
-              console.error("❌ Failed to load project tags:", error);
-              setProjectTags([]); // Ensure it's always an array
-            });
-        } catch (error) {
-          console.error("❌ Failed to parse project data:", error);
+          }
+        })
+        .catch((error) => {
+          console.error("❌ Failed to load project columns:", error);
           console.groupEnd();
-          message.error("Failed to load project information");
-        }
-      } else {
-        console.warn("⚠️ No project data in localStorage");
-        console.groupEnd();
-        message.warning("No project selected. Please create a project first.");
-      }
+          message.error("Failed to load project columns");
+        });
+
+      // Fetch open tickets for parent selection
+      ticketService
+        .getTickets(selectedProject.id)
+        .then((response) => {
+          const allTickets = response.results || [];
+          // Filter to exclude done status
+          const projectTickets = allTickets.filter(
+            (t: any) => t.status !== "done"
+          );
+          setOpenTickets(projectTickets);
+          console.log(
+            "Fetched open tickets for parent selection:",
+            projectTickets.length
+          );
+        })
+        .catch((error) => {
+          console.error("❌ Failed to load open tickets:", error);
+        });
+
+      // Fetch project tags for autocomplete
+      tagService
+        .getTags(selectedProject.id)
+        .then((response: any) => {
+          // Handle both array response and paginated response
+          const tags = Array.isArray(response)
+            ? response
+            : response.results || [];
+          setProjectTags(tags);
+          console.log("Fetched project tags:", tags.length);
+        })
+        .catch((error) => {
+          console.error("❌ Failed to load project tags:", error);
+          setProjectTags([]); // Ensure it's always an array
+        });
+    } else if (open && !selectedProject) {
+      console.warn("⚠️ No project selected");
+      message.warning("No project selected. Please select a project first.");
     }
-  }, [open, form, columnId]);
+  }, [open, form, columnId, selectedProject]);
 
   const handleSubmit = async (values: any) => {
     console.group("🎫 CreateTicketModal - handleSubmit");
     console.log("Form values:", JSON.stringify(values, null, 2));
-    console.log("Current project:", currentProject);
+    console.log("Selected project:", selectedProject);
     console.log("Actual column ID:", actualColumnId);
     console.log("Passed column ID:", columnId);
 
-    if (!currentProject) {
-      console.error("❌ No current project!");
-      message.error("No project selected. Please create a project first.");
+    if (!selectedProject) {
+      console.error("❌ No selected project!");
+      message.error("No project selected. Please select a project first.");
       console.groupEnd();
       return;
     }
@@ -251,7 +224,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               const newTag = await tagService.createTag({
                 name: tagName,
                 color: "#0052cc", // Default color
-                project: currentProject.id,
+                project: selectedProject.id,
               });
               existingTag = newTag;
               // Add to projectTags for next time
@@ -276,7 +249,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
         type: values.type,
         priority_id: values.priority || 3,
         column: values.column || actualColumnId, // Use selected column from form or the actual column ID
-        project: currentProject.id, // Use current project
+        project: selectedProject.id, // Use selected project from context
         assignee_ids: values.assignee ? [values.assignee] : undefined,
         parent: values.parent || undefined,
         tags: tagIds.length > 0 ? tagIds : undefined,
@@ -307,7 +280,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
         // Reset form but keep type and project
         form.resetFields();
         form.setFieldValue("type", values.type);
-        form.setFieldValue("project", currentProject.id);
+        form.setFieldValue("project", selectedProject.id);
       } else {
         onClose();
       }
@@ -411,8 +384,8 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               style={{ marginBottom: "12px" }}
             >
               <Select placeholder="Select project" disabled>
-                {currentProject && (
-                  <Option value={currentProject.id}>
+                {selectedProject && (
+                  <Option value={selectedProject.id}>
                     <div
                       style={{
                         display: "flex",
@@ -434,10 +407,10 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                           fontWeight: 600,
                         }}
                       >
-                        {currentProject.key.substring(0, 2)}
+                        {selectedProject.key.substring(0, 2)}
                       </div>
                       <span>
-                        {currentProject.name} ({currentProject.key})
+                        {selectedProject.name} ({selectedProject.key})
                       </span>
                     </div>
                   </Option>

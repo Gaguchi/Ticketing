@@ -20,6 +20,7 @@ import { DeadlineView } from "../components/DeadlineView";
 import { getPriorityIcon } from "../components/PriorityIcons";
 import { TicketModal } from "../components/TicketModal";
 import { CreateTicketModal } from "../components/CreateTicketModal";
+import { useProject } from "../contexts/ProjectContext";
 import { ticketService, projectService } from "../services";
 import type { Ticket, TicketColumn } from "../types/ticket";
 import "./Tickets.css";
@@ -58,6 +59,7 @@ const Tickets: React.FC = () => {
   );
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const { selectedProject } = useProject();
 
   // Real data from API
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -67,73 +69,35 @@ const Tickets: React.FC = () => {
   // Track pending API requests for optimistic updates (used internally, no visual indicator)
   const [, setPendingUpdates] = useState<Set<number>>(new Set());
 
-  // Fetch tickets and columns on mount
+  // Fetch tickets and columns when project changes
   useEffect(() => {
     const fetchData = async () => {
+      if (!selectedProject) {
+        setTickets([]);
+        setKanbanColumns([]);
+        return;
+      }
+
       setLoading(true);
       try {
-        // Fetch user's projects
-        const projectsResponse = await projectService.getProjects();
-        console.log("📦 Projects response:", projectsResponse);
-
-        // Handle both paginated and non-paginated responses
-        const projects: any[] = Array.isArray(projectsResponse)
-          ? projectsResponse
-          : (projectsResponse as any)?.results || [];
-
-        if (projects.length === 0) {
-          message.warning("No projects found. Please create a project first.");
-          return;
-        }
-
-        // Use stored project if valid, otherwise find a project with columns
-        let project = null;
-        const storedProjectData = localStorage.getItem("currentProject");
-
-        if (storedProjectData && storedProjectData !== "undefined") {
-          try {
-            const storedProject = JSON.parse(storedProjectData);
-            // Check if stored project exists in user's projects
-            const foundProject = projects.find(
-              (p: any) => p.id === storedProject.id
-            );
-            if (foundProject) {
-              project = foundProject;
-              console.log("📌 Using stored project:", project);
-            }
-          } catch (parseError) {
-            console.warn("Failed to parse stored project");
-            localStorage.removeItem("currentProject");
-          }
-        }
-
-        // If no stored project, find the first project with columns
-        if (!project) {
-          // Try to find a project with columns_count > 0
-          project =
-            projects.find((p: any) => p.columns_count > 0) || projects[0];
-          console.log("📌 Auto-selected project:", project);
-        }
-
-        // Store current project for future use
-        localStorage.setItem("currentProject", JSON.stringify(project));
+        console.log("📌 Loading data for project:", selectedProject);
 
         // Fetch columns for the project
         const projectColumns = await projectService.getProjectColumns(
-          project.id
+          selectedProject.id
         );
         console.log("📊 Project columns:", projectColumns);
 
         if (projectColumns.length === 0) {
           message.warning(
-            `Project "${project.name}" has no columns. Please set up columns first.`
+            `Project "${selectedProject.name}" has no columns. Please set up columns first.`
           );
         }
 
         setKanbanColumns(projectColumns);
 
-        // Fetch tickets
-        const response = await ticketService.getTickets();
+        // Fetch tickets for the project
+        const response = await ticketService.getTickets(selectedProject.id);
         // Map API response fields
         const mappedTickets = response.results.map((ticket: any) => ({
           ...ticket,
@@ -158,7 +122,7 @@ const Tickets: React.FC = () => {
     };
 
     fetchData();
-  }, []);
+  }, [selectedProject]);
 
   // Fetch full ticket details before opening modal
   const handleTicketClick = async (ticket: Ticket) => {

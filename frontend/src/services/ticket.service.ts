@@ -36,10 +36,13 @@ export interface TicketListResponse {
 
 class TicketService {
   /**
-   * Get all tickets
+   * Get all tickets (optionally filtered by project)
    */
-  async getTickets(): Promise<TicketListResponse> {
-    return apiService.get<TicketListResponse>(API_ENDPOINTS.TICKETS);
+  async getTickets(projectId?: number): Promise<TicketListResponse> {
+    const url = projectId 
+      ? `${API_ENDPOINTS.TICKETS}?project=${projectId}`
+      : API_ENDPOINTS.TICKETS;
+    return apiService.get<TicketListResponse>(url);
   }
 
   /**
