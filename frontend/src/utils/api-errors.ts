@@ -2,22 +2,12 @@
  * API Error Handling Utilities
  * 
  * Provides helpers for parsing API errors and generating user-friendly messages
+ * 
+ * Expected error structure from axios:
+ * - error.response.status: HTTP status code
+ * - error.response.data: API error response object with error/detail/message fields
+ * - error.message: Error message for network errors
  */
-
-import type { ErrorResponse } from "../types/api";
-
-/**
- * Standard error structure from the API
- * @internal Used for type documentation only
- */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-interface ApiError {
-  response?: {
-    status: number;
-    data?: ErrorResponse | any;
-  };
-  message?: string;
-}
 
 /**
  * Parse API error and return user-friendly message
