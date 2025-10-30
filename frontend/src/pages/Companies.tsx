@@ -19,7 +19,9 @@ import {
   Divider,
   Spin,
   message,
+  Upload,
 } from "antd";
+import type { UploadFile } from "antd";
 import {
   PlusOutlined,
   SearchOutlined,
@@ -39,6 +41,8 @@ import {
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import type { MenuProps } from "antd";
+import { API_ENDPOINTS } from "../config/api";
+import apiService from "../services/api.service";
 
 const { Title, Text, Paragraph } = Typography;
 const { Search } = Input;
@@ -75,6 +79,8 @@ const Companies: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCompany, setEditingCompany] = useState<Company | null>(null);
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
+  const [submitting, setSubmitting] = useState(false);
+  const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [form] = Form.useForm();
 
   useEffect(() => {
@@ -84,17 +90,11 @@ const Companies: React.FC = () => {
   const fetchCompanies = async () => {
     setLoading(true);
     try {
-      // TODO: Replace with actual API call
-      // const response = await api.get('/companies/');
-      // setCompanies(response.data);
-
-      // Mock data for demonstration
-      setTimeout(() => {
-        setCompanies([]);
-        setLoading(false);
-      }, 500);
-    } catch (error) {
-      message.error("Failed to load companies");
+      const response = await apiService.get<Company[]>(API_ENDPOINTS.COMPANIES);
+      setCompanies(response);
+      setLoading(false);
+    } catch (error: any) {
+      message.error(error.message || "Failed to load companies");
       setLoading(false);
     }
   };
@@ -102,6 +102,7 @@ const Companies: React.FC = () => {
   const handleCreateCompany = () => {
     setEditingCompany(null);
     form.resetFields();
+    setFileList([]);
     setIsModalOpen(true);
   };
 
@@ -110,7 +111,10 @@ const Companies: React.FC = () => {
     form.setFieldsValue({
       name: company.name,
       description: company.description,
+      primary_contact_email: company.primary_contact_email,
+      phone: company.phone,
     });
+    setFileList([]);
     setIsModalOpen(true);
   };
 
@@ -123,11 +127,11 @@ const Companies: React.FC = () => {
       okType: "danger",
       onOk: async () => {
         try {
-          // TODO: API call to delete
+          await apiService.delete(API_ENDPOINTS.COMPANY_DETAIL(company.id));
           message.success("Company deleted successfully");
           fetchCompanies();
-        } catch (error) {
-          message.error("Failed to delete company");
+        } catch (error: any) {
+          message.error(error.message || "Failed to delete company");
         }
       },
     });
@@ -135,17 +139,81 @@ const Companies: React.FC = () => {
 
   const handleModalOk = async () => {
     try {
-      await form.validateFields();
-      // TODO: API call to create/update
-      message.success(
-        editingCompany
-          ? "Company updated successfully"
-          : "Company created successfully"
-      );
+      setSubmitting(true);
+      const values = await form.validateFields();
+
+      // Prepare form data for file upload
+      const formData = new FormData();
+      formData.append("name", values.name);
+      formData.append("description", values.description);
+
+      if (values.primary_contact_email) {
+        formData.append("primary_contact_email", values.primary_contact_email);
+      }
+
+      if (values.phone) {
+        formData.append("phone", values.phone);
+      }
+
+      // Handle logo upload
+      if (fileList.length > 0 && fileList[0].originFileObj) {
+        formData.append("logo", fileList[0].originFileObj);
+      }
+
+      // Handle admin assignments (only for create)
+      if (!editingCompany && values.admin_ids && values.admin_ids.length > 0) {
+        values.admin_ids.forEach((id: number) => {
+          formData.append("admin_ids", id.toString());
+        });
+      }
+
+      if (editingCompany) {
+        // Update existing company
+        await fetch(API_ENDPOINTS.COMPANY_DETAIL(editingCompany.id), {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+          },
+          body: formData,
+        }).then(async (response) => {
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || "Failed to update company");
+          }
+          return response.json();
+        });
+        message.success("Company updated successfully");
+      } else {
+        // Create new company
+        await fetch(API_ENDPOINTS.COMPANIES, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+          },
+          body: formData,
+        }).then(async (response) => {
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || "Failed to create company");
+          }
+          return response.json();
+        });
+        message.success("Company created successfully");
+      }
+
       setIsModalOpen(false);
+      form.resetFields();
+      setFileList([]);
       fetchCompanies();
-    } catch (error) {
-      console.error("Validation failed:", error);
+    } catch (error: any) {
+      console.error("Error:", error);
+      if (error.errorFields) {
+        // Form validation error
+        return;
+      }
+      message.error(error.message || "Failed to save company");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -415,7 +483,7 @@ const Companies: React.FC = () => {
                 <Text strong>Organize Work</Text>
                 <br />
                 <Text type="secondary" style={{ fontSize: 12 }}>
-                  Manage tasks and tickets per company
+                  Manage tasks by company
                 </Text>
               </Card>
             </Col>
@@ -699,8 +767,13 @@ const Companies: React.FC = () => {
         title={editingCompany ? "Edit Company" : "Create Company"}
         open={isModalOpen}
         onOk={handleModalOk}
-        onCancel={() => setIsModalOpen(false)}
+        onCancel={() => {
+          setIsModalOpen(false);
+          form.resetFields();
+          setFileList([]);
+        }}
         okText={editingCompany ? "Update" : "Create"}
+        confirmLoading={submitting}
         width={600}
       >
         <Form form={form} layout="vertical" style={{ marginTop: 24 }}>
@@ -756,20 +829,22 @@ const Companies: React.FC = () => {
             name="logo"
             label="Company Logo"
             tooltip="Upload a logo image for this company (optional)"
-            valuePropName="fileList"
-            getValueFromEvent={(e) => {
-              if (Array.isArray(e)) {
-                return e;
-              }
-              return e?.fileList;
-            }}
           >
-            <Input
-              type="file"
+            <Upload
+              listType="picture-card"
+              fileList={fileList}
+              beforeUpload={() => false} // Prevent auto upload
+              onChange={({ fileList: newFileList }) => setFileList(newFileList)}
+              maxCount={1}
               accept="image/*"
-              prefix={<PictureOutlined />}
-              placeholder="Choose logo image..."
-            />
+            >
+              {fileList.length === 0 && (
+                <div>
+                  <PictureOutlined />
+                  <div style={{ marginTop: 8 }}>Upload Logo</div>
+                </div>
+              )}
+            </Upload>
           </Form.Item>
 
           {!editingCompany && (

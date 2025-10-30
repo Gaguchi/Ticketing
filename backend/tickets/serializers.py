@@ -69,10 +69,11 @@ class CompanySerializer(serializers.ModelSerializer):
     class Meta:
         model = Company
         fields = [
-            'id', 'name', 'description',
+            'id', 'name', 'description', 'logo', 
+            'primary_contact_email', 'phone',
             'admins', 'admin_ids', 'admin_count',
             'users', 'user_ids', 'user_count',
-            'ticket_count',
+            'ticket_count', 'project_count',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at']
@@ -96,6 +97,9 @@ class CompanySerializer(serializers.ModelSerializer):
         
         instance.name = validated_data.get('name', instance.name)
         instance.description = validated_data.get('description', instance.description)
+        instance.logo = validated_data.get('logo', instance.logo)
+        instance.primary_contact_email = validated_data.get('primary_contact_email', instance.primary_contact_email)
+        instance.phone = validated_data.get('phone', instance.phone)
         instance.save()
         
         if admin_ids is not None:
@@ -111,13 +115,15 @@ class CompanyListSerializer(serializers.ModelSerializer):
     ticket_count = serializers.IntegerField(read_only=True)
     admin_count = serializers.IntegerField(read_only=True)
     user_count = serializers.IntegerField(read_only=True)
+    project_count = serializers.IntegerField(read_only=True)
     admin_names = serializers.SerializerMethodField()
     
     class Meta:
         model = Company
         fields = [
-            'id', 'name', 'description',
-            'ticket_count', 'admin_count', 'user_count',
+            'id', 'name', 'description', 'logo',
+            'primary_contact_email', 'phone',
+            'ticket_count', 'admin_count', 'user_count', 'project_count',
             'admin_names', 'created_at'
         ]
     

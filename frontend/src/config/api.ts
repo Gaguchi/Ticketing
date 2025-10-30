@@ -65,6 +65,15 @@ export const API_ENDPOINTS = {
   TAG_CONTACTS_LIST: `${API_BASE_URL}/api/tickets/tag-contacts/`,
   TAG_CONTACT_DETAIL: (id: number) => `${API_BASE_URL}/api/tickets/tag-contacts/${id}/`,
   
+  // Companies
+  COMPANIES: `${API_BASE_URL}/api/tickets/companies/`,
+  COMPANY_DETAIL: (id: number) => `${API_BASE_URL}/api/tickets/companies/${id}/`,
+  COMPANY_ASSIGN_ADMIN: (id: number) => `${API_BASE_URL}/api/tickets/companies/${id}/assign_admin/`,
+  COMPANY_REMOVE_ADMIN: (id: number) => `${API_BASE_URL}/api/tickets/companies/${id}/remove_admin/`,
+  COMPANY_ASSIGN_USER: (id: number) => `${API_BASE_URL}/api/tickets/companies/${id}/assign_user/`,
+  COMPANY_REMOVE_USER: (id: number) => `${API_BASE_URL}/api/tickets/companies/${id}/remove_user/`,
+  COMPANY_TICKETS: (id: number) => `${API_BASE_URL}/api/tickets/companies/${id}/tickets/`,
+  
   // API Documentation
   API_DOCS: `${API_BASE_URL}/api/docs/`,
   API_SCHEMA: `${API_BASE_URL}/api/schema/`,
