@@ -508,7 +508,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
             
             # Define default columns
             default_columns = [
-                {'name': 'New', 'order': 1},
+                {'name': 'To Do', 'order': 1},
                 {'name': 'In Progress', 'order': 2},
                 {'name': 'Review', 'order': 3},
                 {'name': 'Done', 'order': 4},

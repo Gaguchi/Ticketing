@@ -6,6 +6,7 @@ interface AuthContextType {
   token: string | null;
   login: (token: string, user: User) => void;
   logout: () => void;
+  refreshUser: () => Promise<void>;
   isAuthenticated: boolean;
   loading: boolean;
 }
@@ -43,11 +44,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setUser(null);
   };
 
+  const refreshUser = async () => {
+    try {
+      const freshUser = await authService.getCurrentUser();
+      setUser(freshUser);
+      // Update stored user
+      localStorage.setItem("user", JSON.stringify(freshUser));
+    } catch (error) {
+      console.error("Failed to refresh user:", error);
+    }
+  };
+
   const value: AuthContextType = {
     user,
     token,
     login,
     logout,
+    refreshUser,
     isAuthenticated: !!token && !!user,
     loading,
   };

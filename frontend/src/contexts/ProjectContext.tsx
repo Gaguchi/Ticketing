@@ -40,7 +40,7 @@ interface ProjectProviderProps {
 export const ProjectProvider: React.FC<ProjectProviderProps> = ({
   children,
 }) => {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [selectedProject, setSelectedProjectState] = useState<Project | null>(
     null
   );
@@ -93,11 +93,15 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({
   };
 
   const refreshProjects = async () => {
-    // This will be implemented when we need to refresh the project list
-    // For now, it relies on the auth context updating the user
+    // Refresh user data from API to get latest projects
     setLoading(true);
-    // Trigger a refresh from auth context if needed
-    setLoading(false);
+    try {
+      await refreshUser();
+    } catch (error) {
+      console.error("Failed to refresh projects:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const value: ProjectContextType = {

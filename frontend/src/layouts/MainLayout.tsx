@@ -7,6 +7,7 @@ import {
   Typography,
   Tooltip,
   Select,
+  Button,
 } from "antd";
 import {
   MenuFoldOutlined,
@@ -26,6 +27,7 @@ import {
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useProject } from "../contexts/ProjectContext";
+import { CreateProjectModal } from "../components/CreateProjectModal";
 import type { MenuProps } from "antd";
 import "./MainLayout.css";
 
@@ -41,6 +43,8 @@ interface NavItem {
 
 const MainLayout: React.FC = () => {
   const [collapsed, setCollapsed] = useState(true);
+  const [isCreateProjectModalOpen, setIsCreateProjectModalOpen] =
+    useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { logout, user } = useAuth();
@@ -352,7 +356,26 @@ const MainLayout: React.FC = () => {
                     value: project.id,
                   }))}
                 />
+                <Button
+                  type="primary"
+                  size="small"
+                  icon={<PlusOutlined />}
+                  onClick={() => setIsCreateProjectModalOpen(true)}
+                >
+                  New Project
+                </Button>
               </Space>
+            )}
+            {/* Show Create Project button if no projects */}
+            {availableProjects.length === 0 && (
+              <Button
+                type="primary"
+                size="small"
+                icon={<PlusOutlined />}
+                onClick={() => setIsCreateProjectModalOpen(true)}
+              >
+                Create Your First Project
+              </Button>
             )}
             <Tooltip title="Notifications">
               <div
@@ -416,6 +439,15 @@ const MainLayout: React.FC = () => {
           <Outlet />
         </Content>
       </Layout>
+
+      {/* Create Project Modal */}
+      <CreateProjectModal
+        open={isCreateProjectModalOpen}
+        onClose={() => setIsCreateProjectModalOpen(false)}
+        onSuccess={() => {
+          // Modal will handle refreshing projects
+        }}
+      />
     </Layout>
   );
 };
