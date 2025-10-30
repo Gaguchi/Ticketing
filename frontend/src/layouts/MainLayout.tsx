@@ -12,6 +12,7 @@ import {
   BellOutlined,
   PlusOutlined,
   MessageOutlined,
+  UsergroupAddOutlined,
 } from "@ant-design/icons";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -69,6 +70,12 @@ const MainLayout: React.FC = () => {
       icon: <TeamOutlined />,
       label: "Companies",
       path: "/companies",
+    },
+    {
+      key: "/users",
+      icon: <UsergroupAddOutlined />,
+      label: "Users",
+      path: "/users",
     },
     {
       key: "/settings",

@@ -2,7 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import (
     Ticket, Project, Column, Comment, Attachment,
-    Tag, Contact, TagContact, UserTag, TicketTag, IssueLink, Company
+    Tag, Contact, TagContact, UserTag, TicketTag, IssueLink, Company, UserRole
 )
 
 
@@ -434,3 +434,107 @@ class IssueLinkSerializer(serializers.ModelSerializer):
     
     def get_target_ticket_key(self, obj):
         return f"{obj.target_ticket.project.key}-{obj.target_ticket.id}"
+
+
+class UserRoleSerializer(serializers.ModelSerializer):
+    """Serializer for UserRole model"""
+    project_name = serializers.CharField(source='project.name', read_only=True)
+    project_key = serializers.CharField(source='project.key', read_only=True)
+    user_email = serializers.CharField(source='user.email', read_only=True)
+    user_name = serializers.SerializerMethodField()
+    assigned_by_name = serializers.SerializerMethodField()
+    role_display = serializers.CharField(source='get_role_display', read_only=True)
+    
+    class Meta:
+        model = UserRole
+        fields = [
+            'id', 'user', 'user_email', 'user_name',
+            'project', 'project_name', 'project_key',
+            'role', 'role_display',
+            'assigned_at', 'assigned_by', 'assigned_by_name'
+        ]
+        read_only_fields = ['assigned_at', 'assigned_by']
+    
+    def get_user_name(self, obj):
+        return f"{obj.user.first_name} {obj.user.last_name}".strip() or obj.user.username
+    
+    def get_assigned_by_name(self, obj):
+        if obj.assigned_by:
+            return f"{obj.assigned_by.first_name} {obj.assigned_by.last_name}".strip() or obj.assigned_by.username
+        return None
+
+
+class UserManagementSerializer(serializers.ModelSerializer):
+    """Comprehensive user serializer for user management page"""
+    project_roles = UserRoleSerializer(many=True, read_only=True, source='project_roles')
+    administered_companies = serializers.SerializerMethodField()
+    member_companies = serializers.SerializerMethodField()
+    full_name = serializers.SerializerMethodField()
+    ticket_count = serializers.SerializerMethodField()
+    last_login_display = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = User
+        fields = [
+            'id', 'username', 'email', 'first_name', 'last_name', 'full_name',
+            'is_active', 'is_staff', 'is_superuser',
+            'date_joined', 'last_login', 'last_login_display',
+            'project_roles', 'administered_companies', 'member_companies',
+            'ticket_count'
+        ]
+        read_only_fields = ['date_joined', 'last_login']
+    
+    def get_full_name(self, obj):
+        return f"{obj.first_name} {obj.last_name}".strip() or obj.username
+    
+    def get_administered_companies(self, obj):
+        return [{'id': c.id, 'name': c.name} for c in obj.administered_companies.all()]
+    
+    def get_member_companies(self, obj):
+        return [{'id': c.id, 'name': c.name} for c in obj.member_companies.all()]
+    
+    def get_ticket_count(self, obj):
+        return obj.reported_tickets.count()
+    
+    def get_last_login_display(self, obj):
+        if obj.last_login:
+            from django.utils import timezone
+            diff = timezone.now() - obj.last_login
+            if diff.days > 30:
+                return f"{diff.days // 30} months ago"
+            elif diff.days > 0:
+                return f"{diff.days} days ago"
+            elif diff.seconds > 3600:
+                return f"{diff.seconds // 3600} hours ago"
+            else:
+                return "Recently"
+        return "Never"
+
+
+class UserCreateUpdateSerializer(serializers.ModelSerializer):
+    """Serializer for creating/updating users"""
+    password = serializers.CharField(write_only=True, required=False)
+    
+    class Meta:
+        model = User
+        fields = [
+            'id', 'username', 'email', 'first_name', 'last_name',
+            'password', 'is_active', 'is_staff', 'is_superuser'
+        ]
+    
+    def create(self, validated_data):
+        password = validated_data.pop('password', None)
+        user = User.objects.create(**validated_data)
+        if password:
+            user.set_password(password)
+            user.save()
+        return user
+    
+    def update(self, instance, validated_data):
+        password = validated_data.pop('password', None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        if password:
+            instance.set_password(password)
+        instance.save()
+        return instance

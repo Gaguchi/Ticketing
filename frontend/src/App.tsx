@@ -10,6 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import Tickets from "./pages/Tickets";
 import Chat from "./pages/Chat";
 import Companies from "./pages/Companies";
+import Users from "./pages/Users";
 import Settings from "./pages/Settings";
 
 function App() {
@@ -45,6 +46,7 @@ function App() {
               <Route path="tickets" element={<Tickets />} />
               <Route path="chat" element={<Chat />} />
               <Route path="companies" element={<Companies />} />
+              <Route path="users" element={<Users />} />
               <Route path="settings" element={<Settings />} />
             </Route>
 

@@ -74,6 +74,15 @@ export const API_ENDPOINTS = {
   COMPANY_REMOVE_USER: (id: number) => `${API_BASE_URL}/api/tickets/companies/${id}/remove_user/`,
   COMPANY_TICKETS: (id: number) => `${API_BASE_URL}/api/tickets/companies/${id}/tickets/`,
   
+  // User Management
+  USERS: `${API_BASE_URL}/api/tickets/users/`,
+  USER_DETAIL: (id: number) => `${API_BASE_URL}/api/tickets/users/${id}/`,
+  USER_ASSIGN_ROLE: (id: number) => `${API_BASE_URL}/api/tickets/users/${id}/assign_role/`,
+  USER_REMOVE_ROLE: (id: number) => `${API_BASE_URL}/api/tickets/users/${id}/remove_role/`,
+  USER_SET_PASSWORD: (id: number) => `${API_BASE_URL}/api/tickets/users/${id}/set_password/`,
+  USER_TOGGLE_ACTIVE: (id: number) => `${API_BASE_URL}/api/tickets/users/${id}/toggle_active/`,
+  USER_ROLES: (id: number) => `${API_BASE_URL}/api/tickets/users/${id}/roles/`,
+  
   // API Documentation
   API_DOCS: `${API_BASE_URL}/api/docs/`,
   API_SCHEMA: `${API_BASE_URL}/api/schema/`,

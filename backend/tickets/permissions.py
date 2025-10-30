@@ -151,6 +151,7 @@ class IsCompanyAdminOrReadOnly(permissions.BasePermission):
     """
     Permission class that allows:
     - Superusers: Full access
+    - Staff users: Can create companies and view/edit their assigned companies
     - Company admins: Full access to their companies
     - Company members: Read-only access to their companies
     """
@@ -164,13 +165,18 @@ class IsCompanyAdminOrReadOnly(permissions.BasePermission):
         if request.user.is_superuser:
             return True
         
+        # Staff users can create companies and view their companies
+        if request.user.is_staff:
+            return True
+        
         # For safe methods (GET, HEAD, OPTIONS), check if user is member
         if request.method in permissions.SAFE_METHODS:
+            # Allow viewing if user has any company
             return Company.objects.filter(
                 Q(admins=request.user) | Q(users=request.user)
             ).exists()
         
-        # For unsafe methods, check if user is admin
+        # For unsafe methods (POST, PUT, PATCH, DELETE), check if user is admin
         return Company.objects.filter(admins=request.user).exists()
     
     def has_object_permission(self, request, view, obj):

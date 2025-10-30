@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import (
     Ticket, Column, Project, Comment, Attachment,
-    Tag, Contact, TagContact, UserTag, TicketTag, Company
+    Tag, Contact, TagContact, UserTag, TicketTag, Company, UserRole
 )
 
 
@@ -203,3 +203,28 @@ class TicketTagAdmin(admin.ModelAdmin):
     search_fields = ['ticket__name', 'tag__name']
     autocomplete_fields = ['ticket', 'tag', 'added_by']
     readonly_fields = ['added_at']
+
+
+@admin.register(UserRole)
+class UserRoleAdmin(admin.ModelAdmin):
+    list_display = ['user', 'project', 'role', 'assigned_at', 'assigned_by']
+    list_filter = ['role', 'project', 'assigned_at']
+    search_fields = ['user__username', 'user__email', 'user__first_name', 'user__last_name', 'project__name', 'project__key']
+    autocomplete_fields = ['user', 'project', 'assigned_by']
+    readonly_fields = ['assigned_at']
+    ordering = ['-assigned_at']
+    
+    fieldsets = (
+        ('Role Assignment', {
+            'fields': ('user', 'project', 'role')
+        }),
+        ('Assignment Details', {
+            'fields': ('assigned_by', 'assigned_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.select_related('user', 'project', 'assigned_by')
+

@@ -13,14 +13,15 @@ from .permissions import (
 )
 from .models import (
     Ticket, Column, Project, Comment, Attachment,
-    Tag, Contact, TagContact, UserTag, TicketTag, IssueLink, Company
+    Tag, Contact, TagContact, UserTag, TicketTag, IssueLink, Company, UserRole
 )
 from .serializers import (
     TicketSerializer, TicketListSerializer, ColumnSerializer,
     ProjectSerializer, CommentSerializer, AttachmentSerializer,
     TagSerializer, TagListSerializer, ContactSerializer,
     TagContactSerializer, UserTagSerializer, TicketTagSerializer,
-    IssueLinkSerializer, CompanySerializer, CompanyListSerializer
+    IssueLinkSerializer, CompanySerializer, CompanyListSerializer,
+    UserManagementSerializer, UserCreateUpdateSerializer, UserRoleSerializer
 )
 
 
@@ -313,6 +314,172 @@ class CompanyViewSet(viewsets.ModelViewSet):
         company = self.get_object()
         tickets = company.tickets.all()
         serializer = TicketListSerializer(tickets, many=True)
+        return Response(serializer.data)
+
+
+class UserManagementViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for User Management (Superadmin only).
+    Provides comprehensive user CRUD with role assignment capabilities.
+    """
+    queryset = User.objects.all().select_related().prefetch_related(
+        'project_roles__project',
+        'administered_companies',
+        'member_companies',
+        'reported_tickets'
+    )
+    permission_classes = [IsAuthenticated]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['username', 'email', 'first_name', 'last_name']
+    ordering_fields = ['username', 'email', 'date_joined', 'last_login']
+    ordering = ['-date_joined']
+    
+    def get_permissions(self):
+        """Only superusers and staff can manage users"""
+        if self.action in ['create', 'update', 'partial_update', 'destroy', 'assign_role', 'remove_role', 'set_password']:
+            return [IsAuthenticated(), IsSuperuserOrCompanyAdmin()]
+        return [IsAuthenticated()]
+    
+    def get_serializer_class(self):
+        if self.action in ['create', 'update', 'partial_update']:
+            return UserCreateUpdateSerializer
+        return UserManagementSerializer
+    
+    def get_queryset(self):
+        """Filter users based on permissions"""
+        user = self.request.user
+        
+        # Superusers see all users
+        if user.is_superuser:
+            return self.queryset
+        
+        # Staff users see all users (read-only for non-superusers)
+        if user.is_staff:
+            return self.queryset
+        
+        # Regular users only see themselves
+        return User.objects.filter(id=user.id)
+    
+    @action(detail=True, methods=['post'])
+    def assign_role(self, request, pk=None):
+        """
+        Assign a project role to a user.
+        Body: {"project_id": 1, "role": "admin"}
+        """
+        user = self.get_object()
+        project_id = request.data.get('project_id')
+        role = request.data.get('role')
+        
+        if not project_id or not role:
+            return Response(
+                {'error': 'project_id and role are required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if role not in ['superadmin', 'admin', 'user', 'manager']:
+            return Response(
+                {'error': 'Invalid role. Must be: superadmin, admin, user, or manager'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            project = Project.objects.get(id=project_id)
+        except Project.DoesNotExist:
+            return Response(
+                {'error': 'Project not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Create or update role
+        user_role, created = UserRole.objects.update_or_create(
+            user=user,
+            project=project,
+            defaults={
+                'role': role,
+                'assigned_by': request.user
+            }
+        )
+        
+        serializer = UserRoleSerializer(user_role)
+        return Response({
+            'message': f'{user.username} assigned as {role} in {project.name}',
+            'user_role': serializer.data,
+            'created': created
+        }, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+    
+    @action(detail=True, methods=['post'])
+    def remove_role(self, request, pk=None):
+        """
+        Remove a project role from a user.
+        Body: {"project_id": 1}
+        """
+        user = self.get_object()
+        project_id = request.data.get('project_id')
+        
+        if not project_id:
+            return Response(
+                {'error': 'project_id is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            user_role = UserRole.objects.get(user=user, project_id=project_id)
+            user_role.delete()
+            return Response({
+                'message': f'Role removed for {user.username}',
+            }, status=status.HTTP_200_OK)
+        except UserRole.DoesNotExist:
+            return Response(
+                {'error': 'User role not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+    
+    @action(detail=True, methods=['post'])
+    def set_password(self, request, pk=None):
+        """
+        Set/reset password for a user (superadmin only).
+        Body: {"password": "newpassword"}
+        """
+        if not request.user.is_superuser:
+            return Response(
+                {'error': 'Only superusers can set passwords'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        user = self.get_object()
+        password = request.data.get('password')
+        
+        if not password:
+            return Response(
+                {'error': 'password is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        user.set_password(password)
+        user.save()
+        
+        return Response({
+            'message': f'Password updated for {user.username}',
+        }, status=status.HTTP_200_OK)
+    
+    @action(detail=True, methods=['post'])
+    def toggle_active(self, request, pk=None):
+        """Toggle user active status (soft delete)"""
+        user = self.get_object()
+        user.is_active = not user.is_active
+        user.save()
+        
+        return Response({
+            'message': f'User {"activated" if user.is_active else "deactivated"}',
+            'is_active': user.is_active
+        }, status=status.HTTP_200_OK)
+    
+    @action(detail=True, methods=['get'])
+    def roles(self, request, pk=None):
+        """Get all project roles for a user"""
+        user = self.get_object()
+        roles = user.project_roles.all()
+        serializer = UserRoleSerializer(roles, many=True)
         return Response(serializer.data)
 
 

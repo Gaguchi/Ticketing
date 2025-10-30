@@ -2,6 +2,53 @@ from django.db import models
 from django.contrib.auth.models import User
 
 
+class UserRole(models.Model):
+    """
+    Project-specific user roles for granular permission control.
+    Each user can have different roles in different projects.
+    
+    Roles:
+    - superadmin: Project owner with full control (project-specific, doesn't transfer)
+    - admin: IT staff who can manage tickets, assign work, view all tickets
+    - user: Regular member who can create/edit own tickets, see company tickets
+    - manager: Read-only oversight role with access to all KPIs and reports
+    """
+    ROLE_CHOICES = [
+        ('superadmin', 'Superadmin'),
+        ('admin', 'Admin'),
+        ('user', 'User'),
+        ('manager', 'Manager'),
+    ]
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='project_roles')
+    project = models.ForeignKey('Project', on_delete=models.CASCADE, related_name='user_roles')
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='user')
+    assigned_at = models.DateTimeField(auto_now_add=True)
+    assigned_by = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='assigned_roles',
+        help_text='User who assigned this role'
+    )
+    
+    class Meta:
+        unique_together = ['user', 'project']
+        ordering = ['project', 'role', 'user']
+        verbose_name = 'User Role'
+        verbose_name_plural = 'User Roles'
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.get_role_display()} in {self.project.name}"
+    
+    def save(self, *args, **kwargs):
+        """Ensure user is also added to project members"""
+        super().save(*args, **kwargs)
+        if self.user not in self.project.members.all():
+            self.project.members.add(self.user)
+
+
 class Company(models.Model):
     """
     Company model representing client companies serviced by the IT business.
