@@ -4,6 +4,7 @@ import { UserOutlined, LockOutlined, MailOutlined } from "@ant-design/icons";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { authService } from "../services/auth.service";
+import { Turnstile } from "../components/Turnstile";
 import "./Login.css";
 
 const { Title, Text } = Typography;
@@ -20,11 +21,18 @@ interface RegisterFormValues {
 const Register: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const navigate = useNavigate();
   const { login } = useAuth();
   const [form] = Form.useForm();
+  const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY;
 
   const onFinish = async (values: RegisterFormValues) => {
+    if (turnstileSiteKey && !captchaToken) {
+      setError("Please complete the CAPTCHA verification");
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -36,6 +44,7 @@ const Register: React.FC = () => {
         last_name: values.lastName,
         password: values.password,
         password_confirm: values.confirmPassword,
+        ...(captchaToken && { captcha_token: captchaToken }),
       });
 
       // Update auth context
@@ -59,6 +68,7 @@ const Register: React.FC = () => {
       }
     } catch (err: any) {
       setError(err?.message || "An error occurred during registration");
+      setCaptchaToken(null); // Reset captcha on error
     } finally {
       setLoading(false);
     }
@@ -181,6 +191,19 @@ const Register: React.FC = () => {
                   autoComplete="new-password"
                 />
               </Form.Item>
+
+              {/* Cloudflare Turnstile CAPTCHA */}
+              {turnstileSiteKey && (
+                <Form.Item style={{ marginBottom: 16 }}>
+                  <Turnstile
+                    siteKey={turnstileSiteKey}
+                    onSuccess={(token) => setCaptchaToken(token)}
+                    onError={() => setCaptchaToken(null)}
+                    onExpire={() => setCaptchaToken(null)}
+                    theme="light"
+                  />
+                </Form.Item>
+              )}
 
               <Form.Item>
                 <Button

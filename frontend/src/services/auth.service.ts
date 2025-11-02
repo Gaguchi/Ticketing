@@ -22,30 +22,46 @@ class AuthService {
    * Login user
    */
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    const response = await apiService.post<AuthResponse>(
+    const response = await apiService.post<any>(
       API_ENDPOINTS.AUTH_LOGIN,
       credentials
     );
     
-    this.setTokens(response.tokens.access, response.tokens.refresh);
+    // Handle both response formats: {tokens: {access, refresh}} or {access, refresh}
+    const access = response.tokens?.access || response.access;
+    const refresh = response.tokens?.refresh || response.refresh;
+    
+    this.setTokens(access, refresh);
     this.setUser(response.user);
     
-    return response;
+    // Return normalized format
+    return {
+      user: response.user,
+      tokens: { access, refresh }
+    };
   }
 
   /**
    * Register new user
    */
   async register(data: RegisterData): Promise<AuthResponse> {
-    const response = await apiService.post<AuthResponse>(
+    const response = await apiService.post<any>(
       API_ENDPOINTS.AUTH_REGISTER,
       data
     );
     
-    this.setTokens(response.tokens.access, response.tokens.refresh);
+    // Handle both response formats: {tokens: {access, refresh}} or {access, refresh}
+    const access = response.tokens?.access || response.access;
+    const refresh = response.tokens?.refresh || response.refresh;
+    
+    this.setTokens(access, refresh);
     this.setUser(response.user);
     
-    return response;
+    // Return normalized format
+    return {
+      user: response.user,
+      tokens: { access, refresh }
+    };
   }
 
   /**
