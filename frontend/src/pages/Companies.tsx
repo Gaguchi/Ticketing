@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Card,
   Table,
@@ -15,8 +15,6 @@ import {
   Avatar,
   Row,
   Col,
-  Statistic,
-  Divider,
   Spin,
   message,
   Upload,
@@ -32,7 +30,6 @@ import {
   DeleteOutlined,
   MoreOutlined,
   BuildOutlined,
-  FileTextOutlined,
   AppstoreOutlined,
   UnorderedListOutlined,
   MailOutlined,
@@ -43,8 +40,9 @@ import type { ColumnsType } from "antd/es/table";
 import type { MenuProps } from "antd";
 import { API_ENDPOINTS } from "../config/api";
 import apiService from "../services/api.service";
+import { debug, LogLevel, LogCategory } from "../utils/debug";
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 const { Search } = Input;
 
 interface Company {
@@ -83,21 +81,59 @@ const Companies: React.FC = () => {
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [form] = Form.useForm();
 
+  // Prevent duplicate initialization in React Strict Mode
+  const initRef = useRef(false);
+  const fetchInProgressRef = useRef(false);
+
   useEffect(() => {
+    // Skip if already initialized (React Strict Mode protection)
+    if (initRef.current) {
+      debug.log(
+        LogCategory.COMPANY,
+        LogLevel.INFO,
+        "Already initialized, skipping"
+      );
+      return;
+    }
+
+    initRef.current = true;
+    debug.log(LogCategory.COMPANY, LogLevel.INFO, "Initializing...");
     fetchCompanies();
   }, []);
 
   const fetchCompanies = async () => {
+    // Prevent concurrent identical requests
+    if (fetchInProgressRef.current) {
+      debug.log(
+        LogCategory.COMPANY,
+        LogLevel.INFO,
+        "Fetch already in progress, skipping"
+      );
+      return;
+    }
+
+    fetchInProgressRef.current = true;
     setLoading(true);
+
     try {
+      debug.log(LogCategory.COMPANY, LogLevel.INFO, "Fetching companies...");
       const response = await apiService.get<any>(API_ENDPOINTS.COMPANIES);
       // API returns paginated response: {count, next, previous, results}
       const companiesData = response.results || response;
       setCompanies(Array.isArray(companiesData) ? companiesData : []);
+      debug.log(
+        LogCategory.COMPANY,
+        LogLevel.INFO,
+        `Loaded ${
+          Array.isArray(companiesData) ? companiesData.length : 0
+        } companies`
+      );
       setLoading(false);
     } catch (error: any) {
       message.error(error.message || "Failed to load companies");
       setLoading(false);
+    } finally {
+      fetchInProgressRef.current = false;
     }
   };
 
@@ -313,7 +349,7 @@ const Companies: React.FC = () => {
       width: 120,
       render: (count: number) => (
         <Space>
-          <FileTextOutlined style={{ color: "#722ed1" }} />
+          <BuildOutlined style={{ color: "#9E9E9E" }} />
           <Text>{count}</Text>
         </Space>
       ),
@@ -349,148 +385,31 @@ const Companies: React.FC = () => {
   );
 
   // ============================================
-  // Empty State with Quick Setup Guide
+  // Empty State (Simplified - Design Bible v1.0)
   // ============================================
   const EmptyState = () => (
-    <div style={{ padding: 24, maxWidth: 800, margin: "0 auto" }}>
-      <Card
-        style={{
-          marginTop: 60,
-          borderRadius: 12,
-          border: "2px dashed #d9d9d9",
-        }}
+    <div
+      style={{
+        padding: 24,
+        minHeight: "60vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <Empty
+        image={<BuildOutlined style={{ fontSize: 64, color: "#9E9E9E" }} />}
+        description="No companies yet"
       >
-        <Empty
-          image={
-            <BuildOutlined
-              style={{ fontSize: 100, color: "#d9d9d9", marginBottom: 16 }}
-            />
-          }
-          description={
-            <div>
-              <Title level={3}>No Companies Yet</Title>
-              <Paragraph
-                style={{ color: "#8c8c8c", maxWidth: 500, margin: "0 auto" }}
-              >
-                Start managing your IT services for multiple clients by creating
-                your first company. Companies help you organize projects,
-                tickets, and team members by client.
-              </Paragraph>
-            </div>
-          }
+        <Button
+          type="primary"
+          size="large"
+          icon={<PlusOutlined />}
+          onClick={handleCreateCompany}
         >
-          <Space size="middle">
-            <Button
-              type="primary"
-              size="large"
-              icon={<PlusOutlined />}
-              onClick={handleCreateCompany}
-            >
-              Create Company
-            </Button>
-            <Button size="large" icon={<FileTextOutlined />}>
-              View Guide
-            </Button>
-          </Space>
-        </Empty>
-
-        <Divider />
-
-        <div style={{ marginTop: 32 }}>
-          <Title level={5} style={{ marginBottom: 16 }}>
-            Quick Setup Guide:
-          </Title>
-          <Row gutter={[24, 24]}>
-            <Col span={8}>
-              <Card
-                size="small"
-                bordered={false}
-                style={{ background: "#fafafa" }}
-              >
-                <div
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: "50%",
-                    background: "#1890ff",
-                    color: "white",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    marginBottom: 12,
-                    fontWeight: "bold",
-                  }}
-                >
-                  1
-                </div>
-                <Text strong>Create Company</Text>
-                <br />
-                <Text type="secondary" style={{ fontSize: 12 }}>
-                  Add your client organization
-                </Text>
-              </Card>
-            </Col>
-            <Col span={8}>
-              <Card
-                size="small"
-                bordered={false}
-                style={{ background: "#fafafa" }}
-              >
-                <div
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: "50%",
-                    background: "#52c41a",
-                    color: "white",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    marginBottom: 12,
-                    fontWeight: "bold",
-                  }}
-                >
-                  2
-                </div>
-                <Text strong>Add Users</Text>
-                <br />
-                <Text type="secondary" style={{ fontSize: 12 }}>
-                  Invite admins and client users
-                </Text>
-              </Card>
-            </Col>
-            <Col span={8}>
-              <Card
-                size="small"
-                bordered={false}
-                style={{ background: "#fafafa" }}
-              >
-                <div
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: "50%",
-                    background: "#722ed1",
-                    color: "white",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    marginBottom: 12,
-                    fontWeight: "bold",
-                  }}
-                >
-                  3
-                </div>
-                <Text strong>Organize Work</Text>
-                <br />
-                <Text type="secondary" style={{ fontSize: 12 }}>
-                  Manage tasks by company
-                </Text>
-              </Card>
-            </Col>
-          </Row>
-        </div>
-      </Card>
+          Create Company
+        </Button>
+      </Empty>
     </div>
   );
 
@@ -516,7 +435,7 @@ const Companies: React.FC = () => {
           </Text>
         </div>
         <Space>
-          <Button.Group>
+          <Space.Compact>
             <Button
               icon={<UnorderedListOutlined />}
               type={viewMode === "list" ? "primary" : "default"}
@@ -527,7 +446,7 @@ const Companies: React.FC = () => {
               type={viewMode === "grid" ? "primary" : "default"}
               onClick={() => setViewMode("grid")}
             />
-          </Button.Group>
+          </Space.Compact>
           <Button
             type="primary"
             icon={<PlusOutlined />}
@@ -537,50 +456,6 @@ const Companies: React.FC = () => {
           </Button>
         </Space>
       </div>
-
-      {/* Stats Cards */}
-      <Row gutter={16} style={{ marginBottom: 24 }}>
-        <Col span={6}>
-          <Card size="small">
-            <Statistic
-              title="Total Companies"
-              value={companies.length}
-              prefix={<BuildOutlined />}
-              valueStyle={{ color: "#1890ff" }}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card size="small">
-            <Statistic
-              title="Total Admins"
-              value={companies.reduce((sum, c) => sum + c.admin_count, 0)}
-              prefix={<UserOutlined />}
-              valueStyle={{ color: "#52c41a" }}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card size="small">
-            <Statistic
-              title="Total Users"
-              value={companies.reduce((sum, c) => sum + c.user_count, 0)}
-              prefix={<TeamOutlined />}
-              valueStyle={{ color: "#722ed1" }}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card size="small">
-            <Statistic
-              title="Active Tickets"
-              value={companies.reduce((sum, c) => sum + c.ticket_count, 0)}
-              prefix={<FileTextOutlined />}
-              valueStyle={{ color: "#fa8c16" }}
-            />
-          </Card>
-        </Col>
-      </Row>
 
       {/* Search */}
       <Card style={{ marginBottom: 16 }}>
@@ -639,7 +514,7 @@ const Companies: React.FC = () => {
             onChange={(e) => setSearchText(e.target.value)}
             style={{ width: 250 }}
           />
-          <Button.Group>
+          <Space.Compact>
             <Button
               icon={<UnorderedListOutlined />}
               type={viewMode === "list" ? "primary" : "default"}
@@ -650,7 +525,7 @@ const Companies: React.FC = () => {
               type={viewMode === "grid" ? "primary" : "default"}
               onClick={() => setViewMode("grid")}
             />
-          </Button.Group>
+          </Space.Compact>
           <Button
             type="primary"
             icon={<PlusOutlined />}
@@ -685,11 +560,11 @@ const Companies: React.FC = () => {
               <div style={{ textAlign: "center", marginBottom: 16 }}>
                 <Avatar
                   size={64}
-                  style={{ background: "#1890ff" }}
+                  style={{ background: "#2C3E50" }}
                   icon={<BuildOutlined />}
                 />
               </div>
-              <div style={{ textAlign: "center", marginBottom: 16 }}>
+              <div style={{ textAlign: "center", marginBottom: 12 }}>
                 <Title level={5} style={{ marginBottom: 4 }}>
                   {company.name}
                 </Title>
@@ -697,37 +572,30 @@ const Companies: React.FC = () => {
                   {company.description}
                 </Text>
               </div>
-              <Divider style={{ margin: "12px 0" }} />
-              <Row gutter={[8, 8]}>
-                <Col span={12}>
-                  <Statistic
-                    title="Tickets"
-                    value={company.ticket_count}
-                    valueStyle={{ fontSize: 16 }}
-                  />
-                </Col>
-                <Col span={12}>
-                  <Statistic
-                    title="Projects"
-                    value={company.project_count}
-                    valueStyle={{ fontSize: 16 }}
-                  />
-                </Col>
-                <Col span={12}>
-                  <Statistic
-                    title="Admins"
-                    value={company.admin_count}
-                    valueStyle={{ fontSize: 16 }}
-                  />
-                </Col>
-                <Col span={12}>
-                  <Statistic
-                    title="Users"
-                    value={company.user_count}
-                    valueStyle={{ fontSize: 16 }}
-                  />
-                </Col>
-              </Row>
+              <Space direction="vertical" size={4} style={{ width: "100%" }}>
+                <Space>
+                  <TeamOutlined style={{ color: "#9E9E9E" }} />
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    {company.admin_count} admins, {company.user_count} users
+                  </Text>
+                </Space>
+                {company.project_count > 0 && (
+                  <Space>
+                    <BuildOutlined style={{ color: "#9E9E9E" }} />
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      {company.project_count} projects
+                    </Text>
+                  </Space>
+                )}
+                {company.ticket_count > 0 && (
+                  <Space>
+                    <MailOutlined style={{ color: "#9E9E9E" }} />
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      {company.ticket_count} tickets
+                    </Text>
+                  </Space>
+                )}
+              </Space>
             </Card>
           </Col>
         ))}

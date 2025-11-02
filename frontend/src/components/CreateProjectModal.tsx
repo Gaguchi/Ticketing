@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { Modal, Form, Input, message } from "antd";
 import { projectService, type CreateProjectData } from "../services";
-import { useAuth } from "../contexts/AuthContext";
-import { useProject } from "../contexts/ProjectContext";
+import { useAuth } from "../contexts/AppContext";
+import { useProject } from "../contexts/AppContext";
 
 const { TextArea } = Input;
 
@@ -73,7 +73,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
       okText="Create Project"
       confirmLoading={saving}
       width={600}
-      destroyOnClose
+      destroyOnHidden
     >
       <Form
         form={form}

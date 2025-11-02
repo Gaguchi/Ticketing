@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Card,
   Table,
@@ -39,6 +39,7 @@ import type { ColumnsType } from "antd/es/table";
 import type { MenuProps } from "antd";
 import { API_ENDPOINTS } from "../config/api";
 import apiService from "../services/api.service";
+import { debug, LogLevel, LogCategory } from "../utils/debug";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -99,31 +100,87 @@ const Users: React.FC = () => {
   const [roleForm] = Form.useForm();
   const [passwordForm] = Form.useForm();
 
+  // Prevent duplicate initialization in React Strict Mode
+  const initRef = useRef(false);
+  const fetchUsersInProgressRef = useRef(false);
+  const fetchProjectsInProgressRef = useRef(false);
+
   useEffect(() => {
+    // Skip if already initialized (React Strict Mode protection)
+    if (initRef.current) {
+      debug.log(
+        LogCategory.USER,
+        LogLevel.INFO,
+        "Already initialized, skipping"
+      );
+      return;
+    }
+
+    initRef.current = true;
+    debug.log(LogCategory.USER, LogLevel.INFO, "Initializing...");
     fetchUsers();
     fetchProjects();
   }, []);
 
   const fetchUsers = async () => {
+    // Prevent concurrent identical requests
+    if (fetchUsersInProgressRef.current) {
+      debug.log(
+        LogCategory.USER,
+        LogLevel.INFO,
+        "Fetch users already in progress, skipping"
+      );
+      return;
+    }
+
+    fetchUsersInProgressRef.current = true;
     setLoading(true);
+
     try {
+      debug.log(LogCategory.USER, LogLevel.INFO, "Fetching users...");
       const response = await apiService.get<any>(API_ENDPOINTS.USERS);
       // API returns paginated response: {count, next, previous, results}
       const usersData = response.results || response;
       setUsers(Array.isArray(usersData) ? usersData : []);
+      debug.log(
+        LogCategory.USER,
+        LogLevel.INFO,
+        `Loaded ${Array.isArray(usersData) ? usersData.length : 0} users`
+      );
     } catch (error: any) {
       message.error(error.message || "Failed to load users");
     } finally {
       setLoading(false);
+      fetchUsersInProgressRef.current = false;
     }
   };
 
   const fetchProjects = async () => {
+    // Prevent concurrent identical requests
+    if (fetchProjectsInProgressRef.current) {
+      debug.log(
+        LogCategory.PROJECT,
+        LogLevel.INFO,
+        "Fetch projects already in progress, skipping"
+      );
+      return;
+    }
+
+    fetchProjectsInProgressRef.current = true;
+
     try {
+      debug.log(LogCategory.PROJECT, LogLevel.INFO, "Fetching projects...");
       const response = await apiService.get<any>(API_ENDPOINTS.PROJECTS);
       setProjects(response.results || response);
+      debug.log(
+        LogCategory.PROJECT,
+        LogLevel.INFO,
+        `Loaded ${(response.results || response).length} projects`
+      );
     } catch (error: any) {
       console.error("Failed to load projects:", error);
+    } finally {
+      fetchProjectsInProgressRef.current = false;
     }
   };
 

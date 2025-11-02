@@ -20,8 +20,13 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import dayjs from "dayjs";
 import { getPriorityIcon } from "./PriorityIcons";
-import { useProject } from "../contexts/ProjectContext";
-import { ticketService, projectService, tagService } from "../services";
+import { useProject } from "../contexts/AppContext";
+import {
+  ticketService,
+  projectService,
+  tagService,
+  companyService,
+} from "../services";
 import type { Ticket, CreateTicketData } from "../types/api";
 
 const { TextArea } = Input;
@@ -66,87 +71,123 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
   const [projectTags, setProjectTags] = useState<any[]>([]);
   const [projectColumns, setProjectColumns] = useState<any[]>([]);
   const [currentProjectId, setCurrentProjectId] = useState<number | null>(null);
+  const [companies, setCompanies] = useState<any[]>([]);
 
   // Watch for project field changes
   const watchedProject = Form.useWatch("project", form);
 
   // Load project columns when modal opens or project changes
   useEffect(() => {
-    if (open) {
+    if (open && selectedProject) {
       // Set initial project when modal opens
-      if (selectedProject && !currentProjectId) {
-        form.setFieldValue("project", selectedProject.id);
-        setCurrentProjectId(selectedProject.id);
-      }
+      form.setFieldValue("project", selectedProject.id);
     }
-  }, [open, selectedProject, currentProjectId, form]);
+  }, [open, selectedProject, form]);
+
+  // Fetch companies when modal opens
+  useEffect(() => {
+    if (open) {
+      companyService
+        .getAllCompanies()
+        .then((companiesData) => {
+          setCompanies(companiesData);
+          console.log("Fetched companies:", companiesData.length);
+        })
+        .catch((error) => {
+          console.error("❌ Failed to load companies:", error);
+          setCompanies([]);
+        });
+    }
+  }, [open]);
 
   // Load project data when project selection changes
   useEffect(() => {
-    if (open && watchedProject && watchedProject !== currentProjectId) {
-      setCurrentProjectId(watchedProject);
-      const project = availableProjects.find((p) => p.id === watchedProject);
-
-      console.group("🔧 CreateTicketModal - Loading project data");
-      console.log("Loading data for project ID:", watchedProject);
-      console.log("Project:", project);
-
-      // Fetch project columns
-      projectService
-        .getProjectColumns(watchedProject)
-        .then((columns) => {
-          console.log("Fetched columns:", columns);
-          setProjectColumns(columns);
-          if (columns.length > 0) {
-            const targetColumn =
-              columns.find((col: any) => col.id === columnId) || columns[0];
-            console.log("Selected column:", targetColumn);
-            setActualColumnId(targetColumn.id);
-            form.setFieldValue("column", targetColumn.id);
-          } else {
-            console.warn("⚠️ No columns found in project");
-            message.warning(
-              "This project has no columns. Please set up columns for this project first."
-            );
-          }
-          console.groupEnd();
-        })
-        .catch((error) => {
-          console.error("❌ Failed to load project columns:", error);
-          console.groupEnd();
-          message.error("Failed to load project columns");
-        });
-
-      // Fetch open tickets for parent selection
-      ticketService
-        .getTickets({ project: watchedProject })
-        .then((response) => {
-          const allTickets = response.results || [];
-          const projectTickets = allTickets.filter(
-            (t: any) => t.status !== "done"
-          );
-          setOpenTickets(projectTickets);
-          console.log("Fetched open tickets:", projectTickets.length);
-        })
-        .catch((error) => {
-          console.error("❌ Failed to load open tickets:", error);
-        });
-
-      // Fetch project tags
-      tagService
-        .getTags(watchedProject)
-        .then((response: any) => {
-          const tags = Array.isArray(response)
-            ? response
-            : response.results || [];
-          setProjectTags(tags);
-          console.log("Fetched project tags:", tags.length);
-        })
-        .catch((error) => {
-          console.error("❌ Failed to load project tags:", error);
-          setProjectTags([]);
-        });
+    if (!open || !watchedProject) {
+      // Reset state when closed or no project
+      if (!open) {
+        setProjectColumns([]);
+        setActualColumnId(null);
+        setOpenTickets([]);
+        setProjectTags([]);
+        setCurrentProjectId(null);
+      }
+      return;
     }
+
+    // Only fetch if project actually changed
+    if (watchedProject === currentProjectId) return;
+
+    setCurrentProjectId(watchedProject);
+    const project = availableProjects.find((p) => p.id === watchedProject);
+
+    console.group("🔧 CreateTicketModal - Loading project data");
+    console.log("Loading data for project ID:", watchedProject);
+    console.log("Project key:", project?.key, "name:", project?.name);
+
+    // Fetch project columns
+    projectService
+      .getProjectColumns(watchedProject)
+      .then((columns) => {
+        console.log("Fetched columns:", columns.length);
+        setProjectColumns(columns);
+        if (columns.length > 0) {
+          const targetColumn =
+            columns.find((col: any) => col.id === columnId) || columns[0];
+          console.log(
+            "Selected column ID:",
+            targetColumn.id,
+            "Name:",
+            targetColumn.name
+          );
+          setActualColumnId(targetColumn.id);
+          form.setFieldValue("column", targetColumn.id);
+        } else {
+          console.warn("⚠️ No columns found in project");
+          setActualColumnId(null);
+          message.warning(
+            "This project has no columns. Please set up columns for this project first."
+          );
+        }
+        console.groupEnd();
+      })
+      .catch((error) => {
+        console.error("❌ Failed to load project columns:", error);
+        console.groupEnd();
+        message.error("Failed to load project columns");
+        setProjectColumns([]);
+        setActualColumnId(null);
+      });
+
+    // Fetch open tickets for parent selection
+    ticketService
+      .getTickets({ project: watchedProject })
+      .then((response) => {
+        const allTickets = response.results || [];
+        const projectTickets = allTickets.filter(
+          (t: any) => t.status !== "done"
+        );
+        setOpenTickets(projectTickets);
+        console.log("Fetched open tickets:", projectTickets.length);
+      })
+      .catch((error) => {
+        console.error("❌ Failed to load open tickets:", error);
+        setOpenTickets([]);
+      });
+
+    // Fetch project tags
+    tagService
+      .getTags(watchedProject)
+      .then((response: any) => {
+        const tags = Array.isArray(response)
+          ? response
+          : response.results || [];
+        setProjectTags(tags);
+        console.log("Fetched project tags:", tags.length);
+      })
+      .catch((error) => {
+        console.error("❌ Failed to load project tags:", error);
+        setProjectTags([]);
+      });
   }, [
     watchedProject,
     open,
@@ -159,7 +200,12 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
   const handleSubmit = async (values: any) => {
     console.group("🎫 CreateTicketModal - handleSubmit");
     console.log("Form values:", JSON.stringify(values, null, 2));
-    console.log("Selected project:", selectedProject);
+    console.log(
+      "Selected project ID:",
+      selectedProject?.id,
+      "key:",
+      selectedProject?.key
+    );
     console.log("Actual column ID:", actualColumnId);
     console.log("Passed column ID:", columnId);
 
@@ -225,10 +271,11 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
         description: values.description || "",
         type: values.type,
         priority_id: values.priority || 3,
-        urgency: values.urgency || "medium",
-        importance: values.importance || "medium",
+        urgency: values.urgency || "normal",
+        importance: values.importance || "normal",
         column: values.column || actualColumnId, // Use selected column from form or the actual column ID
         project: selectedProject.id, // Use selected project from context
+        company: values.company || undefined,
         assignee_ids: values.assignee ? [values.assignee] : undefined,
         parent: values.parent || undefined,
         tags: tagIds.length > 0 ? tagIds : undefined,
@@ -303,46 +350,53 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
     <Modal
       open={open}
       onCancel={handleClose}
-      width={680}
+      width={600}
       footer={null}
       closeIcon={null}
-      style={{ top: 20 }}
+      style={{ top: 20, borderRadius: 8 }}
       styles={{
         body: {
           padding: 0,
           maxHeight: "calc(100vh - 80px)",
           overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+        },
+        content: {
+          borderRadius: 8,
+          padding: 0,
         },
       }}
     >
       <div
         style={{
-          maxHeight: "calc(100vh - 80px)",
-          overflow: "auto",
           display: "flex",
           flexDirection: "column",
+          maxHeight: "calc(100vh - 80px)",
         }}
       >
         {/* Header */}
         <div
           style={{
-            padding: "12px 20px",
-            borderBottom: "1px solid #dfe1e6",
+            padding: "12px 16px",
+            borderBottom: "1px solid #f0f0f0",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            backgroundColor: "#fff",
+            backgroundColor: "#fafafa",
             position: "sticky",
             top: 0,
             zIndex: 10,
+            borderTopLeftRadius: 8,
+            borderTopRightRadius: 8,
           }}
         >
           <h1
             style={{
               margin: 0,
-              fontSize: "16px",
-              fontWeight: 500,
-              color: "#172b4d",
+              fontSize: "15px",
+              fontWeight: 600,
+              color: "#262626",
               display: "flex",
               alignItems: "center",
               gap: "8px",
@@ -350,19 +404,24 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
           >
             Create {ticketType.charAt(0).toUpperCase() + ticketType.slice(1)}
           </h1>
-          <div style={{ display: "flex", gap: "4px" }}>
-            <Button
-              type="text"
-              size="small"
-              icon={<CloseOutlined />}
-              onClick={handleClose}
-              style={{ color: "#5e6c84" }}
-            />
-          </div>
+          <Button
+            type="text"
+            size="small"
+            icon={<CloseOutlined />}
+            onClick={handleClose}
+            style={{ color: "#8c8c8c" }}
+          />
         </div>
 
         {/* Form Content */}
-        <div style={{ padding: "16px 20px", flex: 1 }}>
+        <div
+          style={{
+            padding: "16px",
+            flex: 1,
+            overflowY: "auto",
+            overflowX: "hidden",
+          }}
+        >
           <Form
             form={form}
             layout="vertical"
@@ -371,8 +430,9 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               type: "task",
               status: "new", // Use lowercase status
               priority: 3,
+              reporter: 1,
             }}
-            size="middle"
+            size="small"
           >
             {/* Project */}
             <Form.Item
@@ -380,7 +440,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               name="project"
               required
               rules={[{ required: true, message: "Project is required" }]}
-              style={{ marginBottom: "12px" }}
+              style={{ marginBottom: "10px" }}
             >
               <Select
                 placeholder="Select project"
@@ -432,7 +492,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               name="type"
               required
               rules={[{ required: true, message: "Work type is required" }]}
-              style={{ marginBottom: "12px" }}
+              style={{ marginBottom: "10px" }}
             >
               <Select
                 placeholder="Select type"
@@ -517,7 +577,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
             <Form.Item
               label="Column"
               name="column"
-              style={{ marginBottom: "12px" }}
+              style={{ marginBottom: "10px" }}
             >
               <Select placeholder="Select column">
                 {projectColumns.map((col) => (
@@ -534,7 +594,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               name="summary"
               required
               rules={[{ required: true, message: "Summary is required" }]}
-              style={{ marginBottom: "12px" }}
+              style={{ marginBottom: "10px" }}
             >
               <Input placeholder="Enter a summary" />
             </Form.Item>
@@ -543,7 +603,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
             <Form.Item
               label="Description"
               name="description"
-              style={{ marginBottom: "12px" }}
+              style={{ marginBottom: "10px" }}
             >
               <TextArea
                 placeholder="Add description..."
@@ -555,14 +615,14 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               style={{
                 display: "grid",
                 gridTemplateColumns: "1fr 1fr",
-                gap: "12px",
+                gap: "10px",
               }}
             >
               {/* Assignee */}
               <Form.Item
                 label="Assignee"
                 name="assignee"
-                style={{ marginBottom: "12px" }}
+                style={{ marginBottom: "10px" }}
               >
                 <Select placeholder="Automatic" allowClear showSearch>
                   <Option value={1}>
@@ -595,11 +655,35 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                 </Select>
               </Form.Item>
 
+              {/* Company */}
+              <Form.Item
+                label="Company"
+                name="company"
+                style={{ marginBottom: "10px" }}
+              >
+                <Select
+                  placeholder="Select company"
+                  allowClear
+                  showSearch
+                  filterOption={(input, option) =>
+                    ((option?.children ?? "") as string)
+                      .toLowerCase()
+                      .includes(input.toLowerCase())
+                  }
+                >
+                  {companies.map((company) => (
+                    <Option key={company.id} value={company.id}>
+                      {company.name}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+
               {/* Parent */}
               <Form.Item
                 label="Parent"
                 name="parent"
-                style={{ marginBottom: "12px" }}
+                style={{ marginBottom: "10px" }}
               >
                 <Select
                   placeholder="Select parent ticket"
@@ -623,7 +707,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               <Form.Item
                 label="Priority"
                 name="priority"
-                style={{ marginBottom: "12px" }}
+                style={{ marginBottom: "10px" }}
               >
                 <Select placeholder="Select priority">
                   <Option value={1}>{getPriorityIcon(1)}</Option>
@@ -637,14 +721,13 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               <Form.Item
                 label="Urgency"
                 name="urgency"
-                initialValue="medium"
-                style={{ marginBottom: "12px" }}
+                initialValue="normal"
+                style={{ marginBottom: "10px" }}
               >
                 <Select placeholder="Select urgency">
                   <Option value="low">Low</Option>
-                  <Option value="medium">Medium</Option>
+                  <Option value="normal">Normal</Option>
                   <Option value="high">High</Option>
-                  <Option value="critical">Critical</Option>
                 </Select>
               </Form.Item>
 
@@ -652,12 +735,12 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               <Form.Item
                 label="Importance"
                 name="importance"
-                initialValue="medium"
-                style={{ marginBottom: "12px" }}
+                initialValue="normal"
+                style={{ marginBottom: "10px" }}
               >
                 <Select placeholder="Select importance">
                   <Option value="low">Low</Option>
-                  <Option value="medium">Medium</Option>
+                  <Option value="normal">Normal</Option>
                   <Option value="high">High</Option>
                   <Option value="critical">Critical</Option>
                 </Select>
@@ -667,7 +750,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               <Form.Item
                 label="Due date"
                 name="dueDate"
-                style={{ marginBottom: "12px" }}
+                style={{ marginBottom: "10px" }}
               >
                 <DatePicker
                   style={{ width: "100%" }}
@@ -680,7 +763,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               <Form.Item
                 label="Tags"
                 name="tags"
-                style={{ marginBottom: "12px" }}
+                style={{ marginBottom: "10px" }}
               >
                 <Select
                   mode="tags"
@@ -708,7 +791,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               <Form.Item
                 label="Start date"
                 name="startDate"
-                style={{ marginBottom: "12px" }}
+                style={{ marginBottom: "10px" }}
               >
                 <DatePicker
                   style={{ width: "100%" }}
@@ -721,9 +804,9 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               <Form.Item
                 label="Reporter"
                 name="reporter"
-                style={{ marginBottom: "12px" }}
+                style={{ marginBottom: "10px" }}
               >
-                <Select placeholder="Select reporter" defaultValue={1} disabled>
+                <Select placeholder="Select reporter" disabled>
                   <Option value={1}>
                     <div
                       style={{
@@ -759,7 +842,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
             <Form.Item
               label="Attachment"
               name="attachment"
-              style={{ marginBottom: "12px" }}
+              style={{ marginBottom: "10px" }}
             >
               <div
                 style={{
@@ -783,36 +866,38 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
             {/* Linked Work items */}
             <Form.Item
               label="Linked Work items"
-              name="linkedItems"
-              style={{ marginBottom: "12px" }}
+              style={{ marginBottom: "10px" }}
             >
               <div style={{ display: "flex", width: "100%" }}>
-                <Select
-                  placeholder="blocks"
-                  defaultValue="blocks"
-                  style={{
-                    width: "30%",
-                    borderTopRightRadius: 0,
-                    borderBottomRightRadius: 0,
-                  }}
-                >
-                  <Option value="blocks">blocks</Option>
-                  <Option value="is blocked by">is blocked by</Option>
-                  <Option value="relates to">relates to</Option>
-                  <Option value="duplicates">duplicates</Option>
-                </Select>
-                <Select
-                  mode="multiple"
-                  placeholder="Type, search or paste URL"
-                  style={{
-                    width: "70%",
-                    borderTopLeftRadius: 0,
-                    borderBottomLeftRadius: 0,
-                    marginLeft: -1,
-                  }}
-                  allowClear
-                  showSearch
-                />
+                <Form.Item name="linkedItemsType" noStyle initialValue="blocks">
+                  <Select
+                    placeholder="blocks"
+                    style={{
+                      width: "30%",
+                      borderTopRightRadius: 0,
+                      borderBottomRightRadius: 0,
+                    }}
+                  >
+                    <Option value="blocks">blocks</Option>
+                    <Option value="is blocked by">is blocked by</Option>
+                    <Option value="relates to">relates to</Option>
+                    <Option value="duplicates">duplicates</Option>
+                  </Select>
+                </Form.Item>
+                <Form.Item name="linkedItemsValue" noStyle>
+                  <Select
+                    mode="multiple"
+                    placeholder="Type, search or paste URL"
+                    allowClear
+                    showSearch
+                    style={{
+                      width: "70%",
+                      borderTopLeftRadius: 0,
+                      borderBottomLeftRadius: 0,
+                      marginLeft: -1,
+                    }}
+                  />
+                </Form.Item>
               </div>
             </Form.Item>
 
@@ -834,15 +919,17 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
         {/* Footer */}
         <div
           style={{
-            padding: "12px 20px",
-            borderTop: "1px solid #dfe1e6",
+            padding: "12px 16px",
+            borderTop: "1px solid #f0f0f0",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            backgroundColor: "#fff",
+            backgroundColor: "#fafafa",
             position: "sticky",
             bottom: 0,
             zIndex: 10,
+            borderBottomLeftRadius: 8,
+            borderBottomRightRadius: 8,
           }}
         >
           <Checkbox
@@ -853,14 +940,11 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
             Create another
           </Checkbox>
           <Space size="small">
-            <Button onClick={handleClose} size="middle">
-              Cancel
-            </Button>
+            <Button onClick={handleClose}>Cancel</Button>
             <Button
               type="primary"
               onClick={() => form.submit()}
               loading={saving}
-              size="middle"
             >
               Create
             </Button>

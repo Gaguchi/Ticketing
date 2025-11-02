@@ -59,7 +59,6 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({
         "📁 [ProjectContext] Projects:",
         projects.map((p) => `${p.key} - ${p.name}`)
       );
-      console.log("📁 [ProjectContext] user.has_projects:", user.has_projects);
 
       setAvailableProjects(projects);
       setHasProjects(user.has_projects || false);
@@ -104,7 +103,8 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({
       setHasProjects(false);
       setLoading(false);
     }
-  }, [user, authLoading]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, authLoading]); // Removed selectedProject from deps to prevent loops
 
   const setSelectedProject = (project: Project | null) => {
     setSelectedProjectState(project);

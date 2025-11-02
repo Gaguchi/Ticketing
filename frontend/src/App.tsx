@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "./contexts/AuthContext";
+import { ConfigProvider } from "antd";
+import { AppProvider } from "./contexts/AppContext";
 import { CompanyProvider } from "./contexts/CompanyContext";
-import { ProjectProvider } from "./contexts/ProjectContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import MainLayout from "./layouts/MainLayout";
 import Login from "./pages/Login";
@@ -13,12 +13,13 @@ import Chat from "./pages/Chat";
 import Companies from "./pages/Companies";
 import Users from "./pages/Users";
 import Settings from "./pages/Settings";
+import theme from "./theme/antd-theme";
 
 function App() {
   return (
-    <AuthProvider>
-      <CompanyProvider>
-        <ProjectProvider>
+    <ConfigProvider theme={theme}>
+      <AppProvider>
+        <CompanyProvider>
           <BrowserRouter>
             <Routes>
               {/* Public routes */}
@@ -56,9 +57,9 @@ function App() {
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </BrowserRouter>
-        </ProjectProvider>
-      </CompanyProvider>
-    </AuthProvider>
+        </CompanyProvider>
+      </AppProvider>
+    </ConfigProvider>
   );
 }
 

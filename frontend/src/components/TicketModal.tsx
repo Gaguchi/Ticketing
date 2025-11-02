@@ -8,16 +8,15 @@ import {
   Button,
   Tabs,
   message,
+  Dropdown,
 } from "antd";
 import {
   CloseOutlined,
-  UserOutlined,
-  EyeOutlined,
+  FullscreenOutlined,
   ShareAltOutlined,
   EllipsisOutlined,
-  FullscreenOutlined,
   PlusOutlined,
-  ThunderboltOutlined,
+  DownOutlined,
 } from "@ant-design/icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -27,13 +26,22 @@ import {
   faBolt,
 } from "@fortawesome/free-solid-svg-icons";
 import dayjs from "dayjs";
+import ReactQuill from "react-quill-new";
+import "react-quill-new/dist/quill.snow.css";
+import "./TicketModal.css";
 import { getPriorityIcon } from "./PriorityIcons";
-import { ticketService, projectService, tagService } from "../services";
+import {
+  ticketService,
+  projectService,
+  tagService,
+  userService,
+} from "../services";
 import type {
   Ticket,
   CreateTicketData,
   TicketUrgency,
   TicketImportance,
+  User,
   Project,
 } from "../types/api";
 
@@ -64,13 +72,42 @@ const getTypeIcon = (type?: string) => {
   }
 };
 
-// Mock quick comment suggestions
+// Quick comment suggestions
 const quickComments = [
   { emoji: "👍", text: "Looks good!" },
   { emoji: "👋", text: "Need help?" },
   { emoji: "🚫", text: "This is blocked..." },
   { emoji: "🔍", text: "Can you clarify...?" },
   { emoji: "✅", text: "This is done!" },
+];
+
+// Quill editor modules configuration
+const quillModules = {
+  toolbar: [
+    [{ header: [1, 2, 3, false] }],
+    ["bold", "italic", "underline", "strike"],
+    [{ list: "ordered" }, { list: "bullet" }],
+    ["blockquote", "code-block"],
+    ["link", "image"],
+    [{ color: [] }, { background: [] }],
+    ["clean"],
+  ],
+};
+
+const quillFormats = [
+  "header",
+  "bold",
+  "italic",
+  "underline",
+  "strike",
+  "list",
+  "bullet",
+  "blockquote",
+  "code-block",
+  "link",
+  "image",
+  "color",
+  "background",
 ];
 
 export const TicketModal: React.FC<TicketModalProps> = ({
@@ -92,10 +129,10 @@ export const TicketModal: React.FC<TicketModalProps> = ({
   );
   const [priority, setPriority] = useState(ticket?.priority_id || 3);
   const [urgency, setUrgency] = useState<TicketUrgency>(
-    (ticket?.urgency as TicketUrgency) || "medium"
+    (ticket?.urgency as TicketUrgency) || "normal"
   );
   const [importance, setImportance] = useState<TicketImportance>(
-    (ticket?.importance as TicketImportance) || "medium"
+    (ticket?.importance as TicketImportance) || "normal"
   );
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(
     ticket?.project || null
@@ -118,6 +155,8 @@ export const TicketModal: React.FC<TicketModalProps> = ({
   const [actualColumnId, setActualColumnId] = useState<number | null>(null);
   const [projectTags, setProjectTags] = useState<any[]>([]);
   const [projectColumns, setProjectColumns] = useState<any[]>([]);
+  const [availableUsers, setAvailableUsers] = useState<User[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
 
   // Load current project from localStorage when modal opens
   useEffect(() => {
@@ -130,6 +169,20 @@ export const TicketModal: React.FC<TicketModalProps> = ({
         })
         .catch((error) => {
           console.error("Failed to load projects:", error);
+        });
+
+      // Load all users for assignee dropdown
+      setLoadingUsers(true);
+      userService
+        .getAllUsers()
+        .then((users) => {
+          setAvailableUsers(users);
+        })
+        .catch((error) => {
+          console.error("Failed to load users:", error);
+        })
+        .finally(() => {
+          setLoadingUsers(false);
         });
 
       if (isCreateMode) {
@@ -438,28 +491,88 @@ export const TicketModal: React.FC<TicketModalProps> = ({
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <Button
-              type="text"
-              size="small"
-              icon={<PlusOutlined />}
-              style={{ color: "#5e6c84" }}
-            >
-              Add epic
-            </Button>
             <div
               style={{
                 display: "flex",
                 alignItems: "center",
                 gap: "6px",
                 fontSize: "14px",
-                color: "#5e6c84",
+                color: "#9E9E9E",
               }}
             >
-              <FontAwesomeIcon
-                icon={typeInfo.icon}
-                style={{ fontSize: "16px", color: typeInfo.color }}
-              />
-              <span style={{ color: "#0052cc", fontWeight: 500 }}>
+              <Dropdown
+                menu={{
+                  items: [
+                    {
+                      key: "task",
+                      label: "Task",
+                      icon: (
+                        <FontAwesomeIcon
+                          icon={faCheckSquare}
+                          style={{ fontSize: "14px", color: "#4bade8" }}
+                        />
+                      ),
+                      onClick: () => setTicketType("task"),
+                    },
+                    {
+                      key: "bug",
+                      label: "Bug",
+                      icon: (
+                        <FontAwesomeIcon
+                          icon={faBug}
+                          style={{ fontSize: "14px", color: "#e5493a" }}
+                        />
+                      ),
+                      onClick: () => setTicketType("bug"),
+                    },
+                    {
+                      key: "story",
+                      label: "Story",
+                      icon: (
+                        <FontAwesomeIcon
+                          icon={faBookmark}
+                          style={{ fontSize: "14px", color: "#63ba3c" }}
+                        />
+                      ),
+                      onClick: () => setTicketType("story"),
+                    },
+                    {
+                      key: "epic",
+                      label: "Epic",
+                      icon: (
+                        <FontAwesomeIcon
+                          icon={faBolt}
+                          style={{ fontSize: "14px", color: "#904ee2" }}
+                        />
+                      ),
+                      onClick: () => setTicketType("epic"),
+                    },
+                  ],
+                  selectedKeys: [ticketType],
+                }}
+                trigger={["click"]}
+              >
+                <Button
+                  type="text"
+                  size="small"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    padding: "2px 8px",
+                    height: "auto",
+                  }}
+                >
+                  <FontAwesomeIcon
+                    icon={typeInfo.icon}
+                    style={{ fontSize: "16px", color: typeInfo.color }}
+                  />
+                  <DownOutlined
+                    style={{ fontSize: "10px", color: "#9E9E9E" }}
+                  />
+                </Button>
+              </Dropdown>
+              <span style={{ color: "#2C3E50", fontWeight: 500 }}>
                 {isCreateMode
                   ? "NEW TICKET"
                   : `${ticket?.project_key || "TICK"}-${ticket?.id}`}
@@ -472,28 +585,20 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                 <Button
                   type="text"
                   size="small"
-                  icon={<EyeOutlined />}
-                  style={{ color: "#5e6c84" }}
-                >
-                  1
-                </Button>
-                <Button
-                  type="text"
-                  size="small"
                   icon={<ShareAltOutlined />}
-                  style={{ color: "#5e6c84" }}
+                  style={{ color: "#9E9E9E" }}
                 />
                 <Button
                   type="text"
                   size="small"
                   icon={<EllipsisOutlined />}
-                  style={{ color: "#5e6c84" }}
+                  style={{ color: "#9E9E9E" }}
                 />
                 <Button
                   type="text"
                   size="small"
                   icon={<FullscreenOutlined />}
-                  style={{ color: "#5e6c84" }}
+                  style={{ color: "#9E9E9E" }}
                 />
               </>
             )}
@@ -511,7 +616,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
               size="small"
               icon={<CloseOutlined />}
               onClick={onClose}
-              style={{ color: "#5e6c84" }}
+              style={{ color: "#9E9E9E" }}
             />
           </div>
         </div>
@@ -541,25 +646,23 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                 style={{
                   fontSize: "12px",
                   fontWeight: 600,
-                  color: "#5e6c84",
+                  color: "#9E9E9E",
                   textTransform: "uppercase",
                   marginBottom: "8px",
                 }}
               >
                 Description
               </h3>
-              <TextArea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Add a description..."
-                autoSize={{ minRows: 3, maxRows: 10 }}
-                style={{
-                  fontSize: "14px",
-                  color: "#172b4d",
-                  border: "1px solid #dfe1e6",
-                  borderRadius: "3px",
-                }}
-              />
+              <div className="ticket-modal-editor">
+                <ReactQuill
+                  theme="snow"
+                  value={description}
+                  onChange={setDescription}
+                  modules={quillModules}
+                  formats={quillFormats}
+                  placeholder="Add a description..."
+                />
+              </div>
             </div>
 
             {/* Subtasks */}
@@ -568,7 +671,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                 style={{
                   fontSize: "12px",
                   fontWeight: 600,
-                  color: "#5e6c84",
+                  color: "#9E9E9E",
                   textTransform: "uppercase",
                   marginBottom: "8px",
                 }}
@@ -578,7 +681,8 @@ export const TicketModal: React.FC<TicketModalProps> = ({
               <Button
                 type="text"
                 size="small"
-                style={{ padding: 0, color: "#5e6c84", height: "auto" }}
+                icon={<PlusOutlined />}
+                style={{ padding: 0, color: "#9E9E9E", height: "auto" }}
               >
                 Add subtask
               </Button>
@@ -590,7 +694,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                 style={{
                   fontSize: "12px",
                   fontWeight: 600,
-                  color: "#5e6c84",
+                  color: "#9E9E9E",
                   textTransform: "uppercase",
                   marginBottom: "8px",
                 }}
@@ -600,7 +704,8 @@ export const TicketModal: React.FC<TicketModalProps> = ({
               <Button
                 type="text"
                 size="small"
-                style={{ padding: 0, color: "#5e6c84", height: "auto" }}
+                icon={<PlusOutlined />}
+                style={{ padding: 0, color: "#9E9E9E", height: "auto" }}
               >
                 Add linked work item
               </Button>
@@ -612,7 +717,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                 style={{
                   fontSize: "12px",
                   fontWeight: 600,
-                  color: "#5e6c84",
+                  color: "#9E9E9E",
                   textTransform: "uppercase",
                   marginBottom: "16px",
                 }}
@@ -627,7 +732,6 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                   { key: "all", label: "All" },
                   { key: "comments", label: "Comments" },
                   { key: "history", label: "History" },
-                  { key: "worklog", label: "Work log" },
                 ]}
                 style={{ marginBottom: "16px" }}
               />
@@ -638,7 +742,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
               >
                 <Avatar
                   size={32}
-                  style={{ backgroundColor: "#0052cc", flexShrink: 0 }}
+                  style={{ backgroundColor: "#2C3E50", flexShrink: 0 }}
                 >
                   BK
                 </Avatar>
@@ -673,7 +777,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                         onClick={() => setComment(qc.text)}
                         style={{
                           fontSize: "12px",
-                          color: "#5e6c84",
+                          color: "#9E9E9E",
                           border: "1px solid #dfe1e6",
                           borderRadius: "3px",
                           padding: "2px 8px",
@@ -683,20 +787,6 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                         {qc.emoji} {qc.text}
                       </Button>
                     ))}
-                  </div>
-                  <div style={{ fontSize: "12px", color: "#5e6c84" }}>
-                    <strong>Pro tip:</strong> press{" "}
-                    <kbd
-                      style={{
-                        padding: "2px 6px",
-                        border: "1px solid #dfe1e6",
-                        borderRadius: "3px",
-                        backgroundColor: "#f4f5f7",
-                      }}
-                    >
-                      M
-                    </kbd>{" "}
-                    to comment
                   </div>
                 </div>
               </div>
@@ -716,7 +806,6 @@ export const TicketModal: React.FC<TicketModalProps> = ({
               style={{
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "space-between",
                 marginBottom: "16px",
               }}
             >
@@ -724,19 +813,13 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                 style={{
                   fontSize: "12px",
                   fontWeight: 600,
-                  color: "#5e6c84",
+                  color: "#9E9E9E",
                   textTransform: "uppercase",
                   margin: 0,
                 }}
               >
                 Details
               </h3>
-              <Button
-                type="text"
-                size="small"
-                icon={<PlusOutlined />}
-                style={{ color: "#5e6c84", padding: 0 }}
-              />
             </div>
 
             {/* Project Selection */}
@@ -746,7 +829,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                   style={{
                     fontSize: "12px",
                     fontWeight: 600,
-                    color: "#5e6c84",
+                    color: "#9E9E9E",
                     marginBottom: "4px",
                   }}
                 >
@@ -774,7 +857,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                 style={{
                   fontSize: "12px",
                   fontWeight: 600,
-                  color: "#5e6c84",
+                  color: "#9E9E9E",
                   marginBottom: "4px",
                 }}
               >
@@ -800,60 +883,53 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                 style={{
                   fontSize: "12px",
                   fontWeight: 600,
-                  color: "#5e6c84",
+                  color: "#9E9E9E",
                   marginBottom: "4px",
                 }}
               >
                 Assignee
               </div>
-              {ticket?.assignees && ticket.assignees.length > 0 ? (
-                <div style={{ marginBottom: "8px" }}>
-                  {ticket.assignees.map((assignee: any) => (
-                    <div
-                      key={assignee.id}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                        padding: "4px 8px",
-                      }}
-                    >
-                      <Avatar size={24} style={{ backgroundColor: "#0052cc" }}>
-                        {assignee.first_name?.[0] ||
-                          assignee.username?.[0]?.toUpperCase()}
-                        {assignee.last_name?.[0] ||
-                          assignee.username?.[1]?.toUpperCase()}
-                      </Avatar>
-                      <span style={{ fontSize: "14px", color: "#172b4d" }}>
-                        {assignee.first_name && assignee.last_name
-                          ? `${assignee.first_name} ${assignee.last_name}`
-                          : assignee.username}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <Button
-                  type="text"
-                  size="small"
-                  style={{
-                    width: "100%",
-                    textAlign: "left",
-                    padding: "4px 8px",
-                    height: "auto",
-                    color: "#5e6c84",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                  }}
-                >
-                  <UserOutlined />
-                  <span>Unassigned</span>
-                </Button>
-              )}
+              <Select
+                mode="multiple"
+                value={assignees}
+                onChange={setAssignees}
+                loading={loadingUsers}
+                placeholder="Select assignees"
+                style={{ width: "100%" }}
+                size="small"
+                allowClear
+                showSearch
+                optionFilterProp="children"
+                filterOption={(input, option) =>
+                  (option?.label ?? "")
+                    .toLowerCase()
+                    .includes(input.toLowerCase())
+                }
+                options={availableUsers.map((user) => ({
+                  label:
+                    user.first_name && user.last_name
+                      ? `${user.first_name} ${user.last_name}`
+                      : user.username,
+                  value: user.id,
+                }))}
+              />
               <Button
                 type="link"
                 size="small"
+                onClick={() => {
+                  // Get current user ID from localStorage or auth context
+                  const currentUser = localStorage.getItem("user");
+                  if (currentUser) {
+                    try {
+                      const user = JSON.parse(currentUser);
+                      if (user.id && !assignees.includes(user.id)) {
+                        setAssignees([...assignees, user.id]);
+                      }
+                    } catch (error) {
+                      console.error("Failed to parse current user:", error);
+                    }
+                  }
+                }}
                 style={{
                   padding: "4px 0",
                   height: "auto",
@@ -870,7 +946,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                 style={{
                   fontSize: "12px",
                   fontWeight: 600,
-                  color: "#5e6c84",
+                  color: "#9E9E9E",
                   marginBottom: "4px",
                 }}
               >
@@ -879,12 +955,13 @@ export const TicketModal: React.FC<TicketModalProps> = ({
               <Button
                 type="text"
                 size="small"
+                icon={<PlusOutlined />}
                 style={{
                   width: "100%",
                   textAlign: "left",
                   padding: "4px 8px",
                   height: "auto",
-                  color: "#5e6c84",
+                  color: "#9E9E9E",
                 }}
               >
                 Add parent
@@ -897,7 +974,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                 style={{
                   fontSize: "12px",
                   fontWeight: 600,
-                  color: "#5e6c84",
+                  color: "#9E9E9E",
                   marginBottom: "4px",
                 }}
               >
@@ -922,7 +999,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                 style={{
                   fontSize: "12px",
                   fontWeight: 600,
-                  color: "#5e6c84",
+                  color: "#9E9E9E",
                   marginBottom: "4px",
                 }}
               >
@@ -935,9 +1012,8 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                 size="small"
               >
                 <Option value="low">Low</Option>
-                <Option value="medium">Medium</Option>
+                <Option value="normal">Normal</Option>
                 <Option value="high">High</Option>
-                <Option value="critical">Critical</Option>
               </Select>
             </div>
 
@@ -947,7 +1023,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                 style={{
                   fontSize: "12px",
                   fontWeight: 600,
-                  color: "#5e6c84",
+                  color: "#9E9E9E",
                   marginBottom: "4px",
                 }}
               >
@@ -960,9 +1036,8 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                 size="small"
               >
                 <Option value="low">Low</Option>
-                <Option value="medium">Medium</Option>
+                <Option value="normal">Normal</Option>
                 <Option value="high">High</Option>
-                <Option value="critical">Critical</Option>
               </Select>
             </div>
 
@@ -972,7 +1047,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                 style={{
                   fontSize: "12px",
                   fontWeight: 600,
-                  color: "#5e6c84",
+                  color: "#9E9E9E",
                   marginBottom: "4px",
                 }}
               >
@@ -993,19 +1068,21 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                 style={{
                   fontSize: "12px",
                   fontWeight: 600,
-                  color: "#5e6c84",
+                  color: "#9E9E9E",
                   marginBottom: "4px",
                 }}
               >
                 Tags
               </div>
               <Select
-                mode="tags"
+                mode="multiple"
                 value={tags}
                 onChange={(value) => setTags(value)}
                 size="small"
-                placeholder="Type to add tags"
+                placeholder="Select tags"
                 style={{ width: "100%" }}
+                showSearch
+                allowClear
                 filterOption={(input, option) =>
                   (option?.label ?? "")
                     .toLowerCase()
@@ -1014,12 +1091,11 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                 options={
                   Array.isArray(projectTags)
                     ? projectTags.map((tag) => ({
-                        value: tag.name,
+                        value: tag.id,
                         label: tag.name,
                       }))
                     : []
                 }
-                tokenSeparators={[","]}
               />
             </div>
 
@@ -1029,7 +1105,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                 style={{
                   fontSize: "12px",
                   fontWeight: 600,
-                  color: "#5e6c84",
+                  color: "#9E9E9E",
                   marginBottom: "4px",
                 }}
               >
@@ -1045,56 +1121,37 @@ export const TicketModal: React.FC<TicketModalProps> = ({
             </div>
 
             {/* Reporter */}
-            <div style={{ marginBottom: "24px" }}>
-              <div
-                style={{
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  color: "#5e6c84",
-                  marginBottom: "4px",
-                }}
-              >
-                Reporter
+            {!isCreateMode && ticket?.reporter && (
+              <div style={{ marginBottom: "24px" }}>
+                <div
+                  style={{
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    color: "#9E9E9E",
+                    marginBottom: "4px",
+                  }}
+                >
+                  Reporter
+                </div>
+                <div
+                  style={{ display: "flex", alignItems: "center", gap: "8px" }}
+                >
+                  <Avatar size={24} style={{ backgroundColor: "#2C3E50" }}>
+                    {ticket.reporter.first_name?.[0]?.toUpperCase() ||
+                      ticket.reporter.username?.[0]?.toUpperCase() ||
+                      "?"}
+                    {ticket.reporter.last_name?.[0]?.toUpperCase() ||
+                      ticket.reporter.username?.[1]?.toUpperCase() ||
+                      ""}
+                  </Avatar>
+                  <span style={{ fontSize: "14px", color: "#172b4d" }}>
+                    {ticket.reporter.first_name && ticket.reporter.last_name
+                      ? `${ticket.reporter.first_name} ${ticket.reporter.last_name}`
+                      : ticket.reporter.username}
+                  </span>
+                </div>
               </div>
-              <div
-                style={{ display: "flex", alignItems: "center", gap: "8px" }}
-              >
-                <Avatar size={24} style={{ backgroundColor: "#0052cc" }}>
-                  BK
-                </Avatar>
-                <span style={{ fontSize: "14px", color: "#172b4d" }}>
-                  Boris Karaya
-                </span>
-              </div>
-            </div>
-
-            {/* Automation */}
-            <div
-              style={{
-                borderTop: "1px solid #dfe1e6",
-                paddingTop: "16px",
-                marginTop: "24px",
-              }}
-            >
-              <Button
-                type="text"
-                size="small"
-                style={{
-                  width: "100%",
-                  textAlign: "left",
-                  padding: "4px 8px",
-                  height: "auto",
-                  color: "#5e6c84",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                }}
-              >
-                <ThunderboltOutlined />
-                <span style={{ flex: 1 }}>Automation</span>
-                <span style={{ fontSize: "12px" }}>Rule executions</span>
-              </Button>
-            </div>
+            )}
 
             {/* Created/Updated Dates */}
             {!isCreateMode && ticket && (
@@ -1102,7 +1159,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                 style={{
                   marginTop: "24px",
                   fontSize: "11px",
-                  color: "#5e6c84",
+                  color: "#9E9E9E",
                   display: "flex",
                   flexDirection: "column",
                   gap: "4px",
@@ -1122,20 +1179,6 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                 </div>
               </div>
             )}
-
-            {/* Configure Button */}
-            <Button
-              type="link"
-              size="small"
-              style={{
-                marginTop: "8px",
-                padding: 0,
-                height: "auto",
-                fontSize: "12px",
-              }}
-            >
-              Configure
-            </Button>
           </div>
         </div>
       </div>

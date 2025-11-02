@@ -16,7 +16,7 @@ import {
   PlusOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
+import { useAuth } from "../contexts/AppContext";
 import { projectService } from "../services/project.service";
 import "./ProjectSetup.css";
 

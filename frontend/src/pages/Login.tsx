@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Form, Input, Button, Card, Typography, Alert, Checkbox } from "antd";
 import { UserOutlined, LockOutlined } from "@ant-design/icons";
 import { useNavigate, Link } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
+import { useAuth } from "../contexts/AppContext";
 import { authService } from "../services/auth.service";
 import { Turnstile } from "../components/Turnstile";
 import "./Login.css";

@@ -30,7 +30,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { getPriorityIcon } from "../components/PriorityIcons";
 import { TicketModal } from "../components/TicketModal";
 import { CreateTicketModal } from "../components/CreateTicketModal";
-import { useProject } from "../contexts/ProjectContext";
+import { useProject } from "../contexts/AppContext";
 import type { Ticket } from "../types/api";
 import type { TableColumnsType } from "antd";
 import { ticketService } from "../services";

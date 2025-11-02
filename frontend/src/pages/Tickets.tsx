@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Button, Input, Select, Table, Tag, message, Segmented } from "antd";
 import type { TableColumnsType } from "antd";
 import {
@@ -20,9 +20,10 @@ import { DeadlineView } from "../components/DeadlineView";
 import { getPriorityIcon } from "../components/PriorityIcons";
 import { TicketModal } from "../components/TicketModal";
 import { CreateTicketModal } from "../components/CreateTicketModal";
-import { useProject } from "../contexts/ProjectContext";
+import { useProject } from "../contexts/AppContext";
 import { ticketService, projectService } from "../services";
 import type { Ticket, TicketColumn } from "../types/api";
+import { debug, LogLevel, LogCategory } from "../utils/debug";
 import "./Tickets.css";
 
 const { Option } = Select;
@@ -69,6 +70,9 @@ const Tickets: React.FC = () => {
   // Track pending API requests for optimistic updates (used internally, no visual indicator)
   const [, setPendingUpdates] = useState<Set<number>>(new Set());
 
+  // Prevent duplicate initialization
+  const fetchInProgressRef = useRef(false);
+
   // Fetch tickets and columns when project changes
   useEffect(() => {
     const fetchData = async () => {
@@ -78,15 +82,37 @@ const Tickets: React.FC = () => {
         return;
       }
 
+      // Prevent duplicate fetches
+      if (fetchInProgressRef.current) {
+        debug.log(
+          LogCategory.TICKET,
+          LogLevel.INFO,
+          "Fetch already in progress, skipping"
+        );
+        return;
+      }
+
+      fetchInProgressRef.current = true;
       setLoading(true);
+
       try {
-        console.log("📌 Loading data for project:", selectedProject);
+        debug.log(
+          LogCategory.TICKET,
+          LogLevel.INFO,
+          "Loading data for project:",
+          selectedProject
+        );
 
         // Fetch columns for the project
         const projectColumns = await projectService.getProjectColumns(
           selectedProject.id
         );
-        console.log("📊 Project columns:", projectColumns);
+        debug.log(
+          LogCategory.TICKET,
+          LogLevel.INFO,
+          "Project columns:",
+          projectColumns
+        );
 
         if (projectColumns.length === 0) {
           message.warning(
@@ -106,6 +132,7 @@ const Tickets: React.FC = () => {
         message.error("Failed to load tickets");
       } finally {
         setLoading(false);
+        fetchInProgressRef.current = false;
       }
     };
 

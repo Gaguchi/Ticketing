@@ -25,8 +25,8 @@ import {
   ProjectOutlined,
 } from "@ant-design/icons";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
-import { useProject } from "../contexts/ProjectContext";
+import { useAuth } from "../contexts/AppContext";
+import { useProject } from "../contexts/AppContext";
 import { CreateProjectModal } from "../components/CreateProjectModal";
 import type { MenuProps } from "antd";
 import "./MainLayout.css";

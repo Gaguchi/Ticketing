@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useRef,
+} from "react";
 import { authService } from "../services/auth.service";
 import type { User } from "../types/api";
 
@@ -20,8 +26,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const initRef = useRef(false); // Prevent double initialization in React Strict Mode
+  const lastFetchRef = useRef<number>(0); // Track last fetch time
 
   useEffect(() => {
+    // Prevent duplicate initialization in React Strict Mode
+    if (initRef.current) {
+      console.log("🔐 [AuthContext] Already initialized, skipping");
+      return;
+    }
+    initRef.current = true;
+
     // Check for stored auth on mount and fetch fresh user data
     const initAuth = async () => {
       console.log("🔐 [AuthContext] Initializing auth...");
@@ -46,10 +61,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         setToken(storedToken);
         setUser(storedUser);
 
+        // Check if we need to fetch fresh data (cache for 5 minutes)
+        const now = Date.now();
+        const fiveMinutes = 5 * 60 * 1000;
+        const timeSinceLastFetch = now - lastFetchRef.current;
+
+        if (timeSinceLastFetch < fiveMinutes && lastFetchRef.current > 0) {
+          console.log(
+            "🔐 [AuthContext] Using cached user data (fetched",
+            Math.round(timeSinceLastFetch / 1000),
+            "seconds ago)"
+          );
+          setLoading(false);
+          return;
+        }
+
         // Fetch fresh user data from API to get updated projects/companies
         try {
           console.log("🔐 [AuthContext] Fetching fresh user data from API...");
           const freshUser = await authService.getCurrentUser();
+          lastFetchRef.current = Date.now();
           console.log(
             "🔐 [AuthContext] Fresh user data received:",
             freshUser.username
@@ -57,10 +88,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           console.log(
             "🔐 [AuthContext] Fresh user projects:",
             freshUser.projects?.length || 0
-          );
-          console.log(
-            "🔐 [AuthContext] Fresh user has_projects:",
-            freshUser.has_projects
           );
           setUser(freshUser);
           localStorage.setItem("user", JSON.stringify(freshUser));

@@ -18,10 +18,17 @@
     "@fortawesome/fontawesome-svg-core": "^7.1.0",
     "@fortawesome/free-solid-svg-icons": "^7.1.0",
     "@fortawesome/react-fontawesome": "^3.1.0",
+    "@tiptap/extension-image": "^3.10.1",
+    "@tiptap/extension-link": "^3.10.1",
+    "@tiptap/extension-task-item": "^3.10.1",
+    "@tiptap/extension-task-list": "^3.10.1",
+    "@tiptap/react": "^3.10.1",
+    "@tiptap/starter-kit": "^3.10.1",
     "antd": "^5.27.5",
     "immutability-helper": "^3.1.1",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
+    "react-quill-new": "^3.6.0",
     "react-router-dom": "^7.9.4"
   },
   "devDependencies": {
