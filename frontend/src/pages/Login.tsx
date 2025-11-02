@@ -22,9 +22,10 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
   const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY;
+  const turnstileEnabled = import.meta.env.VITE_TURNSTILE_ENABLED === "true";
 
   const onFinish = async (values: LoginFormValues) => {
-    if (turnstileSiteKey && !captchaToken) {
+    if (turnstileEnabled && turnstileSiteKey && !captchaToken) {
       setError("Please complete the CAPTCHA verification");
       return;
     }
@@ -33,11 +34,17 @@ const Login: React.FC = () => {
     setError(null);
 
     try {
-      const response = await authService.login({
+      const loginData: any = {
         username: values.username,
         password: values.password,
-        ...(captchaToken && { captcha_token: captchaToken }),
-      });
+      };
+
+      // Only include captcha_token if CAPTCHA is enabled
+      if (turnstileEnabled && captchaToken) {
+        loginData.captcha_token = captchaToken;
+      }
+
+      const response = await authService.login(loginData);
 
       // Update auth context
       login(response.tokens.access, response.user);
@@ -148,7 +155,7 @@ const Login: React.FC = () => {
               </Form.Item>
 
               {/* Cloudflare Turnstile CAPTCHA */}
-              {turnstileSiteKey && (
+              {turnstileEnabled && turnstileSiteKey && (
                 <Form.Item style={{ marginBottom: 16 }}>
                   <Turnstile
                     siteKey={turnstileSiteKey}
