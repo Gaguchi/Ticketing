@@ -47,9 +47,13 @@ const MainLayout: React.FC = () => {
     useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const { logout, user } = useAuth();
-  const { selectedProject, availableProjects, setSelectedProject } =
-    useProject();
+  const { logout, user, loading: authLoading } = useAuth();
+  const {
+    selectedProject,
+    availableProjects,
+    setSelectedProject,
+    loading: projectLoading,
+  } = useProject();
 
   const handleMenuClick: MenuProps["onClick"] = ({ key }) => {
     if (key === "logout") {
@@ -334,8 +338,19 @@ const MainLayout: React.FC = () => {
             )}
           </div>
           <Space size="middle">
-            {/* Project Selector */}
-            {availableProjects.length > 0 && (
+            {/* Project Selector - Show loading or data based on state */}
+            {authLoading || projectLoading ? (
+              <Space size="small">
+                <ProjectOutlined style={{ fontSize: 16, color: "#595959" }} />
+                <Select
+                  loading={true}
+                  disabled={true}
+                  style={{ minWidth: 150 }}
+                  size="small"
+                  placeholder="Loading projects..."
+                />
+              </Space>
+            ) : availableProjects.length > 0 ? (
               <Space size="small">
                 <ProjectOutlined style={{ fontSize: 16, color: "#595959" }} />
                 <Select
@@ -365,9 +380,8 @@ const MainLayout: React.FC = () => {
                   New Project
                 </Button>
               </Space>
-            )}
-            {/* Show Create Project button if no projects */}
-            {availableProjects.length === 0 && (
+            ) : (
+              /* Show Create Project button if no projects */
               <Button
                 type="primary"
                 size="small"

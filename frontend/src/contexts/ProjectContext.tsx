@@ -29,7 +29,7 @@ interface ProjectProviderProps {
 export const ProjectProvider: React.FC<ProjectProviderProps> = ({
   children,
 }) => {
-  const { user, refreshUser } = useAuth();
+  const { user, refreshUser, loading: authLoading } = useAuth();
   const [selectedProject, setSelectedProjectState] = useState<Project | null>(
     null
   );
@@ -39,6 +39,12 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({
 
   // Load projects from user data
   useEffect(() => {
+    // Wait for auth to finish loading
+    if (authLoading) {
+      setLoading(true);
+      return;
+    }
+
     if (user) {
       const projects = user.projects || [];
 
@@ -70,7 +76,7 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({
       setHasProjects(false);
       setLoading(false);
     }
-  }, [user]);
+  }, [user, authLoading]);
 
   const setSelectedProject = (project: Project | null) => {
     setSelectedProjectState(project);
