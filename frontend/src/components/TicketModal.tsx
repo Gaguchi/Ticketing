@@ -9,6 +9,9 @@ import {
   Tabs,
   message,
   Dropdown,
+  Checkbox,
+  Popconfirm,
+  Spin,
 } from "antd";
 import {
   CloseOutlined,
@@ -17,6 +20,7 @@ import {
   EllipsisOutlined,
   PlusOutlined,
   DownOutlined,
+  DeleteOutlined,
 } from "@ant-design/icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -24,6 +28,8 @@ import {
   faBug,
   faBookmark,
   faBolt,
+  faCheckCircle,
+  faLink,
 } from "@fortawesome/free-solid-svg-icons";
 import dayjs from "dayjs";
 import ReactQuill from "react-quill-new";
@@ -35,6 +41,12 @@ import {
   projectService,
   tagService,
   userService,
+  subtaskService,
+  type Subtask,
+  linkedItemService,
+  LINK_TYPES,
+  type IssueLink,
+  type LinkedTicket,
 } from "../services";
 import type {
   Ticket,
@@ -158,6 +170,27 @@ export const TicketModal: React.FC<TicketModalProps> = ({
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
 
+  // Subtask state
+  const [subtasks, setSubtasks] = useState<Subtask[]>([]);
+  const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
+  const [loadingSubtasks, setLoadingSubtasks] = useState(false);
+  const [addingSubtask, setAddingSubtask] = useState(false);
+  const [showSubtaskForm, setShowSubtaskForm] = useState(false);
+
+  // Linked items state
+  const [linkedItems, setLinkedItems] = useState<IssueLink[]>([]);
+  const [loadingLinkedItems, setLoadingLinkedItems] = useState(false);
+  const [addingLink, setAddingLink] = useState(false);
+  const [newLinkType, setNewLinkType] = useState("");
+  const [selectedTargetTicket, setSelectedTargetTicket] = useState<
+    number | null
+  >(null);
+  const [searchingTickets, setSearchingTickets] = useState(false);
+  const [ticketSearchResults, setTicketSearchResults] = useState<
+    LinkedTicket[]
+  >([]);
+  const [showLinkForm, setShowLinkForm] = useState(false);
+
   // Load current project from localStorage when modal opens
   useEffect(() => {
     if (open) {
@@ -199,12 +232,18 @@ export const TicketModal: React.FC<TicketModalProps> = ({
             const project = JSON.parse(projectData);
             console.log("Parsed project:", project);
             setCurrentProject(project);
-            setSelectedProjectId(project.id);
+
+            // Ensure project.id is a number
+            const projectId =
+              typeof project.id === "number"
+                ? project.id
+                : parseInt(project.id, 10);
+            setSelectedProjectId(projectId);
 
             // Fetch project columns to get the actual column ID
-            console.log("Fetching columns for project ID:", project.id);
+            console.log("Fetching columns for project ID:", projectId);
             projectService
-              .getProjectColumns(project.id)
+              .getProjectColumns(projectId)
               .then((columns) => {
                 console.log("Fetched columns:", columns);
                 setProjectColumns(columns);
@@ -278,9 +317,15 @@ export const TicketModal: React.FC<TicketModalProps> = ({
           const project = JSON.parse(projectData);
           setCurrentProject(project);
 
+          // Ensure project.id is a number
+          const projectId =
+            typeof project.id === "number"
+              ? project.id
+              : parseInt(project.id, 10);
+
           // Load columns
           projectService
-            .getProjectColumns(project.id)
+            .getProjectColumns(projectId)
             .then((columns) => {
               setProjectColumns(columns);
             })
@@ -290,7 +335,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
 
           // Load tags
           tagService
-            .getTags(project.id)
+            .getTags(projectId)
             .then((response: any) => {
               // Handle both array response and paginated response
               const tags = Array.isArray(response)
@@ -308,6 +353,56 @@ export const TicketModal: React.FC<TicketModalProps> = ({
       }
     }
   }, [open, ticket]);
+
+  // Load subtasks when ticket is opened in edit mode
+  useEffect(() => {
+    const loadSubtasks = async () => {
+      if (!isCreateMode && ticket?.id) {
+        setLoadingSubtasks(true);
+        try {
+          const fetchedSubtasks = await subtaskService.getSubtasks(ticket.id);
+          setSubtasks(fetchedSubtasks);
+        } catch (error) {
+          console.error("Failed to load subtasks:", error);
+          message.error("Failed to load subtasks");
+        } finally {
+          setLoadingSubtasks(false);
+        }
+      } else {
+        setSubtasks([]);
+      }
+    };
+
+    if (open) {
+      loadSubtasks();
+    }
+  }, [open, ticket?.id, isCreateMode]);
+
+  // Load linked items when ticket is opened in edit mode
+  useEffect(() => {
+    const loadLinkedItems = async () => {
+      if (!isCreateMode && ticket?.id) {
+        setLoadingLinkedItems(true);
+        try {
+          const fetchedLinks = await linkedItemService.getLinkedItems(
+            ticket.id
+          );
+          setLinkedItems(fetchedLinks);
+        } catch (error) {
+          console.error("Failed to load linked items:", error);
+          message.error("Failed to load linked items");
+        } finally {
+          setLoadingLinkedItems(false);
+        }
+      } else {
+        setLinkedItems([]);
+      }
+    };
+
+    if (open) {
+      loadLinkedItems();
+    }
+  }, [open, ticket?.id, isCreateMode]);
 
   const handleProjectChange = async (projectId: number) => {
     setSelectedProjectId(projectId);
@@ -410,6 +505,148 @@ export const TicketModal: React.FC<TicketModalProps> = ({
       message.error(error.message || "Failed to save ticket");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleAddSubtask = async () => {
+    if (!newSubtaskTitle.trim()) {
+      message.warning("Please enter a subtask title");
+      return;
+    }
+
+    if (!ticket?.id) {
+      message.warning("Save the ticket first before adding subtasks");
+      return;
+    }
+
+    setAddingSubtask(true);
+    try {
+      const newSubtask = await subtaskService.createSubtask({
+        ticket: ticket.id,
+        title: newSubtaskTitle.trim(),
+      });
+      setSubtasks([...subtasks, newSubtask]);
+      setNewSubtaskTitle("");
+      setShowSubtaskForm(false);
+      message.success("Subtask added successfully!");
+    } catch (error) {
+      console.error("Failed to add subtask:", error);
+      message.error("Failed to add subtask");
+    } finally {
+      setAddingSubtask(false);
+    }
+  };
+
+  const handleToggleSubtask = async (
+    subtaskId: number,
+    isComplete: boolean
+  ) => {
+    try {
+      const updatedSubtask = await subtaskService.toggleComplete(
+        subtaskId,
+        isComplete
+      );
+      setSubtasks(
+        subtasks.map((s) => (s.id === subtaskId ? updatedSubtask : s))
+      );
+    } catch (error) {
+      console.error("Failed to toggle subtask:", error);
+      message.error("Failed to update subtask");
+    }
+  };
+
+  const handleDeleteSubtask = async (subtaskId: number) => {
+    try {
+      await subtaskService.deleteSubtask(subtaskId);
+      setSubtasks(subtasks.filter((s) => s.id !== subtaskId));
+      message.success("Subtask deleted successfully!");
+    } catch (error) {
+      console.error("Failed to delete subtask:", error);
+      message.error("Failed to delete subtask");
+    }
+  };
+
+  const handleAssigneeChange = async (
+    subtaskId: number,
+    assigneeId: number | null
+  ) => {
+    try {
+      const updatedSubtask = await subtaskService.updateSubtask(subtaskId, {
+        assignee_id: assigneeId,
+      });
+      setSubtasks(
+        subtasks.map((s) => (s.id === subtaskId ? updatedSubtask : s))
+      );
+      message.success("Assignee updated successfully!");
+    } catch (error) {
+      console.error("Failed to update assignee:", error);
+      message.error("Failed to update assignee");
+    }
+  };
+
+  const handleSearchTickets = async (searchValue: string) => {
+    if (!searchValue || searchValue.length < 2) {
+      setTicketSearchResults([]);
+      return;
+    }
+
+    setSearchingTickets(true);
+    try {
+      const results = await linkedItemService.searchTickets(
+        searchValue,
+        ticket?.project
+      );
+      // Filter out the current ticket from results
+      const filtered = results.filter((t) => t.id !== ticket?.id);
+      setTicketSearchResults(filtered);
+    } catch (error) {
+      console.error("Failed to search tickets:", error);
+      message.error("Failed to search tickets");
+    } finally {
+      setSearchingTickets(false);
+    }
+  };
+
+  const handleAddLink = async () => {
+    if (!newLinkType || !selectedTargetTicket) {
+      message.warning("Please select a link type and target ticket");
+      return;
+    }
+
+    if (!ticket?.id) {
+      message.warning("Save the ticket first before adding links");
+      return;
+    }
+
+    setAddingLink(true);
+    try {
+      const newLink = await linkedItemService.createLink({
+        source_ticket_id: ticket.id,
+        target_ticket_id: selectedTargetTicket,
+        link_type: newLinkType,
+      });
+      setLinkedItems([...linkedItems, newLink]);
+      setNewLinkType("");
+      setSelectedTargetTicket(null);
+      setTicketSearchResults([]);
+      setShowLinkForm(false);
+      message.success("Link added successfully!");
+    } catch (error) {
+      console.error("Failed to add link:", error);
+      message.error("Failed to add link");
+    } finally {
+      setAddingLink(false);
+    }
+  };
+
+  const handleDeleteLink = async (linkId: number) => {
+    try {
+      await linkedItemService.deleteLink(linkId);
+      setLinkedItems(linkedItems.filter((l) => l.id !== linkId));
+      message.success("Link deleted successfully!");
+    } catch (error) {
+      console.error("Failed to delete link:", error);
+      message.error("Failed to delete link");
     }
   };
 
@@ -678,14 +915,196 @@ export const TicketModal: React.FC<TicketModalProps> = ({
               >
                 Subtasks
               </h3>
-              <Button
-                type="text"
-                size="small"
-                icon={<PlusOutlined />}
-                style={{ padding: 0, color: "#9E9E9E", height: "auto" }}
-              >
-                Add subtask
-              </Button>
+
+              {/* Add subtask button or form */}
+              {!isCreateMode && (
+                <>
+                  {!showSubtaskForm ? (
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<PlusOutlined />}
+                      onClick={() => setShowSubtaskForm(true)}
+                      style={{
+                        padding: "4px 8px",
+                        color: "#5E6C84",
+                        height: "auto",
+                        marginBottom: "8px",
+                      }}
+                    >
+                      Add subtask
+                    </Button>
+                  ) : (
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "8px",
+                        marginBottom: "12px",
+                      }}
+                    >
+                      <Input
+                        placeholder="Type to create or search for existing task..."
+                        value={newSubtaskTitle}
+                        onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                        onPressEnter={handleAddSubtask}
+                        disabled={addingSubtask}
+                        style={{ flex: 1 }}
+                        autoFocus
+                        onBlur={() => {
+                          if (!newSubtaskTitle.trim()) {
+                            setShowSubtaskForm(false);
+                          }
+                        }}
+                      />
+                      <Button
+                        type="primary"
+                        size="small"
+                        onClick={handleAddSubtask}
+                        loading={addingSubtask}
+                        disabled={!newSubtaskTitle.trim()}
+                      >
+                        Add
+                      </Button>
+                      <Button
+                        size="small"
+                        onClick={() => {
+                          setNewSubtaskTitle("");
+                          setShowSubtaskForm(false);
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Subtasks list */}
+              {loadingSubtasks ? (
+                <div style={{ textAlign: "center", padding: "16px" }}>
+                  <Spin size="small" />
+                </div>
+              ) : subtasks.length > 0 ? (
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "8px",
+                  }}
+                >
+                  {subtasks.map((subtask) => (
+                    <div
+                      key={subtask.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        padding: "8px",
+                        border: "1px solid #dfe1e6",
+                        borderRadius: "4px",
+                        backgroundColor: subtask.is_complete
+                          ? "#f7f8f9"
+                          : "#fff",
+                      }}
+                    >
+                      <FontAwesomeIcon
+                        icon={faCheckCircle}
+                        style={{
+                          fontSize: "16px",
+                          color: subtask.is_complete ? "#4bade8" : "#DFE1E6",
+                        }}
+                      />
+                      <Checkbox
+                        checked={subtask.is_complete}
+                        onChange={(e) =>
+                          handleToggleSubtask(subtask.id, e.target.checked)
+                        }
+                      />
+                      <span
+                        style={{
+                          flex: 1,
+                          textDecoration: subtask.is_complete
+                            ? "line-through"
+                            : "none",
+                          color: subtask.is_complete ? "#9E9E9E" : "#2C3E50",
+                        }}
+                      >
+                        {subtask.title}
+                      </span>
+
+                      {/* Assignee selector */}
+                      <Select
+                        placeholder="Assignee"
+                        value={subtask.assignee?.id || null}
+                        onChange={(value) =>
+                          handleAssigneeChange(subtask.id, value)
+                        }
+                        allowClear
+                        style={{ width: 150 }}
+                        size="small"
+                      >
+                        {availableUsers.map((user) => (
+                          <Select.Option key={user.id} value={user.id}>
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "4px",
+                              }}
+                            >
+                              <Avatar size={16}>
+                                {user.first_name?.[0] ||
+                                  user.username?.[0]?.toUpperCase()}
+                              </Avatar>
+                              {user.first_name && user.last_name
+                                ? `${user.first_name} ${user.last_name}`
+                                : user.username}
+                            </div>
+                          </Select.Option>
+                        ))}
+                      </Select>
+
+                      <Popconfirm
+                        title="Delete subtask?"
+                        description="Are you sure you want to delete this subtask?"
+                        onConfirm={() => handleDeleteSubtask(subtask.id)}
+                        okText="Yes"
+                        cancelText="No"
+                      >
+                        <Button
+                          type="text"
+                          size="small"
+                          icon={<DeleteOutlined />}
+                          danger
+                          style={{ color: "#e5493a" }}
+                        />
+                      </Popconfirm>
+                    </div>
+                  ))}
+                </div>
+              ) : !isCreateMode && !showSubtaskForm ? (
+                <div
+                  style={{
+                    textAlign: "center",
+                    padding: "16px",
+                    color: "#9E9E9E",
+                    fontSize: "14px",
+                  }}
+                >
+                  No subtasks yet. Click "Add subtask" above.
+                </div>
+              ) : isCreateMode ? (
+                <div
+                  style={{
+                    textAlign: "center",
+                    padding: "16px",
+                    color: "#9E9E9E",
+                    fontSize: "14px",
+                  }}
+                >
+                  Save the ticket first to add subtasks.
+                </div>
+              ) : null}
             </div>
 
             {/* Linked work items */}
@@ -701,14 +1120,231 @@ export const TicketModal: React.FC<TicketModalProps> = ({
               >
                 Linked work items
               </h3>
-              <Button
-                type="text"
-                size="small"
-                icon={<PlusOutlined />}
-                style={{ padding: 0, color: "#9E9E9E", height: "auto" }}
-              >
-                Add linked work item
-              </Button>
+
+              {/* Add link button or form */}
+              {!isCreateMode && (
+                <>
+                  {!showLinkForm ? (
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<PlusOutlined />}
+                      onClick={() => setShowLinkForm(true)}
+                      style={{
+                        padding: "4px 8px",
+                        color: "#5E6C84",
+                        height: "auto",
+                        marginBottom: "8px",
+                      }}
+                    >
+                      Add linked work item
+                    </Button>
+                  ) : (
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "8px",
+                        marginBottom: "12px",
+                      }}
+                    >
+                      <Select
+                        placeholder="Link type"
+                        value={newLinkType || undefined}
+                        onChange={(value) => setNewLinkType(value)}
+                        style={{ width: 150 }}
+                        size="small"
+                        options={LINK_TYPES}
+                      />
+                      <Select
+                        showSearch
+                        placeholder="Type to search for ticket..."
+                        value={selectedTargetTicket || undefined}
+                        onChange={(value) => setSelectedTargetTicket(value)}
+                        onSearch={handleSearchTickets}
+                        loading={searchingTickets}
+                        filterOption={false}
+                        style={{ flex: 1 }}
+                        size="small"
+                        autoFocus
+                        notFoundContent={
+                          searchingTickets ? (
+                            <Spin size="small" />
+                          ) : (
+                            "Type to search..."
+                          )
+                        }
+                        onBlur={() => {
+                          if (!selectedTargetTicket) {
+                            setTimeout(() => {
+                              if (!selectedTargetTicket) {
+                                setShowLinkForm(false);
+                                setNewLinkType("");
+                                setTicketSearchResults([]);
+                              }
+                            }, 200);
+                          }
+                        }}
+                      >
+                        {ticketSearchResults.map((ticket) => (
+                          <Select.Option key={ticket.id} value={ticket.id}>
+                            {ticket.project_key}-{ticket.id} {ticket.name}
+                          </Select.Option>
+                        ))}
+                      </Select>
+                      <Button
+                        type="primary"
+                        size="small"
+                        onClick={handleAddLink}
+                        loading={addingLink}
+                        disabled={!newLinkType || !selectedTargetTicket}
+                      >
+                        Add
+                      </Button>
+                      <Button
+                        size="small"
+                        onClick={() => {
+                          setNewLinkType("");
+                          setSelectedTargetTicket(null);
+                          setTicketSearchResults([]);
+                          setShowLinkForm(false);
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Linked items list */}
+              {loadingLinkedItems ? (
+                <div style={{ textAlign: "center", padding: "16px" }}>
+                  <Spin size="small" />
+                </div>
+              ) : linkedItems.length > 0 ? (
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "8px",
+                  }}
+                >
+                  {linkedItems.map((link) => {
+                    // Determine if current ticket is source or target
+                    const isSource = link.source_ticket.id === ticket?.id;
+                    const relatedTicket = isSource
+                      ? link.target_ticket
+                      : link.source_ticket;
+                    const displayLinkType =
+                      LINK_TYPES.find((t) => t.value === link.link_type)
+                        ?.label || link.link_type;
+
+                    return (
+                      <div
+                        key={link.id}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "12px",
+                          padding: "12px",
+                          border: "1px solid #dfe1e6",
+                          borderRadius: "4px",
+                          backgroundColor: "#fff",
+                        }}
+                      >
+                        <FontAwesomeIcon
+                          icon={faLink}
+                          style={{
+                            fontSize: "16px",
+                            color: "#5E6C84",
+                          }}
+                        />
+                        <div style={{ flex: 1 }}>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "8px",
+                              marginBottom: "4px",
+                            }}
+                          >
+                            <span
+                              style={{
+                                fontSize: "12px",
+                                fontWeight: 500,
+                                color: "#9E9E9E",
+                                textTransform: "uppercase",
+                              }}
+                            >
+                              {displayLinkType}
+                            </span>
+                          </div>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "8px",
+                            }}
+                          >
+                            <span
+                              style={{
+                                fontSize: "14px",
+                                fontWeight: 500,
+                                color: "#2C3E50",
+                              }}
+                            >
+                              {relatedTicket.project_key}-{relatedTicket.id}
+                            </span>
+                            <span
+                              style={{ fontSize: "14px", color: "#2C3E50" }}
+                            >
+                              {relatedTicket.name}
+                            </span>
+                          </div>
+                        </div>
+
+                        <Popconfirm
+                          title="Delete link?"
+                          description="Are you sure you want to remove this link?"
+                          onConfirm={() => handleDeleteLink(link.id)}
+                          okText="Yes"
+                          cancelText="No"
+                        >
+                          <Button
+                            type="text"
+                            size="small"
+                            icon={<DeleteOutlined />}
+                            danger
+                            style={{ color: "#e5493a" }}
+                          />
+                        </Popconfirm>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : !isCreateMode && !showLinkForm ? (
+                <div
+                  style={{
+                    textAlign: "center",
+                    padding: "16px",
+                    color: "#9E9E9E",
+                    fontSize: "14px",
+                  }}
+                >
+                  No linked items yet. Click "Add linked work item" above.
+                </div>
+              ) : isCreateMode ? (
+                <div
+                  style={{
+                    textAlign: "center",
+                    padding: "16px",
+                    color: "#9E9E9E",
+                    fontSize: "14px",
+                  }}
+                >
+                  Save the ticket first to add linked items.
+                </div>
+              ) : null}
             </div>
 
             {/* Activity Section */}

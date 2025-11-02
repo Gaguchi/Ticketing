@@ -4,7 +4,7 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from .views import (
     TicketViewSet, ColumnViewSet, ProjectViewSet, CommentViewSet, AttachmentViewSet,
     TagViewSet, ContactViewSet, TagContactViewSet, UserTagViewSet, TicketTagViewSet,
-    IssueLinkViewSet, CompanyViewSet, UserManagementViewSet,
+    IssueLinkViewSet, CompanyViewSet, UserManagementViewSet, TicketSubtaskViewSet,
     register_user, login_user, get_current_user
 )
 
@@ -22,6 +22,7 @@ router.register(r'tag-contacts', TagContactViewSet, basename='tag-contact')
 router.register(r'user-tags', UserTagViewSet, basename='user-tag')
 router.register(r'ticket-tags', TicketTagViewSet, basename='ticket-tag')
 router.register(r'issue-links', IssueLinkViewSet, basename='issue-link')
+router.register(r'subtasks', TicketSubtaskViewSet, basename='subtask')
 
 urlpatterns = [
     # Authentication endpoints

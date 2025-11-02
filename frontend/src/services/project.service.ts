@@ -76,7 +76,8 @@ class ProjectService {
    * Get project columns
    */
   async getProjectColumns(id: number): Promise<any[]> {
-    return await apiService.get<any[]>(API_ENDPOINTS.PROJECT_COLUMNS(id));
+    const response = await apiService.get<PaginatedResponse<any>>(`${API_ENDPOINTS.COLUMNS}?project=${id}`);
+    return response.results || [];
   }
 
   /**

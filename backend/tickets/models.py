@@ -359,6 +359,42 @@ class UserTag(models.Model):
         return f"{self.user.username} → {self.tag.name}"
 
 
+class TicketSubtask(models.Model):
+    """
+    Subtask model for breaking down tickets into smaller actionable items.
+    Each subtask belongs to a parent ticket and can be assigned and tracked independently.
+    """
+    ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name='subtasks_list')
+    title = models.CharField(max_length=500)
+    assignee = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        related_name='assigned_subtasks'
+    )
+    is_complete = models.BooleanField(default=False)
+    order = models.IntegerField(default=0, help_text='Display order within the ticket')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_subtasks'
+    )
+
+    class Meta:
+        ordering = ['order', 'created_at']
+        verbose_name = 'Subtask'
+        verbose_name_plural = 'Subtasks'
+
+    def __str__(self):
+        status = "✓" if self.is_complete else "○"
+        return f"{status} {self.title} ({self.ticket.project.key}-{self.ticket.id})"
+
+
 class IssueLink(models.Model):
     """
     Links between tickets (issue links).

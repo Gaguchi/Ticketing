@@ -36,5 +36,13 @@ export { companyService } from './company.service';
 // User Management Service
 export { userService } from './user.service';
 
+// Subtask Service
+export { subtaskService } from './subtask.service';
+export type { Subtask, CreateSubtaskData, UpdateSubtaskData } from './subtask.service';
+
+// Linked Item Service
+export { linkedItemService, LINK_TYPES } from './linkedItem.service';
+export type { IssueLink, LinkedTicket, CreateIssueLinkData } from './linkedItem.service';
+
 // Re-export all types from centralized types/api.ts
 export type * from '../types/api';

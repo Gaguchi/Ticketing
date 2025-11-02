@@ -2,7 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import (
     Ticket, Project, Column, Comment, Attachment,
-    Tag, Contact, TagContact, UserTag, TicketTag, IssueLink, Company, UserRole
+    Tag, Contact, TagContact, UserTag, TicketTag, IssueLink, Company, UserRole, TicketSubtask
 )
 
 
@@ -538,3 +538,72 @@ class UserCreateUpdateSerializer(serializers.ModelSerializer):
             instance.set_password(password)
         instance.save()
         return instance
+
+
+class TicketSubtaskSerializer(serializers.ModelSerializer):
+    """Serializer for TicketSubtask model"""
+    assignee = UserSimpleSerializer(read_only=True)
+    assignee_id = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(),
+        source='assignee',
+        required=False,
+        allow_null=True
+    )
+    created_by = UserSimpleSerializer(read_only=True)
+    
+    class Meta:
+        model = TicketSubtask
+        fields = [
+            'id', 'ticket', 'title', 'assignee', 'assignee_id',
+            'is_complete', 'order', 'created_at', 'updated_at', 'created_by'
+        ]
+        read_only_fields = ['created_at', 'updated_at', 'created_by']
+    
+    def create(self, validated_data):
+        # Set created_by from request user
+        request = self.context.get('request')
+        if request and hasattr(request, 'user'):
+            validated_data['created_by'] = request.user
+        return super().create(validated_data)
+
+
+class TicketSimpleSerializer(serializers.ModelSerializer):
+    """Simple serializer for tickets used in IssueLink"""
+    project_key = serializers.CharField(source='project.key', read_only=True)
+    
+    class Meta:
+        model = Ticket
+        fields = ['id', 'name', 'type', 'status', 'project', 'project_key']
+
+
+class IssueLinkSerializer(serializers.ModelSerializer):
+    """Serializer for IssueLink model"""
+    source_ticket = TicketSimpleSerializer(read_only=True)
+    source_ticket_id = serializers.PrimaryKeyRelatedField(
+        queryset=Ticket.objects.all(),
+        source='source_ticket',
+        required=True
+    )
+    target_ticket = TicketSimpleSerializer(read_only=True)
+    target_ticket_id = serializers.PrimaryKeyRelatedField(
+        queryset=Ticket.objects.all(),
+        source='target_ticket',
+        required=True
+    )
+    created_by = UserSimpleSerializer(read_only=True)
+    
+    class Meta:
+        model = IssueLink
+        fields = [
+            'id', 'source_ticket', 'source_ticket_id',
+            'target_ticket', 'target_ticket_id', 'link_type',
+            'created_by', 'created_at'
+        ]
+        read_only_fields = ['created_at', 'created_by']
+    
+    def create(self, validated_data):
+        # Set created_by from request user
+        request = self.context.get('request')
+        if request and hasattr(request, 'user'):
+            validated_data['created_by'] = request.user
+        return super().create(validated_data)

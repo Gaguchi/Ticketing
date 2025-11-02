@@ -13,7 +13,7 @@ from .permissions import (
 )
 from .models import (
     Ticket, Column, Project, Comment, Attachment,
-    Tag, Contact, TagContact, UserTag, TicketTag, IssueLink, Company, UserRole
+    Tag, Contact, TagContact, UserTag, TicketTag, IssueLink, Company, UserRole, TicketSubtask
 )
 from .serializers import (
     TicketSerializer, TicketListSerializer, ColumnSerializer,
@@ -21,7 +21,7 @@ from .serializers import (
     TagSerializer, TagListSerializer, ContactSerializer,
     TagContactSerializer, UserTagSerializer, TicketTagSerializer,
     IssueLinkSerializer, CompanySerializer, CompanyListSerializer,
-    UserManagementSerializer, UserCreateUpdateSerializer, UserRoleSerializer
+    UserManagementSerializer, UserCreateUpdateSerializer, UserRoleSerializer, TicketSubtaskSerializer
 )
 
 
@@ -926,6 +926,52 @@ class IssueLinkViewSet(viewsets.ModelViewSet):
     serializer_class = IssueLinkSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['source_ticket', 'target_ticket', 'link_type']
+    
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user if self.request.user.is_authenticated else None)
+
+
+class TicketSubtaskViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for TicketSubtask - subtasks within tickets
+    """
+    queryset = TicketSubtask.objects.select_related('ticket', 'assignee', 'created_by')
+    serializer_class = TicketSubtaskSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['ticket', 'assignee', 'is_complete']
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        ticket_id = self.request.query_params.get('ticket', None)
+        if ticket_id:
+            queryset = queryset.filter(ticket_id=ticket_id)
+        return queryset.order_by('order', 'created_at')
+    
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user if self.request.user.is_authenticated else None)
+
+
+class IssueLinkViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for IssueLink - linked work items between tickets
+    """
+    queryset = IssueLink.objects.select_related(
+        'source_ticket', 'target_ticket', 'created_by',
+        'source_ticket__project', 'target_ticket__project'
+    )
+    serializer_class = IssueLinkSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['source_ticket', 'target_ticket', 'link_type']
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        ticket_id = self.request.query_params.get('ticket', None)
+        if ticket_id:
+            # Return links where the ticket is either source or target
+            queryset = queryset.filter(
+                Q(source_ticket_id=ticket_id) | Q(target_ticket_id=ticket_id)
+            )
+        return queryset.order_by('-created_at')
     
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user if self.request.user.is_authenticated else None)

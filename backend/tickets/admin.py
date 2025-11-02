@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import (
     Ticket, Column, Project, Comment, Attachment,
-    Tag, Contact, TagContact, UserTag, TicketTag, Company, UserRole
+    Tag, Contact, TagContact, UserTag, TicketTag, Company, UserRole, TicketSubtask, IssueLink
 )
 
 
@@ -227,4 +227,48 @@ class UserRoleAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         return qs.select_related('user', 'project', 'assigned_by')
+
+
+@admin.register(TicketSubtask)
+class TicketSubtaskAdmin(admin.ModelAdmin):
+    list_display = ['id', 'title', 'ticket', 'assignee', 'is_complete', 'order', 'created_at']
+    list_filter = ['is_complete', 'created_at']
+    search_fields = ['title', 'ticket__name']
+    autocomplete_fields = ['ticket', 'assignee', 'created_by']
+    readonly_fields = ['created_at', 'updated_at']
+    list_editable = ['is_complete', 'order']
+    ordering = ['ticket', 'order', 'created_at']
+    
+    fieldsets = (
+        ('Subtask Information', {
+            'fields': ('ticket', 'title', 'is_complete', 'order')
+        }),
+        ('Assignment', {
+            'fields': ('assignee',)
+        }),
+        ('Metadata', {
+            'fields': ('created_by', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(IssueLink)
+class IssueLinkAdmin(admin.ModelAdmin):
+    list_display = ['id', 'source_ticket', 'link_type', 'target_ticket', 'created_by', 'created_at']
+    list_filter = ['link_type', 'created_at']
+    search_fields = ['source_ticket__name', 'target_ticket__name']
+    autocomplete_fields = ['source_ticket', 'target_ticket', 'created_by']
+    readonly_fields = ['created_at']
+    ordering = ['-created_at']
+    
+    fieldsets = (
+        ('Link Information', {
+            'fields': ('source_ticket', 'link_type', 'target_ticket')
+        }),
+        ('Metadata', {
+            'fields': ('created_by', 'created_at'),
+            'classes': ('collapse',)
+        }),
+    )
 
