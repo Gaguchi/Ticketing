@@ -52,7 +52,11 @@ const Register: React.FC = () => {
         registerData.captcha_token = captchaToken;
       }
 
+      console.log("📤 Registration request data:", registerData);
+
       const response = await authService.register(registerData);
+
+      console.log("✅ Registration response:", response);
 
       // Update auth context
       login(response.tokens.access, response.user);
@@ -74,7 +78,34 @@ const Register: React.FC = () => {
         navigate("/setup");
       }
     } catch (err: any) {
-      setError(err?.message || "An error occurred during registration");
+      console.error("Registration error:", err);
+
+      // Extract detailed error message
+      let errorMessage = "An error occurred during registration";
+
+      if (err?.details) {
+        // Handle field-specific errors
+        const details = err.details;
+        if (typeof details === "object") {
+          const fieldErrors = [];
+          for (const [field, messages] of Object.entries(details)) {
+            if (Array.isArray(messages)) {
+              fieldErrors.push(`${field}: ${messages.join(", ")}`);
+            } else if (typeof messages === "string") {
+              fieldErrors.push(`${field}: ${messages}`);
+            }
+          }
+          if (fieldErrors.length > 0) {
+            errorMessage = fieldErrors.join("\n");
+          }
+        } else if (typeof details === "string") {
+          errorMessage = details;
+        }
+      } else if (err?.message) {
+        errorMessage = err.message;
+      }
+
+      setError(errorMessage);
       setCaptchaToken(null); // Reset captcha on error
     } finally {
       setLoading(false);

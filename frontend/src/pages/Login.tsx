@@ -70,7 +70,33 @@ const Login: React.FC = () => {
         navigate("/setup");
       }
     } catch (err: any) {
-      setError(err?.message || "Invalid username or password");
+      console.error("Login error:", err);
+
+      // Extract detailed error message
+      let errorMessage = "Invalid username or password";
+
+      if (err?.details) {
+        const details = err.details;
+        if (typeof details === "object") {
+          const fieldErrors = [];
+          for (const [field, messages] of Object.entries(details)) {
+            if (Array.isArray(messages)) {
+              fieldErrors.push(`${field}: ${messages.join(", ")}`);
+            } else if (typeof messages === "string") {
+              fieldErrors.push(`${field}: ${messages}`);
+            }
+          }
+          if (fieldErrors.length > 0) {
+            errorMessage = fieldErrors.join("\n");
+          }
+        } else if (typeof details === "string") {
+          errorMessage = details;
+        }
+      } else if (err?.message) {
+        errorMessage = err.message;
+      }
+
+      setError(errorMessage);
       setCaptchaToken(null); // Reset captcha on error
     } finally {
       setLoading(false);
