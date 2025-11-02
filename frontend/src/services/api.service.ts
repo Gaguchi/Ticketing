@@ -23,6 +23,14 @@ class APIService {
   }
 
   /**
+   * Get project header for project-scoped requests
+   */
+  private getProjectHeader(): Record<string, string> {
+    const projectId = localStorage.getItem('selectedProjectId');
+    return projectId ? { 'X-Project-ID': projectId } : {};
+  }
+
+  /**
    * Log API request details (only in development)
    */
   private logRequest(url: string, config: RequestInit) {
@@ -82,6 +90,7 @@ class APIService {
       headers: {
         ...API_HEADERS,
         ...this.getAuthHeader(),
+        ...this.getProjectHeader(),
         ...options.headers,
       },
       credentials: API_CONFIG.withCredentials ? 'include' : 'same-origin',

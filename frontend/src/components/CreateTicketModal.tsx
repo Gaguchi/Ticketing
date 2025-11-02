@@ -59,46 +59,57 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
   const [saving, setSaving] = useState(false);
   const [createAnother, setCreateAnother] = useState(false);
   const [ticketType, setTicketType] = useState("task");
-  const { selectedProject } = useProject();
+  const { selectedProject, availableProjects, setSelectedProject } =
+    useProject();
   const [actualColumnId, setActualColumnId] = useState<number | null>(null);
   const [openTickets, setOpenTickets] = useState<any[]>([]);
   const [projectTags, setProjectTags] = useState<any[]>([]);
   const [projectColumns, setProjectColumns] = useState<any[]>([]);
+  const [currentProjectId, setCurrentProjectId] = useState<number | null>(null);
+
+  // Watch for project field changes
+  const watchedProject = Form.useWatch("project", form);
 
   // Load project columns when modal opens or project changes
   useEffect(() => {
-    if (open && selectedProject) {
-      console.group("🔧 CreateTicketModal - Loading project and columns");
-      console.log("Modal opened with columnId:", columnId);
-      console.log("Selected project:", selectedProject);
+    if (open) {
+      // Set initial project when modal opens
+      if (selectedProject && !currentProjectId) {
+        form.setFieldValue("project", selectedProject.id);
+        setCurrentProjectId(selectedProject.id);
+      }
+    }
+  }, [open, selectedProject, currentProjectId, form]);
 
-      form.setFieldValue("project", selectedProject.id);
+  // Load project data when project selection changes
+  useEffect(() => {
+    if (open && watchedProject && watchedProject !== currentProjectId) {
+      setCurrentProjectId(watchedProject);
+      const project = availableProjects.find((p) => p.id === watchedProject);
 
-      // Fetch project columns to get the actual first column ID
-      console.log("Fetching columns for project ID:", selectedProject.id);
+      console.group("🔧 CreateTicketModal - Loading project data");
+      console.log("Loading data for project ID:", watchedProject);
+      console.log("Project:", project);
+
+      // Fetch project columns
       projectService
-        .getProjectColumns(selectedProject.id)
+        .getProjectColumns(watchedProject)
         .then((columns) => {
           console.log("Fetched columns:", columns);
           setProjectColumns(columns);
           if (columns.length > 0) {
-            // Use the first column or the specified columnId if it exists in this project
             const targetColumn =
               columns.find((col: any) => col.id === columnId) || columns[0];
             console.log("Selected column:", targetColumn);
             setActualColumnId(targetColumn.id);
-            // Set default column value in form
             form.setFieldValue("column", targetColumn.id);
-            console.groupEnd();
           } else {
             console.warn("⚠️ No columns found in project");
-            console.groupEnd();
-
-            // No columns available - inform user
             message.warning(
               "This project has no columns. Please set up columns for this project first."
             );
           }
+          console.groupEnd();
         })
         .catch((error) => {
           console.error("❌ Failed to load project columns:", error);
@@ -108,28 +119,23 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
 
       // Fetch open tickets for parent selection
       ticketService
-        .getTickets({ project: selectedProject.id })
+        .getTickets({ project: watchedProject })
         .then((response) => {
           const allTickets = response.results || [];
-          // Filter to exclude done status
           const projectTickets = allTickets.filter(
             (t: any) => t.status !== "done"
           );
           setOpenTickets(projectTickets);
-          console.log(
-            "Fetched open tickets for parent selection:",
-            projectTickets.length
-          );
+          console.log("Fetched open tickets:", projectTickets.length);
         })
         .catch((error) => {
           console.error("❌ Failed to load open tickets:", error);
         });
 
-      // Fetch project tags for autocomplete
+      // Fetch project tags
       tagService
-        .getTags(selectedProject.id)
+        .getTags(watchedProject)
         .then((response: any) => {
-          // Handle both array response and paginated response
           const tags = Array.isArray(response)
             ? response
             : response.results || [];
@@ -138,13 +144,17 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
         })
         .catch((error) => {
           console.error("❌ Failed to load project tags:", error);
-          setProjectTags([]); // Ensure it's always an array
+          setProjectTags([]);
         });
-    } else if (open && !selectedProject) {
-      console.warn("⚠️ No project selected");
-      message.warning("No project selected. Please select a project first.");
     }
-  }, [open, form, columnId, selectedProject]);
+  }, [
+    watchedProject,
+    open,
+    columnId,
+    availableProjects,
+    currentProjectId,
+    form,
+  ]);
 
   const handleSubmit = async (values: any) => {
     console.group("🎫 CreateTicketModal - handleSubmit");
@@ -266,7 +276,27 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
   const handleClose = () => {
     form.resetFields();
     setCreateAnother(false);
+    setCurrentProjectId(null);
     onClose();
+  };
+
+  const handleProjectChange = (projectId: number) => {
+    // Clear related fields when project changes
+    form.setFieldsValue({
+      column: undefined,
+      parent: undefined,
+      tags: undefined,
+    });
+    setActualColumnId(null);
+    setOpenTickets([]);
+    setProjectTags([]);
+    setProjectColumns([]);
+
+    // Update the selected project in context if different
+    const project = availableProjects.find((p) => p.id === projectId);
+    if (project && project.id !== selectedProject?.id) {
+      setSelectedProject(project);
+    }
   };
 
   return (
@@ -352,9 +382,18 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               rules={[{ required: true, message: "Project is required" }]}
               style={{ marginBottom: "12px" }}
             >
-              <Select placeholder="Select project" disabled>
-                {selectedProject && (
-                  <Option value={selectedProject.id}>
+              <Select
+                placeholder="Select project"
+                onChange={handleProjectChange}
+                showSearch
+                filterOption={(input, option) =>
+                  (option?.children?.toString() ?? "")
+                    .toLowerCase()
+                    .includes(input.toLowerCase())
+                }
+              >
+                {availableProjects.map((project) => (
+                  <Option key={project.id} value={project.id}>
                     <div
                       style={{
                         display: "flex",
@@ -376,14 +415,14 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                           fontWeight: 600,
                         }}
                       >
-                        {selectedProject.key.substring(0, 2)}
+                        {project.key.substring(0, 2)}
                       </div>
                       <span>
-                        {selectedProject.name} ({selectedProject.key})
+                        {project.name} ({project.key})
                       </span>
                     </div>
                   </Option>
-                )}
+                ))}
               </Select>
             </Form.Item>
 
