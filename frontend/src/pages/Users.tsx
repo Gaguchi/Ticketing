@@ -107,8 +107,10 @@ const Users: React.FC = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const response = await apiService.get<User[]>(API_ENDPOINTS.USERS);
-      setUsers(response);
+      const response = await apiService.get<any>(API_ENDPOINTS.USERS);
+      // API returns paginated response: {count, next, previous, results}
+      const usersData = response.results || response;
+      setUsers(Array.isArray(usersData) ? usersData : []);
     } catch (error: any) {
       message.error(error.message || "Failed to load users");
     } finally {

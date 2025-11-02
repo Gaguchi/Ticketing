@@ -1,21 +1,32 @@
 from rest_framework import permissions
 from django.db.models import Q
-from .models import Company
+from .models import Company, UserRole
 
 
 class IsSuperuserOrCompanyAdmin(permissions.BasePermission):
     """
-    Permission class that allows access to superusers or company admins.
-    For company-specific operations, checks if user is admin of that company.
+    Permission class that allows access to:
+    - Django superusers (system admins)
+    - Project superadmins (users with 'superadmin' role in any project)
+    - Company admins (IT staff assigned to manage companies)
     """
     
     def has_permission(self, request, view):
-        """Check if user is authenticated and is either superuser or company admin."""
+        """Check if user is authenticated and is either superuser, project superadmin, or company admin."""
         if not request.user or not request.user.is_authenticated:
             return False
         
-        # Superusers have full access
+        # Django superusers have full access
         if request.user.is_superuser:
+            return True
+        
+        # Check if user is a 'superadmin' of ANY project
+        is_project_superadmin = UserRole.objects.filter(
+            user=request.user,
+            role='superadmin'
+        ).exists()
+        
+        if is_project_superadmin:
             return True
         
         # Check if user is admin of any company
@@ -26,8 +37,17 @@ class IsSuperuserOrCompanyAdmin(permissions.BasePermission):
         if not request.user or not request.user.is_authenticated:
             return False
         
-        # Superusers have full access
+        # Django superusers have full access
         if request.user.is_superuser:
+            return True
+        
+        # Project superadmins have full access
+        is_project_superadmin = UserRole.objects.filter(
+            user=request.user,
+            role='superadmin'
+        ).exists()
+        
+        if is_project_superadmin:
             return True
         
         # If object is a Company, check if user is admin of it
@@ -150,7 +170,8 @@ class IsSuperuserOrCompanyMember(permissions.BasePermission):
 class IsCompanyAdminOrReadOnly(permissions.BasePermission):
     """
     Permission class that allows:
-    - Superusers: Full access
+    - Django Superusers: Full access (for system administration)
+    - Project Superadmins: Can create companies and manage all companies
     - Staff users: Can create companies and view/edit their assigned companies
     - Company admins: Full access to their companies
     - Company members: Read-only access to their companies
@@ -161,8 +182,18 @@ class IsCompanyAdminOrReadOnly(permissions.BasePermission):
         if not request.user or not request.user.is_authenticated:
             return False
         
-        # Superusers have full access
+        # Django superusers have full access (system admins)
         if request.user.is_superuser:
+            return True
+        
+        # Check if user is a 'superadmin' of ANY project
+        # Project superadmins can create and manage companies
+        is_project_superadmin = UserRole.objects.filter(
+            user=request.user,
+            role='superadmin'
+        ).exists()
+        
+        if is_project_superadmin:
             return True
         
         # Staff users can create companies and view their companies
@@ -184,8 +215,17 @@ class IsCompanyAdminOrReadOnly(permissions.BasePermission):
         if not request.user or not request.user.is_authenticated:
             return False
         
-        # Superusers have full access
+        # Django superusers have full access
         if request.user.is_superuser:
+            return True
+        
+        # Project superadmins have full access
+        is_project_superadmin = UserRole.objects.filter(
+            user=request.user,
+            role='superadmin'
+        ).exists()
+        
+        if is_project_superadmin:
             return True
         
         # Determine the company from the object

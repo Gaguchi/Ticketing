@@ -144,10 +144,17 @@ def get_current_user(request):
     member_companies = user.member_companies.all()
     all_companies = (admin_companies | member_companies).distinct()
     
+    # Get user roles for all projects
+    user_roles = UserRole.objects.filter(user=user).select_related('project')
+    
+    # Check if user has any superadmin role
+    is_project_superadmin = user_roles.filter(role='superadmin').exists()
+    
     # Serialize data
-    from .serializers import ProjectSerializer, CompanyListSerializer
+    from .serializers import ProjectSerializer, CompanyListSerializer, UserRoleSerializer
     projects_data = ProjectSerializer(all_projects, many=True).data
     companies_data = CompanyListSerializer(all_companies, many=True).data
+    user_roles_data = UserRoleSerializer(user_roles, many=True).data
     
     return Response({
         'id': user.id,
@@ -156,6 +163,8 @@ def get_current_user(request):
         'first_name': user.first_name,
         'last_name': user.last_name,
         'is_superuser': user.is_superuser,
+        'is_project_superadmin': is_project_superadmin,  # NEW: Check if user has any superadmin role
+        'roles': user_roles_data,  # NEW: Include all user roles
         'projects': projects_data,
         'has_projects': all_projects.exists(),
         'companies': companies_data,
@@ -496,15 +505,27 @@ class ProjectViewSet(viewsets.ModelViewSet):
     
     def create(self, request, *args, **kwargs):
         """
-        Override create to automatically add default columns to new projects
+        Override create to automatically:
+        1. Add default columns to new projects
+        2. Assign the creator as 'superadmin' for the project
         """
         # Create the project using the parent create method
         response = super().create(request, *args, **kwargs)
         
-        # If project was created successfully, add default columns
+        # If project was created successfully, add default columns and assign creator as superadmin
         if response.status_code == status.HTTP_201_CREATED:
             project_id = response.data['id']
             project = Project.objects.get(id=project_id)
+            user = request.user
+            
+            # Assign the creator as 'superadmin' for this project
+            UserRole.objects.create(
+                user=user,
+                project=project,
+                role='superadmin',
+                assigned_by=user  # Self-assigned during project creation
+            )
+            print(f"✅ Created UserRole: {user.username} as superadmin of {project.name}")
             
             # Define default columns
             default_columns = [

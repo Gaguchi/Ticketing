@@ -90,8 +90,10 @@ const Companies: React.FC = () => {
   const fetchCompanies = async () => {
     setLoading(true);
     try {
-      const response = await apiService.get<Company[]>(API_ENDPOINTS.COMPANIES);
-      setCompanies(response);
+      const response = await apiService.get<any>(API_ENDPOINTS.COMPANIES);
+      // API returns paginated response: {count, next, previous, results}
+      const companiesData = response.results || response;
+      setCompanies(Array.isArray(companiesData) ? companiesData : []);
       setLoading(false);
     } catch (error: any) {
       message.error(error.message || "Failed to load companies");
@@ -101,7 +103,6 @@ const Companies: React.FC = () => {
 
   const handleCreateCompany = () => {
     setEditingCompany(null);
-    form.resetFields();
     setFileList([]);
     setIsModalOpen(true);
   };
@@ -752,15 +753,16 @@ const Companies: React.FC = () => {
     );
   }
 
-  // Choose which empty state to show
-  if (companies.length === 0) {
-    return <EmptyState />;
-  }
-
-  // Render with data
+  // Render content based on whether there are companies
   return (
     <>
-      {viewMode === "list" ? <ListView /> : <GridView />}
+      {companies.length === 0 ? (
+        <EmptyState />
+      ) : viewMode === "list" ? (
+        <ListView />
+      ) : (
+        <GridView />
+      )}
 
       {/* Create/Edit Modal */}
       <Modal
@@ -771,6 +773,11 @@ const Companies: React.FC = () => {
           setIsModalOpen(false);
           form.resetFields();
           setFileList([]);
+        }}
+        afterOpenChange={(open) => {
+          if (open && !editingCompany) {
+            form.resetFields();
+          }
         }}
         okText={editingCompany ? "Update" : "Create"}
         confirmLoading={submitting}

@@ -466,7 +466,7 @@ class UserRoleSerializer(serializers.ModelSerializer):
 
 class UserManagementSerializer(serializers.ModelSerializer):
     """Comprehensive user serializer for user management page"""
-    project_roles = UserRoleSerializer(many=True, read_only=True, source='project_roles')
+    project_roles = UserRoleSerializer(many=True, read_only=True)
     administered_companies = serializers.SerializerMethodField()
     member_companies = serializers.SerializerMethodField()
     full_name = serializers.SerializerMethodField()

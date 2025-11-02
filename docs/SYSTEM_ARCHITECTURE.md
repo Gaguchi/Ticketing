@@ -98,55 +98,67 @@ User ──manages──> Company ──associated with──> Project ──con
       │ └──────────────────────────────┐
       │                                 │ members (M2M)
       │         ┌──────────────┐        │
-      │         │   Company    │        │ admins/users (M2M)
+      │         │   UserRole   │        │ (NEW: Project-specific roles)
       │         │──────────────│        │
-      │         │ id           │◄───────┤
-      │         │ name         │        │
-      │         │ description  │        │
-      │         │ admins (M2M) │────────┘
-      │         │ users (M2M)  │────────┐
-      │         └──────────────┘        │
-      │                │                │
-      │                │ companies (M2M)│
-      │                ↓                │
-      │         ┌─────────────┐         │
-      │         │   Project   │         │
-      │         │─────────────│         │
-      │         │ id          │         │
-      │         │ key         │◄────────┼──────────┐
-      │         │ name        │         │          │ project (FK)
-      │         │ description │         │          │
-      │         │ lead_user   │         │          │
-      │         │ members     │─────────┘          │
-      │         │ companies   │────────────────────┘
-      │         └─────────────┘
-      │                │
-      │                │ columns
-      │                ↓
-      │         ┌─────────────┐
-      │         │   Column    │
+      │    ┌────│ id           │        │
+      │    │    │ user (FK)    │────────┤
+      │    │    │ project (FK) │────────┼────┐
+      │    │    │ role         │        │    │
+      │    │    │ assigned_by  │────────┘    │
+      │    │    └──────────────┘             │
+      │    │          │                       │
+      │    │          │                       │
+      │    │          ↓                       │
+      │    │    ┌──────────────┐              │
+      │    │    │   Company    │              │ admins/users (M2M)
+      │    │    │──────────────│              │
+      │    │    │ id           │◄─────────────┤
+      │    │    │ name         │              │
+      │    │    │ description  │              │
+      │    │    │ admins (M2M) │──────────────┤
+      │    │    │ users (M2M)  │──────────────┘
+      │    │    └──────────────┘
+      │    │           │
+      │    │           │ companies (M2M)
+      │    │           ↓
+      │    │    ┌─────────────┐
+      │    └───>│   Project   │
       │         │─────────────│
       │         │ id          │
-      │         │ name        │◄────────┐
-      │         │ order       │         │
-      │         │ color       │         │
-      │         │ project_id  │─────────┘
-      │         └─────────────┘
-      │                │
-      │                │ tickets
-      │                ↓
-      │         ┌─────────────┐
-      │         │   Ticket    │
-      │         │─────────────│
-      │         │ id          │
-      │         │ name        │
-      │         │ description │
-      │         │ type        │ task/bug/story/epic
-      │         │ status      │
-      │         │ priority_id │ 1-4
-      │         │ urgency     │
-      │         │ importance  │
-      │         │ project_id  │─────────────────┐
+      │         │ key         │◄────────┐
+      │         │ name        │         │
+      │         │ description │         │
+      │         │ lead_user   │         │ project (FK)
+      │         │ members     │─────────┼──────────┐
+      │         │ companies   │─────────┘          │
+      │         └─────────────┘                    │
+      │                │                           │
+      │                │ columns                   │
+      │                ↓                           │
+      │         ┌─────────────┐                    │
+      │         │   Column    │                    │
+      │         │─────────────│                    │
+      │         │ id          │                    │
+      │         │ name        │◄────────┐          │
+      │         │ order       │         │          │
+      │         │ color       │         │          │
+      │         │ project_id  │─────────┘          │
+      │         └─────────────┘                    │
+      │                │                           │
+      │                │ tickets                   │
+      │                ↓                           │
+      │         ┌─────────────┐                    │
+      │         │   Ticket    │                    │
+      │         │─────────────│                    │
+      │         │ id          │                    │
+      │         │ name        │                    │
+      │         │ description │                    │
+      │         │ type        │ task/bug/story/epic│
+      │         │ status      │                    │
+      │         │ priority_id │ 1-4                │
+      │         │ urgency     │                    │
+      │         │ importance  │                    │
+      │         │ project_id  │────────────────────┘
       │         │ company_id  │─ (optional) ────┼──> Company
       │         │ column_id   │─────────────────┘
       │         │ reporter_id │──┐
@@ -212,17 +224,18 @@ User ──manages──> Company ──associated with──> Project ──con
 
 ### Core Models
 
-| Model          | Purpose                        | Key Fields                                                           |
-| -------------- | ------------------------------ | -------------------------------------------------------------------- |
-| **User**       | System users (Django built-in) | username, email, password, is_superuser                              |
-| **Company**    | Client organization            | name, description, admins (M2M), users (M2M)                         |
-| **Project**    | Workspace container            | key (unique), name, lead_username, members (M2M), companies (M2M)    |
-| **Column**     | Kanban workflow stage          | name, order, color, project (FK)                                     |
-| **Ticket**     | Work item                      | name, type, status, priority_id, project (FK), company (FK optional) |
-| **Tag**        | Organizational label           | name, color, project (FK)                                            |
-| **Comment**    | Ticket discussion              | content, ticket (FK), user (FK)                                      |
-| **Attachment** | File upload                    | file, ticket (FK), uploaded_by (FK)                                  |
-| **Contact**    | External contact               | name, email, phone, title                                            |
+| Model          | Purpose                        | Key Fields                                                            |
+| -------------- | ------------------------------ | --------------------------------------------------------------------- |
+| **User**       | System users (Django built-in) | username, email, password, is_superuser                               |
+| **UserRole**   | Project-specific permissions   | user (FK), project (FK), role ('superadmin'/'admin'/'user'/'manager') |
+| **Company**    | Client organization            | name, description, admins (M2M), users (M2M)                          |
+| **Project**    | Workspace container            | key (unique), name, lead_username, members (M2M), companies (M2M)     |
+| **Column**     | Kanban workflow stage          | name, order, color, project (FK)                                      |
+| **Ticket**     | Work item                      | name, type, status, priority_id, project (FK), company (FK optional)  |
+| **Tag**        | Organizational label           | name, color, project (FK)                                             |
+| **Comment**    | Ticket discussion              | content, ticket (FK), user (FK)                                       |
+| **Attachment** | File upload                    | file, ticket (FK), uploaded_by (FK)                                   |
+| **Contact**    | External contact               | name, email, phone, title                                             |
 
 ---
 
@@ -240,17 +253,84 @@ User:
   - password (hashed)
   - first_name
   - last_name
-  - is_superuser (boolean)
+  - is_superuser (boolean) - Django system admin only
   - is_staff (boolean)
   - is_active (boolean)
 ```
 
+### UserRole Model - Project-Specific Permissions
+
+**CRITICAL**: User roles are **per-project**, not global. The same user can have different roles in different projects.
+
+```python
+UserRole:
+  - user (FK to User)
+  - project (FK to Project)
+  - role (choices: 'superadmin', 'admin', 'user', 'manager')
+  - assigned_at (timestamp)
+  - assigned_by (FK to User)
+
+  unique_together: ['user', 'project']
+```
+
+### User Roles Explained
+
+**Superadmin** (Project-Specific)
+
+- **Automatic Assignment**: When a user creates a project, they automatically become 'superadmin' of that project
+- **Scope**: Full control over THEIR project only (doesn't transfer to other projects)
+- **Permissions**:
+  - Create/edit/delete the project
+  - Manage project members (add/remove users with any role)
+  - Create companies
+  - Manage companies (add/remove admins and users)
+  - Create/edit/delete tags for the project
+  - Full access to all tickets in the project
+  - Assign other users as 'superadmin', 'admin', 'manager', or 'user'
+
+**Admin** (Project-Specific)
+
+- **Assignment**: Assigned by project superadmin
+- **Purpose**: IT staff who manage tickets and help run the project
+- **Permissions**:
+  - View all tickets in the project
+  - Create tickets
+  - Edit their own tickets
+  - Assign tickets to other users
+  - Manage ticket tags
+  - Cannot create/edit/delete the project itself
+  - Cannot manage project members
+  - Cannot create companies
+
+**User** (Project-Specific)
+
+- **Assignment**: Default role when added to a project
+- **Purpose**: Regular team member who works on tickets
+- **Permissions**:
+  - Create tickets
+  - Edit their own tickets
+  - View tickets they're assigned to
+  - View tickets for companies they're members of
+  - Cannot assign tickets to others
+  - Cannot manage project or companies
+
+**Manager** (Project-Specific)
+
+- **Assignment**: Assigned by project superadmin
+- **Purpose**: Read-only oversight role with access to KPIs and reports
+- **Permissions**:
+  - View all tickets in the project
+  - View reports and analytics
+  - Cannot create or edit tickets
+  - Cannot manage project or companies
+
 ### User Relationships
 
-1. **Project Membership** (M2M)
+1. **Project Membership** (via UserRole)
 
-   - `User.project_memberships` → All projects user is a member of
-   - `Project.members` → All users in the project
+   - `User.project_roles` → All UserRole records for this user
+   - `Project.user_roles` → All UserRole records for this project
+   - `UserRole.role` → The specific role ('superadmin', 'admin', 'user', 'manager')
 
 2. **Ticket Assignment** (M2M)
 
@@ -271,31 +351,63 @@ User:
 ```
 1. User registers → POST /api/tickets/auth/register/
    - Creates User + Project + Default Columns
+   - Automatically creates UserRole(user, project, role='superadmin')
    - Returns JWT tokens
 
 2. User logs in → POST /api/tickets/auth/login/
    - Validates credentials
    - Returns JWT access + refresh tokens
 
-3. User makes requests
+3. User creates another project → POST /api/tickets/projects/
+   - Creates new project
+   - Automatically creates UserRole(user, new_project, role='superadmin')
+   - User is now superadmin of 2 projects
+
+4. User makes requests
    - Header: Authorization: Bearer <access_token>
    - OR Header: X-Super-Secret-Key: dev-super-secret-key-12345 (dev only)
 
-4. Token expires → POST /api/tickets/auth/token/refresh/
+5. Token expires → POST /api/tickets/auth/token/refresh/
    - Sends refresh_token
    - Gets new access_token
 ```
 
-### User Roles (Implicit)
+### Permission Examples
 
-While there are no explicit role models, user permissions are determined by:
+**Example 1: User creates first project**
 
-- **Superuser** (`is_superuser=True`): Can manage tags, all projects, all companies
-- **IT Admin** (company admin): Can manage assigned companies and their tickets
-- **Company User** (company member): Can view/work on their company's tickets
-- **Project Member**: Can create tickets, view project data
-- **Ticket Assignee**: Can update assigned tickets
-- **Ticket Reporter**: Created the ticket
+```
+User "gaga" creates project "Tickets"
+→ UserRole(user=gaga, project=Tickets, role='superadmin') is auto-created
+→ gaga can now:
+  ✅ Create companies for the Tickets project
+  ✅ Add other users to Tickets project with any role
+  ✅ Manage all settings for Tickets project
+```
+
+**Example 2: User is member of multiple projects**
+
+```
+User "john" is:
+  - Superadmin of Project A (created it)
+  - Admin of Project B (assigned by B's superadmin)
+  - User of Project C (assigned by C's superadmin)
+
+Project A: john has FULL control (superadmin)
+Project B: john can manage tickets, assign work (admin)
+Project C: john can only work on assigned tickets (user)
+```
+
+**Example 3: User assigns roles**
+
+```
+User "alice" is superadmin of "Dev Team" project
+Alice adds "bob" to the project:
+  1. POST /api/users/123/assign_role/
+     {"project_id": 5, "role": "admin"}
+  2. UserRole(user=bob, project=Dev Team, role='admin') created
+  3. bob can now manage tickets in Dev Team (but cannot manage the project itself)
+```
 
 ---
 
@@ -679,49 +791,74 @@ Tag:
 ### Access Control
 
 ```
-Superuser:
-  ✓ Full access to all projects, tickets, companies, tags
-  ✓ Can create/edit/delete tags and companies
-  ✓ Can manage any ticket
-  ✓ System administration
+Django Superuser (is_superuser=True):
+  ✓ Full system administration access
+  ✓ Can access Django admin panel
+  ✓ Can manage ALL projects, companies, users
+  ✓ Bypasses all permission checks
 
-IT Admin (Company Admin):
+Project Superadmin (UserRole.role='superadmin'):
+  ✓ Full control over THEIR projects only
+  ✓ Create/edit/delete their projects
+  ✓ Manage project members (add/remove with any role)
+  ✓ Create companies
+  ✓ Manage companies (add/remove admins and users)
+  ✓ Create/edit/delete tags for their projects
+  ✓ Full access to all tickets in their projects
+  ✗ Cannot access other projects (unless explicitly granted role)
+  ✗ Cannot access Django admin panel (unless also is_staff)
+
+Project Admin (UserRole.role='admin'):
+  ✓ View all tickets in their projects
+  ✓ Create tickets
+  ✓ Edit their own tickets
+  ✓ Assign tickets to other users
+  ✓ Manage ticket tags
+  ✗ Cannot create/edit/delete the project
+  ✗ Cannot manage project members
+  ✗ Cannot create companies
+  ✗ Cannot access other projects
+
+Project User (UserRole.role='user'):
+  ✓ Create tickets in their projects
+  ✓ Edit their own tickets
+  ✓ View tickets they're assigned to
+  ✓ View tickets for companies they're members of
+  ✗ Cannot assign tickets to others
+  ✗ Cannot manage project or companies
+  ✗ Cannot access other projects
+
+Project Manager (UserRole.role='manager'):
+  ✓ View all tickets in their projects
+  ✓ View reports and analytics
+  ✗ Cannot create or edit tickets
+  ✗ Cannot manage project or companies
+  ✗ Cannot access other projects
+
+Company Admin (Company.admins):
   ✓ View all projects linked to their companies
   ✓ View company-specific tickets in those projects
   ✓ Auto-assigned to new company-specific tickets
   ✓ Can manage company users
-  ✓ Can create/update/delete their companies
-  ✗ Cannot manage tags (view only)
+  ✗ Cannot create companies (needs to be project superadmin)
   ✗ Cannot access unrelated projects
 
-Company User:
+Company User (Company.users):
   ✓ View projects linked to their companies
   ✓ View company-specific tickets (read-only for their company)
   ✓ Create tickets for their company
   ✗ Cannot manage companies
   ✗ Cannot access unrelated projects
-
-Project Member:
-  ✓ View all tickets in their projects (general + company-specific)
-  ✓ Create tickets in their projects
-  ✓ Update tickets they're assigned to
-  ✗ Cannot manage tags (view only)
-  ✗ Cannot manage companies
-  ✗ Cannot access other projects
-
-Non-Member:
-  ✗ Cannot see project
-  ✗ Cannot access tickets
-  ✗ Cannot see companies
 ```
 
 ### Data Isolation
 
 **Project-Level Isolation:**
 
-- Users see projects they're members of OR projects linked to their companies
+- Users see projects they have UserRole records for OR projects linked to their companies
 - API filters tickets/columns/tags by user's accessible projects
 - Cross-project references not allowed
+- **UserRole.role determines what user can DO within the project**
 
 **Company-Level Isolation:**
 
@@ -733,14 +870,30 @@ Non-Member:
 **Implementation:**
 
 ```python
-# In TicketViewSet
+# Permission check for creating companies
+def has_permission(self, request, view):
+    # Django superusers can always create
+    if request.user.is_superuser:
+        return True
+
+    # Project superadmins can create companies
+    is_project_superadmin = UserRole.objects.filter(
+        user=request.user,
+        role='superadmin'
+    ).exists()
+
+    return is_project_superadmin
+
+# Queryset filtering for tickets
 def get_queryset(self):
     user = self.request.user
     if user.is_superuser:
         return Ticket.objects.all()
 
-    # Get projects where user is a member
-    member_projects = Project.objects.filter(members=user)
+    # Get projects where user has a role
+    user_projects = UserRole.objects.filter(
+        user=user
+    ).values_list('project_id', flat=True)
 
     # Get companies where user is admin or member
     user_companies = Company.objects.filter(
@@ -750,20 +903,29 @@ def get_queryset(self):
     # Get projects associated with user's companies
     company_projects = Project.objects.filter(
         companies__in=user_companies
-    )
+    ).values_list('id', flat=True)
 
     # Combine both sets
-    all_project_ids = set(member_projects.values_list('id', flat=True)) | \
-                      set(company_projects.values_list('id', flat=True))
+    all_project_ids = set(user_projects) | set(company_projects)
 
     return Ticket.objects.filter(project_id__in=all_project_ids)
 
-def perform_create(self, serializer):
-    ticket = serializer.save(reporter=self.request.user)
+# Auto-create UserRole when user creates project
+def create(self, request, *args, **kwargs):
+    response = super().create(request, *args, **kwargs)
 
-    # Auto-assign company-specific tickets to company admins
-    if ticket.company and ticket.company.admins.exists():
-        ticket.assignees.set(ticket.company.admins.all())
+    if response.status_code == status.HTTP_201_CREATED:
+        project = Project.objects.get(id=response.data['id'])
+
+        # Automatically assign creator as 'superadmin'
+        UserRole.objects.create(
+            user=request.user,
+            project=project,
+            role='superadmin',
+            assigned_by=request.user
+        )
+
+    return response
 ```
 
 ---

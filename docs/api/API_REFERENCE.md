@@ -77,6 +77,53 @@ SUPER_SECRET_KEY=dev-super-secret-key-12345
 
 ---
 
+## Permission System
+
+### User Roles (Project-Specific)
+
+**IMPORTANT:** Roles are **per-project**, not global. The same user can have different roles in different projects.
+
+**Roles:**
+
+- **superadmin**: Project owner with full control (auto-assigned when creating a project)
+- **admin**: IT staff who can manage tickets, assign work, view all tickets
+- **user**: Regular member who can create/edit own tickets, see company tickets
+- **manager**: Read-only oversight role with access to all KPIs and reports
+
+**Role Assignment:**
+When a user creates a project, they are **automatically assigned as 'superadmin'** for that project.
+
+**Permission Matrix:**
+
+| Action                   | Superadmin | Admin | User | Manager |
+| ------------------------ | ---------- | ----- | ---- | ------- |
+| **Projects**             |
+| Create project           | ✅         | ❌    | ❌   | ❌      |
+| Edit own project         | ✅         | ❌    | ❌   | ❌      |
+| Delete own project       | ✅         | ❌    | ❌   | ❌      |
+| Manage project members   | ✅         | ❌    | ❌   | ❌      |
+| View project             | ✅         | ✅    | ✅   | ✅      |
+| **Companies**            |
+| Create company           | ✅         | ❌    | ❌   | ❌      |
+| Edit company             | ✅         | ❌    | ❌   | ❌      |
+| Delete company           | ✅         | ❌    | ❌   | ❌      |
+| View companies           | ✅         | ✅    | ✅   | ✅      |
+| **Tags**                 |
+| Create tag               | ✅         | ❌    | ❌   | ❌      |
+| Edit tag                 | ✅         | ❌    | ❌   | ❌      |
+| Delete tag               | ✅         | ❌    | ❌   | ❌      |
+| View tags                | ✅         | ✅    | ✅   | ✅      |
+| **Tickets**              |
+| View all project tickets | ✅         | ✅    | ❌   | ✅      |
+| Create ticket            | ✅         | ✅    | ✅   | ❌      |
+| Edit own ticket          | ✅         | ✅    | ✅   | ❌      |
+| Edit others' tickets     | ✅         | ❌    | ❌   | ❌      |
+| Delete own ticket        | ✅         | ✅    | ✅   | ❌      |
+| Assign tickets           | ✅         | ✅    | ❌   | ❌      |
+| Comment on tickets       | ✅         | ✅    | ✅   | ✅      |
+
+---
+
 ## API Endpoints Reference
 
 ### Authentication Endpoints
