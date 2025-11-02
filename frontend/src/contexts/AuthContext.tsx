@@ -24,24 +24,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     // Check for stored auth on mount and fetch fresh user data
     const initAuth = async () => {
+      console.log("🔐 [AuthContext] Initializing auth...");
       const storedToken = authService.getAccessToken();
       const storedUser = authService.getUser();
 
+      console.log(
+        "🔐 [AuthContext] Stored token:",
+        storedToken ? "EXISTS" : "NONE"
+      );
+      console.log(
+        "🔐 [AuthContext] Stored user:",
+        storedUser ? storedUser.username : "NONE"
+      );
+
       if (storedToken && storedUser) {
+        console.log("🔐 [AuthContext] Setting initial user from localStorage");
+        console.log(
+          "🔐 [AuthContext] User projects:",
+          storedUser.projects?.length || 0
+        );
         setToken(storedToken);
         setUser(storedUser);
 
         // Fetch fresh user data from API to get updated projects/companies
         try {
+          console.log("🔐 [AuthContext] Fetching fresh user data from API...");
           const freshUser = await authService.getCurrentUser();
+          console.log(
+            "🔐 [AuthContext] Fresh user data received:",
+            freshUser.username
+          );
+          console.log(
+            "🔐 [AuthContext] Fresh user projects:",
+            freshUser.projects?.length || 0
+          );
+          console.log(
+            "🔐 [AuthContext] Fresh user has_projects:",
+            freshUser.has_projects
+          );
           setUser(freshUser);
           localStorage.setItem("user", JSON.stringify(freshUser));
         } catch (error) {
-          console.error("Failed to fetch fresh user data:", error);
+          console.error(
+            "🔐 [AuthContext] Failed to fetch fresh user data:",
+            error
+          );
           // Keep the stored user if API call fails
         }
       }
 
+      console.log("🔐 [AuthContext] Setting loading to false");
       setLoading(false);
     };
 
@@ -49,6 +81,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   const login = (newToken: string, newUser: User) => {
+    console.log("🔐 [AuthContext] Login called with user:", newUser.username);
+    console.log(
+      "🔐 [AuthContext] User projects on login:",
+      newUser.projects?.length || 0
+    );
+    console.log(
+      "🔐 [AuthContext] User has_projects on login:",
+      newUser.has_projects
+    );
     setToken(newToken);
     setUser(newUser);
   };

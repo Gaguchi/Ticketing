@@ -57,24 +57,42 @@ const Register: React.FC = () => {
       const response = await authService.register(registerData);
 
       console.log("✅ Registration response:", response);
+      console.log("✅ [Register] User:", response.user.username);
+      console.log(
+        "✅ [Register] User projects:",
+        response.user.projects?.length || 0
+      );
+      console.log(
+        "✅ [Register] User has_projects:",
+        response.user.has_projects
+      );
 
-      // Update auth context
+      // Update auth context with initial registration response
       login(response.tokens.access, response.user);
 
-      // Check if user has access to any projects using the new endpoint
-      try {
-        const userWithProjects = await authService.getCurrentUserWithProjects();
+      // Immediately fetch fresh user data to get projects
+      // The registration response doesn't always include projects, but /auth/me/ does
+      console.log("✅ [Register] Fetching fresh user data with projects...");
+      const freshUser = await authService.getCurrentUser();
+      console.log(
+        "✅ [Register] Fresh user projects:",
+        freshUser.projects?.length || 0
+      );
+      console.log(
+        "✅ [Register] Fresh user has_projects:",
+        freshUser.has_projects
+      );
 
-        // If user has projects (as lead or member), go to dashboard
-        // Otherwise go to setup to create their first project
-        if (userWithProjects.has_projects) {
-          navigate("/");
-        } else {
-          navigate("/setup");
-        }
-      } catch (projectError) {
-        // If there's an error checking projects, default to setup
-        console.error("Error checking projects:", projectError);
+      // Update auth context again with fresh data that includes projects
+      login(response.tokens.access, freshUser);
+
+      // Navigate based on whether user has projects
+      // Use the freshUser we just fetched instead of making another API call
+      if (freshUser.has_projects) {
+        console.log("✅ [Register] User has projects, navigating to dashboard");
+        navigate("/");
+      } else {
+        console.log("✅ [Register] User has no projects, navigating to setup");
         navigate("/setup");
       }
     } catch (err: any) {

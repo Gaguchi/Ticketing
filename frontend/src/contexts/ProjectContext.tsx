@@ -39,14 +39,27 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({
 
   // Load projects from user data
   useEffect(() => {
+    console.log("📁 [ProjectContext] useEffect triggered");
+    console.log("📁 [ProjectContext] authLoading:", authLoading);
+    console.log("📁 [ProjectContext] user:", user ? user.username : "NULL");
+
     // Wait for auth to finish loading
     if (authLoading) {
+      console.log(
+        "📁 [ProjectContext] Auth still loading, setting loading=true"
+      );
       setLoading(true);
       return;
     }
 
     if (user) {
       const projects = user.projects || [];
+      console.log("📁 [ProjectContext] User has", projects.length, "projects");
+      console.log(
+        "📁 [ProjectContext] Projects:",
+        projects.map((p) => `${p.key} - ${p.name}`)
+      );
+      console.log("📁 [ProjectContext] user.has_projects:", user.has_projects);
 
       setAvailableProjects(projects);
       setHasProjects(user.has_projects || false);
@@ -54,23 +67,38 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({
       // Auto-select first project if none selected
       if (!selectedProject && projects.length > 0) {
         const storedProjectId = localStorage.getItem("selectedProjectId");
+        console.log("📁 [ProjectContext] Stored project ID:", storedProjectId);
 
         if (storedProjectId) {
           const storedProject = projects.find(
             (p: Project) => p.id === parseInt(storedProjectId)
           );
           if (storedProject) {
+            console.log(
+              "📁 [ProjectContext] Selecting stored project:",
+              storedProject.name
+            );
             setSelectedProjectState(storedProject);
           } else {
+            console.log(
+              "📁 [ProjectContext] Stored project not found, selecting first project:",
+              projects[0].name
+            );
             setSelectedProjectState(projects[0]);
           }
         } else {
+          console.log(
+            "📁 [ProjectContext] No stored project, selecting first:",
+            projects[0].name
+          );
           setSelectedProjectState(projects[0]);
         }
       }
 
+      console.log("📁 [ProjectContext] Setting loading=false");
       setLoading(false);
     } else {
+      console.log("📁 [ProjectContext] No user, clearing projects");
       setAvailableProjects([]);
       setSelectedProjectState(null);
       setHasProjects(false);

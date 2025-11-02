@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Layout,
   Avatar,
@@ -54,6 +54,19 @@ const MainLayout: React.FC = () => {
     setSelectedProject,
     loading: projectLoading,
   } = useProject();
+
+  // Log the state for debugging
+  useEffect(() => {
+    console.log("🏗️ [MainLayout] Render state:");
+    console.log("  - authLoading:", authLoading);
+    console.log("  - projectLoading:", projectLoading);
+    console.log("  - user:", user ? user.username : "NULL");
+    console.log("  - availableProjects:", availableProjects.length);
+    console.log(
+      "  - selectedProject:",
+      selectedProject ? selectedProject.name : "NULL"
+    );
+  }, [authLoading, projectLoading, user, availableProjects, selectedProject]);
 
   const handleMenuClick: MenuProps["onClick"] = ({ key }) => {
     if (key === "logout") {
