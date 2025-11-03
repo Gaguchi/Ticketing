@@ -23,16 +23,23 @@ code {
   font-weight: 600;
 }
 
-/* Modal header and footer padding */
+/* Modal styling */
 .ant-modal-header {
   padding: 16px 24px;
+  background-color: #F5F5F5;
+}
+
+.ant-modal-body {
+  padding: 24px;
 }
 
 .ant-modal-footer {
   padding: 16px 24px;
+  background-color: #FAFAFA;
 }
 
-/* Modal title font weight */
 .ant-modal-title {
   font-weight: 600;
+  font-size: 18px;
+  line-height: 1.56;
 }

@@ -151,14 +151,8 @@ export const theme: ThemeConfig = {
     
     // ===== MODAL =====
     Modal: {
-      headerBg: '#F5F5F5',
-      // Note: headerPadding is controlled via CSS, not theme token
-      bodyPadding: 24,
-      footerBg: '#FAFAFA',
-      // Note: footerPadding is controlled via CSS, not theme token
-      
-      titleFontSize: 18,
-      titleLineHeight: 1.56,
+      // Note: Modal styling is controlled via CSS in index.css
+      // Most Modal tokens are not available in the theme config
     },
     
     // ===== FORM =====
