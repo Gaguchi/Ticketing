@@ -139,7 +139,7 @@ export const theme: ThemeConfig = {
     Table: {
       headerBg: '#F5F5F5',            // Gray 100
       headerColor: '#1A1A1A',
-      headerFontWeight: 600,          // Semibold
+      // Note: headerFontWeight is controlled via CSS, not theme token
       
       rowHoverBg: '#FAFAFA',
       
@@ -147,20 +147,18 @@ export const theme: ThemeConfig = {
       cellPaddingInline: 12,
       
       fontSize: 14,
-      lineHeight: 1.57,
     },
     
     // ===== MODAL =====
     Modal: {
       headerBg: '#F5F5F5',
-      headerPadding: '16px 24px',
+      // Note: headerPadding is controlled via CSS, not theme token
       bodyPadding: 24,
       footerBg: '#FAFAFA',
-      footerPadding: '16px 24px',
+      // Note: footerPadding is controlled via CSS, not theme token
       
       titleFontSize: 18,
       titleLineHeight: 1.56,
-      titleFontWeight: 600,
     },
     
     // ===== FORM =====

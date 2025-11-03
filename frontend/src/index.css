@@ -16,3 +16,23 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
 
+/* Custom Ant Design Overrides - Properties not available in theme config */
+
+/* Table header font weight */
+.ant-table-thead > tr > th {
+  font-weight: 600;
+}
+
+/* Modal header and footer padding */
+.ant-modal-header {
+  padding: 16px 24px;
+}
+
+.ant-modal-footer {
+  padding: 16px 24px;
+}
+
+/* Modal title font weight */
+.ant-modal-title {
+  font-weight: 600;
+}
