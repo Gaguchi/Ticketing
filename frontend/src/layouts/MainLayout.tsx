@@ -13,7 +13,7 @@ import {
   MenuUnfoldOutlined,
   DashboardOutlined,
   InboxOutlined,
-  TeamOutlined,
+  ShopOutlined,
   SettingOutlined,
   UserOutlined,
   LogoutOutlined,
@@ -99,7 +99,7 @@ const MainLayout: React.FC = () => {
     },
     {
       key: "/companies",
-      icon: <TeamOutlined />,
+      icon: <ShopOutlined />,
       label: "Companies",
       path: "/companies",
     },

@@ -15,7 +15,6 @@ import {
   Avatar,
   Row,
   Col,
-  Statistic,
   Switch,
   Tooltip,
   Badge,
@@ -31,9 +30,9 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   TeamOutlined,
+  EyeOutlined,
   CrownOutlined,
   SafetyOutlined,
-  EyeOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import type { MenuProps } from "antd";
@@ -572,50 +571,6 @@ const Users: React.FC = () => {
           Create User
         </Button>
       </div>
-
-      {/* Stats Cards */}
-      <Row gutter={16} style={{ marginBottom: 24 }}>
-        <Col span={6}>
-          <Card size="small">
-            <Statistic
-              title="Total Users"
-              value={users.length}
-              prefix={<UserOutlined />}
-              valueStyle={{ color: "#1890ff" }}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card size="small">
-            <Statistic
-              title="Active Users"
-              value={users.filter((u) => u.is_active).length}
-              prefix={<CheckCircleOutlined />}
-              valueStyle={{ color: "#52c41a" }}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card size="small">
-            <Statistic
-              title="Staff Members"
-              value={users.filter((u) => u.is_staff).length}
-              prefix={<SafetyOutlined />}
-              valueStyle={{ color: "#722ed1" }}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card size="small">
-            <Statistic
-              title="Superusers"
-              value={users.filter((u) => u.is_superuser).length}
-              prefix={<CrownOutlined />}
-              valueStyle={{ color: "#f5222d" }}
-            />
-          </Card>
-        </Col>
-      </Row>
 
       {/* Search */}
       <Card style={{ marginBottom: 16 }}>

@@ -14,10 +14,10 @@ export const theme: ThemeConfig = {
     // Primary Brand Color (Slate Blue-Gray)
     colorPrimary: '#2C3E50',
     
-    // Accent Color (Burnt Orange) - Used sparingly
-    colorLink: '#E67E22',
-    colorLinkHover: '#D35400',
-    colorLinkActive: '#BA4A00',
+    // Accent Color (Darker Blue) - Used sparingly
+    colorLink: '#1565C0',
+    colorLinkHover: '#0D47A1',
+    colorLinkActive: '#0A3A7F',
     
     // Success (Muted Green)
     colorSuccess: '#27AE60',
@@ -110,9 +110,9 @@ export const theme: ThemeConfig = {
     // ===== BUTTON =====
     Button: {
       primaryColor: '#FFFFFF',
-      colorPrimary: '#E67E22',        // Burnt Orange
-      colorPrimaryHover: '#D35400',
-      colorPrimaryActive: '#BA4A00',
+      colorPrimary: '#1565C0',        // Darker Blue
+      colorPrimaryHover: '#0D47A1',
+      colorPrimaryActive: '#0A3A7F',
       
       defaultBorderColor: '#9E9E9E',  // Gray 500
       defaultColor: '#4A4A4A',        // Gray 700

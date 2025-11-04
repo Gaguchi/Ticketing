@@ -232,7 +232,7 @@ const Dashboard: React.FC = () => {
       id: "inProgress",
       title: "In Progress",
       filter: (ticket) => ticket.column_name === "In Progress",
-      color: "#fa8c16",
+      color: "#1565C0",
     },
     {
       id: "toDo",
@@ -379,7 +379,7 @@ const Dashboard: React.FC = () => {
         const colorMap: Record<string, string> = {
           "To Do": "blue",
           New: "blue",
-          "In Progress": "orange",
+          "In Progress": "geekblue",
           Review: "purple",
           Done: "green",
         };
@@ -407,7 +407,7 @@ const Dashboard: React.FC = () => {
           : "Normal";
         const colorMap: Record<string, string> = {
           High: "red",
-          Normal: "orange",
+          Normal: "blue",
           Low: "green",
         };
         return (
@@ -427,7 +427,7 @@ const Dashboard: React.FC = () => {
           : "Normal";
         const colorMap: Record<string, string> = {
           Critical: "red",
-          High: "orange",
+          High: "volcano",
           Normal: "blue",
           Low: "green",
         };

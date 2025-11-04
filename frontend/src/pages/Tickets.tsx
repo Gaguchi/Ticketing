@@ -286,7 +286,7 @@ const Tickets: React.FC = () => {
         const colorMap: Record<string, string> = {
           "To Do": "blue",
           New: "blue",
-          "In Progress": "orange",
+          "In Progress": "geekblue",
           Review: "purple",
           Done: "green",
         };
@@ -310,7 +310,7 @@ const Tickets: React.FC = () => {
       render: (urgency: string) => {
         const colorMap: Record<string, string> = {
           High: "red",
-          Normal: "orange",
+          Normal: "blue",
           Low: "green",
         };
         return <Tag color={colorMap[urgency]}>{urgency}</Tag>;
@@ -324,7 +324,7 @@ const Tickets: React.FC = () => {
       render: (importance: string) => {
         const colorMap: Record<string, string> = {
           Critical: "red",
-          High: "orange",
+          High: "volcano",
           Normal: "blue",
           Low: "green",
         };

@@ -28,7 +28,7 @@ import {
   EditOutlined,
   DeleteOutlined,
   MoreOutlined,
-  BuildOutlined,
+  ShopOutlined,
   MailOutlined,
   PhoneOutlined,
   PictureOutlined,
@@ -327,7 +327,7 @@ const Companies: React.FC = () => {
       }}
     >
       <Empty
-        image={<BuildOutlined style={{ fontSize: 64, color: "#9E9E9E" }} />}
+        image={<ShopOutlined style={{ fontSize: 64, color: "#9E9E9E" }} />}
         description="No companies yet"
       >
         <Button
@@ -384,7 +384,7 @@ const Companies: React.FC = () => {
                 <Avatar
                   size={80}
                   style={{ background: "#1890ff" }}
-                  icon={<BuildOutlined />}
+                  icon={<ShopOutlined />}
                 />
               </Col>
               <Col flex={1}>
@@ -407,11 +407,11 @@ const Companies: React.FC = () => {
                     <Text>{selectedCompany.user_count} Users</Text>
                   </Space>
                   <Space>
-                    <BuildOutlined style={{ color: "#9E9E9E" }} />
+                    <ShopOutlined style={{ color: "#9E9E9E" }} />
                     <Text>{selectedCompany.project_count} Projects</Text>
                   </Space>
                   <Space>
-                    <MailOutlined style={{ color: "#fa8c16" }} />
+                    <MailOutlined style={{ color: "#1565C0" }} />
                     <Text>{companyTickets.length} Tickets</Text>
                   </Space>
                 </Space>
@@ -516,7 +516,7 @@ const Companies: React.FC = () => {
                             priority === "High"
                               ? "red"
                               : priority === "Medium"
-                              ? "orange"
+                              ? "blue"
                               : "green"
                           }
                         >
@@ -609,7 +609,7 @@ const Companies: React.FC = () => {
                     <Avatar
                       size={64}
                       style={{ background: "#2C3E50" }}
-                      icon={<BuildOutlined />}
+                      icon={<ShopOutlined />}
                     />
                   </div>
                   <div style={{ textAlign: "center", marginBottom: 12 }}>
@@ -633,7 +633,7 @@ const Companies: React.FC = () => {
                     </Space>
                     {company.project_count > 0 && (
                       <Space>
-                        <BuildOutlined style={{ color: "#9E9E9E" }} />
+                        <ShopOutlined style={{ color: "#9E9E9E" }} />
                         <Text type="secondary" style={{ fontSize: 12 }}>
                           {company.project_count} projects
                         </Text>
@@ -683,7 +683,7 @@ const Companies: React.FC = () => {
             <Input
               placeholder="e.g., Acme Corporation"
               size="large"
-              prefix={<BuildOutlined />}
+              prefix={<ShopOutlined />}
             />
           </Form.Item>
 
