@@ -289,9 +289,7 @@ const MainLayout: React.FC = () => {
           >
             <PlusOutlined style={{ fontSize: collapsed ? 20 : 16 }} />
             {!collapsed && (
-              <span style={{ fontSize: 13, fontWeight: 500 }}>
-                New Ticket
-              </span>
+              <span style={{ fontSize: 13, fontWeight: 500 }}>New Ticket</span>
             )}
           </div>
         </div>

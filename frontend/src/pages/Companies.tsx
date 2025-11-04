@@ -83,7 +83,9 @@ const Companies: React.FC = () => {
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [companyTickets, setCompanyTickets] = useState<any[]>([]);
   const [loadingTickets, setLoadingTickets] = useState(false);
-  const [ticketViewMode, setTicketViewMode] = useState<"table" | "kanban" | "timeline">("table");
+  const [ticketViewMode, setTicketViewMode] = useState<
+    "table" | "kanban" | "timeline"
+  >("table");
 
   // Prevent duplicate initialization in React Strict Mode
   const initRef = useRef(false);
@@ -147,7 +149,9 @@ const Companies: React.FC = () => {
     try {
       // Fetch tickets for this company
       // Assuming tickets have a company field - adjust API endpoint as needed
-      const response = await apiService.get<any>(`${API_ENDPOINTS.TICKETS}?company=${company.id}`);
+      const response = await apiService.get<any>(
+        `${API_ENDPOINTS.TICKETS}?company=${company.id}`
+      );
       const tickets = response.results || response;
       setCompanyTickets(Array.isArray(tickets) ? tickets : []);
     } catch (error: any) {
@@ -387,7 +391,10 @@ const Companies: React.FC = () => {
                 <Title level={2} style={{ margin: 0, marginBottom: 8 }}>
                   {selectedCompany.name}
                 </Title>
-                <Text type="secondary" style={{ display: "block", marginBottom: 16 }}>
+                <Text
+                  type="secondary"
+                  style={{ display: "block", marginBottom: 16 }}
+                >
                   {selectedCompany.description}
                 </Text>
                 <Space size={16}>
@@ -495,14 +502,24 @@ const Companies: React.FC = () => {
                       title: "Status",
                       dataIndex: "status",
                       key: "status",
-                      render: (status: string) => <Tag color="blue">{status}</Tag>,
+                      render: (status: string) => (
+                        <Tag color="blue">{status}</Tag>
+                      ),
                     },
                     {
                       title: "Priority",
                       dataIndex: "priority",
                       key: "priority",
                       render: (priority: string) => (
-                        <Tag color={priority === "High" ? "red" : priority === "Medium" ? "orange" : "green"}>
+                        <Tag
+                          color={
+                            priority === "High"
+                              ? "red"
+                              : priority === "Medium"
+                              ? "orange"
+                              : "green"
+                          }
+                        >
                           {priority}
                         </Tag>
                       ),
@@ -514,7 +531,10 @@ const Companies: React.FC = () => {
                       render: (assignees: any[]) => (
                         <Avatar.Group maxCount={3}>
                           {assignees?.map((a: any) => (
-                            <Avatar key={a.id}>{a.first_name?.[0]}{a.last_name?.[0]}</Avatar>
+                            <Avatar key={a.id}>
+                              {a.first_name?.[0]}
+                              {a.last_name?.[0]}
+                            </Avatar>
                           ))}
                         </Avatar.Group>
                       ),
@@ -575,10 +595,7 @@ const Companies: React.FC = () => {
                       }}
                     />,
                     <SettingOutlined key="settings" />,
-                    <div
-                      key="more"
-                      onClick={(e) => e.stopPropagation()}
-                    >
+                    <div key="more" onClick={(e) => e.stopPropagation()}>
                       <Dropdown
                         menu={{ items: getActionMenu(company) }}
                         trigger={["click"]}
@@ -603,7 +620,11 @@ const Companies: React.FC = () => {
                       {company.description}
                     </Text>
                   </div>
-                  <Space direction="vertical" size={4} style={{ width: "100%" }}>
+                  <Space
+                    direction="vertical"
+                    size={4}
+                    style={{ width: "100%" }}
+                  >
                     <Space>
                       <TeamOutlined style={{ color: "#9E9E9E" }} />
                       <Text type="secondary" style={{ fontSize: 12 }}>
