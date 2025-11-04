@@ -311,48 +311,48 @@ export const TicketModal: React.FC<TicketModalProps> = ({
       console.groupEnd();
 
       // Load project tags and columns for autocomplete
+      // Use ticket's project if editing, otherwise use current project from localStorage
+      const projectId = ticket?.project || selectedProjectId;
+
+      if (projectId) {
+        // Load columns
+        projectService
+          .getProjectColumns(projectId)
+          .then((columns) => {
+            setProjectColumns(columns);
+          })
+          .catch((error) => {
+            console.error("Failed to load columns:", error);
+          });
+
+        // Load tags
+        tagService
+          .getTags(projectId)
+          .then((response: any) => {
+            // Handle both array response and paginated response
+            const tags = Array.isArray(response)
+              ? response
+              : response.results || [];
+            setProjectTags(tags);
+          })
+          .catch((error) => {
+            console.error("Failed to load tags:", error);
+            setProjectTags([]); // Ensure it's always an array
+          });
+      }
+
+      // Also load current project info for context
       const projectData = localStorage.getItem("currentProject");
       if (projectData) {
         try {
           const project = JSON.parse(projectData);
           setCurrentProject(project);
-
-          // Ensure project.id is a number
-          const projectId =
-            typeof project.id === "number"
-              ? project.id
-              : parseInt(project.id, 10);
-
-          // Load columns
-          projectService
-            .getProjectColumns(projectId)
-            .then((columns) => {
-              setProjectColumns(columns);
-            })
-            .catch((error) => {
-              console.error("Failed to load columns:", error);
-            });
-
-          // Load tags
-          tagService
-            .getTags(projectId)
-            .then((response: any) => {
-              // Handle both array response and paginated response
-              const tags = Array.isArray(response)
-                ? response
-                : response.results || [];
-              setProjectTags(tags);
-            })
-            .catch((error) => {
-              console.error("Failed to load tags:", error);
-              setProjectTags([]); // Ensure it's always an array
-            });
         } catch (error) {
           console.error("Failed to parse project data:", error);
         }
       }
     }
-  }, [open, ticket]);
+  }, [open, ticket, selectedProjectId]);
 
   // Load subtasks when ticket is opened in edit mode
   useEffect(() => {
@@ -1082,17 +1082,6 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                     </div>
                   ))}
                 </div>
-              ) : !isCreateMode && !showSubtaskForm ? (
-                <div
-                  style={{
-                    textAlign: "center",
-                    padding: "16px",
-                    color: "#9E9E9E",
-                    fontSize: "14px",
-                  }}
-                >
-                  No subtasks yet. Click "Add subtask" above.
-                </div>
               ) : isCreateMode ? (
                 <div
                   style={{
@@ -1173,17 +1162,6 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                             "Type to search..."
                           )
                         }
-                        onBlur={() => {
-                          if (!selectedTargetTicket) {
-                            setTimeout(() => {
-                              if (!selectedTargetTicket) {
-                                setShowLinkForm(false);
-                                setNewLinkType("");
-                                setTicketSearchResults([]);
-                              }
-                            }, 200);
-                          }
-                        }}
                       >
                         {ticketSearchResults.map((ticket) => (
                           <Select.Option key={ticket.id} value={ticket.id}>
@@ -1321,17 +1299,6 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                       </div>
                     );
                   })}
-                </div>
-              ) : !isCreateMode && !showLinkForm ? (
-                <div
-                  style={{
-                    textAlign: "center",
-                    padding: "16px",
-                    color: "#9E9E9E",
-                    fontSize: "14px",
-                  }}
-                >
-                  No linked items yet. Click "Add linked work item" above.
                 </div>
               ) : isCreateMode ? (
                 <div
