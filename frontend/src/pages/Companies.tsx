@@ -18,32 +18,32 @@ import {
   Spin,
   message,
   Upload,
+  Badge,
 } from "antd";
 import type { UploadFile } from "antd";
 import {
   PlusOutlined,
-  SearchOutlined,
   TeamOutlined,
   UserOutlined,
-  SettingOutlined,
   EditOutlined,
   DeleteOutlined,
   MoreOutlined,
   BuildOutlined,
-  AppstoreOutlined,
-  UnorderedListOutlined,
   MailOutlined,
   PhoneOutlined,
   PictureOutlined,
+  ArrowLeftOutlined,
+  CalendarOutlined,
+  TableOutlined,
+  SettingOutlined,
+  AppstoreOutlined,
 } from "@ant-design/icons";
-import type { ColumnsType } from "antd/es/table";
 import type { MenuProps } from "antd";
 import { API_ENDPOINTS } from "../config/api";
 import apiService from "../services/api.service";
 import { debug, LogLevel, LogCategory } from "../utils/debug";
 
 const { Title, Text } = Typography;
-const { Search } = Input;
 
 interface Company {
   id: number;
@@ -73,13 +73,17 @@ interface Company {
 const Companies: React.FC = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchText, setSearchText] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCompany, setEditingCompany] = useState<Company | null>(null);
-  const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   const [submitting, setSubmitting] = useState(false);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [form] = Form.useForm();
+
+  // New state for detailed company view
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  const [companyTickets, setCompanyTickets] = useState<any[]>([]);
+  const [loadingTickets, setLoadingTickets] = useState(false);
+  const [ticketViewMode, setTicketViewMode] = useState<"table" | "kanban" | "timeline">("table");
 
   // Prevent duplicate initialization in React Strict Mode
   const initRef = useRef(false);
@@ -135,6 +139,28 @@ const Companies: React.FC = () => {
     } finally {
       fetchInProgressRef.current = false;
     }
+  };
+
+  const handleCompanyClick = async (company: Company) => {
+    setSelectedCompany(company);
+    setLoadingTickets(true);
+    try {
+      // Fetch tickets for this company
+      // Assuming tickets have a company field - adjust API endpoint as needed
+      const response = await apiService.get<any>(`${API_ENDPOINTS.TICKETS}?company=${company.id}`);
+      const tickets = response.results || response;
+      setCompanyTickets(Array.isArray(tickets) ? tickets : []);
+    } catch (error: any) {
+      message.error(error.message || "Failed to load company tickets");
+      setCompanyTickets([]);
+    } finally {
+      setLoadingTickets(false);
+    }
+  };
+
+  const handleBackToList = () => {
+    setSelectedCompany(null);
+    setCompanyTickets([]);
   };
 
   const handleCreateCompany = () => {
@@ -283,107 +309,6 @@ const Companies: React.FC = () => {
     },
   ];
 
-  const columns: ColumnsType<Company> = [
-    {
-      title: "Company Name",
-      dataIndex: "name",
-      key: "name",
-      render: (name: string, record: Company) => (
-        <Space>
-          <Avatar
-            style={{ background: "#1890ff" }}
-            icon={<BuildOutlined />}
-            size="small"
-          />
-          <div>
-            <div style={{ fontWeight: 500 }}>{name}</div>
-            {record.description && (
-              <Text type="secondary" style={{ fontSize: 12 }}>
-                {record.description.length > 50
-                  ? `${record.description.substring(0, 50)}...`
-                  : record.description}
-              </Text>
-            )}
-          </div>
-        </Space>
-      ),
-      filteredValue: searchText ? [searchText] : null,
-      onFilter: (value, record) => {
-        const searchValue = (value as string).toLowerCase();
-        return (
-          record.name.toLowerCase().includes(searchValue) ||
-          (record.description &&
-            record.description.toLowerCase().includes(searchValue)) ||
-          false
-        );
-      },
-    },
-    {
-      title: "Admins",
-      dataIndex: "admin_count",
-      key: "admin_count",
-      width: 120,
-      render: (count: number) => (
-        <Space>
-          <UserOutlined style={{ color: "#1890ff" }} />
-          <Text>{count}</Text>
-        </Space>
-      ),
-    },
-    {
-      title: "Users",
-      dataIndex: "user_count",
-      key: "user_count",
-      width: 120,
-      render: (count: number) => (
-        <Space>
-          <TeamOutlined style={{ color: "#52c41a" }} />
-          <Text>{count}</Text>
-        </Space>
-      ),
-    },
-    {
-      title: "Projects",
-      dataIndex: "project_count",
-      key: "project_count",
-      width: 120,
-      render: (count: number) => (
-        <Space>
-          <BuildOutlined style={{ color: "#9E9E9E" }} />
-          <Text>{count}</Text>
-        </Space>
-      ),
-    },
-    {
-      title: "Tickets",
-      dataIndex: "ticket_count",
-      key: "ticket_count",
-      width: 120,
-      render: (count: number) => (
-        <Tag color={count > 20 ? "red" : count > 10 ? "orange" : "blue"}>
-          {count} tickets
-        </Tag>
-      ),
-    },
-    {
-      title: "Actions",
-      key: "actions",
-      width: 100,
-      render: (_, record) => (
-        <Dropdown menu={{ items: getActionMenu(record) }} trigger={["click"]}>
-          <Button type="text" icon={<MoreOutlined />} />
-        </Dropdown>
-      ),
-    },
-  ];
-
-  const filteredCompanies = companies.filter(
-    (company) =>
-      company.name.toLowerCase().includes(searchText.toLowerCase()) ||
-      (company.description &&
-        company.description.toLowerCase().includes(searchText.toLowerCase()))
-  );
-
   // ============================================
   // Empty State (Simplified - Design Bible v1.0)
   // ============================================
@@ -414,196 +339,6 @@ const Companies: React.FC = () => {
   );
 
   // ============================================
-  // LIST VIEW (With Data)
-  // ============================================
-  const ListView = () => (
-    <div style={{ padding: 24 }}>
-      <div
-        style={{
-          marginBottom: 24,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
-        <div>
-          <Title level={3} style={{ margin: 0 }}>
-            Companies
-          </Title>
-          <Text type="secondary">
-            Manage your client organizations and their teams
-          </Text>
-        </div>
-        <Space>
-          <Space.Compact>
-            <Button
-              icon={<UnorderedListOutlined />}
-              type={viewMode === "list" ? "primary" : "default"}
-              onClick={() => setViewMode("list")}
-            />
-            <Button
-              icon={<AppstoreOutlined />}
-              type={viewMode === "grid" ? "primary" : "default"}
-              onClick={() => setViewMode("grid")}
-            />
-          </Space.Compact>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={handleCreateCompany}
-          >
-            Create Company
-          </Button>
-        </Space>
-      </div>
-
-      {/* Search */}
-      <Card style={{ marginBottom: 16 }}>
-        <Search
-          placeholder="Search companies by name or description..."
-          allowClear
-          size="large"
-          prefix={<SearchOutlined />}
-          onChange={(e) => setSearchText(e.target.value)}
-          style={{ maxWidth: 600 }}
-        />
-      </Card>
-
-      {/* Table */}
-      <Card>
-        <Table
-          columns={columns}
-          dataSource={filteredCompanies}
-          rowKey="id"
-          loading={loading}
-          pagination={{
-            pageSize: 10,
-            showSizeChanger: true,
-            showTotal: (total) => `Total ${total} companies`,
-          }}
-        />
-      </Card>
-    </div>
-  );
-
-  // ============================================
-  // GRID VIEW (With Data)
-  // ============================================
-  const GridView = () => (
-    <div style={{ padding: 24 }}>
-      <div
-        style={{
-          marginBottom: 24,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
-        <div>
-          <Title level={3} style={{ margin: 0 }}>
-            Companies
-          </Title>
-          <Text type="secondary">
-            Manage your client organizations and their teams
-          </Text>
-        </div>
-        <Space>
-          <Search
-            placeholder="Search..."
-            allowClear
-            onChange={(e) => setSearchText(e.target.value)}
-            style={{ width: 250 }}
-          />
-          <Space.Compact>
-            <Button
-              icon={<UnorderedListOutlined />}
-              type={viewMode === "list" ? "primary" : "default"}
-              onClick={() => setViewMode("list")}
-            />
-            <Button
-              icon={<AppstoreOutlined />}
-              type={viewMode === "grid" ? "primary" : "default"}
-              onClick={() => setViewMode("grid")}
-            />
-          </Space.Compact>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={handleCreateCompany}
-          >
-            Create Company
-          </Button>
-        </Space>
-      </div>
-
-      <Row gutter={[16, 16]}>
-        {filteredCompanies.map((company) => (
-          <Col key={company.id} xs={24} sm={12} lg={8} xl={6}>
-            <Card
-              hoverable
-              style={{ height: "100%" }}
-              actions={[
-                <EditOutlined
-                  key="edit"
-                  onClick={() => handleEditCompany(company)}
-                />,
-                <SettingOutlined key="settings" />,
-                <Dropdown
-                  menu={{ items: getActionMenu(company) }}
-                  trigger={["click"]}
-                  key="more"
-                >
-                  <MoreOutlined />
-                </Dropdown>,
-              ]}
-            >
-              <div style={{ textAlign: "center", marginBottom: 16 }}>
-                <Avatar
-                  size={64}
-                  style={{ background: "#2C3E50" }}
-                  icon={<BuildOutlined />}
-                />
-              </div>
-              <div style={{ textAlign: "center", marginBottom: 12 }}>
-                <Title level={5} style={{ marginBottom: 4 }}>
-                  {company.name}
-                </Title>
-                <Text type="secondary" style={{ fontSize: 12 }}>
-                  {company.description}
-                </Text>
-              </div>
-              <Space direction="vertical" size={4} style={{ width: "100%" }}>
-                <Space>
-                  <TeamOutlined style={{ color: "#9E9E9E" }} />
-                  <Text type="secondary" style={{ fontSize: 12 }}>
-                    {company.admin_count} admins, {company.user_count} users
-                  </Text>
-                </Space>
-                {company.project_count > 0 && (
-                  <Space>
-                    <BuildOutlined style={{ color: "#9E9E9E" }} />
-                    <Text type="secondary" style={{ fontSize: 12 }}>
-                      {company.project_count} projects
-                    </Text>
-                  </Space>
-                )}
-                {company.ticket_count > 0 && (
-                  <Space>
-                    <MailOutlined style={{ color: "#9E9E9E" }} />
-                    <Text type="secondary" style={{ fontSize: 12 }}>
-                      {company.ticket_count} tickets
-                    </Text>
-                  </Space>
-                )}
-              </Space>
-            </Card>
-          </Col>
-        ))}
-      </Row>
-    </div>
-  );
-
-  // ============================================
   // RENDER LOGIC
   // ============================================
   if (loading) {
@@ -626,10 +361,277 @@ const Companies: React.FC = () => {
     <>
       {companies.length === 0 ? (
         <EmptyState />
-      ) : viewMode === "list" ? (
-        <ListView />
+      ) : selectedCompany ? (
+        // Detailed Company View
+        <div style={{ padding: 24 }}>
+          {/* Back Button */}
+          <Button
+            icon={<ArrowLeftOutlined />}
+            onClick={handleBackToList}
+            style={{ marginBottom: 16 }}
+          >
+            Back to Companies
+          </Button>
+
+          {/* Company Header Card */}
+          <Card style={{ marginBottom: 24 }}>
+            <Row gutter={24} align="middle">
+              <Col>
+                <Avatar
+                  size={80}
+                  style={{ background: "#1890ff" }}
+                  icon={<BuildOutlined />}
+                />
+              </Col>
+              <Col flex={1}>
+                <Title level={2} style={{ margin: 0, marginBottom: 8 }}>
+                  {selectedCompany.name}
+                </Title>
+                <Text type="secondary" style={{ display: "block", marginBottom: 16 }}>
+                  {selectedCompany.description}
+                </Text>
+                <Space size={16}>
+                  <Space>
+                    <UserOutlined style={{ color: "#1890ff" }} />
+                    <Text>{selectedCompany.admin_count} Admins</Text>
+                  </Space>
+                  <Space>
+                    <TeamOutlined style={{ color: "#52c41a" }} />
+                    <Text>{selectedCompany.user_count} Users</Text>
+                  </Space>
+                  <Space>
+                    <BuildOutlined style={{ color: "#9E9E9E" }} />
+                    <Text>{selectedCompany.project_count} Projects</Text>
+                  </Space>
+                  <Space>
+                    <MailOutlined style={{ color: "#fa8c16" }} />
+                    <Text>{companyTickets.length} Tickets</Text>
+                  </Space>
+                </Space>
+              </Col>
+              <Col>
+                <Space direction="vertical" align="end">
+                  {selectedCompany.primary_contact_email && (
+                    <Text>
+                      <MailOutlined /> {selectedCompany.primary_contact_email}
+                    </Text>
+                  )}
+                  {selectedCompany.phone && (
+                    <Text>
+                      <PhoneOutlined /> {selectedCompany.phone}
+                    </Text>
+                  )}
+                  <Dropdown
+                    menu={{ items: getActionMenu(selectedCompany) }}
+                    trigger={["click"]}
+                  >
+                    <Button icon={<MoreOutlined />}>Actions</Button>
+                  </Dropdown>
+                </Space>
+              </Col>
+            </Row>
+          </Card>
+
+          {/* Tickets Section */}
+          <Card
+            title={
+              <Space>
+                <MailOutlined />
+                <span>Company Tickets</span>
+                <Badge count={companyTickets.length} />
+              </Space>
+            }
+            extra={
+              <Space>
+                <Button
+                  type={ticketViewMode === "table" ? "primary" : "default"}
+                  icon={<TableOutlined />}
+                  onClick={() => setTicketViewMode("table")}
+                >
+                  Table
+                </Button>
+                <Button
+                  type={ticketViewMode === "kanban" ? "primary" : "default"}
+                  icon={<AppstoreOutlined />}
+                  onClick={() => setTicketViewMode("kanban")}
+                >
+                  Kanban
+                </Button>
+                <Button
+                  type={ticketViewMode === "timeline" ? "primary" : "default"}
+                  icon={<CalendarOutlined />}
+                  onClick={() => setTicketViewMode("timeline")}
+                >
+                  Timeline
+                </Button>
+              </Space>
+            }
+          >
+            {loadingTickets ? (
+              <div style={{ textAlign: "center", padding: 48 }}>
+                <Spin size="large" />
+              </div>
+            ) : ticketViewMode === "table" ? (
+              companyTickets.length === 0 ? (
+                <Empty description="No tickets for this company yet" />
+              ) : (
+                <Table
+                  dataSource={companyTickets}
+                  rowKey="id"
+                  pagination={{ pageSize: 10 }}
+                  columns={[
+                    {
+                      title: "Ticket",
+                      dataIndex: "name",
+                      key: "name",
+                    },
+                    {
+                      title: "Type",
+                      dataIndex: "type",
+                      key: "type",
+                      render: (type: string) => <Tag>{type}</Tag>,
+                    },
+                    {
+                      title: "Status",
+                      dataIndex: "status",
+                      key: "status",
+                      render: (status: string) => <Tag color="blue">{status}</Tag>,
+                    },
+                    {
+                      title: "Priority",
+                      dataIndex: "priority",
+                      key: "priority",
+                      render: (priority: string) => (
+                        <Tag color={priority === "High" ? "red" : priority === "Medium" ? "orange" : "green"}>
+                          {priority}
+                        </Tag>
+                      ),
+                    },
+                    {
+                      title: "Assignees",
+                      dataIndex: "assignees",
+                      key: "assignees",
+                      render: (assignees: any[]) => (
+                        <Avatar.Group maxCount={3}>
+                          {assignees?.map((a: any) => (
+                            <Avatar key={a.id}>{a.first_name?.[0]}{a.last_name?.[0]}</Avatar>
+                          ))}
+                        </Avatar.Group>
+                      ),
+                    },
+                  ]}
+                />
+              )
+            ) : ticketViewMode === "kanban" ? (
+              <Empty description="Kanban view coming soon" />
+            ) : (
+              <Empty description="Timeline view coming soon" />
+            )}
+          </Card>
+        </div>
       ) : (
-        <GridView />
+        // Card Grid View (Default)
+        <div style={{ padding: 24 }}>
+          {/* Header */}
+          <div
+            style={{
+              marginBottom: 24,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <div>
+              <Title level={3} style={{ margin: 0 }}>
+                Companies
+              </Title>
+              <Text type="secondary">
+                Manage your client organizations and their teams
+              </Text>
+            </div>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={handleCreateCompany}
+            >
+              Create Company
+            </Button>
+          </div>
+
+          {/* Cards Grid */}
+          <Row gutter={[16, 16]}>
+            {companies.map((company) => (
+              <Col key={company.id} xs={24} sm={12} lg={8} xl={6}>
+                <Card
+                  hoverable
+                  style={{ height: "100%", cursor: "pointer" }}
+                  onClick={() => handleCompanyClick(company)}
+                  actions={[
+                    <EditOutlined
+                      key="edit"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditCompany(company);
+                      }}
+                    />,
+                    <SettingOutlined key="settings" />,
+                    <div
+                      key="more"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Dropdown
+                        menu={{ items: getActionMenu(company) }}
+                        trigger={["click"]}
+                      >
+                        <MoreOutlined />
+                      </Dropdown>
+                    </div>,
+                  ]}
+                >
+                  <div style={{ textAlign: "center", marginBottom: 16 }}>
+                    <Avatar
+                      size={64}
+                      style={{ background: "#2C3E50" }}
+                      icon={<BuildOutlined />}
+                    />
+                  </div>
+                  <div style={{ textAlign: "center", marginBottom: 12 }}>
+                    <Title level={5} style={{ marginBottom: 4 }}>
+                      {company.name}
+                    </Title>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      {company.description}
+                    </Text>
+                  </div>
+                  <Space direction="vertical" size={4} style={{ width: "100%" }}>
+                    <Space>
+                      <TeamOutlined style={{ color: "#9E9E9E" }} />
+                      <Text type="secondary" style={{ fontSize: 12 }}>
+                        {company.admin_count} admins, {company.user_count} users
+                      </Text>
+                    </Space>
+                    {company.project_count > 0 && (
+                      <Space>
+                        <BuildOutlined style={{ color: "#9E9E9E" }} />
+                        <Text type="secondary" style={{ fontSize: 12 }}>
+                          {company.project_count} projects
+                        </Text>
+                      </Space>
+                    )}
+                    {company.ticket_count > 0 && (
+                      <Space>
+                        <MailOutlined style={{ color: "#9E9E9E" }} />
+                        <Text type="secondary" style={{ fontSize: 12 }}>
+                          {company.ticket_count} tickets
+                        </Text>
+                      </Space>
+                    )}
+                  </Space>
+                </Card>
+              </Col>
+            ))}
+          </Row>
+        </div>
       )}
 
       {/* Create/Edit Modal */}

@@ -5,7 +5,6 @@ import {
   Dropdown,
   Space,
   Typography,
-  Tooltip,
   Select,
   Button,
 } from "antd";
@@ -219,48 +218,43 @@ const MainLayout: React.FC = () => {
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
             return (
-              <Tooltip
+              <div
                 key={item.key}
-                title={collapsed ? item.label : ""}
-                placement="right"
+                onClick={() => navigate(item.path)}
+                className={`nav-item ${isActive ? "active" : ""} ${
+                  collapsed ? "collapsed" : ""
+                }`}
+                style={{
+                  display: "flex",
+                  flexDirection: collapsed ? "column" : "row",
+                  alignItems: "center",
+                  justifyContent: collapsed ? "center" : "flex-start",
+                  gap: collapsed ? 2 : 8,
+                  padding: collapsed ? "10px 4px" : "6px 12px",
+                  marginBottom: 2,
+                  borderRadius: 2,
+                  cursor: "pointer",
+                  transition: "all 0.15s",
+                  background: isActive ? "#e6f7ff" : "transparent",
+                  borderLeft: isActive
+                    ? "2px solid #1890ff"
+                    : "2px solid transparent",
+                  color: isActive ? "#1890ff" : "#595959",
+                }}
               >
-                <div
-                  onClick={() => navigate(item.path)}
-                  className={`nav-item ${isActive ? "active" : ""} ${
-                    collapsed ? "collapsed" : ""
-                  }`}
+                <span style={{ fontSize: collapsed ? 20 : 16 }}>
+                  {item.icon}
+                </span>
+                <span
                   style={{
-                    display: "flex",
-                    flexDirection: collapsed ? "column" : "row",
-                    alignItems: "center",
-                    justifyContent: collapsed ? "center" : "flex-start",
-                    gap: collapsed ? 2 : 8,
-                    padding: collapsed ? "10px 4px" : "6px 12px",
-                    marginBottom: 2,
-                    borderRadius: 2,
-                    cursor: "pointer",
-                    transition: "all 0.15s",
-                    background: isActive ? "#e6f7ff" : "transparent",
-                    borderLeft: isActive
-                      ? "2px solid #1890ff"
-                      : "2px solid transparent",
-                    color: isActive ? "#1890ff" : "#595959",
+                    fontSize: collapsed ? 10 : 13,
+                    fontWeight: isActive ? 500 : 400,
+                    whiteSpace: "nowrap",
                   }}
                 >
-                  <span style={{ fontSize: collapsed ? 20 : 16 }}>
-                    {item.icon}
-                  </span>
-                  <span
-                    style={{
-                      fontSize: collapsed ? 10 : 13,
-                      fontWeight: isActive ? 500 : 400,
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {item.label}
-                  </span>
-                </div>
-              </Tooltip>
+                  {item.label}
+                </span>
+              </div>
             );
           })}
         </div>
@@ -277,31 +271,29 @@ const MainLayout: React.FC = () => {
             background: "#ffffff",
           }}
         >
-          <Tooltip title={collapsed ? "New Ticket" : ""} placement="right">
-            <div
-              className="nav-item"
-              style={{
-                display: "flex",
-                flexDirection: collapsed ? "column" : "row",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: collapsed ? 2 : 8,
-                padding: collapsed ? "10px 4px" : "6px 12px",
-                borderRadius: 2,
-                cursor: "pointer",
-                transition: "all 0.15s",
-                background: "#1890ff",
-                color: "#ffffff",
-              }}
-            >
-              <PlusOutlined style={{ fontSize: collapsed ? 20 : 16 }} />
-              {!collapsed && (
-                <span style={{ fontSize: 13, fontWeight: 500 }}>
-                  New Ticket
-                </span>
-              )}
-            </div>
-          </Tooltip>
+          <div
+            className="nav-item"
+            style={{
+              display: "flex",
+              flexDirection: collapsed ? "column" : "row",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: collapsed ? 2 : 8,
+              padding: collapsed ? "10px 4px" : "6px 12px",
+              borderRadius: 2,
+              cursor: "pointer",
+              transition: "all 0.15s",
+              background: "#1890ff",
+              color: "#ffffff",
+            }}
+          >
+            <PlusOutlined style={{ fontSize: collapsed ? 20 : 16 }} />
+            {!collapsed && (
+              <span style={{ fontSize: 13, fontWeight: 500 }}>
+                New Ticket
+              </span>
+            )}
+          </div>
         </div>
       </Sider>
       <Layout
@@ -404,39 +396,37 @@ const MainLayout: React.FC = () => {
                 Create Your First Project
               </Button>
             )}
-            <Tooltip title="Notifications">
-              <div
+            <div
+              style={{
+                cursor: "pointer",
+                padding: "6px 8px",
+                borderRadius: 2,
+                transition: "all 0.15s",
+                display: "flex",
+                alignItems: "center",
+                position: "relative",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "#f0f0f0";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "transparent";
+              }}
+            >
+              <BellOutlined style={{ fontSize: 16, color: "#595959" }} />
+              <span
                 style={{
-                  cursor: "pointer",
-                  padding: "6px 8px",
-                  borderRadius: 2,
-                  transition: "all 0.15s",
-                  display: "flex",
-                  alignItems: "center",
-                  position: "relative",
+                  position: "absolute",
+                  top: 4,
+                  right: 6,
+                  width: 6,
+                  height: 6,
+                  borderRadius: "50%",
+                  background: "#ff4d4f",
+                  border: "1px solid white",
                 }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "#f0f0f0";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "transparent";
-                }}
-              >
-                <BellOutlined style={{ fontSize: 16, color: "#595959" }} />
-                <span
-                  style={{
-                    position: "absolute",
-                    top: 4,
-                    right: 6,
-                    width: 6,
-                    height: 6,
-                    borderRadius: "50%",
-                    background: "#ff4d4f",
-                    border: "1px solid white",
-                  }}
-                />
-              </div>
-            </Tooltip>
+              />
+            </div>
             <Dropdown
               menu={{ items: userMenuItems, onClick: handleMenuClick }}
               placement="bottomRight"

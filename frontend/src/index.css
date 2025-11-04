@@ -43,3 +43,22 @@ code {
   font-size: 18px;
   line-height: 1.56;
 }
+
+/* Pagination active item styling */
+.ant-pagination-item-active {
+  background-color: #1890ff !important;
+  border-color: #1890ff !important;
+}
+
+.ant-pagination-item-active a {
+  color: #ffffff !important;
+}
+
+.ant-pagination-item-active:hover {
+  background-color: #40a9ff !important;
+  border-color: #40a9ff !important;
+}
+
+.ant-pagination-item-active:hover a {
+  color: #ffffff !important;
+}
