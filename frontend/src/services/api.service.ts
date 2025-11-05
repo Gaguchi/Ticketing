@@ -4,6 +4,7 @@
  */
 
 import { API_HEADERS, API_CONFIG } from '../config/api';
+import { tokenInterceptor } from '../utils/token-interceptor';
 
 export interface APIError {
   message: string;
@@ -104,20 +105,18 @@ class APIService {
       const duration = Math.round(performance.now() - startTime);
 
       if (!response.ok) {
-        // Handle 401 Unauthorized - logout and redirect to login
+        // Handle 401 Unauthorized - try to refresh token and retry
         if (response.status === 401) {
           const errorData = await response.json().catch(() => ({}));
           this.logResponse(url, response, errorData, duration);
           
-          // Import dynamically to avoid circular dependencies
-          const { default: authService } = await import('./auth.service');
-          authService.logout();
-          window.location.href = '/login';
-          throw {
-            message: 'Session expired. Please login again.',
-            status: 401,
-            details: {}
-          } as APIError;
+          console.log('🔒 [APIService] 401 error detected, attempting token refresh...');
+          
+          // Use token interceptor to handle refresh and retry
+          return await tokenInterceptor.handle401Error(
+            () => this.request<T>(url, options),
+            url
+          );
         }
 
         const errorData = await response.json().catch(() => ({}));
@@ -178,12 +177,33 @@ class APIService {
   async postFormData<T>(url: string, formData: FormData): Promise<T> {
     // Don't set Content-Type header for FormData - browser will set it with boundary
     const authHeader = this.getAuthHeader();
+    const projectHeader = this.getProjectHeader();
     
     return this.request<T>(url, {
       method: 'POST',
       body: formData,
       headers: {
         ...authHeader,
+        ...projectHeader,
+        // Don't include Content-Type for FormData
+      },
+    });
+  }
+
+  /**
+   * PATCH request with FormData (for file uploads)
+   */
+  async patchFormData<T>(url: string, formData: FormData): Promise<T> {
+    // Don't set Content-Type header for FormData - browser will set it with boundary
+    const authHeader = this.getAuthHeader();
+    const projectHeader = this.getProjectHeader();
+    
+    return this.request<T>(url, {
+      method: 'PATCH',
+      body: formData,
+      headers: {
+        ...authHeader,
+        ...projectHeader,
         // Don't include Content-Type for FormData
       },
     });

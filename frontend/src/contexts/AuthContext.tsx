@@ -6,6 +6,8 @@ import React, {
   useRef,
 } from "react";
 import { authService } from "../services/auth.service";
+import { tabSync } from "../utils/tab-sync";
+import { getRefreshTime, isTokenExpired } from "../utils/jwt-decoder";
 import type { User } from "../types/api";
 
 interface AuthContextType {
@@ -28,6 +30,88 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [loading, setLoading] = useState(true);
   const initRef = useRef(false); // Prevent double initialization in React Strict Mode
   const lastFetchRef = useRef<number>(0); // Track last fetch time
+  const refreshTimeoutRef = useRef<number | null>(null); // Token refresh timer
+
+  // Initialize multi-tab synchronization
+  useEffect(() => {
+    tabSync.init();
+    return () => tabSync.destroy();
+  }, []);
+
+  // Proactive token refresh scheduler
+  useEffect(() => {
+    const scheduleTokenRefresh = () => {
+      // Clear any existing timeout
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+        refreshTimeoutRef.current = null;
+      }
+
+      const accessToken = authService.getAccessToken();
+      if (!accessToken) {
+        console.log("⏰ [AuthContext] No token to schedule refresh for");
+        return;
+      }
+
+      // Check if token is already expired
+      if (isTokenExpired(accessToken)) {
+        console.log(
+          "⏰ [AuthContext] Token already expired, skipping schedule"
+        );
+        return;
+      }
+
+      // Calculate when to refresh (10 minutes before expiry)
+      const refreshIn = getRefreshTime(accessToken, 10);
+
+      if (refreshIn <= 0) {
+        console.log("⏰ [AuthContext] Token should be refreshed now");
+        refreshTokenProactively();
+        return;
+      }
+
+      console.log(
+        `⏰ [AuthContext] Scheduling token refresh in ${Math.round(
+          refreshIn / 1000 / 60
+        )} minutes`
+      );
+
+      refreshTimeoutRef.current = setTimeout(() => {
+        refreshTokenProactively();
+      }, refreshIn);
+    };
+
+    const refreshTokenProactively = async () => {
+      try {
+        console.log("🔄 [AuthContext] Proactively refreshing token...");
+        const newToken = await authService.refreshToken();
+        console.log("✅ [AuthContext] Token refreshed proactively");
+
+        setToken(newToken);
+
+        // Broadcast to other tabs
+        tabSync.broadcastTokenRefresh(newToken);
+
+        // Schedule next refresh
+        scheduleTokenRefresh();
+      } catch (error) {
+        console.error("❌ [AuthContext] Failed to refresh token:", error);
+        // Let the 401 interceptor handle it on next request
+      }
+    };
+
+    // Schedule refresh when token changes
+    if (token) {
+      scheduleTokenRefresh();
+    }
+
+    // Cleanup timeout on unmount
+    return () => {
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
+    };
+  }, [token]);
 
   useEffect(() => {
     // Prevent duplicate initialization in React Strict Mode
@@ -122,6 +206,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const logout = () => {
+    console.log("🔐 [AuthContext] Logging out user");
+
+    // Clear refresh timer
+    if (refreshTimeoutRef.current) {
+      clearTimeout(refreshTimeoutRef.current);
+      refreshTimeoutRef.current = null;
+    }
+
+    // Broadcast logout to all tabs
+    tabSync.broadcastLogout();
+
+    // Clear local state
     authService.logout();
     setToken(null);
     setUser(null);

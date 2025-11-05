@@ -236,35 +236,14 @@ const Companies: React.FC = () => {
 
       if (editingCompany) {
         // Update existing company
-        await fetch(API_ENDPOINTS.COMPANY_DETAIL(editingCompany.id), {
-          method: "PATCH",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-          },
-          body: formData,
-        }).then(async (response) => {
-          if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.detail || "Failed to update company");
-          }
-          return response.json();
-        });
+        await apiService.patchFormData(
+          API_ENDPOINTS.COMPANY_DETAIL(editingCompany.id),
+          formData
+        );
         message.success("Company updated successfully");
       } else {
         // Create new company
-        await fetch(API_ENDPOINTS.COMPANIES, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-          },
-          body: formData,
-        }).then(async (response) => {
-          if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.detail || "Failed to create company");
-          }
-          return response.json();
-        });
+        await apiService.postFormData(API_ENDPOINTS.COMPANIES, formData);
         message.success("Company created successfully");
       }
 
