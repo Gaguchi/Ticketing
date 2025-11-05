@@ -48,6 +48,7 @@ After both deployments complete:
 
 1. **Open a ticket** in your application
 2. **Check browser console** - you should see detailed logs like:
+
    ```
    📖 [TicketComments] Loading comments for ticket: 11
    📥 [TicketComments] Load response status: 200
@@ -56,6 +57,7 @@ After both deployments complete:
 
 3. **Type a comment** and press Enter
 4. **Watch the console** for logs like:
+
    ```
    💬 [TicketComments] Sending comment: {ticketId: 11, content: "Test", ...}
    📥 [TicketComments] Response status: 201

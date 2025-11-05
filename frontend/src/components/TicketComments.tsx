@@ -89,7 +89,7 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
     const loadComments = async () => {
       setLoading(true);
       console.log("📖 [TicketComments] Loading comments for ticket:", ticketId);
-      
+
       try {
         const response = await fetch(
           `${
@@ -101,9 +101,12 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
             },
           }
         );
-        
-        console.log("📥 [TicketComments] Load response status:", response.status);
-        
+
+        console.log(
+          "📥 [TicketComments] Load response status:",
+          response.status
+        );
+
         if (!response.ok) {
           const errorText = await response.text();
           console.error("❌ [TicketComments] Load error:", {
@@ -113,10 +116,14 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
           });
           throw new Error("Failed to load comments");
         }
-        
+
         const data = await response.json();
         const commentsList = data.results || data;
-        console.log("✅ [TicketComments] Loaded comments:", commentsList.length, "comments");
+        console.log(
+          "✅ [TicketComments] Loaded comments:",
+          commentsList.length,
+          "comments"
+        );
         setComments(commentsList);
       } catch (error) {
         console.error("❌ [TicketComments] Failed to load comments:", error);
@@ -230,7 +237,9 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
     console.log("💬 [TicketComments] Sending comment:", {
       ticketId,
       content: newComment,
-      url: `${import.meta.env.VITE_API_BASE_URL}/api/tickets/tickets/${ticketId}/comments/`,
+      url: `${
+        import.meta.env.VITE_API_BASE_URL
+      }/api/tickets/tickets/${ticketId}/comments/`,
       hasToken: !!localStorage.getItem("access_token"),
     });
 
