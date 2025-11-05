@@ -88,6 +88,8 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
   useEffect(() => {
     const loadComments = async () => {
       setLoading(true);
+      console.log("📖 [TicketComments] Loading comments for ticket:", ticketId);
+      
       try {
         const response = await fetch(
           `${
@@ -99,11 +101,25 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
             },
           }
         );
-        if (!response.ok) throw new Error("Failed to load comments");
+        
+        console.log("📥 [TicketComments] Load response status:", response.status);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("❌ [TicketComments] Load error:", {
+            status: response.status,
+            statusText: response.statusText,
+            body: errorText,
+          });
+          throw new Error("Failed to load comments");
+        }
+        
         const data = await response.json();
-        setComments(data.results || data);
+        const commentsList = data.results || data;
+        console.log("✅ [TicketComments] Loaded comments:", commentsList.length, "comments");
+        setComments(commentsList);
       } catch (error) {
-        console.error("Failed to load comments:", error);
+        console.error("❌ [TicketComments] Failed to load comments:", error);
         message.error("Failed to load comments");
       } finally {
         setLoading(false);
@@ -211,6 +227,13 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
   const handleSendComment = async () => {
     if (!newComment.trim()) return;
 
+    console.log("💬 [TicketComments] Sending comment:", {
+      ticketId,
+      content: newComment,
+      url: `${import.meta.env.VITE_API_BASE_URL}/api/tickets/tickets/${ticketId}/comments/`,
+      hasToken: !!localStorage.getItem("access_token"),
+    });
+
     setSending(true);
     try {
       const response = await fetch(
@@ -229,8 +252,20 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
         }
       );
 
-      if (!response.ok) throw new Error("Failed to send comment");
+      console.log("📥 [TicketComments] Response status:", response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("❌ [TicketComments] Error response:", {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorText,
+        });
+        throw new Error(`Failed to send comment: ${response.status}`);
+      }
+
       const comment = await response.json();
+      console.log("✅ [TicketComments] Comment created successfully:", comment);
 
       // Add comment to local state
       setComments((prev) => [...prev, comment]);
@@ -244,7 +279,7 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
         comment,
       });
     } catch (error) {
-      console.error("Failed to send comment:", error);
+      console.error("❌ [TicketComments] Failed to send comment:", error);
       message.error("Failed to send comment");
     } finally {
       setSending(false);

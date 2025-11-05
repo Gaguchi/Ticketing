@@ -762,14 +762,29 @@ class CommentViewSet(viewsets.ModelViewSet):
         # Set the user to the current user (when authentication is enabled)
         # Support nested route by setting ticket from URL parameter
         ticket_id = self.kwargs.get('ticket_id')
+        print(f"💬 [CommentViewSet] Creating comment for ticket_id={ticket_id}")
+        
         if ticket_id:
             from .models import Ticket
-            ticket = Ticket.objects.get(id=ticket_id)
-            serializer.save(
-                user=self.request.user if self.request.user.is_authenticated else None,
-                ticket=ticket
-            )
+            try:
+                ticket = Ticket.objects.get(id=ticket_id)
+                print(f"✅ [CommentViewSet] Found ticket: {ticket}")
+                user = self.request.user if self.request.user.is_authenticated else None
+                print(f"👤 [CommentViewSet] User: {user}")
+                
+                serializer.save(
+                    user=user,
+                    ticket=ticket
+                )
+                print(f"✅ [CommentViewSet] Comment saved successfully")
+            except Ticket.DoesNotExist:
+                print(f"❌ [CommentViewSet] Ticket {ticket_id} not found")
+                raise
+            except Exception as e:
+                print(f"❌ [CommentViewSet] Error saving comment: {e}")
+                raise
         else:
+            print(f"⚠️ [CommentViewSet] No ticket_id in URL kwargs")
             serializer.save(user=self.request.user if self.request.user.is_authenticated else None)
 
 
