@@ -105,12 +105,22 @@ class APIService {
       const duration = Math.round(performance.now() - startTime);
 
       if (!response.ok) {
-        // Handle 401 Unauthorized - try to refresh token and retry
-        if (response.status === 401) {
-          const errorData = await response.json().catch(() => ({}));
-          this.logResponse(url, response, errorData, duration);
-          
-          console.log('🔒 [APIService] 401 error detected, attempting token refresh...');
+        const errorData = await response.json().catch(() => ({}));
+        this.logResponse(url, response, errorData, duration);
+
+        // Check if this is a token refresh endpoint - don't retry these
+        const isRefreshEndpoint = url.includes('/auth/token/refresh/');
+        const isLoginEndpoint = url.includes('/auth/login/') || url.includes('/auth/register/');
+
+        // Handle 401 Unauthorized or 403 Forbidden (invalid/expired token)
+        // Django can return 403 with "token_not_valid" error code
+        if (
+          (response.status === 401 || 
+          (response.status === 403 && errorData.code === 'token_not_valid')) &&
+          !isRefreshEndpoint &&
+          !isLoginEndpoint
+        ) {
+          console.log(`🔒 [APIService] ${response.status} error detected, attempting token refresh...`);
           
           // Use token interceptor to handle refresh and retry
           return await tokenInterceptor.handle401Error(
@@ -119,8 +129,13 @@ class APIService {
           );
         }
 
-        const errorData = await response.json().catch(() => ({}));
-        this.logResponse(url, response, errorData, duration);
+        // If refresh endpoint failed, logout immediately
+        if (isRefreshEndpoint && (response.status === 401 || response.status === 403)) {
+          console.error('❌ [APIService] Refresh token invalid, logging out...');
+          const { default: authService } = await import('./auth.service');
+          authService.logout();
+          window.location.href = '/login';
+        }
         
         throw {
           message: errorData.detail || errorData.message || `HTTP Error: ${response.status}`,

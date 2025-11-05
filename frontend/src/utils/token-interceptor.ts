@@ -30,7 +30,7 @@ class TokenInterceptor {
   }
 
   /**
-   * Handle 401 errors with automatic token refresh and retry
+   * Handle 401/403 errors with automatic token refresh and retry
    */
   async handle401Error(
     originalRequest: () => Promise<any>,
@@ -42,6 +42,9 @@ class TokenInterceptor {
       url.includes('/auth/login/') ||
       url.includes('/auth/register/')
     ) {
+      console.error('❌ [TokenInterceptor] Auth endpoint failed, logging out');
+      authService.logout();
+      window.location.href = '/login';
       throw new Error('Authentication failed');
     }
 
@@ -80,8 +83,13 @@ class TokenInterceptor {
       this.isRefreshing = false;
 
       // Logout and redirect to login
+      console.log('🚪 [TokenInterceptor] Redirecting to login...');
       authService.logout();
-      window.location.href = '/login';
+      
+      // Force immediate redirect
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 100);
       
       throw error;
     }
