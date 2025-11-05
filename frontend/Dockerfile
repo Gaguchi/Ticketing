@@ -16,11 +16,13 @@ COPY . .
 
 # Accept build arguments (Vite environment variables)
 ARG VITE_API_BASE_URL=http://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me
+ARG VITE_WS_BASE_URL=ws://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me
 ARG VITE_APP_NAME="Ticketing System"
 ARG VITE_APP_VERSION=1.0.0
 
 # Set as environment variables for the build process
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+ENV VITE_WS_BASE_URL=$VITE_WS_BASE_URL
 ENV VITE_APP_NAME=$VITE_APP_NAME
 ENV VITE_APP_VERSION=$VITE_APP_VERSION
 

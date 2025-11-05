@@ -28,8 +28,9 @@ RUN chmod +x entrypoint.sh
 # Create static files directory
 RUN mkdir -p /app/staticfiles
 
-# Expose port
+# Expose port for Daphne (ASGI server for WebSockets)
 EXPOSE 8000
 
-# Run entrypoint script
-ENTRYPOINT ["./entrypoint.sh"]
+# Run with Daphne for WebSocket support
+# Dokploy will override this with the entrypoint.sh script
+CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "config.asgi:application"]

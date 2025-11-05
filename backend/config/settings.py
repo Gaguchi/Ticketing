@@ -28,6 +28,9 @@ ALLOWED_HOSTS = [host.strip() for host in allowed_hosts_env.split(',') if host.s
 
 # Application definition
 INSTALLED_APPS = [
+    # Django channels must be before Django apps
+    'daphne',
+    
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -39,6 +42,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'drf_spectacular',
+    'channels',
     
     # Local apps
     'tickets',
@@ -273,5 +277,27 @@ LOGGING = {
             'level': 'DEBUG' if DEBUG else 'WARNING',
             'propagate': False,
         },
+    },
+}
+
+# ============================================
+# CHANNELS / WEBSOCKET CONFIGURATION
+# ============================================
+
+# ASGI Application
+ASGI_APPLICATION = 'config.asgi.application'
+
+# Channel Layers - Redis backend for production, In-Memory for development
+# Redis Configuration
+REDIS_HOST = os.getenv('REDIS_HOST', '127.0.0.1')
+REDIS_PORT = int(os.getenv('REDIS_PORT', 6379))
+
+CHANNEL_LAYERS = {
+    'default': {
+        # Use Redis in production, in-memory for development
+        'BACKEND': 'channels_redis.core.RedisChannelLayer' if not DEBUG else 'channels.layers.InMemoryChannelLayer',
+        'CONFIG': {
+            "hosts": [(REDIS_HOST, REDIS_PORT)],
+        } if not DEBUG else {},
     },
 }

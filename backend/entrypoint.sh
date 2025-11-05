@@ -50,6 +50,7 @@ echo "✅ Static files collected!"
 
 # Start server
 echo "========================================"
-echo "Starting Gunicorn server on 0.0.0.0:8000"
+echo "Starting Daphne ASGI server on 0.0.0.0:8000"
 echo "========================================"
-gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 4 --timeout 120 --access-logfile - --error-logfile -
+# Use Daphne for ASGI/WebSocket support instead of Gunicorn
+daphne -b 0.0.0.0 -p 8000 config.asgi:application
