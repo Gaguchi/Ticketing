@@ -1,0 +1,75 @@
+.ticket-comments {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.comments-list {
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 16px;
+}
+
+/* Custom scrollbar for comments list */
+.comments-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.comments-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.comments-list::-webkit-scrollbar-thumb {
+  background: #dfe1e6;
+  border-radius: 4px;
+}
+
+.comments-list::-webkit-scrollbar-thumb:hover {
+  background: #b3b9c4;
+}
+
+/* For Firefox */
+.comments-list {
+  scrollbar-width: thin;
+  scrollbar-color: #dfe1e6 transparent;
+}
+
+/* Comment item animations */
+.ant-list-item {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Hover effects for comment actions */
+.ant-list-item:hover .ant-btn-text {
+  opacity: 1;
+}
+
+.ant-list-item .ant-btn-text {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+/* Typing indicator animation */
+@keyframes typing {
+  0%, 100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.typing-indicator {
+  animation: typing 1.5s infinite;
+}

@@ -36,6 +36,7 @@ import ReactQuill from "react-quill-new";
 import "react-quill-new/dist/quill.snow.css";
 import "./TicketModal.css";
 import { getPriorityIcon } from "./PriorityIcons";
+import { TicketComments } from "./TicketComments";
 import {
   ticketService,
   projectService,
@@ -83,15 +84,6 @@ const getTypeIcon = (type?: string) => {
       return { icon: faCheckSquare, color: "#4bade8" };
   }
 };
-
-// Quick comment suggestions
-const quickComments = [
-  { emoji: "👍", text: "Looks good!" },
-  { emoji: "👋", text: "Need help?" },
-  { emoji: "🚫", text: "This is blocked..." },
-  { emoji: "🔍", text: "Can you clarify...?" },
-  { emoji: "✅", text: "This is done!" },
-];
 
 // Quill editor modules configuration
 const quillModules = {
@@ -159,7 +151,6 @@ export const TicketModal: React.FC<TicketModalProps> = ({
   const [startDate, setStartDate] = useState<dayjs.Dayjs | null>(
     ticket?.start_date ? dayjs(ticket.start_date) : null
   );
-  const [comment, setComment] = useState("");
   const [activeTab, setActiveTab] = useState("comments");
   const [saving, setSaving] = useState(false);
   const [currentProject, setCurrentProject] = useState<any>(null);
@@ -1332,67 +1323,30 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                 activeKey={activeTab}
                 onChange={setActiveTab}
                 items={[
-                  { key: "all", label: "All" },
                   { key: "comments", label: "Comments" },
                   { key: "history", label: "History" },
                 ]}
                 style={{ marginBottom: "16px" }}
               />
 
-              {/* Comment Input */}
-              <div
-                style={{ display: "flex", gap: "12px", marginBottom: "16px" }}
-              >
-                <Avatar
-                  size={32}
-                  style={{ backgroundColor: "#2C3E50", flexShrink: 0 }}
-                >
-                  BK
-                </Avatar>
-                <div style={{ flex: 1 }}>
-                  <TextArea
-                    value={comment}
-                    onChange={(e) => setComment(e.target.value)}
-                    placeholder="Add a comment..."
-                    autoSize={{ minRows: 1, maxRows: 10 }}
-                    style={{
-                      fontSize: "14px",
-                      color: "#172b4d",
-                      border: "1px solid #dfe1e6",
-                      borderRadius: "3px",
-                      marginBottom: "8px",
-                    }}
-                  />
-                  {/* Quick Comment Buttons */}
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: "8px",
-                      flexWrap: "wrap",
-                      marginBottom: "8px",
-                    }}
-                  >
-                    {quickComments.map((qc, idx) => (
-                      <Button
-                        key={idx}
-                        size="small"
-                        type="text"
-                        onClick={() => setComment(qc.text)}
-                        style={{
-                          fontSize: "12px",
-                          color: "#9E9E9E",
-                          border: "1px solid #dfe1e6",
-                          borderRadius: "3px",
-                          padding: "2px 8px",
-                          height: "auto",
-                        }}
-                      >
-                        {qc.emoji} {qc.text}
-                      </Button>
-                    ))}
-                  </div>
+              {/* Comments Tab */}
+              {activeTab === "comments" && !isCreateMode && ticket?.id && (
+                <TicketComments ticketId={ticket.id} projectId={ticket.project} />
+              )}
+
+              {/* History Tab - Placeholder */}
+              {activeTab === "history" && (
+                <div style={{ padding: "24px", textAlign: "center", color: "#9E9E9E" }}>
+                  History feature coming soon...
                 </div>
-              </div>
+              )}
+
+              {/* Create mode message */}
+              {isCreateMode && (
+                <div style={{ padding: "24px", textAlign: "center", color: "#9E9E9E" }}>
+                  Save the ticket first to add comments.
+                </div>
+              )}
             </div>
           </div>
 
