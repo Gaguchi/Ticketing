@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ConfigProvider } from "antd";
 import { AppProvider } from "./contexts/AppContext";
 import { CompanyProvider } from "./contexts/CompanyContext";
-import { WebSocketProvider } from "./contexts/WebSocketContext";
+// import { WebSocketProvider } from "./contexts/WebSocketContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import MainLayout from "./layouts/MainLayout";
 import Login from "./pages/Login";
