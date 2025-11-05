@@ -2,6 +2,10 @@
 
 Welcome to the Ticketing System documentation! This directory contains all project documentation organized by category.
 
+## ⭐ Essential Reference
+
+**[../PROJECT_REFERENCE.md](../PROJECT_REFERENCE.md)** - Critical reference for model fields, API patterns, and avoiding common errors. **Read this first!**
+
 ## 📁 Directory Structure
 
 ```
@@ -16,6 +20,28 @@ docs/
 ├── jira-7-9-2-database-schema.pdf     # Database schema reference
 ├── jira-7-9-2-database-schema_page-0001.jpg
 ├── starting_requirements_ge.txt        # Initial requirements
+│
+├── CHAT_IMPLEMENTATION.md              # Real-time chat/comment system ⭐
+├── DATABASE_RESET_IMPLEMENTATION.md    # Database reset implementation
+├── DEPLOYMENT_INSTRUCTIONS.md          # Comment system deployment guide
+├── DESIGN_BIBLE.md                     # Design system and UI guidelines
+├── DESIGN_IMPLEMENTATION_LOG.md        # Design implementation history
+├── ENVIRONMENT_VARIABLES.md            # Environment configuration guide
+├── FIXING_PROJECT_ROLES.md             # Project roles and permissions fixes
+├── QUICKSTART_WEBSOCKETS.md            # Quick start guide for WebSockets
+├── QUICK_FIX_SERVER_RESET.md           # Quick server reset procedures
+├── QUICK_REFERENCE_DB_RESET.txt        # Quick database reset reference
+├── TICKETMODAL_TODO.md                 # TicketModal feature TODOs
+├── TOKEN_MANAGEMENT_GUIDE.md           # JWT token management
+├── WEBSOCKET_CHECKLIST.md              # WebSocket implementation checklist
+├── WEBSOCKET_CONFIG_FOR_DOKPLOY.md     # Dokploy WebSocket configuration
+├── WEBSOCKET_GUIDE.md                  # Comprehensive WebSocket guide ⭐
+├── WEBSOCKET_IMPLEMENTATION_SUMMARY.md # WebSocket implementation summary
+├── COMPANIES_PAGE_DESIGNS.md           # Companies page design docs
+├── CLEANUP_SUMMARY.md                  # Code cleanup summaries
+├── FRONTEND_CLEANUP_SUMMARY.md         # Frontend cleanup summary
+├── FRONTEND_API_GUIDE.md               # Frontend API usage guide
+├── CLOUDFLARE_TURNSTILE_SETUP.md       # Cloudflare Turnstile setup
 │
 ├── api/                                # API Documentation
 │   ├── API_REFERENCE.md               # Complete API reference for LLMs
@@ -63,50 +89,79 @@ docs/
 
 ### For Developers
 
-1. **System Architecture** ⭐ **START HERE**
+1. **Project Reference** ⭐ **START HERE**
+
+   - Read: `../PROJECT_REFERENCE.md` - Essential reference for avoiding common errors
+   - Contains: Model field names, API patterns, common pitfalls, debugging checklists
+
+2. **System Architecture**
 
    - Read: `SYSTEM_ARCHITECTURE.md` - Complete guide to Projects, Users, and Tickets
    - Understand: Data models, relationships, and workflows
 
-2. **Frontend Architecture**
+3. **WebSocket & Real-time Features**
+
+   - Read: `WEBSOCKET_GUIDE.md` - Complete WebSocket implementation
+   - Read: `CHAT_IMPLEMENTATION.md` - Real-time comment system
+   - Quick Start: `QUICKSTART_WEBSOCKETS.md`
+
+4. **Frontend Architecture**
 
    - Read: `architecture.md` - Complete frontend component documentation
 
-3. **API Development**
+5. **API Development**
 
    - Read: `api/API_REFERENCE.md` - Complete API documentation
    - Import: `api/Ticketing_API.postman_collection.json` into Postman
    - Test: Use super-secret-key authentication for quick testing
 
-4. **Environment Setup**
+6. **Environment Setup**
 
    - Follow: `setup/ENV_SETUP.md`
-   - Reference: `setup/ENVIRONMENT_VARIABLES.md`
-   - Reset Database: `setup/DATABASE_RESET.md` (development only)
+   - Reference: `ENVIRONMENT_VARIABLES.md`
+   - Reset Database: `DATABASE_RESET_IMPLEMENTATION.md` (development only)
 
-5. **Deployment**
+7. **Deployment**
    - Check: `deployment/DEPLOYMENT_CHECKLIST.md`
    - Follow: `deployment/DOKPLOY_DEPLOYMENT.md`
+   - WebSocket Config: `WEBSOCKET_CONFIG_FOR_DOKPLOY.md`
 
 ### For LLMs/AI Assistants
 
-1. **API Reference**: `api/API_REFERENCE.md`
+1. **Project Reference**: `../PROJECT_REFERENCE.md` ⭐ **MUST READ**
+
+   - Model field names (e.g., Comment.user NOT Comment.author)
+   - API endpoint patterns
+   - Common pitfalls and correct implementations
+   - Debugging checklists
+
+2. **API Reference**: `api/API_REFERENCE.md`
 
    - Contains all endpoints, request/response formats
    - Authentication methods (JWT + super-secret-key)
    - Common patterns and best practices
 
-2. **Postman Collection**: `api/Ticketing_API.postman_collection.json`
+3. **Postman Collection**: `api/Ticketing_API.postman_collection.json`
    - Import into Postman for interactive testing
    - Includes all endpoints with examples
 
 ## 📚 Key Documents
 
+### Essential References
+
+| Document                                                                                | Description                                |
+| --------------------------------------------------------------------------------------- | ------------------------------------------ |
+| [**PROJECT_REFERENCE.md**](../PROJECT_REFERENCE.md) ⭐                                  | Model fields, API patterns, common pitfalls |
+| [CHAT_IMPLEMENTATION.md](CHAT_IMPLEMENTATION.md)                                        | Real-time comment system implementation    |
+| [WEBSOCKET_GUIDE.md](WEBSOCKET_GUIDE.md)                                                | Complete WebSocket guide                   |
+
 ### Architecture
 
 | Document                           | Description                                       |
 | ---------------------------------- | ------------------------------------------------- |
+| [SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md) | System architecture overview            |
 | [architecture.md](architecture.md) | Frontend architecture and component documentation |
+| [DESIGN_BIBLE.md](DESIGN_BIBLE.md) | Design system and UI guidelines                  |
 
 ### API Documentation
 
@@ -127,11 +182,23 @@ docs/
 
 ### Setup & Configuration
 
-| Document                                                   | Description                         |
-| ---------------------------------------------------------- | ----------------------------------- |
-| [ENV_SETUP.md](setup/ENV_SETUP.md)                         | Environment setup instructions      |
-| [ENVIRONMENT_VARIABLES.md](setup/ENVIRONMENT_VARIABLES.md) | All environment variables explained |
-| [DATABASE_RESET.md](setup/DATABASE_RESET.md)               | Database reset guide (development)  |
+| Document                                                                      | Description                          |
+| ----------------------------------------------------------------------------- | ------------------------------------ |
+| [ENV_SETUP.md](setup/ENV_SETUP.md)                                            | Environment setup instructions       |
+| [ENVIRONMENT_VARIABLES.md](ENVIRONMENT_VARIABLES.md)                           | All environment variables explained  |
+| [DATABASE_RESET_IMPLEMENTATION.md](DATABASE_RESET_IMPLEMENTATION.md)           | Database reset guide (development)   |
+| [TOKEN_MANAGEMENT_GUIDE.md](TOKEN_MANAGEMENT_GUIDE.md)                         | JWT token management                 |
+| [CLOUDFLARE_TURNSTILE_SETUP.md](CLOUDFLARE_TURNSTILE_SETUP.md)                | Cloudflare Turnstile configuration   |
+
+### WebSocket & Real-time
+
+| Document                                                                      | Description                          |
+| ----------------------------------------------------------------------------- | ------------------------------------ |
+| [WEBSOCKET_GUIDE.md](WEBSOCKET_GUIDE.md) ⭐                                    | Comprehensive WebSocket guide        |
+| [QUICKSTART_WEBSOCKETS.md](QUICKSTART_WEBSOCKETS.md)                          | Quick WebSocket setup                |
+| [WEBSOCKET_IMPLEMENTATION_SUMMARY.md](WEBSOCKET_IMPLEMENTATION_SUMMARY.md)    | Implementation summary               |
+| [WEBSOCKET_CHECKLIST.md](WEBSOCKET_CHECKLIST.md)                              | Implementation checklist             |
+| [WEBSOCKET_CONFIG_FOR_DOKPLOY.md](WEBSOCKET_CONFIG_FOR_DOKPLOY.md)            | Dokploy-specific configuration       |
 
 ### Troubleshooting
 
@@ -224,6 +291,14 @@ For questions or issues:
 
 ## 🔄 Recent Changes
 
+- **2025-11-05**: Major documentation cleanup
+  - Created **PROJECT_REFERENCE.md** with critical model field names and API patterns
+  - Moved all documentation files to `docs/` folder
+  - Kept only PROJECT_REFERENCE.md in root for easy access
+  - Added comprehensive docs/README.md with categorized index
+  - Documented WebSocket implementation
+  - Added real-time comment system documentation
+  
 - **2025-10-29**: Reorganized documentation structure
   - Created category folders (api/, deployment/, setup/, troubleshooting/, archive/)
   - Moved all root-level docs to appropriate folders
@@ -248,4 +323,4 @@ For questions or issues:
 
 ---
 
-**Last Updated**: October 29, 2025
+**Last Updated**: November 5, 2025
