@@ -83,13 +83,8 @@ const MainLayout: React.FC = () => {
         disconnectPresence();
       }
     };
-  }, [
-    selectedProject?.id,
-    connectTickets,
-    connectPresence,
-    disconnectTickets,
-    disconnectPresence,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedProject?.id]);
 
   // Log the state for debugging
   useEffect(() => {

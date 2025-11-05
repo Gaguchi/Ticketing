@@ -9,6 +9,7 @@ import React, {
   useEffect,
   useRef,
   useState,
+  useCallback,
 } from "react";
 import { webSocketService } from "../services/websocket.service";
 import { useAuth } from "./AppContext";
@@ -69,6 +70,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
     return () => {
       disconnectAll();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, user]);
 
   // Start heartbeat to keep connections alive
@@ -108,7 +110,40 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [isAuthenticated]);
 
-  const connectNotifications = () => {
+  // Disconnect functions (defined first so connect functions can use them)
+  const disconnectNotifications = useCallback(() => {
+    webSocketService.disconnect("ws/notifications/");
+    setIsNotificationConnected(false);
+  }, []);
+
+  const disconnectTickets = useCallback(() => {
+    if (currentProjectId.current) {
+      webSocketService.disconnect(
+        `ws/projects/${currentProjectId.current}/tickets/`
+      );
+      setIsTicketConnected(false);
+    }
+  }, []);
+
+  const disconnectPresence = useCallback(() => {
+    if (currentProjectId.current) {
+      webSocketService.disconnect(
+        `ws/projects/${currentProjectId.current}/presence/`
+      );
+      setIsPresenceConnected(false);
+    }
+  }, []);
+
+  const disconnectAll = useCallback(() => {
+    webSocketService.disconnectAll();
+    setIsNotificationConnected(false);
+    setIsTicketConnected(false);
+    setIsPresenceConnected(false);
+    currentProjectId.current = null;
+  }, []);
+
+  // Connect functions
+  const connectNotifications = useCallback(() => {
     if (!isAuthenticated) {
       console.warn(
         "⚠️ [WebSocketContext] Cannot connect notifications: not authenticated"
@@ -135,9 +170,9 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
     if (ws) {
       setIsNotificationConnected(true);
     }
-  };
+  }, [isAuthenticated]);
 
-  const connectTickets = (projectId: number) => {
+  const connectTickets = useCallback((projectId: number) => {
     if (!isAuthenticated) {
       console.warn(
         "⚠️ [WebSocketContext] Cannot connect tickets: not authenticated"
@@ -172,9 +207,9 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
     if (ws) {
       setIsTicketConnected(true);
     }
-  };
+  }, [isAuthenticated, disconnectTickets, disconnectPresence]);
 
-  const connectPresence = (projectId: number) => {
+  const connectPresence = useCallback((projectId: number) => {
     if (!isAuthenticated) {
       console.warn(
         "⚠️ [WebSocketContext] Cannot connect presence: not authenticated"
@@ -203,58 +238,28 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
     if (ws) {
       setIsPresenceConnected(true);
     }
-  };
+  }, [isAuthenticated]);
 
-  const disconnectNotifications = () => {
-    webSocketService.disconnect("ws/notifications/");
-    setIsNotificationConnected(false);
-  };
-
-  const disconnectTickets = () => {
-    if (currentProjectId.current) {
-      webSocketService.disconnect(
-        `ws/projects/${currentProjectId.current}/tickets/`
-      );
-      setIsTicketConnected(false);
-    }
-  };
-
-  const disconnectPresence = () => {
-    if (currentProjectId.current) {
-      webSocketService.disconnect(
-        `ws/projects/${currentProjectId.current}/presence/`
-      );
-      setIsPresenceConnected(false);
-    }
-  };
-
-  const disconnectAll = () => {
-    webSocketService.disconnectAll();
-    setIsNotificationConnected(false);
-    setIsTicketConnected(false);
-    setIsPresenceConnected(false);
-    currentProjectId.current = null;
-  };
-
-  const sendNotificationMessage = (data: any): boolean => {
+  // Send functions
+  const sendNotificationMessage = useCallback((data: any): boolean => {
     return webSocketService.send("ws/notifications/", data);
-  };
+  }, []);
 
-  const sendTicketMessage = (data: any): boolean => {
+  const sendTicketMessage = useCallback((data: any): boolean => {
     if (!currentProjectId.current) return false;
     return webSocketService.send(
       `ws/projects/${currentProjectId.current}/tickets/`,
       data
     );
-  };
+  }, []);
 
-  const sendPresenceMessage = (data: any): boolean => {
+  const sendPresenceMessage = useCallback((data: any): boolean => {
     if (!currentProjectId.current) return false;
     return webSocketService.send(
       `ws/projects/${currentProjectId.current}/presence/`,
       data
     );
-  };
+  }, []);
 
   const value: WebSocketContextType = {
     isNotificationConnected,
