@@ -26,6 +26,10 @@ DEBUG = os.getenv('DEBUG', 'False') == 'True'
 allowed_hosts_env = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,31.146.76.40')
 ALLOWED_HOSTS = [host.strip() for host in allowed_hosts_env.split(',') if host.strip()]
 
+# Add support for Traefik.me wildcard domains (for Dokploy deployments)
+if os.getenv('ALLOW_TRAEFIK_DOMAINS', 'False') == 'True':
+    ALLOWED_HOSTS.append('.traefik.me')  # Allows *.traefik.me subdomains
+
 # Application definition
 INSTALLED_APPS = [
     # Django channels must be before Django apps

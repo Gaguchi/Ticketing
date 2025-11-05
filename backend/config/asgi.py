@@ -16,14 +16,16 @@ from channels.security.websocket import AllowedHostsOriginValidator
 from tickets.middleware import JWTAuthMiddleware
 from tickets.routing import websocket_urlpatterns
 
+# WebSocket application with JWT auth (no AllowedHostsOriginValidator to allow Traefik domains)
+# ALLOWED_HOSTS in settings.py will handle host validation
 application = ProtocolTypeRouter({
     # Django's ASGI application to handle traditional HTTP requests
     "http": django_asgi_app,
     
     # WebSocket handler with JWT authentication
-    "websocket": AllowedHostsOriginValidator(
-        JWTAuthMiddleware(
-            URLRouter(websocket_urlpatterns)
-        )
+    # Note: Removed AllowedHostsOriginValidator because it's too strict for Traefik.me domains
+    # Use ALLOWED_HOSTS in settings.py instead
+    "websocket": JWTAuthMiddleware(
+        URLRouter(websocket_urlpatterns)
     ),
 })
