@@ -16,6 +16,7 @@ import {
   EditOutlined,
   DeleteOutlined,
   MoreOutlined,
+  EnterOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
@@ -364,27 +365,64 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
               <List.Item
                 key={comment.id}
                 style={{
-                  padding: "12px 0",
-                  borderBottom: "1px solid #f0f0f0",
-                  alignItems: "flex-start",
+                  padding: "0",
+                  border: "none",
+                  marginBottom: "16px",
                 }}
               >
-                <List.Item.Meta
-                  avatar={
-                    <Avatar style={{ backgroundColor: "#2C3E50" }}>
-                      {getUserInitials(comment.user)}
-                    </Avatar>
-                  }
-                  title={
+                <div
+                  style={{
+                    width: "100%",
+                    display: "flex",
+                    gap: "12px",
+                    backgroundColor: "#fff",
+                    borderRadius: "12px",
+                    padding: "16px",
+                    border: "1px solid #f0f0f0",
+                    boxShadow: "0 1px 2px rgba(0, 0, 0, 0.04)",
+                    transition: "all 0.3s",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.08)";
+                    e.currentTarget.style.borderColor = "#e6e6e6";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = "0 1px 2px rgba(0, 0, 0, 0.04)";
+                    e.currentTarget.style.borderColor = "#f0f0f0";
+                  }}
+                >
+                  {/* Avatar */}
+                  <Avatar 
+                    size={40} 
+                    style={{ 
+                      backgroundColor: "#4096ff",
+                      flexShrink: 0,
+                      fontSize: "16px",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {getUserInitials(comment.user)}
+                  </Avatar>
+
+                  {/* Comment Content */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    {/* Header */}
                     <div
                       style={{
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "space-between",
+                        marginBottom: "8px",
                       }}
                     >
-                      <div>
-                        <span style={{ fontWeight: 600, color: "#172b4d" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                        <span
+                          style={{
+                            fontWeight: 600,
+                            color: "#172b4d",
+                            fontSize: "14px",
+                          }}
+                        >
                           {getUserDisplayName(comment.user)}
                         </span>
                         <Tooltip
@@ -394,7 +432,6 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
                         >
                           <span
                             style={{
-                              marginLeft: "8px",
                               fontSize: "12px",
                               color: "#9E9E9E",
                             }}
@@ -405,12 +442,14 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
                         {comment.updated_at !== comment.created_at && (
                           <span
                             style={{
-                              marginLeft: "8px",
-                              fontSize: "12px",
+                              fontSize: "11px",
                               color: "#9E9E9E",
+                              backgroundColor: "#f5f5f5",
+                              padding: "2px 6px",
+                              borderRadius: "4px",
                             }}
                           >
-                            (edited)
+                            edited
                           </span>
                         )}
                       </div>
@@ -446,26 +485,42 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
                             type="text"
                             size="small"
                             icon={<MoreOutlined />}
-                            style={{ color: "#9E9E9E" }}
+                            style={{ 
+                              color: "#9E9E9E",
+                              opacity: 0.6,
+                              transition: "opacity 0.3s",
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.opacity = "1";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.opacity = "0.6";
+                            }}
                           />
                         </Dropdown>
                       )}
                     </div>
-                  }
-                  description={
-                    editingCommentId === comment.id ? (
+
+                    {/* Comment Body */}
+                    {editingCommentId === comment.id ? (
                       <div style={{ marginTop: "8px" }}>
                         <TextArea
                           value={editingContent}
                           onChange={(e) => setEditingContent(e.target.value)}
                           autoSize={{ minRows: 2, maxRows: 6 }}
-                          style={{ marginBottom: "8px" }}
+                          style={{ 
+                            marginBottom: "8px",
+                            borderRadius: "8px",
+                            border: "2px solid #4096ff",
+                          }}
+                          autoFocus
                         />
                         <div style={{ display: "flex", gap: "8px" }}>
                           <Button
                             type="primary"
                             size="small"
                             onClick={() => handleEditComment(comment.id)}
+                            style={{ borderRadius: "6px" }}
                           >
                             Save
                           </Button>
@@ -475,6 +530,7 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
                               setEditingCommentId(null);
                               setEditingContent("");
                             }}
+                            style={{ borderRadius: "6px" }}
                           >
                             Cancel
                           </Button>
@@ -489,6 +545,7 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
                               size="small"
                               danger
                               icon={<DeleteOutlined />}
+                              style={{ borderRadius: "6px" }}
                             >
                               Delete
                             </Button>
@@ -498,18 +555,22 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
                     ) : (
                       <div
                         style={{
-                          marginTop: "4px",
                           fontSize: "14px",
                           color: "#172b4d",
                           whiteSpace: "pre-wrap",
                           wordBreak: "break-word",
+                          lineHeight: "1.6",
+                          backgroundColor: "#fafbfc",
+                          padding: "12px",
+                          borderRadius: "8px",
+                          border: "1px solid #f0f0f0",
                         }}
                       >
                         {comment.content}
                       </div>
-                    )
-                  }
-                />
+                    )}
+                  </div>
+                </div>
               </List.Item>
             )}
           />
@@ -546,31 +607,58 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
             : "?"}
         </Avatar>
         <div style={{ flex: 1 }}>
-          <TextArea
-            value={newComment}
-            onChange={(e) => {
-              setNewComment(e.target.value);
-              handleTyping();
-            }}
-            onPressEnter={(e) => {
-              if (e.shiftKey) {
-                // Allow new line with Shift+Enter
-                return;
-              }
-              e.preventDefault();
-              handleSendComment();
-            }}
-            placeholder="Add a comment... (Press Enter to send, Shift+Enter for new line)"
-            autoSize={{ minRows: 2, maxRows: 10 }}
-            style={{
-              fontSize: "14px",
-              color: "#172b4d",
-              border: "1px solid #dfe1e6",
-              borderRadius: "3px",
-              marginBottom: "8px",
-            }}
-            disabled={sending}
-          />
+          <div style={{ position: "relative" }}>
+            <TextArea
+              value={newComment}
+              onChange={(e) => {
+                setNewComment(e.target.value);
+                handleTyping();
+              }}
+              onPressEnter={(e) => {
+                if (e.shiftKey) {
+                  // Allow new line with Shift+Enter
+                  return;
+                }
+                e.preventDefault();
+                handleSendComment();
+              }}
+              placeholder="Add a comment..."
+              autoSize={{ minRows: 2, maxRows: 10 }}
+              style={{
+                fontSize: "14px",
+                color: "#172b4d",
+                border: "2px solid #dfe1e6",
+                borderRadius: "8px",
+                marginBottom: "8px",
+                paddingRight: "40px",
+                transition: "border-color 0.3s",
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = "#4096ff";
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = "#dfe1e6";
+              }}
+              disabled={sending}
+            />
+            {/* Enter Icon Hint */}
+            <Tooltip title="Press Enter to send">
+              <div
+                style={{
+                  position: "absolute",
+                  right: "12px",
+                  top: "8px",
+                  color: "#9E9E9E",
+                  fontSize: "16px",
+                  pointerEvents: "none",
+                  opacity: newComment.trim() ? 1 : 0.5,
+                  transition: "opacity 0.3s",
+                }}
+              >
+                <EnterOutlined />
+              </div>
+            </Tooltip>
+          </div>
 
           {/* Quick Comment Buttons */}
           <div
@@ -589,11 +677,20 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
                   onClick={() => setNewComment(qc.text)}
                   style={{
                     fontSize: "12px",
-                    color: "#9E9E9E",
+                    color: "#5E6C84",
                     border: "1px solid #dfe1e6",
-                    borderRadius: "3px",
-                    padding: "2px 8px",
+                    borderRadius: "6px",
+                    padding: "4px 10px",
                     height: "auto",
+                    transition: "all 0.3s",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = "#4096ff";
+                    e.currentTarget.style.backgroundColor = "#f0f5ff";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = "#dfe1e6";
+                    e.currentTarget.style.backgroundColor = "transparent";
                   }}
                 >
                   {qc.emoji} {qc.text}
@@ -603,13 +700,20 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
           </div>
 
           {/* Send Button */}
-          <div style={{ display: "flex", justifyContent: "flex-end" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: "12px", color: "#9E9E9E" }}>
+              Press <kbd style={{ padding: "2px 6px", border: "1px solid #ddd", borderRadius: "3px", fontSize: "11px" }}>Enter</kbd> to send, <kbd style={{ padding: "2px 6px", border: "1px solid #ddd", borderRadius: "3px", fontSize: "11px" }}>Shift+Enter</kbd> for new line
+            </span>
             <Button
               type="primary"
               icon={<SendOutlined />}
               onClick={handleSendComment}
               loading={sending}
               disabled={!newComment.trim() || sending}
+              style={{
+                borderRadius: "6px",
+                boxShadow: newComment.trim() ? "0 2px 4px rgba(64, 150, 255, 0.3)" : "none",
+              }}
             >
               Send
             </Button>
