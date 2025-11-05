@@ -172,73 +172,79 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [isAuthenticated]);
 
-  const connectTickets = useCallback((projectId: number) => {
-    if (!isAuthenticated) {
-      console.warn(
-        "⚠️ [WebSocketContext] Cannot connect tickets: not authenticated"
-      );
-      return;
-    }
-
-    // Disconnect from previous project if exists
-    if (currentProjectId.current && currentProjectId.current !== projectId) {
-      disconnectTickets();
-      disconnectPresence();
-    }
-
-    currentProjectId.current = projectId;
-
-    const ws = webSocketService.connect(
-      `ws/projects/${projectId}/tickets/`,
-      (data) => {
-        console.log("📨 [WebSocketContext] Ticket update:", data);
-        // Ticket updates will be handled by custom hooks
-      },
-      (error) => {
-        console.error("❌ [WebSocketContext] Ticket error:", error);
-        setIsTicketConnected(false);
-      },
-      (event) => {
-        console.log("🔌 [WebSocketContext] Ticket disconnected:", event);
-        setIsTicketConnected(false);
+  const connectTickets = useCallback(
+    (projectId: number) => {
+      if (!isAuthenticated) {
+        console.warn(
+          "⚠️ [WebSocketContext] Cannot connect tickets: not authenticated"
+        );
+        return;
       }
-    );
 
-    if (ws) {
-      setIsTicketConnected(true);
-    }
-  }, [isAuthenticated, disconnectTickets, disconnectPresence]);
-
-  const connectPresence = useCallback((projectId: number) => {
-    if (!isAuthenticated) {
-      console.warn(
-        "⚠️ [WebSocketContext] Cannot connect presence: not authenticated"
-      );
-      return;
-    }
-
-    currentProjectId.current = projectId;
-
-    const ws = webSocketService.connect(
-      `ws/projects/${projectId}/presence/`,
-      (data) => {
-        console.log("📨 [WebSocketContext] Presence update:", data);
-        // Presence updates will be handled by custom hooks
-      },
-      (error) => {
-        console.error("❌ [WebSocketContext] Presence error:", error);
-        setIsPresenceConnected(false);
-      },
-      (event) => {
-        console.log("🔌 [WebSocketContext] Presence disconnected:", event);
-        setIsPresenceConnected(false);
+      // Disconnect from previous project if exists
+      if (currentProjectId.current && currentProjectId.current !== projectId) {
+        disconnectTickets();
+        disconnectPresence();
       }
-    );
 
-    if (ws) {
-      setIsPresenceConnected(true);
-    }
-  }, [isAuthenticated]);
+      currentProjectId.current = projectId;
+
+      const ws = webSocketService.connect(
+        `ws/projects/${projectId}/tickets/`,
+        (data) => {
+          console.log("📨 [WebSocketContext] Ticket update:", data);
+          // Ticket updates will be handled by custom hooks
+        },
+        (error) => {
+          console.error("❌ [WebSocketContext] Ticket error:", error);
+          setIsTicketConnected(false);
+        },
+        (event) => {
+          console.log("🔌 [WebSocketContext] Ticket disconnected:", event);
+          setIsTicketConnected(false);
+        }
+      );
+
+      if (ws) {
+        setIsTicketConnected(true);
+      }
+    },
+    [isAuthenticated, disconnectTickets, disconnectPresence]
+  );
+
+  const connectPresence = useCallback(
+    (projectId: number) => {
+      if (!isAuthenticated) {
+        console.warn(
+          "⚠️ [WebSocketContext] Cannot connect presence: not authenticated"
+        );
+        return;
+      }
+
+      currentProjectId.current = projectId;
+
+      const ws = webSocketService.connect(
+        `ws/projects/${projectId}/presence/`,
+        (data) => {
+          console.log("📨 [WebSocketContext] Presence update:", data);
+          // Presence updates will be handled by custom hooks
+        },
+        (error) => {
+          console.error("❌ [WebSocketContext] Presence error:", error);
+          setIsPresenceConnected(false);
+        },
+        (event) => {
+          console.log("🔌 [WebSocketContext] Presence disconnected:", event);
+          setIsPresenceConnected(false);
+        }
+      );
+
+      if (ws) {
+        setIsPresenceConnected(true);
+      }
+    },
+    [isAuthenticated]
+  );
 
   // Send functions
   const sendNotificationMessage = useCallback((data: any): boolean => {
