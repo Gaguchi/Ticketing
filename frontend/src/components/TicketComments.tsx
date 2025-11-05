@@ -90,7 +90,9 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
       setLoading(true);
       try {
         const response = await fetch(
-          `${import.meta.env.VITE_API_BASE_URL}/api/tickets/tickets/${ticketId}/comments/`,
+          `${
+            import.meta.env.VITE_API_BASE_URL
+          }/api/tickets/tickets/${ticketId}/comments/`,
           {
             headers: {
               Authorization: `Bearer ${localStorage.getItem("access_token")}`,
@@ -212,7 +214,9 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
     setSending(true);
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/api/tickets/tickets/${ticketId}/comments/`,
+        `${
+          import.meta.env.VITE_API_BASE_URL
+        }/api/tickets/tickets/${ticketId}/comments/`,
         {
           method: "POST",
           headers: {
