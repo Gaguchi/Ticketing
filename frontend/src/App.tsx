@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ConfigProvider } from "antd";
 import { AppProvider } from "./contexts/AppContext";
 import { CompanyProvider } from "./contexts/CompanyContext";
-// import { WebSocketProvider } from "./contexts/WebSocketContext";
+import { WebSocketProvider } from "./contexts/WebSocketContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import MainLayout from "./layouts/MainLayout";
 import Login from "./pages/Login";
@@ -22,12 +22,11 @@ function App() {
       <AppProvider>
         <CompanyProvider>
           <BrowserRouter>
-            {/* Temporarily disabled WebSocketProvider for debugging */}
-            {/* <WebSocketProvider> */}
-            <Routes>
-              {/* Public routes */}
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
+            <WebSocketProvider>
+              <Routes>
+                {/* Public routes */}
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
 
               {/* Project setup (protected) */}
               <Route
@@ -59,7 +58,7 @@ function App() {
               {/* Catch all */}
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
-            {/* </WebSocketProvider> */}
+            </WebSocketProvider>
           </BrowserRouter>
         </CompanyProvider>
       </AppProvider>

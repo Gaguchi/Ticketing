@@ -26,7 +26,7 @@ import {
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AppContext";
 import { useProject } from "../contexts/AppContext";
-// import { useWebSocketContext } from "../contexts/WebSocketContext";
+import { useWebSocketContext } from "../contexts/WebSocketContext";
 import { CreateProjectModal } from "../components/CreateProjectModal";
 import type { MenuProps } from "antd";
 import "./MainLayout.css";
@@ -54,42 +54,42 @@ const MainLayout: React.FC = () => {
     setSelectedProject,
     loading: projectLoading,
   } = useProject();
-  // const {
-  //   connectTickets,
-  //   connectPresence,
-  //   disconnectTickets,
-  //   disconnectPresence,
-  // } = useWebSocketContext();
+  const {
+    connectTickets,
+    connectPresence,
+    disconnectTickets,
+    disconnectPresence,
+  } = useWebSocketContext();
 
-  // // Connect to WebSocket channels when project changes
-  // useEffect(() => {
-  //   if (selectedProject?.id) {
-  //     console.log(
-  //       "🔌 [MainLayout] Connecting to WebSocket channels for project:",
-  //       selectedProject.id
-  //     );
-  //     connectTickets(selectedProject.id);
-  //     connectPresence(selectedProject.id);
-  //   }
+  // Connect to WebSocket channels when project changes
+  useEffect(() => {
+    if (selectedProject?.id) {
+      console.log(
+        "🔌 [MainLayout] Connecting to WebSocket channels for project:",
+        selectedProject.id
+      );
+      connectTickets(selectedProject.id);
+      connectPresence(selectedProject.id);
+    }
 
-  //   // Cleanup: disconnect when project changes or component unmounts
-  //   return () => {
-  //     if (selectedProject?.id) {
-  //       console.log(
-  //         "🔌 [MainLayout] Disconnecting WebSocket channels for project:",
-  //         selectedProject.id
-  //       );
-  //       disconnectTickets();
-  //       disconnectPresence();
-  //     }
-  //   };
-  // }, [
-  //   selectedProject?.id,
-  //   connectTickets,
-  //   connectPresence,
-  //   disconnectTickets,
-  //   disconnectPresence,
-  // ]);
+    // Cleanup: disconnect when project changes or component unmounts
+    return () => {
+      if (selectedProject?.id) {
+        console.log(
+          "🔌 [MainLayout] Disconnecting WebSocket channels for project:",
+          selectedProject.id
+        );
+        disconnectTickets();
+        disconnectPresence();
+      }
+    };
+  }, [
+    selectedProject?.id,
+    connectTickets,
+    connectPresence,
+    disconnectTickets,
+    disconnectPresence,
+  ]);
 
   // Log the state for debugging
   useEffect(() => {
