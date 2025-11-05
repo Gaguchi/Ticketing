@@ -58,7 +58,6 @@ import type {
   Project,
 } from "../types/api";
 
-const { TextArea } = Input;
 const { Option } = Select;
 
 interface TicketModalProps {
