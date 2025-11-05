@@ -750,9 +750,25 @@ class CommentViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['ticket']
     
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        # Support nested route: /tickets/{ticket_id}/comments/
+        ticket_id = self.kwargs.get('ticket_id')
+        if ticket_id is not None:
+            queryset = queryset.filter(ticket_id=ticket_id)
+        return queryset
+    
     def perform_create(self, serializer):
         # Set the user to the current user (when authentication is enabled)
-        serializer.save(user=self.request.user if self.request.user.is_authenticated else None)
+        # Support nested route by setting ticket from URL parameter
+        ticket_id = self.kwargs.get('ticket_id')
+        if ticket_id:
+            serializer.save(
+                user=self.request.user if self.request.user.is_authenticated else None,
+                ticket_id=ticket_id
+            )
+        else:
+            serializer.save(user=self.request.user if self.request.user.is_authenticated else None)
 
 
 class AttachmentViewSet(viewsets.ModelViewSet):

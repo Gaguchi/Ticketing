@@ -31,6 +31,18 @@ urlpatterns = [
     path('auth/me/', get_current_user, name='current-user'),
     path('auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     
+    # Nested ticket comments route
+    path('tickets/<int:ticket_id>/comments/', CommentViewSet.as_view({
+        'get': 'list',
+        'post': 'create'
+    }), name='ticket-comments-list'),
+    path('tickets/<int:ticket_id>/comments/<int:pk>/', CommentViewSet.as_view({
+        'get': 'retrieve',
+        'put': 'update',
+        'patch': 'partial_update',
+        'delete': 'destroy'
+    }), name='ticket-comments-detail'),
+    
     # Router URLs
     path('', include(router.urls)),
 ]
