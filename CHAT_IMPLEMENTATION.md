@@ -1,25 +1,29 @@
 # Real-Time Chat/Comments Implementation
 
 ## Overview
+
 Implemented a comprehensive real-time chat/comment system for tickets using **Django Channels WebSockets** and **Ant Design** components.
 
 ## Features
 
 ### 1. **Real-Time Comments**
+
 - ✅ **Live Updates**: Comments appear instantly for all users viewing the same ticket
 - ✅ **Create, Edit, Delete**: Full CRUD operations for comments
 - ✅ **WebSocket Broadcasting**: All changes broadcast via WebSocket channels
 - ✅ **Optimistic UI**: Immediate local updates with server sync
 
 ### 2. **Typing Indicators**
+
 - ✅ **Live Typing Status**: Shows when other users are typing
 - ✅ **Auto-timeout**: Indicators automatically disappear after 3 seconds
 - ✅ **Non-intrusive**: Only shown for other users, not yourself
 
 ### 3. **User Experience**
+
 - ✅ **Quick Comment Suggestions**: 8 emoji-based quick replies
 - ✅ **Auto-scroll**: Automatically scrolls to newest comments
-- ✅ **Keyboard Shortcuts**: 
+- ✅ **Keyboard Shortcuts**:
   - `Enter` to send
   - `Shift+Enter` for new line
 - ✅ **Relative Timestamps**: Human-readable time (e.g., "2 minutes ago")
@@ -28,6 +32,7 @@ Implemented a comprehensive real-time chat/comment system for tickets using **Dj
 ### 4. **Ant Design Components Used**
 
 #### Core Components
+
 - **List**: For displaying comments with metadata
 - **Avatar**: User profile pictures with initials
 - **Input.TextArea**: Auto-sizing comment input
@@ -40,6 +45,7 @@ Implemented a comprehensive real-time chat/comment system for tickets using **Dj
 - **message**: Toast notifications
 
 #### Styling Features
+
 - **Custom Scrollbar**: Thin, themed scrollbar for comments list
 - **Fade-in Animations**: Smooth appearance for new comments
 - **Hover Effects**: Action buttons appear on hover
@@ -60,6 +66,7 @@ frontend/src/contexts/
 ## WebSocket Events
 
 ### Outgoing Events (Frontend → Backend)
+
 ```typescript
 // User is typing
 {
@@ -90,6 +97,7 @@ frontend/src/contexts/
 ```
 
 ### Incoming Events (Backend → Frontend)
+
 ```typescript
 // New comment from other user
 {
@@ -127,6 +135,7 @@ frontend/src/contexts/
 ## API Endpoints
 
 ### Get Comments
+
 ```http
 GET /tickets/{ticket_id}/comments/
 Authorization: Bearer {access_token}
@@ -137,6 +146,7 @@ Response: {
 ```
 
 ### Create Comment
+
 ```http
 POST /tickets/{ticket_id}/comments/
 Authorization: Bearer {access_token}
@@ -150,6 +160,7 @@ Response: Comment
 ```
 
 ### Update Comment
+
 ```http
 PATCH /tickets/{ticket_id}/comments/{comment_id}/
 Authorization: Bearer {access_token}
@@ -163,6 +174,7 @@ Response: Comment
 ```
 
 ### Delete Comment
+
 ```http
 DELETE /tickets/{ticket_id}/comments/{comment_id}/
 Authorization: Bearer {access_token}
@@ -173,10 +185,11 @@ Response: 204 No Content
 ## Component Props
 
 ### TicketComments
+
 ```typescript
 interface TicketCommentsProps {
-  ticketId: number;      // Required: Ticket to show comments for
-  projectId?: number;    // Optional: For WebSocket channel filtering
+  ticketId: number; // Required: Ticket to show comments for
+  projectId?: number; // Optional: For WebSocket channel filtering
 }
 ```
 
@@ -187,14 +200,11 @@ import { TicketComments } from "./components/TicketComments";
 
 function TicketDetail() {
   const ticket = useTicket(); // Your ticket fetching logic
-  
+
   return (
     <div>
       <h1>{ticket.name}</h1>
-      <TicketComments 
-        ticketId={ticket.id} 
-        projectId={ticket.project} 
-      />
+      <TicketComments ticketId={ticket.id} projectId={ticket.project} />
     </div>
   );
 }
@@ -203,6 +213,7 @@ function TicketDetail() {
 ## Quick Comment Suggestions
 
 The component includes 8 predefined quick comments:
+
 1. 👍 "Looks good!"
 2. 👋 "Need help?"
 3. 🚫 "This is blocked..."
@@ -225,7 +236,7 @@ The component uses CSS custom properties for easy theming:
 }
 
 .comments-list::-webkit-scrollbar-thumb {
-  background: #dfe1e6;  /* Customize scrollbar color */
+  background: #dfe1e6; /* Customize scrollbar color */
   border-radius: 4px;
 }
 
@@ -259,6 +270,7 @@ The component uses CSS custom properties for easy theming:
 ## Future Enhancements
 
 ### Potential Improvements
+
 - [ ] **Rich Text Formatting**: Bold, italic, code blocks
 - [ ] **Mentions**: @username notifications
 - [ ] **File Attachments**: Upload images/files with comments
@@ -273,17 +285,20 @@ The component uses CSS custom properties for easy theming:
 ## Troubleshooting
 
 ### Comments not appearing in real-time
+
 1. Check WebSocket connection status in browser console
 2. Verify backend ASGI server (Daphne) is running
 3. Confirm Redis is running (for channel layers)
 4. Check browser WebSocket connection in Network tab
 
 ### Typing indicators not working
+
 1. Ensure `sendTicketMessage` function is available
 2. Check WebSocket channel subscriptions
 3. Verify typing event payload format
 
 ### Comments not persisting
+
 1. Check API endpoint responses in Network tab
 2. Verify authentication token is valid
 3. Check backend logs for errors
@@ -305,6 +320,7 @@ The component uses CSS custom properties for easy theming:
 ## Credits
 
 Built using:
+
 - **React** 18.x
 - **Ant Design** 5.x
 - **Django Channels** 4.0
