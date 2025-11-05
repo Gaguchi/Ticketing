@@ -149,19 +149,19 @@ docs/
 
 ### Essential References
 
-| Document                                                                                | Description                                |
-| --------------------------------------------------------------------------------------- | ------------------------------------------ |
-| [**PROJECT_REFERENCE.md**](../PROJECT_REFERENCE.md) ⭐                                  | Model fields, API patterns, common pitfalls |
-| [CHAT_IMPLEMENTATION.md](CHAT_IMPLEMENTATION.md)                                        | Real-time comment system implementation    |
-| [WEBSOCKET_GUIDE.md](WEBSOCKET_GUIDE.md)                                                | Complete WebSocket guide                   |
+| Document                                               | Description                                 |
+| ------------------------------------------------------ | ------------------------------------------- |
+| [**PROJECT_REFERENCE.md**](../PROJECT_REFERENCE.md) ⭐ | Model fields, API patterns, common pitfalls |
+| [CHAT_IMPLEMENTATION.md](CHAT_IMPLEMENTATION.md)       | Real-time comment system implementation     |
+| [WEBSOCKET_GUIDE.md](WEBSOCKET_GUIDE.md)               | Complete WebSocket guide                    |
 
 ### Architecture
 
-| Document                           | Description                                       |
-| ---------------------------------- | ------------------------------------------------- |
-| [SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md) | System architecture overview            |
-| [architecture.md](architecture.md) | Frontend architecture and component documentation |
-| [DESIGN_BIBLE.md](DESIGN_BIBLE.md) | Design system and UI guidelines                  |
+| Document                                         | Description                                       |
+| ------------------------------------------------ | ------------------------------------------------- |
+| [SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md) | System architecture overview                      |
+| [architecture.md](architecture.md)               | Frontend architecture and component documentation |
+| [DESIGN_BIBLE.md](DESIGN_BIBLE.md)               | Design system and UI guidelines                   |
 
 ### API Documentation
 
@@ -182,23 +182,23 @@ docs/
 
 ### Setup & Configuration
 
-| Document                                                                      | Description                          |
-| ----------------------------------------------------------------------------- | ------------------------------------ |
-| [ENV_SETUP.md](setup/ENV_SETUP.md)                                            | Environment setup instructions       |
-| [ENVIRONMENT_VARIABLES.md](ENVIRONMENT_VARIABLES.md)                           | All environment variables explained  |
-| [DATABASE_RESET_IMPLEMENTATION.md](DATABASE_RESET_IMPLEMENTATION.md)           | Database reset guide (development)   |
-| [TOKEN_MANAGEMENT_GUIDE.md](TOKEN_MANAGEMENT_GUIDE.md)                         | JWT token management                 |
-| [CLOUDFLARE_TURNSTILE_SETUP.md](CLOUDFLARE_TURNSTILE_SETUP.md)                | Cloudflare Turnstile configuration   |
+| Document                                                             | Description                         |
+| -------------------------------------------------------------------- | ----------------------------------- |
+| [ENV_SETUP.md](setup/ENV_SETUP.md)                                   | Environment setup instructions      |
+| [ENVIRONMENT_VARIABLES.md](ENVIRONMENT_VARIABLES.md)                 | All environment variables explained |
+| [DATABASE_RESET_IMPLEMENTATION.md](DATABASE_RESET_IMPLEMENTATION.md) | Database reset guide (development)  |
+| [TOKEN_MANAGEMENT_GUIDE.md](TOKEN_MANAGEMENT_GUIDE.md)               | JWT token management                |
+| [CLOUDFLARE_TURNSTILE_SETUP.md](CLOUDFLARE_TURNSTILE_SETUP.md)       | Cloudflare Turnstile configuration  |
 
 ### WebSocket & Real-time
 
-| Document                                                                      | Description                          |
-| ----------------------------------------------------------------------------- | ------------------------------------ |
-| [WEBSOCKET_GUIDE.md](WEBSOCKET_GUIDE.md) ⭐                                    | Comprehensive WebSocket guide        |
-| [QUICKSTART_WEBSOCKETS.md](QUICKSTART_WEBSOCKETS.md)                          | Quick WebSocket setup                |
-| [WEBSOCKET_IMPLEMENTATION_SUMMARY.md](WEBSOCKET_IMPLEMENTATION_SUMMARY.md)    | Implementation summary               |
-| [WEBSOCKET_CHECKLIST.md](WEBSOCKET_CHECKLIST.md)                              | Implementation checklist             |
-| [WEBSOCKET_CONFIG_FOR_DOKPLOY.md](WEBSOCKET_CONFIG_FOR_DOKPLOY.md)            | Dokploy-specific configuration       |
+| Document                                                                   | Description                    |
+| -------------------------------------------------------------------------- | ------------------------------ |
+| [WEBSOCKET_GUIDE.md](WEBSOCKET_GUIDE.md) ⭐                                | Comprehensive WebSocket guide  |
+| [QUICKSTART_WEBSOCKETS.md](QUICKSTART_WEBSOCKETS.md)                       | Quick WebSocket setup          |
+| [WEBSOCKET_IMPLEMENTATION_SUMMARY.md](WEBSOCKET_IMPLEMENTATION_SUMMARY.md) | Implementation summary         |
+| [WEBSOCKET_CHECKLIST.md](WEBSOCKET_CHECKLIST.md)                           | Implementation checklist       |
+| [WEBSOCKET_CONFIG_FOR_DOKPLOY.md](WEBSOCKET_CONFIG_FOR_DOKPLOY.md)         | Dokploy-specific configuration |
 
 ### Troubleshooting
 
@@ -298,7 +298,6 @@ For questions or issues:
   - Added comprehensive docs/README.md with categorized index
   - Documented WebSocket implementation
   - Added real-time comment system documentation
-  
 - **2025-10-29**: Reorganized documentation structure
   - Created category folders (api/, deployment/, setup/, troubleshooting/, archive/)
   - Moved all root-level docs to appropriate folders

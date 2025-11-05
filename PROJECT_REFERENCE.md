@@ -7,6 +7,7 @@
 ---
 
 ## Table of Contents
+
 1. [Model Field Names](#model-field-names)
 2. [API Endpoint Patterns](#api-endpoint-patterns)
 3. [WebSocket Event Types](#websocket-event-types)
@@ -20,6 +21,7 @@
 ### ⚠️ CRITICAL: Always Use These Exact Field Names
 
 #### Comment Model
+
 **Location**: `backend/tickets/models.py`
 
 ```python
@@ -32,6 +34,7 @@ class Comment(models.Model):
 ```
 
 **✅ Correct Usage**:
+
 ```python
 comment.user              # Access the user
 comment.user.username     # Get username
@@ -39,18 +42,21 @@ comment.ticket           # Access the ticket
 ```
 
 **❌ WRONG - Will Cause Errors**:
+
 ```python
 comment.author           # AttributeError: 'Comment' object has no attribute 'author'
 comment.author.username  # WRONG
 ```
 
 **Where This Caused Issues**:
+
 - `backend/tickets/signals.py` - `comment_saved` signal handler used `instance.author` instead of `instance.user`
 - Led to 500 Internal Server Error when creating comments
 
 ---
 
 #### Ticket Model
+
 **Location**: `backend/tickets/models.py`
 
 ```python
@@ -77,6 +83,7 @@ class Ticket(models.Model):
 ---
 
 #### User Model Fields
+
 **Django's built-in User model**:
 
 ```python
@@ -107,6 +114,7 @@ DELETE /api/tickets/tickets/{ticket_id}/comments/{comment_id}/ # Delete comment
 ```
 
 **ViewSet Implementation Pattern**:
+
 ```python
 def get_queryset(self):
     queryset = super().get_queryset()
@@ -126,6 +134,7 @@ def perform_create(self, serializer):
 ```
 
 **❌ Common Mistake**:
+
 ```python
 # WRONG - passing ID instead of object
 serializer.save(
@@ -141,16 +150,20 @@ serializer.save(
 ### Channels and Events
 
 #### Notification Channel
+
 **URL**: `ws/notifications/`
 
 **Events**:
+
 - `connection_established` - Sent when WebSocket connects
 - `notification` - General notification event
 
 #### Project Ticket Channel
+
 **URL**: `ws/projects/{project_id}/tickets/`
 
 **Events**:
+
 - `connection_established` - Sent when WebSocket connects
 - `ticket_created` - New ticket created
 - `ticket_updated` - Ticket modified
@@ -161,6 +174,7 @@ serializer.save(
 - `user_typing` - User is typing a comment
 
 **Comment Event Data Structure**:
+
 ```python
 {
     'type': 'comment_added',
@@ -178,16 +192,19 @@ serializer.save(
 }
 ```
 
-**⚠️ Important Note**: 
+**⚠️ Important Note**:
+
 - In the **database model**, the field is `user`
 - In **WebSocket events**, it's serialized as `author` for the frontend
 - Always use `instance.user` in backend code
 - Frontend receives it as `author` in WebSocket messages
 
 #### Presence Channel
+
 **URL**: `ws/projects/{project_id}/presence/`
 
 **Events**:
+
 - `user_status` - User joined/left
   - `action`: 'joined' | 'left'
   - `user_id`: int
@@ -212,6 +229,7 @@ comment.user.username   # Access related field directly
 ```
 
 **When to use `_id`**:
+
 - Only when you need just the ID number
 - When filtering: `Comment.objects.filter(user_id=3)`
 - When assigning: `comment.user_id = 3` (but prefer `comment.user = user_obj`)
@@ -227,7 +245,7 @@ comment.user.username   # Access related field directly
 @receiver(post_save, sender=Comment)
 def comment_saved(sender, instance, created, **kwargs):
     username = instance.author.username  # WRONG!
-    
+
 # ✅ CORRECT
 @receiver(post_save, sender=Comment)
 def comment_saved(sender, instance, created, **kwargs):
@@ -243,7 +261,7 @@ def comment_saved(sender, instance, created, **kwargs):
 # ✅ CORRECT
 class CommentSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
-    
+
     class Meta:
         model = Comment
         fields = ['id', 'ticket', 'user', 'content', 'created_at', 'updated_at']
@@ -273,33 +291,41 @@ timeout = window.setTimeout(() => {}, 1000);
 ### Backend (Python/Django)
 
 #### Models
+
 - **ClassName**: PascalCase (e.g., `Comment`, `Ticket`, `UserProfile`)
 - **field_name**: snake_case (e.g., `created_at`, `user_id`, `ticket_key`)
 
 #### Views/ViewSets
+
 - **ClassName**: PascalCase + "ViewSet" or "View" (e.g., `CommentViewSet`, `TicketListView`)
 - **method_name**: snake_case (e.g., `get_queryset`, `perform_create`)
 
 #### Serializers
+
 - **ClassName**: PascalCase + "Serializer" (e.g., `CommentSerializer`, `UserSerializer`)
 
 #### Signals
+
 - **function_name**: snake_case + past tense (e.g., `comment_saved`, `ticket_created`)
 
 ### Frontend (TypeScript/React)
 
 #### Components
+
 - **ComponentName**: PascalCase (e.g., `TicketComments`, `MainLayout`)
 - **filename**: PascalCase.tsx (e.g., `TicketComments.tsx`)
 
 #### Interfaces/Types
+
 - **InterfaceName**: PascalCase (e.g., `Comment`, `User`, `WebSocketMessage`)
 
 #### Functions/Variables
+
 - **functionName**: camelCase (e.g., `handleSendComment`, `loadComments`)
 - **variableName**: camelCase (e.g., `newComment`, `isLoading`)
 
 #### Constants
+
 - **CONSTANT_NAME**: UPPER_SNAKE_CASE (e.g., `API_BASE_URL`, `MAX_RETRIES`)
 
 ---
@@ -336,6 +362,7 @@ user.assigned_tickets.all()      # Get all tickets assigned to user
 ## File Locations Quick Reference
 
 ### Backend
+
 ```
 backend/
 ├── tickets/
@@ -353,6 +380,7 @@ backend/
 ```
 
 ### Frontend
+
 ```
 frontend/
 ├── src/
@@ -376,6 +404,7 @@ frontend/
 When encountering errors, check these common issues:
 
 ### 500 Internal Server Error
+
 1. ✅ Check backend logs in Dokploy for the actual error
 2. ✅ Verify field names match model definitions (e.g., `user` not `author`)
 3. ✅ Ensure ForeignKey fields pass objects, not IDs
@@ -383,18 +412,21 @@ When encountering errors, check these common issues:
 5. ✅ Verify serializer read_only_fields are set correctly
 
 ### 404 Not Found
+
 1. ✅ Check URL pattern matches exactly (trailing slashes matter!)
 2. ✅ Verify nested route parameters (e.g., `ticket_id`) are in URL
 3. ✅ Check urls.py includes the route
 4. ✅ Ensure ViewSet is registered with router
 
 ### 400 Bad Request
+
 1. ✅ Check serializer validation rules
 2. ✅ Verify required fields vs. read_only_fields
 3. ✅ Ensure request body matches expected format
 4. ✅ Check for missing or extra fields in request
 
 ### WebSocket Issues
+
 1. ✅ Verify WebSocket URL format: `ws://` not `wss://` for local dev
 2. ✅ Check CORS/ALLOWED_HOSTS settings for Traefik domains
 3. ✅ Ensure channel layer (Redis) is running
@@ -405,6 +437,7 @@ When encountering errors, check these common issues:
 ## Version History
 
 ### v1.0 - November 5, 2025
+
 - Initial document creation
 - Added Comment model field reference (`user` vs `author` issue)
 - Added API endpoint patterns for nested routes
@@ -418,12 +451,14 @@ When encountering errors, check these common issues:
 ## Contributing to This Document
 
 When you encounter a bug caused by:
+
 - Incorrect field name
 - Wrong variable reference
 - Inconsistent naming
 - API endpoint confusion
 
 **Add it to this document** with:
+
 1. The incorrect usage (marked with ❌)
 2. The correct usage (marked with ✅)
 3. Where the error occurred
