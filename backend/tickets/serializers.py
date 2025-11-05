@@ -222,7 +222,7 @@ class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comment
         fields = ['id', 'ticket', 'user', 'content', 'created_at', 'updated_at']
-        read_only_fields = ['user']
+        read_only_fields = ['user', 'ticket']
 
 
 class AttachmentSerializer(serializers.ModelSerializer):
