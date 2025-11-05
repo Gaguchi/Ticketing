@@ -16,7 +16,6 @@ import {
   EditOutlined,
   DeleteOutlined,
   MoreOutlined,
-  SmileOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
@@ -74,7 +73,7 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
   const [isTyping, setIsTyping] = useState(false);
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const commentsEndRef = useRef<HTMLDivElement>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const typingTimeoutRef = useRef<number | null>(null);
 
   // Scroll to bottom when new comments arrive
   const scrollToBottom = () => {
@@ -123,7 +122,10 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
         const data = JSON.parse(event.data);
 
         // Handle comment added
-        if (data.type === "comment_added" && data.comment?.ticket === ticketId) {
+        if (
+          data.type === "comment_added" &&
+          data.comment?.ticket === ticketId
+        ) {
           const newCommentData = data.comment;
           setComments((prev) => {
             // Avoid duplicates
@@ -135,7 +137,10 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
         }
 
         // Handle comment updated
-        if (data.type === "comment_updated" && data.comment?.ticket === ticketId) {
+        if (
+          data.type === "comment_updated" &&
+          data.comment?.ticket === ticketId
+        ) {
           setComments((prev) =>
             prev.map((c) =>
               c.id === data.comment.id ? { ...c, ...data.comment } : c
@@ -191,11 +196,11 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
 
     // Clear existing timeout
     if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
+      window.clearTimeout(typingTimeoutRef.current);
     }
 
     // Set new timeout
-    typingTimeoutRef.current = setTimeout(() => {
+    typingTimeoutRef.current = window.setTimeout(() => {
       setIsTyping(false);
     }, 2000);
   };
@@ -248,7 +253,9 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
 
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/tickets/${ticketId}/comments/${commentId}/`,
+        `${
+          import.meta.env.VITE_API_BASE_URL
+        }/tickets/${ticketId}/comments/${commentId}/`,
         {
           method: "PATCH",
           headers: {
@@ -288,7 +295,9 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
   const handleDeleteComment = async (commentId: number) => {
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/tickets/${ticketId}/comments/${commentId}/`,
+        `${
+          import.meta.env.VITE_API_BASE_URL
+        }/tickets/${ticketId}/comments/${commentId}/`,
         {
           method: "DELETE",
           headers: {
@@ -334,7 +343,10 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
   return (
     <div className="ticket-comments">
       {/* Comments List */}
-      <div className="comments-list" style={{ maxHeight: "400px", overflowY: "auto", marginBottom: "16px" }}>
+      <div
+        className="comments-list"
+        style={{ maxHeight: "400px", overflowY: "auto", marginBottom: "16px" }}
+      >
         {loading ? (
           <div style={{ textAlign: "center", padding: "24px" }}>
             <Spin />
@@ -375,13 +387,29 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
                         <span style={{ fontWeight: 600, color: "#172b4d" }}>
                           {getUserDisplayName(comment.user)}
                         </span>
-                        <Tooltip title={dayjs(comment.created_at).format("MMM D, YYYY [at] h:mm A")}>
-                          <span style={{ marginLeft: "8px", fontSize: "12px", color: "#9E9E9E" }}>
+                        <Tooltip
+                          title={dayjs(comment.created_at).format(
+                            "MMM D, YYYY [at] h:mm A"
+                          )}
+                        >
+                          <span
+                            style={{
+                              marginLeft: "8px",
+                              fontSize: "12px",
+                              color: "#9E9E9E",
+                            }}
+                          >
                             {dayjs(comment.created_at).fromNow()}
                           </span>
                         </Tooltip>
                         {comment.updated_at !== comment.created_at && (
-                          <span style={{ marginLeft: "8px", fontSize: "12px", color: "#9E9E9E" }}>
+                          <span
+                            style={{
+                              marginLeft: "8px",
+                              fontSize: "12px",
+                              color: "#9E9E9E",
+                            }}
+                          >
                             (edited)
                           </span>
                         )}
@@ -457,7 +485,11 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
                             okText="Yes"
                             cancelText="No"
                           >
-                            <Button size="small" danger icon={<DeleteOutlined />}>
+                            <Button
+                              size="small"
+                              danger
+                              icon={<DeleteOutlined />}
+                            >
                               Delete
                             </Button>
                           </Popconfirm>
@@ -496,14 +528,22 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
             paddingLeft: "40px",
           }}
         >
-          {typingUsers.join(", ")} {typingUsers.length === 1 ? "is" : "are"} typing...
+          {typingUsers.join(", ")} {typingUsers.length === 1 ? "is" : "are"}{" "}
+          typing...
         </div>
       )}
 
       {/* Comment Input */}
       <div style={{ display: "flex", gap: "12px" }}>
         <Avatar size={32} style={{ backgroundColor: "#2C3E50", flexShrink: 0 }}>
-          {user ? getUserInitials({ id: user.id, username: user.username, first_name: user.first_name, last_name: user.last_name }) : "?"}
+          {user
+            ? getUserInitials({
+                id: user.id,
+                username: user.username,
+                first_name: user.first_name,
+                last_name: user.last_name,
+              })
+            : "?"}
         </Avatar>
         <div style={{ flex: 1 }}>
           <TextArea

@@ -1331,19 +1331,34 @@ export const TicketModal: React.FC<TicketModalProps> = ({
 
               {/* Comments Tab */}
               {activeTab === "comments" && !isCreateMode && ticket?.id && (
-                <TicketComments ticketId={ticket.id} projectId={ticket.project} />
+                <TicketComments
+                  ticketId={ticket.id}
+                  projectId={ticket.project}
+                />
               )}
 
               {/* History Tab - Placeholder */}
               {activeTab === "history" && (
-                <div style={{ padding: "24px", textAlign: "center", color: "#9E9E9E" }}>
+                <div
+                  style={{
+                    padding: "24px",
+                    textAlign: "center",
+                    color: "#9E9E9E",
+                  }}
+                >
                   History feature coming soon...
                 </div>
               )}
 
               {/* Create mode message */}
               {isCreateMode && (
-                <div style={{ padding: "24px", textAlign: "center", color: "#9E9E9E" }}>
+                <div
+                  style={{
+                    padding: "24px",
+                    textAlign: "center",
+                    color: "#9E9E9E",
+                  }}
+                >
                   Save the ticket first to add comments.
                 </div>
               )}
