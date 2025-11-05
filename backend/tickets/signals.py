@@ -10,7 +10,7 @@ from django.dispatch import receiver
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from django.utils import timezone
-from .models import Ticket, Comment, TicketStatus, TicketPriority
+from .models import Ticket, Comment
 
 
 def send_to_channel_layer(group_name: str, message_type: str, data: dict):
@@ -60,27 +60,32 @@ def ticket_saved(sender, instance, created, **kwargs):
     """
     action = 'created' if created else 'updated'
     
+    # Get ticket key (project prefix + ticket id)
+    ticket_key = f"{instance.project.key}-{instance.id}"
+    
+    # Get priority name from choices
+    priority_name = dict(Ticket.PRIORITY_CHOICES).get(instance.priority_id, 'Unknown')
+    
+    # Get status name from choices
+    status_name = dict(Ticket.STATUS_CHOICES).get(instance.status, 'Unknown')
+    
+    # Get first assignee if any
+    assignee = instance.assignees.first() if instance.assignees.exists() else None
+    
     # Prepare ticket data
     ticket_data = {
         'ticket_id': instance.id,
-        'key': instance.key,
-        'title': instance.title,
-        'description': instance.description,
-        'status': {
-            'id': instance.status.id,
-            'name': instance.status.name,
-            'color': instance.status.color,
-        } if instance.status else None,
-        'priority': {
-            'id': instance.priority.id,
-            'name': instance.priority.name,
-            'color': instance.priority.color,
-        } if instance.priority else None,
+        'key': ticket_key,
+        'name': instance.name,
+        'description': instance.description or '',
+        'status': status_name,
+        'priority': priority_name,
+        'type': instance.type,
         'assignee': {
-            'id': instance.assignee.id,
-            'username': instance.assignee.username,
-            'email': instance.assignee.email,
-        } if instance.assignee else None,
+            'id': assignee.id,
+            'username': assignee.username,
+            'email': assignee.email,
+        } if assignee else None,
         'reporter': {
             'id': instance.reporter.id,
             'username': instance.reporter.username,
@@ -100,34 +105,17 @@ def ticket_saved(sender, instance, created, **kwargs):
         }
     )
     
-    # Send notification to assignee if ticket was just assigned
-    if created and instance.assignee:
+    # Send notification to first assignee if ticket was just created and has assignees
+    if created and assignee:
         send_notification(
-            instance.assignee.id,
+            assignee.id,
             {
                 'id': f'ticket_{instance.id}_assigned',
                 'notification_type': 'ticket_assigned',
                 'title': 'Ticket Assigned',
-                'message': f'You were assigned to {instance.key}: {instance.title}',
+                'message': f'You were assigned to {ticket_key}: {instance.name}',
                 'ticket_id': instance.id,
-                'ticket_key': instance.key,
-                'timestamp': timezone.now().isoformat(),
-            }
-        )
-    
-    # Send notification if assignee changed
-    if not created and instance.assignee:
-        # Check if assignee actually changed (requires tracking old value)
-        # For now, we'll send on any update with an assignee
-        send_notification(
-            instance.assignee.id,
-            {
-                'id': f'ticket_{instance.id}_updated_{timezone.now().timestamp()}',
-                'notification_type': 'ticket_updated',
-                'title': 'Ticket Updated',
-                'message': f'{instance.key} was updated: {instance.title}',
-                'ticket_id': instance.id,
-                'ticket_key': instance.key,
+                'ticket_key': ticket_key,
                 'timestamp': timezone.now().isoformat(),
             }
         )
@@ -138,6 +126,8 @@ def ticket_deleted(sender, instance, **kwargs):
     """
     Broadcast ticket deletion to all users in the project.
     """
+    ticket_key = f"{instance.project.key}-{instance.id}"
+    
     project_group = f'project_{instance.project_id}_tickets'
     send_to_channel_layer(
         project_group,
@@ -146,7 +136,7 @@ def ticket_deleted(sender, instance, **kwargs):
             'action': 'deleted',
             'data': {
                 'ticket_id': instance.id,
-                'key': instance.key,
+                'key': ticket_key,
             }
         }
     )
@@ -160,10 +150,12 @@ def comment_saved(sender, instance, created, **kwargs):
     if not created:
         return  # Only broadcast new comments, not edits
     
+    ticket_key = f"{instance.ticket.project.key}-{instance.ticket.id}"
+    
     comment_data = {
         'comment_id': instance.id,
         'ticket_id': instance.ticket.id,
-        'ticket_key': instance.ticket.key,
+        'ticket_key': ticket_key,
         'content': instance.content,
         'author': {
             'id': instance.author.id,
@@ -182,17 +174,20 @@ def comment_saved(sender, instance, created, **kwargs):
         }
     )
     
+    # Get first assignee if any
+    assignee = instance.ticket.assignees.first() if instance.ticket.assignees.exists() else None
+    
     # Notify ticket assignee (if not the commenter)
-    if instance.ticket.assignee and instance.ticket.assignee.id != instance.author.id:
+    if assignee and assignee.id != instance.author.id:
         send_notification(
-            instance.ticket.assignee.id,
+            assignee.id,
             {
                 'id': f'comment_{instance.id}_added',
                 'notification_type': 'comment_added',
                 'title': 'New Comment',
-                'message': f'{instance.author.username} commented on {instance.ticket.key}',
+                'message': f'{instance.author.username} commented on {ticket_key}',
                 'ticket_id': instance.ticket.id,
-                'ticket_key': instance.ticket.key,
+                'ticket_key': ticket_key,
                 'comment_id': instance.id,
                 'timestamp': timezone.now().isoformat(),
             }
@@ -201,16 +196,16 @@ def comment_saved(sender, instance, created, **kwargs):
     # Notify ticket reporter (if not the commenter and different from assignee)
     if (instance.ticket.reporter and 
         instance.ticket.reporter.id != instance.author.id and
-        (not instance.ticket.assignee or instance.ticket.reporter.id != instance.ticket.assignee.id)):
+        (not assignee or instance.ticket.reporter.id != assignee.id)):
         send_notification(
             instance.ticket.reporter.id,
             {
                 'id': f'comment_{instance.id}_added',
                 'notification_type': 'comment_added',
                 'title': 'New Comment',
-                'message': f'{instance.author.username} commented on {instance.ticket.key}',
+                'message': f'{instance.author.username} commented on {ticket_key}',
                 'ticket_id': instance.ticket.id,
-                'ticket_key': instance.ticket.key,
+                'ticket_key': ticket_key,
                 'comment_id': instance.id,
                 'timestamp': timezone.now().isoformat(),
             }
