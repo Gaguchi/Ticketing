@@ -8,6 +8,7 @@
   flex: 1;
   overflow-y: auto;
   margin-bottom: 16px;
+  padding: 4px;
 }
 
 /* Custom scrollbar for comments list */
@@ -36,7 +37,18 @@
 
 /* Comment item animations */
 .ant-list-item {
-  animation: fadeIn 0.3s ease-in;
+  animation: slideInFromLeft 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideInFromLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) translateY(0);
+  }
 }
 
 @keyframes fadeIn {
@@ -50,14 +62,20 @@
   }
 }
 
-/* Hover effects for comment actions */
-.ant-list-item:hover .ant-btn-text {
-  opacity: 1;
+/* Smooth focus state for textarea */
+.ant-input-textarea-affix-wrapper:focus-within {
+  border-color: #4096ff !important;
+  box-shadow: 0 0 0 2px rgba(64, 150, 255, 0.1);
 }
 
-.ant-list-item .ant-btn-text {
-  opacity: 0;
-  transition: opacity 0.2s;
+/* Quick comment button hover animation */
+.quick-comment-btn {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.quick-comment-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 /* Typing indicator animation */
@@ -72,4 +90,27 @@
 
 .typing-indicator {
   animation: typing 1.5s infinite;
+}
+
+/* Smooth comment card hover */
+.comment-card {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.comment-card:hover {
+  transform: translateY(-2px);
+}
+
+/* Enter icon pulse animation */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.enter-hint-icon {
+  animation: pulse 2s infinite;
 }
