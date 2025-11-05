@@ -763,9 +763,11 @@ class CommentViewSet(viewsets.ModelViewSet):
         # Support nested route by setting ticket from URL parameter
         ticket_id = self.kwargs.get('ticket_id')
         if ticket_id:
+            from .models import Ticket
+            ticket = Ticket.objects.get(id=ticket_id)
             serializer.save(
                 user=self.request.user if self.request.user.is_authenticated else None,
-                ticket_id=ticket_id
+                ticket=ticket
             )
         else:
             serializer.save(user=self.request.user if self.request.user.is_authenticated else None)
