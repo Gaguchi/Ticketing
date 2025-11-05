@@ -22,43 +22,44 @@ function App() {
       <AppProvider>
         <CompanyProvider>
           <BrowserRouter>
-            <WebSocketProvider>
-              <Routes>
-                {/* Public routes */}
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
+            {/* Temporarily disabled WebSocketProvider for debugging */}
+            {/* <WebSocketProvider> */}
+            <Routes>
+              {/* Public routes */}
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
 
-                {/* Project setup (protected) */}
-                <Route
-                  path="/setup"
-                  element={
-                    <ProtectedRoute>
-                      <ProjectSetup />
-                    </ProtectedRoute>
-                  }
-                />
+              {/* Project setup (protected) */}
+              <Route
+                path="/setup"
+                element={
+                  <ProtectedRoute>
+                    <ProjectSetup />
+                  </ProtectedRoute>
+                }
+              />
 
-                {/* Protected routes */}
-                <Route
-                  path="/"
-                  element={
-                    <ProtectedRoute>
-                      <MainLayout />
-                    </ProtectedRoute>
-                  }
-                >
-                  <Route index element={<Dashboard />} />
-                  <Route path="tickets" element={<Tickets />} />
-                  <Route path="chat" element={<Chat />} />
-                  <Route path="companies" element={<Companies />} />
-                  <Route path="users" element={<Users />} />
-                  <Route path="settings" element={<Settings />} />
-                </Route>
+              {/* Protected routes */}
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute>
+                    <MainLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<Dashboard />} />
+                <Route path="tickets" element={<Tickets />} />
+                <Route path="chat" element={<Chat />} />
+                <Route path="companies" element={<Companies />} />
+                <Route path="users" element={<Users />} />
+                <Route path="settings" element={<Settings />} />
+              </Route>
 
-                {/* Catch all */}
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </WebSocketProvider>
+              {/* Catch all */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+            {/* </WebSocketProvider> */}
           </BrowserRouter>
         </CompanyProvider>
       </AppProvider>
