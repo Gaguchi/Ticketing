@@ -31,6 +31,8 @@ export const API_ENDPOINTS = {
   COLUMN_REORDER: `${API_BASE_URL}/api/tickets/columns/reorder/`,
   
   // Comments
+  TICKET_COMMENTS: (ticketId: number) => `${API_BASE_URL}/api/tickets/tickets/${ticketId}/comments/`,
+  TICKET_COMMENT_DETAIL: (ticketId: number, commentId: number) => `${API_BASE_URL}/api/tickets/tickets/${ticketId}/comments/${commentId}/`,
   COMMENTS: `${API_BASE_URL}/api/tickets/comments/`,
   COMMENT_DETAIL: (id: number) => `${API_BASE_URL}/api/tickets/comments/${id}/`,
   

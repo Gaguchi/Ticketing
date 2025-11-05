@@ -19,11 +19,12 @@ class CommentService {
    */
   async getComments(ticketId: number, params?: PaginationParams): Promise<PaginatedResponse<Comment>> {
     const queryParams = new URLSearchParams();
-    queryParams.append('ticket', ticketId.toString());
     if (params?.page) queryParams.append('page', params.page.toString());
     if (params?.page_size) queryParams.append('page_size', params.page_size.toString());
     
-    const url = `${API_ENDPOINTS.COMMENTS}?${queryParams.toString()}`;
+    const url = params && (params.page || params.page_size)
+      ? `${API_ENDPOINTS.TICKET_COMMENTS(ticketId)}?${queryParams.toString()}`
+      : API_ENDPOINTS.TICKET_COMMENTS(ticketId);
     return apiService.get<PaginatedResponse<Comment>>(url);
   }
 
@@ -38,29 +39,29 @@ class CommentService {
   /**
    * Get a single comment by ID
    */
-  async getComment(id: number): Promise<Comment> {
-    return apiService.get<Comment>(API_ENDPOINTS.COMMENT_DETAIL(id));
+  async getComment(ticketId: number, commentId: number): Promise<Comment> {
+    return apiService.get<Comment>(API_ENDPOINTS.TICKET_COMMENT_DETAIL(ticketId, commentId));
   }
 
   /**
    * Create a new comment
    */
-  async createComment(data: CreateCommentData): Promise<Comment> {
-    return apiService.post<Comment>(API_ENDPOINTS.COMMENTS, data);
+  async createComment(ticketId: number, data: Omit<CreateCommentData, 'ticket'>): Promise<Comment> {
+    return apiService.post<Comment>(API_ENDPOINTS.TICKET_COMMENTS(ticketId), data);
   }
 
   /**
    * Update a comment
    */
-  async updateComment(id: number, data: UpdateCommentData): Promise<Comment> {
-    return apiService.patch<Comment>(API_ENDPOINTS.COMMENT_DETAIL(id), data);
+  async updateComment(ticketId: number, commentId: number, data: UpdateCommentData): Promise<Comment> {
+    return apiService.patch<Comment>(API_ENDPOINTS.TICKET_COMMENT_DETAIL(ticketId, commentId), data);
   }
 
   /**
    * Delete a comment
    */
-  async deleteComment(id: number): Promise<void> {
-    return apiService.delete(API_ENDPOINTS.COMMENT_DETAIL(id));
+  async deleteComment(ticketId: number, commentId: number): Promise<void> {
+    return apiService.delete(API_ENDPOINTS.TICKET_COMMENT_DETAIL(ticketId, commentId));
   }
 }
 
