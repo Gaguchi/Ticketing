@@ -11,7 +11,7 @@ import React, {
   useState,
 } from "react";
 import { webSocketService } from "../services/websocket.service";
-import { useAuth } from "./AuthContext";
+import { useAuth } from "./AppContext";
 
 interface WebSocketContextType {
   // Connection states
