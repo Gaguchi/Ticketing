@@ -21,8 +21,8 @@ function App() {
     <ConfigProvider theme={theme}>
       <AppProvider>
         <CompanyProvider>
-          <WebSocketProvider>
-            <BrowserRouter>
+          <BrowserRouter>
+            <WebSocketProvider>
               <Routes>
                 {/* Public routes */}
                 <Route path="/login" element={<Login />} />
@@ -58,8 +58,8 @@ function App() {
                 {/* Catch all */}
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
-            </BrowserRouter>
-          </WebSocketProvider>
+            </WebSocketProvider>
+          </BrowserRouter>
         </CompanyProvider>
       </AppProvider>
     </ConfigProvider>
