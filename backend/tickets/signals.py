@@ -158,9 +158,9 @@ def comment_saved(sender, instance, created, **kwargs):
         'ticket_key': ticket_key,
         'content': instance.content,
         'author': {
-            'id': instance.author.id,
-            'username': instance.author.username,
-        },
+            'id': instance.user.id,
+            'username': instance.user.username,
+        } if instance.user else None,
         'created_at': instance.created_at.isoformat() if instance.created_at else None,
     }
     
@@ -178,14 +178,14 @@ def comment_saved(sender, instance, created, **kwargs):
     assignee = instance.ticket.assignees.first() if instance.ticket.assignees.exists() else None
     
     # Notify ticket assignee (if not the commenter)
-    if assignee and assignee.id != instance.author.id:
+    if assignee and instance.user and assignee.id != instance.user.id:
         send_notification(
             assignee.id,
             {
                 'id': f'comment_{instance.id}_added',
                 'notification_type': 'comment_added',
                 'title': 'New Comment',
-                'message': f'{instance.author.username} commented on {ticket_key}',
+                'message': f'{instance.user.username} commented on {ticket_key}',
                 'ticket_id': instance.ticket.id,
                 'ticket_key': ticket_key,
                 'comment_id': instance.id,
@@ -194,8 +194,8 @@ def comment_saved(sender, instance, created, **kwargs):
         )
     
     # Notify ticket reporter (if not the commenter and different from assignee)
-    if (instance.ticket.reporter and 
-        instance.ticket.reporter.id != instance.author.id and
+    if (instance.ticket.reporter and instance.user and
+        instance.ticket.reporter.id != instance.user.id and
         (not assignee or instance.ticket.reporter.id != assignee.id)):
         send_notification(
             instance.ticket.reporter.id,
@@ -203,7 +203,7 @@ def comment_saved(sender, instance, created, **kwargs):
                 'id': f'comment_{instance.id}_added',
                 'notification_type': 'comment_added',
                 'title': 'New Comment',
-                'message': f'{instance.author.username} commented on {ticket_key}',
+                'message': f'{instance.user.username} commented on {ticket_key}',
                 'ticket_id': instance.ticket.id,
                 'ticket_key': ticket_key,
                 'comment_id': instance.id,
