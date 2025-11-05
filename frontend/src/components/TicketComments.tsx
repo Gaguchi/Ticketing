@@ -12,7 +12,6 @@ import {
   Popconfirm,
 } from "antd";
 import {
-  SendOutlined,
   EditOutlined,
   DeleteOutlined,
   MoreOutlined,
@@ -343,10 +342,180 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
 
   return (
     <div className="ticket-comments">
+      {/* Comment Input - Moved to top */}
+      <div style={{ display: "flex", gap: "12px", marginBottom: "16px" }}>
+        <Avatar size={32} style={{ backgroundColor: "#2C3E50", flexShrink: 0 }}>
+          {user
+            ? getUserInitials({
+                id: user.id,
+                username: user.username,
+                first_name: user.first_name,
+                last_name: user.last_name,
+              })
+            : "?"}
+        </Avatar>
+        <div style={{ flex: 1 }}>
+          {/* Quick Comment Suggestions */}
+          <div
+            style={{
+              display: "flex",
+              gap: "8px",
+              marginBottom: "8px",
+              flexWrap: "wrap",
+            }}
+          >
+            {QUICK_COMMENTS.map((qc, idx) => (
+              <Tooltip key={idx} title="Click to use this suggestion">
+                <Button
+                  size="small"
+                  onClick={() => setNewComment(qc.text)}
+                  className="quick-comment-btn"
+                  style={{
+                    fontSize: "12px",
+                    height: "28px",
+                    padding: "0 12px",
+                    border: "1px solid #dfe1e6",
+                    borderRadius: "6px",
+                    transition: "all 0.3s",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = "#4096ff";
+                    e.currentTarget.style.backgroundColor = "#f0f7ff";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = "#dfe1e6";
+                    e.currentTarget.style.backgroundColor = "transparent";
+                  }}
+                >
+                  {qc.emoji} {qc.text}
+                </Button>
+              </Tooltip>
+            ))}
+          </div>
+
+          <div style={{ position: "relative" }}>
+            <TextArea
+              value={newComment}
+              onChange={(e) => {
+                setNewComment(e.target.value);
+                handleTyping();
+              }}
+              onPressEnter={(e) => {
+                if (e.shiftKey) {
+                  // Allow new line with Shift+Enter
+                  return;
+                }
+                e.preventDefault();
+                handleSendComment();
+              }}
+              placeholder="Add a comment... (Press Enter to send, Shift+Enter for new line)"
+              autoSize={{ minRows: 2, maxRows: 6 }}
+              style={{
+                fontSize: "14px",
+                color: "#172b4d",
+                border: "2px solid #dfe1e6",
+                borderRadius: "8px",
+                paddingRight: "40px",
+                transition: "border-color 0.3s",
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = "#4096ff";
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = "#dfe1e6";
+              }}
+              disabled={sending}
+            />
+            {/* Enter icon hint */}
+            <Tooltip title="Press Enter to send">
+              <div
+                style={{
+                  position: "absolute",
+                  right: "12px",
+                  top: "8px",
+                  color: "#9E9E9E",
+                  fontSize: "16px",
+                  pointerEvents: "none",
+                  opacity: newComment.trim() ? 1 : 0.5,
+                  transition: "opacity 0.3s",
+                }}
+              >
+                <EnterOutlined />
+              </div>
+            </Tooltip>
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginTop: "8px",
+            }}
+          >
+            <span style={{ fontSize: "12px", color: "#9E9E9E" }}>
+              <kbd
+                style={{
+                  padding: "2px 6px",
+                  border: "1px solid #ddd",
+                  borderRadius: "4px",
+                  backgroundColor: "#f5f5f5",
+                  fontSize: "11px",
+                }}
+              >
+                Enter
+              </kbd>{" "}
+              to send,{" "}
+              <kbd
+                style={{
+                  padding: "2px 6px",
+                  border: "1px solid #ddd",
+                  borderRadius: "4px",
+                  backgroundColor: "#f5f5f5",
+                  fontSize: "11px",
+                }}
+              >
+                Shift+Enter
+              </kbd>{" "}
+              for new line
+            </span>
+            <Button
+              type="primary"
+              onClick={handleSendComment}
+              disabled={!newComment.trim() || sending}
+              loading={sending}
+              style={{
+                boxShadow: newComment.trim()
+                  ? "0 2px 4px rgba(64, 150, 255, 0.3)"
+                  : "none",
+              }}
+            >
+              Send
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Typing Indicator */}
+      {typingUsers.length > 0 && (
+        <div
+          style={{
+            fontSize: "12px",
+            color: "#9E9E9E",
+            fontStyle: "italic",
+            marginBottom: "12px",
+            paddingLeft: "44px",
+          }}
+        >
+          {typingUsers.join(", ")} {typingUsers.length === 1 ? "is" : "are"}{" "}
+          typing...
+        </div>
+      )}
+
       {/* Comments List */}
       <div
         className="comments-list"
-        style={{ maxHeight: "400px", overflowY: "auto", marginBottom: "16px" }}
+        style={{ maxHeight: "400px", overflowY: "auto" }}
       >
         {loading ? (
           <div style={{ textAlign: "center", padding: "24px" }}>
@@ -576,149 +745,6 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
           />
         )}
         <div ref={commentsEndRef} />
-      </div>
-
-      {/* Typing Indicator */}
-      {typingUsers.length > 0 && (
-        <div
-          style={{
-            fontSize: "12px",
-            color: "#9E9E9E",
-            fontStyle: "italic",
-            marginBottom: "8px",
-            paddingLeft: "40px",
-          }}
-        >
-          {typingUsers.join(", ")} {typingUsers.length === 1 ? "is" : "are"}{" "}
-          typing...
-        </div>
-      )}
-
-      {/* Comment Input */}
-      <div style={{ display: "flex", gap: "12px" }}>
-        <Avatar size={32} style={{ backgroundColor: "#2C3E50", flexShrink: 0 }}>
-          {user
-            ? getUserInitials({
-                id: user.id,
-                username: user.username,
-                first_name: user.first_name,
-                last_name: user.last_name,
-              })
-            : "?"}
-        </Avatar>
-        <div style={{ flex: 1 }}>
-          <div style={{ position: "relative" }}>
-            <TextArea
-              value={newComment}
-              onChange={(e) => {
-                setNewComment(e.target.value);
-                handleTyping();
-              }}
-              onPressEnter={(e) => {
-                if (e.shiftKey) {
-                  // Allow new line with Shift+Enter
-                  return;
-                }
-                e.preventDefault();
-                handleSendComment();
-              }}
-              placeholder="Add a comment..."
-              autoSize={{ minRows: 2, maxRows: 10 }}
-              style={{
-                fontSize: "14px",
-                color: "#172b4d",
-                border: "2px solid #dfe1e6",
-                borderRadius: "8px",
-                marginBottom: "8px",
-                paddingRight: "40px",
-                transition: "border-color 0.3s",
-              }}
-              onFocus={(e) => {
-                e.target.style.borderColor = "#4096ff";
-              }}
-              onBlur={(e) => {
-                e.target.style.borderColor = "#dfe1e6";
-              }}
-              disabled={sending}
-            />
-            {/* Enter Icon Hint */}
-            <Tooltip title="Press Enter to send">
-              <div
-                style={{
-                  position: "absolute",
-                  right: "12px",
-                  top: "8px",
-                  color: "#9E9E9E",
-                  fontSize: "16px",
-                  pointerEvents: "none",
-                  opacity: newComment.trim() ? 1 : 0.5,
-                  transition: "opacity 0.3s",
-                }}
-              >
-                <EnterOutlined />
-              </div>
-            </Tooltip>
-          </div>
-
-          {/* Quick Comment Buttons */}
-          <div
-            style={{
-              display: "flex",
-              gap: "8px",
-              flexWrap: "wrap",
-              marginBottom: "8px",
-            }}
-          >
-            {QUICK_COMMENTS.map((qc, idx) => (
-              <Tooltip key={idx} title="Click to use this suggestion">
-                <Button
-                  size="small"
-                  type="text"
-                  onClick={() => setNewComment(qc.text)}
-                  style={{
-                    fontSize: "12px",
-                    color: "#5E6C84",
-                    border: "1px solid #dfe1e6",
-                    borderRadius: "6px",
-                    padding: "4px 10px",
-                    height: "auto",
-                    transition: "all 0.3s",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = "#4096ff";
-                    e.currentTarget.style.backgroundColor = "#f0f5ff";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = "#dfe1e6";
-                    e.currentTarget.style.backgroundColor = "transparent";
-                  }}
-                >
-                  {qc.emoji} {qc.text}
-                </Button>
-              </Tooltip>
-            ))}
-          </div>
-
-          {/* Send Button */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: "12px", color: "#9E9E9E" }}>
-              Press <kbd style={{ padding: "2px 6px", border: "1px solid #ddd", borderRadius: "3px", fontSize: "11px" }}>Enter</kbd> to send, <kbd style={{ padding: "2px 6px", border: "1px solid #ddd", borderRadius: "3px", fontSize: "11px" }}>Shift+Enter</kbd> for new line
-            </span>
-            <Button
-              type="primary"
-              icon={<SendOutlined />}
-              onClick={handleSendComment}
-              loading={sending}
-              disabled={!newComment.trim() || sending}
-              style={{
-                borderRadius: "6px",
-                boxShadow: newComment.trim() ? "0 2px 4px rgba(64, 150, 255, 0.3)" : "none",
-              }}
-            >
-              Send
-            </Button>
-          </div>
-        </div>
       </div>
     </div>
   );
