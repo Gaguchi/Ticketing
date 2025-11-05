@@ -383,20 +383,18 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
                     transition: "all 0.3s",
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.boxShadow =
-                      "0 4px 12px rgba(0, 0, 0, 0.08)";
+                    e.currentTarget.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.08)";
                     e.currentTarget.style.borderColor = "#e6e6e6";
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow =
-                      "0 1px 2px rgba(0, 0, 0, 0.04)";
+                    e.currentTarget.style.boxShadow = "0 1px 2px rgba(0, 0, 0, 0.04)";
                     e.currentTarget.style.borderColor = "#f0f0f0";
                   }}
                 >
                   {/* Avatar */}
-                  <Avatar
-                    size={40}
-                    style={{
+                  <Avatar 
+                    size={40} 
+                    style={{ 
                       backgroundColor: "#4096ff",
                       flexShrink: 0,
                       fontSize: "16px",
@@ -417,14 +415,7 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
                         marginBottom: "8px",
                       }}
                     >
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "8px",
-                          flexWrap: "wrap",
-                        }}
-                      >
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
                         <span
                           style={{
                             fontWeight: 600,
@@ -494,7 +485,7 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
                             type="text"
                             size="small"
                             icon={<MoreOutlined />}
-                            style={{
+                            style={{ 
                               color: "#9E9E9E",
                               opacity: 0.6,
                               transition: "opacity 0.3s",
@@ -517,7 +508,7 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
                           value={editingContent}
                           onChange={(e) => setEditingContent(e.target.value)}
                           autoSize={{ minRows: 2, maxRows: 6 }}
-                          style={{
+                          style={{ 
                             marginBottom: "8px",
                             borderRadius: "8px",
                             border: "2px solid #4096ff",
@@ -709,37 +700,9 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
           </div>
 
           {/* Send Button */}
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span style={{ fontSize: "12px", color: "#9E9E9E" }}>
-              Press{" "}
-              <kbd
-                style={{
-                  padding: "2px 6px",
-                  border: "1px solid #ddd",
-                  borderRadius: "3px",
-                  fontSize: "11px",
-                }}
-              >
-                Enter
-              </kbd>{" "}
-              to send,{" "}
-              <kbd
-                style={{
-                  padding: "2px 6px",
-                  border: "1px solid #ddd",
-                  borderRadius: "3px",
-                  fontSize: "11px",
-                }}
-              >
-                Shift+Enter
-              </kbd>{" "}
-              for new line
+              Press <kbd style={{ padding: "2px 6px", border: "1px solid #ddd", borderRadius: "3px", fontSize: "11px" }}>Enter</kbd> to send, <kbd style={{ padding: "2px 6px", border: "1px solid #ddd", borderRadius: "3px", fontSize: "11px" }}>Shift+Enter</kbd> for new line
             </span>
             <Button
               type="primary"
@@ -749,9 +712,7 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
               disabled={!newComment.trim() || sending}
               style={{
                 borderRadius: "6px",
-                boxShadow: newComment.trim()
-                  ? "0 2px 4px rgba(64, 150, 255, 0.3)"
-                  : "none",
+                boxShadow: newComment.trim() ? "0 2px 4px rgba(64, 150, 255, 0.3)" : "none",
               }}
             >
               Send
