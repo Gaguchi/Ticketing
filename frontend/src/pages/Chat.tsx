@@ -1,418 +1,392 @@
-import React, { useState } from "react";
-import { Input, Avatar, Badge, List, Card, Typography, Space } from "antd";
+import React, { useState, useEffect, useRef } from "react";
+import {
+  Input,
+  Avatar,
+  List,
+  Typography,
+  Space,
+  Button,
+  message as antMessage,
+  Spin,
+  Upload,
+  Popover,
+  Badge,
+} from "antd";
 import {
   SearchOutlined,
   SendOutlined,
   UserOutlined,
-  SmileOutlined,
+  PlusOutlined,
   PaperClipOutlined,
-  PlayCircleOutlined,
-  CaretRightOutlined,
+  FileOutlined,
+  DownloadOutlined,
+  SmileOutlined,
+  CloseOutlined,
 } from "@ant-design/icons";
+import EmojiPicker from "emoji-picker-react";
+import { useProject } from "../contexts/ProjectContext";
+import { useAuth } from "../contexts/AppContext";
+import { chatService } from "../services/chat.service";
+import { webSocketService } from "../services/websocket.service";
+import type { ChatRoom, ChatMessage, ChatWebSocketEvent } from "../types/chat";
 
 const { Text } = Typography;
 
-// Dummy data for chat conversations
-const conversations = [
-  {
-    id: 1,
-    name: "Sarah Johnson",
-    avatar: null,
-    lastMessage: "Sure, I'll send you the updated mockups by EOD",
-    timestamp: "2m ago",
-    unread: 3,
-    online: true,
-  },
-  {
-    id: 2,
-    name: "Development Team",
-    avatar: null,
-    lastMessage: "Alex: The API integration is complete ✅",
-    timestamp: "15m ago",
-    unread: 0,
-    online: false,
-    isGroup: true,
-  },
-  {
-    id: 3,
-    name: "Mike Chen",
-    avatar: null,
-    lastMessage: "Thanks for the quick turnaround!",
-    timestamp: "1h ago",
-    unread: 0,
-    online: true,
-  },
-  {
-    id: 4,
-    name: "Design Review",
-    avatar: null,
-    lastMessage: "Emily: Love the new color scheme 🎨",
-    timestamp: "3h ago",
-    unread: 1,
-    online: false,
-    isGroup: true,
-  },
-  {
-    id: 5,
-    name: "Rachel Adams",
-    avatar: null,
-    lastMessage: "Can we schedule a call tomorrow?",
-    timestamp: "Yesterday",
-    unread: 0,
-    online: false,
-  },
-  {
-    id: 6,
-    name: "Project Alpha",
-    avatar: null,
-    lastMessage: "John: Meeting notes uploaded to drive",
-    timestamp: "Yesterday",
-    unread: 0,
-    online: false,
-    isGroup: true,
-  },
-];
-
-// Different message sets for each conversation
-const conversationMessages: { [key: number]: any[] } = {
-  1: [
-    // Sarah Johnson - Design discussion
-    {
-      id: 1,
-      senderId: 2,
-      senderName: "Sarah Johnson",
-      content: "Hey! Did you get a chance to review the designs?",
-      timestamp: "10:23 AM",
-      isMine: false,
-      type: "text",
-    },
-    {
-      id: 2,
-      senderId: 1,
-      senderName: "You",
-      content: "Yes! They look great. Just a few minor tweaks needed.",
-      timestamp: "10:25 AM",
-      isMine: true,
-      type: "text",
-    },
-    {
-      id: 3,
-      senderId: 2,
-      senderName: "Sarah Johnson",
-      content: "Here's the updated mockup",
-      timestamp: "10:26 AM",
-      isMine: false,
-      type: "image",
-      imageUrl: "https://picsum.photos/seed/mockup1/400/300",
-    },
-    {
-      id: 4,
-      senderId: 1,
-      senderName: "You",
-      content:
-        "The main navigation could use a bit more spacing, and maybe we could increase the contrast on the CTAs?",
-      timestamp: "10:27 AM",
-      isMine: true,
-      type: "text",
-    },
-    {
-      id: 5,
-      senderId: 2,
-      senderName: "Sarah Johnson",
-      content: "",
-      timestamp: "10:28 AM",
-      isMine: false,
-      type: "voice",
-      duration: "0:45",
-    },
-    {
-      id: 6,
-      senderId: 1,
-      senderName: "You",
-      content: "Perfect! Thanks for the quick response",
-      timestamp: "10:29 AM",
-      isMine: true,
-      type: "text",
-    },
-  ],
-  2: [
-    // Development Team - Technical discussion
-    {
-      id: 1,
-      senderId: 3,
-      senderName: "Alex Rivera",
-      content: "The API integration is complete! ✅",
-      timestamp: "9:15 AM",
-      isMine: false,
-      type: "text",
-    },
-    {
-      id: 2,
-      senderId: 4,
-      senderName: "Jordan Lee",
-      content: "Great work! Did you update the documentation?",
-      timestamp: "9:17 AM",
-      isMine: false,
-      type: "text",
-    },
-    {
-      id: 3,
-      senderId: 3,
-      senderName: "Alex Rivera",
-      content: "Yes, here's the updated API docs",
-      timestamp: "9:18 AM",
-      isMine: false,
-      type: "image",
-      imageUrl: "https://picsum.photos/seed/apidocs/400/300",
-    },
-    {
-      id: 4,
-      senderId: 1,
-      senderName: "You",
-      content: "Looks good! When can we deploy to staging?",
-      timestamp: "9:20 AM",
-      isMine: true,
-      type: "text",
-    },
-    {
-      id: 5,
-      senderId: 3,
-      senderName: "Alex Rivera",
-      content: "We can deploy this afternoon. I'll run the test suite first.",
-      timestamp: "9:22 AM",
-      isMine: false,
-      type: "text",
-    },
-  ],
-  3: [
-    // Mike Chen - Quick check-in
-    {
-      id: 1,
-      senderId: 2,
-      senderName: "Mike Chen",
-      content: "Quick question about the timeline",
-      timestamp: "2:45 PM",
-      isMine: false,
-      type: "text",
-    },
-    {
-      id: 2,
-      senderId: 1,
-      senderName: "You",
-      content: "Sure, what's up?",
-      timestamp: "2:46 PM",
-      isMine: true,
-      type: "text",
-    },
-    {
-      id: 3,
-      senderId: 2,
-      senderName: "Mike Chen",
-      content:
-        "Can we push the delivery to next week? Need more time for testing.",
-      timestamp: "2:47 PM",
-      isMine: false,
-      type: "text",
-    },
-    {
-      id: 4,
-      senderId: 1,
-      senderName: "You",
-      content: "That should be fine. Let me check with the client.",
-      timestamp: "2:48 PM",
-      isMine: true,
-      type: "text",
-    },
-    {
-      id: 5,
-      senderId: 1,
-      senderName: "You",
-      content: "Client approved the extension. Thanks for the heads up!",
-      timestamp: "3:15 PM",
-      isMine: true,
-      type: "text",
-    },
-    {
-      id: 6,
-      senderId: 2,
-      senderName: "Mike Chen",
-      content: "Thanks for the quick turnaround! 🙏",
-      timestamp: "3:16 PM",
-      isMine: false,
-      type: "text",
-    },
-  ],
-  4: [
-    // Design Review - Group chat
-    {
-      id: 1,
-      senderId: 5,
-      senderName: "Emily Parker",
-      content: "Love the new color scheme! 🎨",
-      timestamp: "Yesterday",
-      isMine: false,
-      type: "text",
-    },
-    {
-      id: 2,
-      senderId: 1,
-      senderName: "You",
-      content: "Thanks! Here's the full palette",
-      timestamp: "Yesterday",
-      isMine: true,
-      type: "image",
-      imageUrl: "https://picsum.photos/seed/palette/400/300",
-    },
-    {
-      id: 3,
-      senderId: 6,
-      senderName: "David Kim",
-      content: "The contrast ratio looks perfect for accessibility",
-      timestamp: "Yesterday",
-      isMine: false,
-      type: "text",
-    },
-    {
-      id: 4,
-      senderId: 5,
-      senderName: "Emily Parker",
-      content: "Quick walkthrough of the design system",
-      timestamp: "Yesterday",
-      isMine: false,
-      type: "video",
-      videoUrl: "https://picsum.photos/seed/designvideo/400/300",
-    },
-    {
-      id: 5,
-      senderId: 1,
-      senderName: "You",
-      content: "Excellent presentation! Let's move forward with this.",
-      timestamp: "Yesterday",
-      isMine: true,
-      type: "text",
-    },
-  ],
-  5: [
-    // Rachel Adams - Meeting request
-    {
-      id: 1,
-      senderId: 7,
-      senderName: "Rachel Adams",
-      content: "Hi! Do you have time for a quick call tomorrow?",
-      timestamp: "Yesterday",
-      isMine: false,
-      type: "text",
-    },
-    {
-      id: 2,
-      senderId: 1,
-      senderName: "You",
-      content: "Sure! What time works for you?",
-      timestamp: "Yesterday",
-      isMine: true,
-      type: "text",
-    },
-    {
-      id: 3,
-      senderId: 7,
-      senderName: "Rachel Adams",
-      content: "How about 2 PM? Should take about 30 minutes.",
-      timestamp: "Yesterday",
-      isMine: false,
-      type: "text",
-    },
-    {
-      id: 4,
-      senderId: 1,
-      senderName: "You",
-      content: "Perfect! I'll send you a calendar invite.",
-      timestamp: "Yesterday",
-      isMine: true,
-      type: "text",
-    },
-    {
-      id: 5,
-      senderId: 7,
-      senderName: "Rachel Adams",
-      content: "",
-      timestamp: "Yesterday",
-      isMine: false,
-      type: "voice",
-      duration: "1:23",
-    },
-    {
-      id: 6,
-      senderId: 1,
-      senderName: "You",
-      content: "Got it, see you tomorrow!",
-      timestamp: "Yesterday",
-      isMine: true,
-      type: "text",
-    },
-  ],
-  6: [
-    // Project Alpha - Group updates
-    {
-      id: 1,
-      senderId: 8,
-      senderName: "John Martinez",
-      content: "Meeting notes uploaded to drive 📄",
-      timestamp: "Yesterday",
-      isMine: false,
-      type: "text",
-    },
-    {
-      id: 2,
-      senderId: 9,
-      senderName: "Lisa Chen",
-      content: "Thanks! I've added my action items.",
-      timestamp: "Yesterday",
-      isMine: false,
-      type: "text",
-    },
-    {
-      id: 3,
-      senderId: 1,
-      senderName: "You",
-      content: "Here's the project roadmap for Q4",
-      timestamp: "Yesterday",
-      isMine: true,
-      type: "image",
-      imageUrl: "https://picsum.photos/seed/roadmap/400/300",
-    },
-    {
-      id: 4,
-      senderId: 8,
-      senderName: "John Martinez",
-      content: "Demo of the prototype",
-      timestamp: "Yesterday",
-      isMine: false,
-      type: "video",
-      videoUrl: "https://picsum.photos/seed/prototype/400/300",
-    },
-    {
-      id: 5,
-      senderId: 9,
-      senderName: "Lisa Chen",
-      content: "This is looking really solid! Great progress team 🎉",
-      timestamp: "Yesterday",
-      isMine: false,
-      type: "text",
-    },
-  ],
-};
-
 const Chat: React.FC = () => {
-  const [activeChat, setActiveChat] = useState(conversations[0]);
+  const { selectedProject } = useProject();
+  const { user } = useAuth();
+  const [rooms, setRooms] = useState<ChatRoom[]>([]);
+  const [activeRoom, setActiveRoom] = useState<ChatRoom | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [messageInput, setMessageInput] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [messagesLoading, setMessagesLoading] = useState(false);
+  const [typingUsers, setTypingUsers] = useState<Set<number>>(new Set());
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<ChatMessage[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [emojiPickerVisible, setEmojiPickerVisible] = useState<number | null>(
+    null
+  );
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const typingTimeoutRef = useRef<number | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
 
-  // Get messages for the active conversation
-  const currentMessages = conversationMessages[activeChat.id] || [];
+  // Scroll to bottom of messages
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  // Load rooms on mount or when project changes
+  useEffect(() => {
+    if (!selectedProject) return;
+
+    const loadRooms = async () => {
+      try {
+        setLoading(true);
+        const data = await chatService.getRooms(selectedProject.id);
+        setRooms(data);
+        if (data.length > 0 && !activeRoom) {
+          setActiveRoom(data[0]);
+        }
+      } catch (error) {
+        console.error("Failed to load chat rooms:", error);
+        antMessage.error("Failed to load conversations");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadRooms();
+  }, [selectedProject]);
+
+  // Load messages when active room changes
+  useEffect(() => {
+    if (!activeRoom) return;
+
+    const loadMessages = async () => {
+      try {
+        setMessagesLoading(true);
+        const data = await chatService.getMessages(activeRoom.id);
+        setMessages(data);
+        setTimeout(scrollToBottom, 100);
+
+        // Mark as read
+        await chatService.markRoomAsRead(activeRoom.id);
+      } catch (error) {
+        console.error("Failed to load messages:", error);
+        antMessage.error("Failed to load messages");
+      } finally {
+        setMessagesLoading(false);
+      }
+    };
+
+    loadMessages();
+  }, [activeRoom]);
+
+  // Connect to WebSocket when room is selected
+  useEffect(() => {
+    if (!activeRoom || !user) return;
+
+    const wsUrl = `ws/chat/${activeRoom.id}/`;
+
+    const onMessage = (event: ChatWebSocketEvent) => {
+      console.log("📨 [Chat] WebSocket event:", event);
+
+      switch (event.type) {
+        case "message_new":
+          setMessages((prev) => [...prev, event.message]);
+          setTimeout(scrollToBottom, 100);
+          break;
+
+        case "message_edited":
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === event.message.id ? event.message : msg
+            )
+          );
+          break;
+
+        case "message_deleted":
+          setMessages((prev) =>
+            prev.filter((msg) => msg.id !== event.message_id)
+          );
+          break;
+
+        case "reaction_added":
+          setMessages((prev) =>
+            prev.map((msg) => {
+              if (msg.id === event.reaction.id) {
+                return {
+                  ...msg,
+                  reactions: [...msg.reactions, event.reaction],
+                };
+              }
+              return msg;
+            })
+          );
+          break;
+
+        case "reaction_removed":
+          setMessages((prev) =>
+            prev.map((msg) => {
+              if (msg.id === event.message_id) {
+                return {
+                  ...msg,
+                  reactions: msg.reactions.filter(
+                    (r) =>
+                      !(r.user.id === event.user_id && r.emoji === event.emoji)
+                  ),
+                };
+              }
+              return msg;
+            })
+          );
+          break;
+
+        case "user_typing":
+          if (event.is_typing) {
+            setTypingUsers((prev) => new Set(prev).add(event.user_id));
+          } else {
+            setTypingUsers((prev) => {
+              const next = new Set(prev);
+              next.delete(event.user_id);
+              return next;
+            });
+          }
+          break;
+      }
+    };
+
+    const onError = (error: Event) => {
+      console.error("❌ [Chat] WebSocket error:", error);
+    };
+
+    const onClose = (event: CloseEvent) => {
+      console.log("🔌 [Chat] WebSocket disconnected:", event);
+    };
+
+    webSocketService.connect(wsUrl, onMessage, onError, onClose);
+
+    return () => {
+      webSocketService.disconnect(wsUrl);
+      wsRef.current = null;
+    };
+  }, [activeRoom, user]);
+
+  // Get WebSocket reference for sending messages
+  useEffect(() => {
+    if (!activeRoom) return;
+    const wsUrl = `ws/chat/${activeRoom.id}/`;
+    // Access internal connections map
+    const ws = (webSocketService as any).connections;
+    if (ws && ws[wsUrl]) {
+      wsRef.current = ws[wsUrl];
+    }
+  }, [activeRoom]);
+
+  // Send message
+  const handleSendMessage = async () => {
+    if ((!messageInput.trim() && !uploadFile) || !activeRoom) return;
+
+    try {
+      const content = messageInput.trim();
+      setMessageInput("");
+      setUploading(true);
+
+      if (uploadFile) {
+        // Send with file attachment via API
+        await chatService.sendMessage({
+          room: activeRoom.id,
+          content: content || "File attachment",
+          type: uploadFile.type.startsWith("image/") ? "image" : "file",
+          attachment: uploadFile,
+        });
+        setUploadFile(null);
+      } else {
+        // Send text via WebSocket for real-time delivery
+        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+          wsRef.current.send(
+            JSON.stringify({
+              type: "message_send",
+              content,
+              message_type: "text",
+            })
+          );
+        }
+      }
+    } catch (error) {
+      console.error("Failed to send message:", error);
+      antMessage.error("Failed to send message");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Handle file selection
+  const handleFileSelect = (file: File) => {
+    // Validate file size (10MB limit)
+    const maxSize = 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      antMessage.error("File size must be less than 10MB");
+      return false;
+    }
+
+    setUploadFile(file);
+    return false; // Prevent auto upload
+  };
+
+  // Handle typing indicator
+  const handleTyping = () => {
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+
+    // Send typing = true
+    wsRef.current.send(
+      JSON.stringify({
+        type: "typing",
+        is_typing: true,
+      })
+    );
+
+    // Clear existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    // Set timeout to send typing = false
+    typingTimeoutRef.current = window.setTimeout(() => {
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.send(
+          JSON.stringify({
+            type: "typing",
+            is_typing: false,
+          })
+        );
+      }
+    }, 3000);
+  };
+
+  // Handle search
+  const handleSearch = async (query: string) => {
+    setSearchQuery(query);
+
+    if (!query.trim()) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    try {
+      setIsSearching(true);
+      const results = await chatService.searchMessages(query, activeRoom?.id);
+      setSearchResults(results);
+    } catch (error) {
+      console.error("Search failed:", error);
+      antMessage.error("Search failed");
+    }
+  };
+
+  // Handle emoji reaction
+  const handleEmojiClick = async (
+    messageId: number,
+    emojiData: { emoji: string }
+  ) => {
+    try {
+      await chatService.addReaction(messageId, emojiData.emoji);
+      setEmojiPickerVisible(null);
+
+      // Also send via WebSocket for real-time update
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.send(
+          JSON.stringify({
+            type: "reaction_add",
+            message_id: messageId,
+            emoji: emojiData.emoji,
+          })
+        );
+      }
+    } catch (error) {
+      console.error("Failed to add reaction:", error);
+      antMessage.error("Failed to add reaction");
+    }
+  };
+
+  // Handle remove reaction
+  const handleRemoveReaction = async (messageId: number, emoji: string) => {
+    try {
+      await chatService.removeReaction(messageId, emoji);
+
+      // Also send via WebSocket for real-time update
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.send(
+          JSON.stringify({
+            type: "reaction_remove",
+            message_id: messageId,
+            emoji,
+          })
+        );
+      }
+    } catch (error) {
+      console.error("Failed to remove reaction:", error);
+      antMessage.error("Failed to remove reaction");
+    }
+  };
+
+  // Format timestamp
+  const formatTime = (timestamp: string) => {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  };
+
+  if (!selectedProject) {
+    return (
+      <div style={{ padding: 24, textAlign: "center" }}>
+        <Text type="secondary">Please select a project to use chat</Text>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "calc(100vh - 64px)",
+        }}
+      >
+        <Spin size="large" />
+      </div>
+    );
+  }
 
   return (
     <div
       style={{
-        height: "calc(100vh - 64px)", // Subtract header height
+        height: "calc(100vh - 64px)",
         display: "flex",
         flexDirection: "column",
         backgroundColor: "#f5f5f5",
@@ -426,9 +400,20 @@ const Chat: React.FC = () => {
           borderBottom: "1px solid #e8e8e8",
         }}
       >
-        <Text style={{ fontSize: 20, fontWeight: 600, color: "#172b4d" }}>
-          Messages
-        </Text>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <Text style={{ fontSize: 20, fontWeight: 600, color: "#172b4d" }}>
+            Messages
+          </Text>
+          <Button type="primary" icon={<PlusOutlined />}>
+            New Chat
+          </Button>
+        </div>
       </div>
 
       {/* Main Content */}
@@ -449,53 +434,52 @@ const Chat: React.FC = () => {
               placeholder="Search conversations..."
               prefix={<SearchOutlined style={{ color: "#8c8c8c" }} />}
               style={{ borderRadius: 8 }}
+              value={searchQuery}
+              onChange={(e) => handleSearch(e.target.value)}
+              suffix={
+                searchQuery && (
+                  <CloseOutlined
+                    onClick={() => {
+                      setSearchQuery("");
+                      setSearchResults([]);
+                      setIsSearching(false);
+                    }}
+                    style={{ color: "#8c8c8c", cursor: "pointer" }}
+                  />
+                )
+              }
             />
           </div>
 
           {/* Conversations */}
           <div style={{ flex: 1, overflowY: "auto" }}>
             <List
-              dataSource={conversations}
-              renderItem={(conversation) => (
+              dataSource={rooms}
+              renderItem={(room) => (
                 <List.Item
-                  onClick={() => setActiveChat(conversation)}
+                  onClick={() => setActiveRoom(room)}
                   style={{
                     padding: "12px 16px",
                     cursor: "pointer",
                     backgroundColor:
-                      activeChat.id === conversation.id
-                        ? "#f0f5ff"
-                        : "transparent",
+                      activeRoom?.id === room.id ? "#f0f5ff" : "transparent",
                     borderLeft:
-                      activeChat.id === conversation.id
+                      activeRoom?.id === room.id
                         ? "3px solid #1890ff"
                         : "3px solid transparent",
                     transition: "all 0.2s",
                   }}
-                  onMouseEnter={(e) => {
-                    if (activeChat.id !== conversation.id) {
-                      e.currentTarget.style.backgroundColor = "#fafafa";
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (activeChat.id !== conversation.id) {
-                      e.currentTarget.style.backgroundColor = "transparent";
-                    }
-                  }}
                 >
                   <List.Item.Meta
                     avatar={
-                      <Badge dot={conversation.online} offset={[-2, 32]}>
-                        <Avatar
-                          size={40}
-                          icon={<UserOutlined />}
-                          style={{
-                            backgroundColor: conversation.isGroup
-                              ? "#52c41a"
-                              : "#1890ff",
-                          }}
-                        />
-                      </Badge>
+                      <Avatar
+                        size={40}
+                        icon={<UserOutlined />}
+                        style={{
+                          backgroundColor:
+                            room.type === "group" ? "#52c41a" : "#1890ff",
+                        }}
+                      />
                     }
                     title={
                       <div
@@ -505,55 +489,27 @@ const Chat: React.FC = () => {
                           alignItems: "center",
                         }}
                       >
-                        <Text
-                          strong
-                          style={{
-                            fontSize: 14,
-                            color: "#172b4d",
-                          }}
-                        >
-                          {conversation.name}
+                        <Text strong style={{ fontSize: 14, color: "#172b4d" }}>
+                          {room.display_name}
                         </Text>
-                        <Text
-                          style={{
-                            fontSize: 11,
-                            color: "#8c8c8c",
-                          }}
-                        >
-                          {conversation.timestamp}
-                        </Text>
+                        {room.last_message && (
+                          <Text style={{ fontSize: 11, color: "#8c8c8c" }}>
+                            {formatTime(room.last_message.created_at)}
+                          </Text>
+                        )}
                       </div>
                     }
                     description={
-                      <div
+                      <Text
+                        ellipsis
                         style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
+                          fontSize: 13,
+                          color: room.unread_count > 0 ? "#172b4d" : "#8c8c8c",
+                          fontWeight: room.unread_count > 0 ? 500 : 400,
                         }}
                       >
-                        <Text
-                          ellipsis
-                          style={{
-                            fontSize: 13,
-                            color:
-                              conversation.unread > 0 ? "#172b4d" : "#8c8c8c",
-                            fontWeight: conversation.unread > 0 ? 500 : 400,
-                            flex: 1,
-                          }}
-                        >
-                          {conversation.lastMessage}
-                        </Text>
-                        {conversation.unread > 0 && (
-                          <Badge
-                            count={conversation.unread}
-                            style={{
-                              marginLeft: 8,
-                              backgroundColor: "#1890ff",
-                            }}
-                          />
-                        )}
-                      </div>
+                        {room.last_message?.content || "No messages yet"}
+                      </Text>
                     }
                   />
                 </List.Item>
@@ -563,332 +519,542 @@ const Chat: React.FC = () => {
         </div>
 
         {/* Chat Area */}
-        <div
-          style={{
-            flex: 1,
-            display: "flex",
-            flexDirection: "column",
-            backgroundColor: "#fff",
-          }}
-        >
-          {/* Chat Header */}
+        {activeRoom ? (
           <div
             style={{
-              padding: "12px 24px",
-              borderBottom: "1px solid #e8e8e8",
-              backgroundColor: "#fafafa",
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              backgroundColor: "#fff",
             }}
           >
-            <Space size={12}>
-              <Badge dot={activeChat.online} offset={[-2, 32]}>
+            {/* Chat Header */}
+            <div
+              style={{
+                padding: "12px 24px",
+                borderBottom: "1px solid #e8e8e8",
+                backgroundColor: "#fafafa",
+              }}
+            >
+              <Space size={12}>
                 <Avatar
                   size={36}
                   icon={<UserOutlined />}
                   style={{
-                    backgroundColor: activeChat.isGroup ? "#52c41a" : "#1890ff",
+                    backgroundColor:
+                      activeRoom.type === "group" ? "#52c41a" : "#1890ff",
                   }}
                 />
-              </Badge>
-              <div>
-                <Text strong style={{ fontSize: 15, color: "#172b4d" }}>
-                  {activeChat.name}
-                </Text>
-                <br />
-                <Text style={{ fontSize: 12, color: "#8c8c8c" }}>
-                  {activeChat.online
-                    ? "Active now"
-                    : activeChat.isGroup
-                    ? `${Math.floor(Math.random() * 10) + 3} members`
-                    : "Last seen recently"}
-                </Text>
-              </div>
-            </Space>
-          </div>
+                <div>
+                  <Text strong style={{ fontSize: 15, color: "#172b4d" }}>
+                    {activeRoom.display_name}
+                  </Text>
+                  <br />
+                  <Text style={{ fontSize: 12, color: "#8c8c8c" }}>
+                    {activeRoom.type === "group"
+                      ? `${activeRoom.participants.length} members`
+                      : "Direct message"}
+                  </Text>
+                </div>
+              </Space>
+            </div>
 
-          {/* Messages Area */}
-          <div
-            style={{
-              flex: 1,
-              overflowY: "auto",
-              padding: "24px",
-              backgroundColor: "#f9fafb",
-            }}
-          >
-            <Space direction="vertical" size={16} style={{ width: "100%" }}>
-              {currentMessages.map((message) => (
-                <div
-                  key={message.id}
-                  style={{
-                    display: "flex",
-                    justifyContent: message.isMine ? "flex-end" : "flex-start",
-                  }}
-                >
+            {/* Messages Area */}
+            <div
+              style={{
+                flex: 1,
+                overflowY: "auto",
+                padding: "24px",
+                backgroundColor: "#f9fafb",
+              }}
+            >
+              {messagesLoading ? (
+                <div style={{ textAlign: "center", padding: 40 }}>
+                  <Spin />
+                </div>
+              ) : isSearching && searchQuery ? (
+                <div>
                   <div
                     style={{
-                      display: "flex",
-                      gap: 8,
-                      maxWidth: "60%",
-                      flexDirection: message.isMine ? "row-reverse" : "row",
+                      marginBottom: 16,
+                      padding: "8px 12px",
+                      backgroundColor: "#fff",
+                      borderRadius: 8,
                     }}
                   >
-                    {!message.isMine && (
-                      <Avatar
-                        size={32}
-                        icon={<UserOutlined />}
-                        style={{ backgroundColor: "#1890ff", flexShrink: 0 }}
-                      />
-                    )}
-                    <div>
-                      <Card
-                        size="small"
-                        styles={{
-                          body: {
-                            padding:
-                              message.type === "image" ||
-                              message.type === "video"
-                                ? "4px"
-                                : message.type === "voice"
-                                ? "8px 12px"
-                                : "10px 14px",
-                            backgroundColor: message.isMine
-                              ? "#1890ff"
-                              : "#fff",
-                            borderRadius: message.isMine
-                              ? "12px 12px 2px 12px"
-                              : "12px 12px 12px 2px",
-                          },
-                        }}
-                        style={{
-                          border: message.isMine ? "none" : "1px solid #e8e8e8",
-                          boxShadow: message.isMine
-                            ? "none"
-                            : "0 1px 2px rgba(0,0,0,0.05)",
-                        }}
-                      >
-                        {message.type === "text" && (
-                          <Text
-                            style={{
-                              color: message.isMine ? "#fff" : "#172b4d",
-                              fontSize: 14,
-                              lineHeight: "20px",
-                            }}
-                          >
-                            {message.content}
-                          </Text>
-                        )}
-
-                        {message.type === "image" && (
-                          <div>
-                            {message.content && (
-                              <Text
-                                style={{
-                                  color: message.isMine ? "#fff" : "#172b4d",
-                                  fontSize: 14,
-                                  display: "block",
-                                  padding: "6px 10px",
-                                }}
-                              >
-                                {message.content}
-                              </Text>
-                            )}
-                            <img
-                              src={message.imageUrl}
-                              alt="Shared image"
-                              style={{
-                                width: "100%",
-                                maxWidth: 400,
-                                borderRadius: 8,
-                                cursor: "pointer",
-                              }}
-                            />
-                          </div>
-                        )}
-
-                        {message.type === "video" && (
-                          <div>
-                            {message.content && (
-                              <Text
-                                style={{
-                                  color: message.isMine ? "#fff" : "#172b4d",
-                                  fontSize: 14,
-                                  display: "block",
-                                  padding: "6px 10px",
-                                }}
-                              >
-                                {message.content}
-                              </Text>
-                            )}
-                            <div
-                              style={{
-                                position: "relative",
-                                width: "100%",
-                                maxWidth: 400,
-                                borderRadius: 8,
-                                overflow: "hidden",
-                                cursor: "pointer",
-                              }}
-                            >
-                              <img
-                                src={message.videoUrl}
-                                alt="Video thumbnail"
-                                style={{ width: "100%", display: "block" }}
-                              />
-                              <div
-                                style={{
-                                  position: "absolute",
-                                  top: "50%",
-                                  left: "50%",
-                                  transform: "translate(-50%, -50%)",
-                                  backgroundColor: "rgba(0,0,0,0.6)",
-                                  borderRadius: "50%",
-                                  width: 56,
-                                  height: 56,
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                }}
-                              >
-                                <PlayCircleOutlined
-                                  style={{ fontSize: 32, color: "#fff" }}
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {message.type === "voice" && (
+                    <Text strong>Search Results: </Text>
+                    <Text type="secondary">
+                      {searchResults.length} message
+                      {searchResults.length !== 1 ? "s" : ""} found for "
+                      {searchQuery}"
+                    </Text>
+                  </div>
+                  <Space
+                    direction="vertical"
+                    size={16}
+                    style={{ width: "100%" }}
+                  >
+                    {searchResults.map((msg) => {
+                      const isMine = msg.user.id === user?.id;
+                      return (
+                        <div
+                          key={msg.id}
+                          style={{
+                            display: "flex",
+                            justifyContent: isMine ? "flex-end" : "flex-start",
+                          }}
+                        >
                           <div
                             style={{
                               display: "flex",
-                              alignItems: "center",
-                              gap: 12,
-                              minWidth: 200,
+                              gap: 8,
+                              maxWidth: "60%",
+                              flexDirection: isMine ? "row-reverse" : "row",
                             }}
                           >
-                            <div
-                              style={{
-                                width: 36,
-                                height: 36,
-                                borderRadius: "50%",
-                                backgroundColor: message.isMine
-                                  ? "rgba(255,255,255,0.2)"
-                                  : "#f0f5ff",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                cursor: "pointer",
-                              }}
-                            >
-                              <CaretRightOutlined
+                            {!isMine && (
+                              <Avatar
+                                size={32}
+                                icon={<UserOutlined />}
                                 style={{
-                                  fontSize: 16,
-                                  color: message.isMine ? "#fff" : "#1890ff",
+                                  backgroundColor: "#1890ff",
+                                  flexShrink: 0,
                                 }}
                               />
-                            </div>
-                            <div style={{ flex: 1 }}>
+                            )}
+                            <div>
                               <div
                                 style={{
-                                  height: 2,
-                                  backgroundColor: message.isMine
-                                    ? "rgba(255,255,255,0.3)"
-                                    : "#e8e8e8",
-                                  borderRadius: 2,
-                                  position: "relative",
+                                  padding: "10px 14px",
+                                  backgroundColor: isMine ? "#1890ff" : "#fff",
+                                  borderRadius: isMine
+                                    ? "12px 12px 2px 12px"
+                                    : "12px 12px 12px 2px",
+                                  border: isMine ? "none" : "1px solid #e8e8e8",
+                                  boxShadow: isMine
+                                    ? "none"
+                                    : "0 1px 2px rgba(0,0,0,0.05)",
                                 }}
                               >
-                                <div
+                                <Text
                                   style={{
-                                    height: 2,
-                                    width: "40%",
-                                    backgroundColor: message.isMine
-                                      ? "#fff"
-                                      : "#1890ff",
-                                    borderRadius: 2,
+                                    color: isMine ? "#fff" : "#172b4d",
+                                    fontSize: 14,
+                                    lineHeight: "20px",
+                                    wordBreak: "break-word",
                                   }}
-                                />
+                                >
+                                  {msg.content}
+                                </Text>
                               </div>
+                              <Text
+                                style={{
+                                  fontSize: 11,
+                                  color: "#8c8c8c",
+                                  marginTop: 4,
+                                  display: "block",
+                                  textAlign: isMine ? "right" : "left",
+                                }}
+                              >
+                                {formatTime(msg.created_at)}
+                              </Text>
                             </div>
-                            <Text
-                              style={{
-                                fontSize: 12,
-                                color: message.isMine ? "#fff" : "#8c8c8c",
-                              }}
-                            >
-                              {message.duration}
-                            </Text>
                           </div>
-                        )}
-                      </Card>
-                      <Text
+                        </div>
+                      );
+                    })}
+                  </Space>
+                </div>
+              ) : (
+                <Space direction="vertical" size={16} style={{ width: "100%" }}>
+                  {messages.map((msg) => {
+                    const isMine = msg.user.id === user?.id;
+                    return (
+                      <div
+                        key={msg.id}
                         style={{
-                          fontSize: 11,
-                          color: "#8c8c8c",
-                          marginTop: 4,
-                          display: "block",
-                          textAlign: message.isMine ? "right" : "left",
+                          display: "flex",
+                          justifyContent: isMine ? "flex-end" : "flex-start",
                         }}
                       >
-                        {message.timestamp}
-                      </Text>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </Space>
-          </div>
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: 8,
+                            maxWidth: "60%",
+                            flexDirection: isMine ? "row-reverse" : "row",
+                          }}
+                        >
+                          {!isMine && (
+                            <Avatar
+                              size={32}
+                              icon={<UserOutlined />}
+                              style={{
+                                backgroundColor: "#1890ff",
+                                flexShrink: 0,
+                              }}
+                            />
+                          )}
+                          <div>
+                            <div
+                              style={{
+                                padding:
+                                  msg.type !== "text" ? "4px" : "10px 14px",
+                                backgroundColor: isMine ? "#1890ff" : "#fff",
+                                borderRadius: isMine
+                                  ? "12px 12px 2px 12px"
+                                  : "12px 12px 12px 2px",
+                                border: isMine ? "none" : "1px solid #e8e8e8",
+                                boxShadow: isMine
+                                  ? "none"
+                                  : "0 1px 2px rgba(0,0,0,0.05)",
+                              }}
+                            >
+                              {msg.type === "text" && (
+                                <Text
+                                  style={{
+                                    color: isMine ? "#fff" : "#172b4d",
+                                    fontSize: 14,
+                                    lineHeight: "20px",
+                                    wordBreak: "break-word",
+                                  }}
+                                >
+                                  {msg.content}
+                                </Text>
+                              )}
 
-          {/* Message Input */}
+                              {msg.type === "image" && msg.attachment_url && (
+                                <div>
+                                  {msg.content && (
+                                    <Text
+                                      style={{
+                                        color: isMine ? "#fff" : "#172b4d",
+                                        fontSize: 14,
+                                        display: "block",
+                                        padding: "6px 10px",
+                                      }}
+                                    >
+                                      {msg.content}
+                                    </Text>
+                                  )}
+                                  <img
+                                    src={msg.attachment_url}
+                                    alt={msg.attachment_name}
+                                    style={{
+                                      maxWidth: "100%",
+                                      width: 400,
+                                      borderRadius: 8,
+                                      cursor: "pointer",
+                                    }}
+                                    onClick={() =>
+                                      window.open(msg.attachment_url!, "_blank")
+                                    }
+                                  />
+                                </div>
+                              )}
+
+                              {msg.type === "file" && msg.attachment_url && (
+                                <div
+                                  style={{
+                                    padding: "10px 14px",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 12,
+                                  }}
+                                >
+                                  <FileOutlined
+                                    style={{
+                                      fontSize: 24,
+                                      color: isMine ? "#fff" : "#1890ff",
+                                    }}
+                                  />
+                                  <div style={{ flex: 1 }}>
+                                    <Text
+                                      strong
+                                      style={{
+                                        color: isMine ? "#fff" : "#172b4d",
+                                        fontSize: 14,
+                                        display: "block",
+                                      }}
+                                    >
+                                      {msg.attachment_name}
+                                    </Text>
+                                    {msg.attachment_size && (
+                                      <Text
+                                        style={{
+                                          color: isMine
+                                            ? "rgba(255,255,255,0.8)"
+                                            : "#8c8c8c",
+                                          fontSize: 12,
+                                        }}
+                                      >
+                                        {(msg.attachment_size / 1024).toFixed(
+                                          1
+                                        )}{" "}
+                                        KB
+                                      </Text>
+                                    )}
+                                  </div>
+                                  <Button
+                                    type="text"
+                                    size="small"
+                                    icon={<DownloadOutlined />}
+                                    onClick={() =>
+                                      window.open(msg.attachment_url!, "_blank")
+                                    }
+                                    style={{
+                                      color: isMine ? "#fff" : "#1890ff",
+                                    }}
+                                  />
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Reactions */}
+                            {msg.reactions && msg.reactions.length > 0 && (
+                              <div
+                                style={{
+                                  display: "flex",
+                                  flexWrap: "wrap",
+                                  gap: 4,
+                                  marginTop: 4,
+                                }}
+                              >
+                                {/* Group reactions by emoji */}
+                                {Object.entries(
+                                  msg.reactions.reduce((acc, reaction) => {
+                                    if (!acc[reaction.emoji]) {
+                                      acc[reaction.emoji] = [];
+                                    }
+                                    acc[reaction.emoji].push(reaction);
+                                    return acc;
+                                  }, {} as Record<string, typeof msg.reactions>)
+                                ).map(([emoji, reactions]) => {
+                                  const hasUserReacted = reactions.some(
+                                    (r) => r.user.id === user?.id
+                                  );
+                                  return (
+                                    <Badge
+                                      key={emoji}
+                                      count={reactions.length}
+                                      size="small"
+                                      style={{
+                                        backgroundColor: hasUserReacted
+                                          ? "#1890ff"
+                                          : "#f0f0f0",
+                                        color: hasUserReacted
+                                          ? "#fff"
+                                          : "#595959",
+                                      }}
+                                    >
+                                      <div
+                                        onClick={() => {
+                                          if (hasUserReacted) {
+                                            handleRemoveReaction(msg.id, emoji);
+                                          } else {
+                                            handleEmojiClick(msg.id, { emoji });
+                                          }
+                                        }}
+                                        style={{
+                                          padding: "2px 8px",
+                                          backgroundColor: hasUserReacted
+                                            ? "#e6f7ff"
+                                            : "#fafafa",
+                                          border: `1px solid ${
+                                            hasUserReacted
+                                              ? "#1890ff"
+                                              : "#d9d9d9"
+                                          }`,
+                                          borderRadius: 12,
+                                          cursor: "pointer",
+                                          fontSize: 14,
+                                          transition: "all 0.2s",
+                                        }}
+                                      >
+                                        {emoji}
+                                      </div>
+                                    </Badge>
+                                  );
+                                })}
+                              </div>
+                            )}
+
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 8,
+                                marginTop: 4,
+                              }}
+                            >
+                              <Text
+                                style={{
+                                  fontSize: 11,
+                                  color: "#8c8c8c",
+                                  textAlign: isMine ? "right" : "left",
+                                }}
+                              >
+                                {formatTime(msg.created_at)}
+                                {msg.is_edited && " (edited)"}
+                              </Text>
+
+                              {/* Emoji Picker Button */}
+                              <Popover
+                                content={
+                                  <div style={{ width: 350 }}>
+                                    <EmojiPicker
+                                      onEmojiClick={(emojiData) =>
+                                        handleEmojiClick(msg.id, emojiData)
+                                      }
+                                      width="100%"
+                                      height={400}
+                                    />
+                                  </div>
+                                }
+                                trigger="click"
+                                open={emojiPickerVisible === msg.id}
+                                onOpenChange={(visible) =>
+                                  setEmojiPickerVisible(visible ? msg.id : null)
+                                }
+                              >
+                                <SmileOutlined
+                                  style={{
+                                    fontSize: 14,
+                                    color: "#8c8c8c",
+                                    cursor: "pointer",
+                                    transition: "color 0.2s",
+                                  }}
+                                  onMouseEnter={(e) =>
+                                    (e.currentTarget.style.color = "#1890ff")
+                                  }
+                                  onMouseLeave={(e) =>
+                                    (e.currentTarget.style.color = "#8c8c8c")
+                                  }
+                                />
+                              </Popover>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div ref={messagesEndRef} />
+                </Space>
+              )}
+            </div>
+
+            {/* Typing Indicator */}
+            {typingUsers.size > 0 && (
+              <div
+                style={{ padding: "0 24px 8px", backgroundColor: "#f9fafb" }}
+              >
+                <Text
+                  style={{
+                    fontSize: 12,
+                    color: "#8c8c8c",
+                    fontStyle: "italic",
+                  }}
+                >
+                  Someone is typing...
+                </Text>
+              </div>
+            )}
+
+            {/* Message Input */}
+            <div
+              style={{
+                padding: "16px 24px",
+                borderTop: "1px solid #e8e8e8",
+                backgroundColor: "#fff",
+              }}
+            >
+              {uploadFile && (
+                <div
+                  style={{
+                    marginBottom: 8,
+                    padding: "8px 12px",
+                    backgroundColor: "#f0f5ff",
+                    borderRadius: 8,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <Space>
+                    <FileOutlined style={{ color: "#1890ff" }} />
+                    <Text style={{ fontSize: 13 }}>{uploadFile.name}</Text>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      ({(uploadFile.size / 1024).toFixed(1)} KB)
+                    </Text>
+                  </Space>
+                  <Button
+                    type="text"
+                    size="small"
+                    onClick={() => setUploadFile(null)}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              )}
+              <div style={{ display: "flex", gap: 8 }}>
+                <Upload
+                  beforeUpload={handleFileSelect}
+                  showUploadList={false}
+                  accept="image/*,.pdf,.doc,.docx,.txt"
+                >
+                  <Button
+                    icon={<PaperClipOutlined />}
+                    style={{ borderRadius: 8 }}
+                  />
+                </Upload>
+                <Input
+                  placeholder="Type a message..."
+                  value={messageInput}
+                  onChange={(e) => {
+                    setMessageInput(e.target.value);
+                    handleTyping();
+                  }}
+                  onPressEnter={handleSendMessage}
+                  disabled={uploading}
+                  style={{
+                    flex: 1,
+                    borderRadius: 8,
+                    padding: "10px 14px",
+                  }}
+                  suffix={
+                    <SendOutlined
+                      onClick={handleSendMessage}
+                      style={{
+                        color:
+                          (messageInput.trim() || uploadFile) && !uploading
+                            ? "#1890ff"
+                            : "#d9d9d9",
+                        cursor:
+                          (messageInput.trim() || uploadFile) && !uploading
+                            ? "pointer"
+                            : "not-allowed",
+                        fontSize: 16,
+                      }}
+                    />
+                  }
+                />
+              </div>
+            </div>
+          </div>
+        ) : (
           <div
             style={{
-              padding: "16px 24px",
-              borderTop: "1px solid #e8e8e8",
-              backgroundColor: "#fff",
+              flex: 1,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
             }}
           >
-            <Space.Compact style={{ width: "100%" }}>
-              <Input
-                placeholder="Type a message..."
-                value={messageInput}
-                onChange={(e) => setMessageInput(e.target.value)}
-                onPressEnter={() => {
-                  if (messageInput.trim()) {
-                    setMessageInput("");
-                  }
-                }}
-                style={{
-                  flex: 1,
-                  borderRadius: "8px 0 0 8px",
-                  padding: "10px 14px",
-                }}
-                prefix={
-                  <Space size={8}>
-                    <PaperClipOutlined
-                      style={{ color: "#8c8c8c", cursor: "pointer" }}
-                    />
-                    <SmileOutlined
-                      style={{ color: "#8c8c8c", cursor: "pointer" }}
-                    />
-                  </Space>
-                }
-                suffix={
-                  <SendOutlined
-                    onClick={() => {
-                      if (messageInput.trim()) {
-                        setMessageInput("");
-                      }
-                    }}
-                    style={{
-                      color: messageInput.trim() ? "#1890ff" : "#d9d9d9",
-                      cursor: messageInput.trim() ? "pointer" : "not-allowed",
-                      fontSize: 16,
-                    }}
-                  />
-                }
-              />
-            </Space.Compact>
+            <Text type="secondary">
+              Select a conversation to start chatting
+            </Text>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

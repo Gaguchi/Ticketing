@@ -70,6 +70,7 @@ urlpatterns = [
     path('api/', api_root, name='api-root'),
     path('admin/', admin.site.urls),
     path('api/tickets/', include('tickets.urls')),
+    path('api/chat/', include('chat.urls')),
     
     # API Schema and Documentation
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
