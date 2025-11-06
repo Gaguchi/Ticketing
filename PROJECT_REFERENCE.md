@@ -284,9 +284,80 @@ let timeout: number;
 timeout = window.setTimeout(() => {}, 1000);
 ```
 
+### 5. ❌ React Context Provider Ordering
+
+**Problem**: Using `ProjectProvider` from `ProjectContext.tsx` when `AppContext.tsx` already provides both auth and project functionality
+
+**Location**: `frontend/src/App.tsx`, `frontend/src/pages/Chat.tsx`
+
+```typescript
+// ❌ WRONG - ProjectProvider tries to use useAuth before AppProvider
+import { ProjectProvider } from "./contexts/ProjectContext";
+import { useProject } from "../contexts/ProjectContext";
+
+<AppProvider>
+  <ProjectProvider>  {/* This will fail! */}
+    <Routes>...</Routes>
+  </ProjectProvider>
+</AppProvider>
+
+// ✅ CORRECT - AppContext provides both useAuth AND useProject
+import { useProject, useAuth } from "../contexts/AppContext";
+
+<AppProvider>  {/* Already includes auth + project */}
+  <Routes>...</Routes>
+</AppProvider>
+```
+
+**Why**: 
+- `AppContext.tsx` is the centralized context that provides BOTH authentication AND project management
+- It exports three hooks: `useApp()`, `useAuth()`, `useProject()`
+- The separate `ProjectContext.tsx` is redundant and tries to use `useAuth` before it's available
+- Always use `AppContext` for both auth and project functionality
+
+**Exports from AppContext.tsx**:
+```typescript
+export const useApp = (): AppContextType => { ... }     // Full context
+export const useAuth = () => { ... }                    // Auth-only subset
+export const useProject = () => { ... }                 // Project-only subset
+```
+
 ---
 
 ## Naming Conventions
+
+### React Context Architecture
+
+The application uses a centralized context architecture:
+
+```
+AppProvider (AppContext.tsx)
+├── Provides: useAuth(), useProject(), useApp()
+├── State: user, token, selectedProject, availableProjects
+└── Combines authentication + project management
+
+CompanyProvider (CompanyContext.tsx)  
+├── Provides: useCompany()
+└── State: companies, selectedCompany
+
+WebSocketProvider (WebSocketContext.tsx)
+├── Provides: useWebSocketContext()
+└── State: WebSocket connections, notifications
+```
+
+**⚠️ IMPORTANT**: 
+- Always import `useAuth` and `useProject` from `./contexts/AppContext`
+- Do NOT use `ProjectContext.tsx` (it's redundant and incompatible)
+- Provider order in App.tsx: `AppProvider` → `CompanyProvider` → `BrowserRouter` → `WebSocketProvider`
+
+**Correct imports**:
+```typescript
+// ✅ CORRECT
+import { useAuth, useProject } from "../contexts/AppContext";
+
+// ❌ WRONG - Don't use this
+import { useProject } from "../contexts/ProjectContext";
+```
 
 ### Backend (Python/Django)
 

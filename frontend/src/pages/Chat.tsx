@@ -24,8 +24,7 @@ import {
   CloseOutlined,
 } from "@ant-design/icons";
 import EmojiPicker from "emoji-picker-react";
-import { useProject } from "../contexts/ProjectContext";
-import { useAuth } from "../contexts/AppContext";
+import { useProject, useAuth } from "../contexts/AppContext";
 import { chatService } from "../services/chat.service";
 import { webSocketService } from "../services/websocket.service";
 import type { ChatRoom, ChatMessage, ChatWebSocketEvent } from "../types/chat";
