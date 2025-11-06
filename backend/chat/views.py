@@ -112,13 +112,72 @@ class ChatMessageViewSet(viewsets.ModelViewSet):
         return queryset.distinct().order_by('created_at')
     
     def perform_create(self, serializer):
-        """Set user to current user."""
-        serializer.save(user=self.request.user)
+        """Set user to current user and broadcast via WebSocket."""
+        message = serializer.save(user=self.request.user)
+        
+        # Broadcast to WebSocket
+        from channels.layers import get_channel_layer
+        from asgiref.sync import async_to_sync
+        
+        channel_layer = get_channel_layer()
+        room_group_name = f'chat_{message.room_id}'
+        
+        # Serialize the message for WebSocket
+        message_data = ChatMessageSerializer(message, context={'request': self.request}).data
+        
+        async_to_sync(channel_layer.group_send)(
+            room_group_name,
+            {
+                'type': 'message_new',
+                'message': message_data
+            }
+        )
     
     def perform_update(self, serializer):
-        """Mark message as edited."""
+        """Mark message as edited and broadcast via WebSocket."""
         from django.utils import timezone
-        serializer.save(is_edited=True, edited_at=timezone.now())
+        message = serializer.save(is_edited=True, edited_at=timezone.now())
+        
+        # Broadcast to WebSocket
+        from channels.layers import get_channel_layer
+        from asgiref.sync import async_to_sync
+        
+        channel_layer = get_channel_layer()
+        room_group_name = f'chat_{message.room_id}'
+        
+        # Serialize the message for WebSocket
+        message_data = ChatMessageSerializer(message, context={'request': self.request}).data
+        
+        async_to_sync(channel_layer.group_send)(
+            room_group_name,
+            {
+                'type': 'message_edited',
+                'message': message_data
+            }
+        )
+    
+    def perform_destroy(self, instance):
+        """Delete message and broadcast via WebSocket."""
+        message_id = instance.id
+        room_id = instance.room_id
+        
+        # Delete the message
+        instance.delete()
+        
+        # Broadcast to WebSocket
+        from channels.layers import get_channel_layer
+        from asgiref.sync import async_to_sync
+        
+        channel_layer = get_channel_layer()
+        room_group_name = f'chat_{room_id}'
+        
+        async_to_sync(channel_layer.group_send)(
+            room_group_name,
+            {
+                'type': 'message_deleted',
+                'message_id': message_id
+            }
+        )
     
     @action(detail=True, methods=['post'])
     def add_reaction(self, request, pk=None):
@@ -134,6 +193,22 @@ class ChatMessageViewSet(viewsets.ModelViewSet):
             user=request.user,
             emoji=emoji
         )
+        
+        # Broadcast to WebSocket
+        if created:
+            from channels.layers import get_channel_layer
+            from asgiref.sync import async_to_sync
+            
+            channel_layer = get_channel_layer()
+            room_group_name = f'chat_{message.room_id}'
+            
+            async_to_sync(channel_layer.group_send)(
+                room_group_name,
+                {
+                    'type': 'reaction_added',
+                    'reaction': MessageReactionSerializer(reaction).data
+                }
+            )
         
         return Response(
             MessageReactionSerializer(reaction).data,
@@ -156,6 +231,23 @@ class ChatMessageViewSet(viewsets.ModelViewSet):
         ).first()
         
         if reaction:
+            # Broadcast to WebSocket before deleting
+            from channels.layers import get_channel_layer
+            from asgiref.sync import async_to_sync
+            
+            channel_layer = get_channel_layer()
+            room_group_name = f'chat_{message.room_id}'
+            
+            async_to_sync(channel_layer.group_send)(
+                room_group_name,
+                {
+                    'type': 'reaction_removed',
+                    'message_id': message.id,
+                    'user_id': request.user.id,
+                    'emoji': emoji
+                }
+            )
+            
             reaction.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
         

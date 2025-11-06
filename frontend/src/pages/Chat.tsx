@@ -11,23 +11,28 @@ import {
   Upload,
   Popover,
   Badge,
+  Modal,
+  Select,
+  Divider,
+  Tabs,
 } from "antd";
 import {
   SearchOutlined,
   SendOutlined,
   UserOutlined,
-  PlusOutlined,
   PaperClipOutlined,
   FileOutlined,
   DownloadOutlined,
   SmileOutlined,
   CloseOutlined,
+  TeamOutlined,
 } from "@ant-design/icons";
 import EmojiPicker from "emoji-picker-react";
 import { useProject, useAuth } from "../contexts/AppContext";
 import { chatService } from "../services/chat.service";
 import { webSocketService } from "../services/websocket.service";
 import type { ChatRoom, ChatMessage, ChatWebSocketEvent } from "../types/chat";
+import type { ProjectMember } from "../types/api";
 
 const { Text } = Typography;
 
@@ -44,14 +49,30 @@ const Chat: React.FC = () => {
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<ChatMessage[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
   const [emojiPickerVisible, setEmojiPickerVisible] = useState<number | null>(
     null
   );
+  const [sidebarTab, setSidebarTab] = useState<"direct" | "groups">("direct");
+  const [groupModalVisible, setGroupModalVisible] = useState(false);
+  const [groupName, setGroupName] = useState("");
+  const [selectedMembers, setSelectedMembers] = useState<number[]>([]);
+  const [creatingGroup, setCreatingGroup] = useState(false);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<number | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
+
+  // Get project members
+  const projectMembers: ProjectMember[] = selectedProject?.members || [];
+
+  // Get other members (excluding current user)
+  const otherMembers = projectMembers.filter(
+    (m) => m.username !== user?.username
+  );
+
+  // Separate direct and group chats
+  const directChats = rooms.filter((r) => r.type === "direct");
+  const groupChats = rooms.filter((r) => r.type === "group");
 
   // Scroll to bottom of messages
   const scrollToBottom = () => {
@@ -88,6 +109,9 @@ const Chat: React.FC = () => {
     const loadMessages = async () => {
       try {
         setMessagesLoading(true);
+        // Clear messages from previous room
+        setMessages([]);
+
         const data = await chatService.getMessages(activeRoom.id);
         setMessages(data);
         setTimeout(scrollToBottom, 100);
@@ -109,6 +133,9 @@ const Chat: React.FC = () => {
   useEffect(() => {
     if (!activeRoom || !user) return;
 
+    // Clear typing users when switching rooms
+    setTypingUsers(new Set());
+
     const wsUrl = `ws/chat/${activeRoom.id}/`;
 
     const onMessage = (event: ChatWebSocketEvent) => {
@@ -116,8 +143,11 @@ const Chat: React.FC = () => {
 
       switch (event.type) {
         case "message_new":
-          setMessages((prev) => [...prev, event.message]);
-          setTimeout(scrollToBottom, 100);
+          // Only add message if it's from another user (avoid duplicates)
+          if (event.message.user.id !== user?.id) {
+            setMessages((prev) => [...prev, event.message]);
+            setTimeout(scrollToBottom, 100);
+          }
           break;
 
         case "message_edited":
@@ -137,7 +167,7 @@ const Chat: React.FC = () => {
         case "reaction_added":
           setMessages((prev) =>
             prev.map((msg) => {
-              if (msg.id === event.reaction.id) {
+              if (msg.id === event.reaction.message) {
                 return {
                   ...msg,
                   reactions: [...msg.reactions, event.reaction],
@@ -187,24 +217,23 @@ const Chat: React.FC = () => {
       console.log("🔌 [Chat] WebSocket disconnected:", event);
     };
 
-    webSocketService.connect(wsUrl, onMessage, onError, onClose);
+    // Small delay to ensure previous WebSocket is fully closed
+    const connectTimer = setTimeout(() => {
+      webSocketService.connect(wsUrl, onMessage, onError, onClose);
+
+      // Get WebSocket reference for sending messages
+      const ws = (webSocketService as any).connections;
+      if (ws && ws[wsUrl]) {
+        wsRef.current = ws[wsUrl];
+      }
+    }, 100);
 
     return () => {
+      clearTimeout(connectTimer);
       webSocketService.disconnect(wsUrl);
       wsRef.current = null;
     };
   }, [activeRoom, user]);
-
-  // Get WebSocket reference for sending messages
-  useEffect(() => {
-    if (!activeRoom) return;
-    const wsUrl = `ws/chat/${activeRoom.id}/`;
-    // Access internal connections map
-    const ws = (webSocketService as any).connections;
-    if (ws && ws[wsUrl]) {
-      wsRef.current = ws[wsUrl];
-    }
-  }, [activeRoom]);
 
   // Send message
   const handleSendMessage = async () => {
@@ -215,26 +244,24 @@ const Chat: React.FC = () => {
       setMessageInput("");
       setUploading(true);
 
+      // Always send via API (WebSocket will broadcast the update)
+      const newMessage = await chatService.sendMessage({
+        room: activeRoom.id,
+        content: content || "File attachment",
+        type: uploadFile
+          ? uploadFile.type.startsWith("image/")
+            ? "image"
+            : "file"
+          : "text",
+        attachment: uploadFile || undefined,
+      });
+
+      // Add message to local state immediately
+      setMessages((prev) => [...prev, newMessage]);
+      setTimeout(scrollToBottom, 100);
+
       if (uploadFile) {
-        // Send with file attachment via API
-        await chatService.sendMessage({
-          room: activeRoom.id,
-          content: content || "File attachment",
-          type: uploadFile.type.startsWith("image/") ? "image" : "file",
-          attachment: uploadFile,
-        });
         setUploadFile(null);
-      } else {
-        // Send text via WebSocket for real-time delivery
-        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-          wsRef.current.send(
-            JSON.stringify({
-              type: "message_send",
-              content,
-              message_type: "text",
-            })
-          );
-        }
       }
     } catch (error) {
       console.error("Failed to send message:", error);
@@ -287,26 +314,6 @@ const Chat: React.FC = () => {
     }, 3000);
   };
 
-  // Handle search
-  const handleSearch = async (query: string) => {
-    setSearchQuery(query);
-
-    if (!query.trim()) {
-      setSearchResults([]);
-      setIsSearching(false);
-      return;
-    }
-
-    try {
-      setIsSearching(true);
-      const results = await chatService.searchMessages(query, activeRoom?.id);
-      setSearchResults(results);
-    } catch (error) {
-      console.error("Search failed:", error);
-      antMessage.error("Search failed");
-    }
-  };
-
   // Handle emoji reaction
   const handleEmojiClick = async (
     messageId: number,
@@ -350,6 +357,67 @@ const Chat: React.FC = () => {
     } catch (error) {
       console.error("Failed to remove reaction:", error);
       antMessage.error("Failed to remove reaction");
+    }
+  };
+
+  // Start direct chat with a user
+  const startDirectChat = async (member: ProjectMember) => {
+    if (!selectedProject || !user) return;
+
+    try {
+      // Check if direct chat already exists
+      const existingChat = directChats.find((room) =>
+        room.participants.some((p) => p.user.id === member.id)
+      );
+
+      if (existingChat) {
+        setActiveRoom(existingChat);
+        return;
+      }
+
+      // Create new direct chat
+      const newRoom = await chatService.createRoom({
+        type: "direct",
+        project: selectedProject.id,
+        participant_ids: [member.id],
+      });
+
+      setRooms([newRoom, ...rooms]);
+      setActiveRoom(newRoom);
+      antMessage.success(`Started chat with ${member.username}`);
+    } catch (error) {
+      console.error("Failed to start direct chat:", error);
+      antMessage.error("Failed to start chat");
+    }
+  };
+
+  // Create group chat
+  const handleCreateGroup = async () => {
+    if (!selectedProject || !groupName.trim() || selectedMembers.length === 0) {
+      antMessage.error("Please enter a group name and select members");
+      return;
+    }
+
+    try {
+      setCreatingGroup(true);
+      const newRoom = await chatService.createRoom({
+        name: groupName,
+        type: "group",
+        project: selectedProject.id,
+        participant_ids: selectedMembers,
+      });
+
+      setRooms([newRoom, ...rooms]);
+      setActiveRoom(newRoom);
+      setGroupModalVisible(false);
+      setGroupName("");
+      setSelectedMembers([]);
+      antMessage.success("Group created successfully");
+    } catch (error) {
+      console.error("Failed to create group:", error);
+      antMessage.error("Failed to create group");
+    } finally {
+      setCreatingGroup(false);
     }
   };
 
@@ -409,15 +477,19 @@ const Chat: React.FC = () => {
           <Text style={{ fontSize: 20, fontWeight: 600, color: "#172b4d" }}>
             Messages
           </Text>
-          <Button type="primary" icon={<PlusOutlined />}>
-            New Chat
+          <Button
+            type="primary"
+            icon={<TeamOutlined />}
+            onClick={() => setGroupModalVisible(true)}
+          >
+            New Group
           </Button>
         </div>
       </div>
 
       {/* Main Content */}
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-        {/* Conversations List */}
+        {/* Sidebar */}
         <div
           style={{
             width: 320,
@@ -427,22 +499,45 @@ const Chat: React.FC = () => {
             flexDirection: "column",
           }}
         >
+          {/* Tabs */}
+          <Tabs
+            activeKey={sidebarTab}
+            onChange={(key) => setSidebarTab(key as "direct" | "groups")}
+            style={{ padding: "0 16px" }}
+            items={[
+              {
+                key: "direct",
+                label: (
+                  <span>
+                    <UserOutlined /> Direct Messages
+                  </span>
+                ),
+              },
+              {
+                key: "groups",
+                label: (
+                  <span>
+                    <TeamOutlined /> Groups
+                  </span>
+                ),
+              },
+            ]}
+          />
+
           {/* Search */}
-          <div style={{ padding: "12px 16px" }}>
+          <div style={{ padding: "0 16px 12px" }}>
             <Input
-              placeholder="Search conversations..."
+              placeholder={
+                sidebarTab === "direct" ? "Search users..." : "Search groups..."
+              }
               prefix={<SearchOutlined style={{ color: "#8c8c8c" }} />}
               style={{ borderRadius: 8 }}
               value={searchQuery}
-              onChange={(e) => handleSearch(e.target.value)}
+              onChange={(e) => setSearchQuery(e.target.value)}
               suffix={
                 searchQuery && (
                   <CloseOutlined
-                    onClick={() => {
-                      setSearchQuery("");
-                      setSearchResults([]);
-                      setIsSearching(false);
-                    }}
+                    onClick={() => setSearchQuery("")}
                     style={{ color: "#8c8c8c", cursor: "pointer" }}
                   />
                 )
@@ -450,70 +545,199 @@ const Chat: React.FC = () => {
             />
           </div>
 
-          {/* Conversations */}
+          <Divider style={{ margin: 0 }} />
+
+          {/* List */}
           <div style={{ flex: 1, overflowY: "auto" }}>
-            <List
-              dataSource={rooms}
-              renderItem={(room) => (
-                <List.Item
-                  onClick={() => setActiveRoom(room)}
-                  style={{
-                    padding: "12px 16px",
-                    cursor: "pointer",
-                    backgroundColor:
-                      activeRoom?.id === room.id ? "#f0f5ff" : "transparent",
-                    borderLeft:
-                      activeRoom?.id === room.id
-                        ? "3px solid #1890ff"
-                        : "3px solid transparent",
-                    transition: "all 0.2s",
-                  }}
-                >
-                  <List.Item.Meta
-                    avatar={
-                      <Avatar
-                        size={40}
-                        icon={<UserOutlined />}
-                        style={{
-                          backgroundColor:
-                            room.type === "group" ? "#52c41a" : "#1890ff",
-                        }}
-                      />
-                    }
-                    title={
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                        }}
-                      >
-                        <Text strong style={{ fontSize: 14, color: "#172b4d" }}>
-                          {room.display_name}
-                        </Text>
-                        {room.last_message && (
-                          <Text style={{ fontSize: 11, color: "#8c8c8c" }}>
-                            {formatTime(room.last_message.created_at)}
+            {sidebarTab === "direct" ? (
+              // Direct Messages - Show project members
+              <List
+                dataSource={otherMembers.filter((m) =>
+                  searchQuery
+                    ? m.username
+                        .toLowerCase()
+                        .includes(searchQuery.toLowerCase()) ||
+                      `${m.first_name} ${m.last_name}`
+                        .toLowerCase()
+                        .includes(searchQuery.toLowerCase())
+                    : true
+                )}
+                renderItem={(member) => {
+                  const existingChat = directChats.find((room) =>
+                    room.participants.some((p) => p.user.id === member.id)
+                  );
+                  const isActive = activeRoom?.id === existingChat?.id;
+                  const unreadCount = existingChat?.unread_count || 0;
+
+                  return (
+                    <List.Item
+                      onClick={() =>
+                        existingChat
+                          ? setActiveRoom(existingChat)
+                          : startDirectChat(member)
+                      }
+                      style={{
+                        padding: "12px 16px",
+                        cursor: "pointer",
+                        backgroundColor: isActive ? "#f0f5ff" : "transparent",
+                        borderLeft: isActive
+                          ? "3px solid #1890ff"
+                          : "3px solid transparent",
+                        transition: "all 0.2s",
+                      }}
+                    >
+                      <List.Item.Meta
+                        avatar={
+                          <Badge
+                            count={unreadCount}
+                            size="small"
+                            offset={[-5, 5]}
+                          >
+                            <Avatar
+                              size={40}
+                              style={{
+                                backgroundColor: "#1890ff",
+                              }}
+                            >
+                              {member.first_name?.[0] || member.username[0]}
+                            </Avatar>
+                          </Badge>
+                        }
+                        title={
+                          <Text
+                            strong
+                            style={{ fontSize: 14, color: "#172b4d" }}
+                          >
+                            {member.first_name && member.last_name
+                              ? `${member.first_name} ${member.last_name}`
+                              : member.username}
                           </Text>
-                        )}
+                        }
+                        description={
+                          existingChat?.last_message ? (
+                            <Text
+                              ellipsis
+                              style={{
+                                fontSize: 13,
+                                color: unreadCount > 0 ? "#172b4d" : "#8c8c8c",
+                                fontWeight: unreadCount > 0 ? 500 : 400,
+                              }}
+                            >
+                              {existingChat.last_message.content}
+                            </Text>
+                          ) : (
+                            <Text style={{ fontSize: 13, color: "#8c8c8c" }}>
+                              Click to start chatting
+                            </Text>
+                          )
+                        }
+                      />
+                    </List.Item>
+                  );
+                }}
+              />
+            ) : (
+              // Groups
+              <List
+                dataSource={groupChats.filter((g) =>
+                  searchQuery
+                    ? g.display_name
+                        .toLowerCase()
+                        .includes(searchQuery.toLowerCase())
+                    : true
+                )}
+                renderItem={(room) => {
+                  const isActive = activeRoom?.id === room.id;
+
+                  return (
+                    <List.Item
+                      onClick={() => setActiveRoom(room)}
+                      style={{
+                        padding: "12px 16px",
+                        cursor: "pointer",
+                        backgroundColor: isActive ? "#f0f5ff" : "transparent",
+                        borderLeft: isActive
+                          ? "3px solid #1890ff"
+                          : "3px solid transparent",
+                        transition: "all 0.2s",
+                      }}
+                    >
+                      <List.Item.Meta
+                        avatar={
+                          <Badge
+                            count={room.unread_count}
+                            size="small"
+                            offset={[-5, 5]}
+                          >
+                            <Avatar
+                              size={40}
+                              icon={<TeamOutlined />}
+                              style={{
+                                backgroundColor: "#52c41a",
+                              }}
+                            />
+                          </Badge>
+                        }
+                        title={
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                            }}
+                          >
+                            <Text
+                              strong
+                              style={{ fontSize: 14, color: "#172b4d" }}
+                            >
+                              {room.display_name}
+                            </Text>
+                            {room.last_message && (
+                              <Text style={{ fontSize: 11, color: "#8c8c8c" }}>
+                                {formatTime(room.last_message.created_at)}
+                              </Text>
+                            )}
+                          </div>
+                        }
+                        description={
+                          <Text
+                            ellipsis
+                            style={{
+                              fontSize: 13,
+                              color:
+                                room.unread_count > 0 ? "#172b4d" : "#8c8c8c",
+                              fontWeight: room.unread_count > 0 ? 500 : 400,
+                            }}
+                          >
+                            {room.last_message?.content || "No messages yet"}
+                          </Text>
+                        }
+                      />
+                    </List.Item>
+                  );
+                }}
+                locale={{
+                  emptyText: (
+                    <div style={{ padding: "40px 0", textAlign: "center" }}>
+                      <TeamOutlined
+                        style={{ fontSize: 48, color: "#d9d9d9" }}
+                      />
+                      <div style={{ marginTop: 16 }}>
+                        <Text type="secondary">No groups yet</Text>
                       </div>
-                    }
-                    description={
-                      <Text
-                        ellipsis
-                        style={{
-                          fontSize: 13,
-                          color: room.unread_count > 0 ? "#172b4d" : "#8c8c8c",
-                          fontWeight: room.unread_count > 0 ? 500 : 400,
-                        }}
-                      >
-                        {room.last_message?.content || "No messages yet"}
-                      </Text>
-                    }
-                  />
-                </List.Item>
-              )}
-            />
+                      <div style={{ marginTop: 8 }}>
+                        <Button
+                          type="link"
+                          onClick={() => setGroupModalVisible(true)}
+                        >
+                          Create your first group
+                        </Button>
+                      </div>
+                    </div>
+                  ),
+                }}
+              />
+            )}
           </div>
         </div>
 
@@ -570,99 +794,6 @@ const Chat: React.FC = () => {
               {messagesLoading ? (
                 <div style={{ textAlign: "center", padding: 40 }}>
                   <Spin />
-                </div>
-              ) : isSearching && searchQuery ? (
-                <div>
-                  <div
-                    style={{
-                      marginBottom: 16,
-                      padding: "8px 12px",
-                      backgroundColor: "#fff",
-                      borderRadius: 8,
-                    }}
-                  >
-                    <Text strong>Search Results: </Text>
-                    <Text type="secondary">
-                      {searchResults.length} message
-                      {searchResults.length !== 1 ? "s" : ""} found for "
-                      {searchQuery}"
-                    </Text>
-                  </div>
-                  <Space
-                    direction="vertical"
-                    size={16}
-                    style={{ width: "100%" }}
-                  >
-                    {searchResults.map((msg) => {
-                      const isMine = msg.user.id === user?.id;
-                      return (
-                        <div
-                          key={msg.id}
-                          style={{
-                            display: "flex",
-                            justifyContent: isMine ? "flex-end" : "flex-start",
-                          }}
-                        >
-                          <div
-                            style={{
-                              display: "flex",
-                              gap: 8,
-                              maxWidth: "60%",
-                              flexDirection: isMine ? "row-reverse" : "row",
-                            }}
-                          >
-                            {!isMine && (
-                              <Avatar
-                                size={32}
-                                icon={<UserOutlined />}
-                                style={{
-                                  backgroundColor: "#1890ff",
-                                  flexShrink: 0,
-                                }}
-                              />
-                            )}
-                            <div>
-                              <div
-                                style={{
-                                  padding: "10px 14px",
-                                  backgroundColor: isMine ? "#1890ff" : "#fff",
-                                  borderRadius: isMine
-                                    ? "12px 12px 2px 12px"
-                                    : "12px 12px 12px 2px",
-                                  border: isMine ? "none" : "1px solid #e8e8e8",
-                                  boxShadow: isMine
-                                    ? "none"
-                                    : "0 1px 2px rgba(0,0,0,0.05)",
-                                }}
-                              >
-                                <Text
-                                  style={{
-                                    color: isMine ? "#fff" : "#172b4d",
-                                    fontSize: 14,
-                                    lineHeight: "20px",
-                                    wordBreak: "break-word",
-                                  }}
-                                >
-                                  {msg.content}
-                                </Text>
-                              </div>
-                              <Text
-                                style={{
-                                  fontSize: 11,
-                                  color: "#8c8c8c",
-                                  marginTop: 4,
-                                  display: "block",
-                                  textAlign: isMine ? "right" : "left",
-                                }}
-                              >
-                                {formatTime(msg.created_at)}
-                              </Text>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </Space>
                 </div>
               ) : (
                 <Space direction="vertical" size={16} style={{ width: "100%" }}>
@@ -1055,6 +1186,60 @@ const Chat: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Group Creation Modal */}
+      <Modal
+        title="Create New Group"
+        open={groupModalVisible}
+        onOk={handleCreateGroup}
+        onCancel={() => {
+          setGroupModalVisible(false);
+          setGroupName("");
+          setSelectedMembers([]);
+        }}
+        confirmLoading={creatingGroup}
+        okText="Create Group"
+        cancelText="Cancel"
+      >
+        <Space direction="vertical" style={{ width: "100%" }} size="large">
+          <div>
+            <Text strong>Group Name</Text>
+            <Input
+              placeholder="Enter group name"
+              value={groupName}
+              onChange={(e) => setGroupName(e.target.value)}
+              style={{ marginTop: 8 }}
+              maxLength={50}
+            />
+          </div>
+          <div>
+            <Text strong>Add Members</Text>
+            <Select
+              mode="multiple"
+              placeholder="Select members to add"
+              value={selectedMembers}
+              onChange={setSelectedMembers}
+              style={{ width: "100%", marginTop: 8 }}
+              optionFilterProp="children"
+              filterOption={(input, option) =>
+                (option?.label?.toString() ?? "")
+                  .toLowerCase()
+                  .includes(input.toLowerCase())
+              }
+              options={otherMembers.map((member) => ({
+                label:
+                  member.first_name && member.last_name
+                    ? `${member.first_name} ${member.last_name} (${member.username})`
+                    : member.username,
+                value: member.id,
+              }))}
+            />
+            <Text type="secondary" style={{ fontSize: 12, marginTop: 4 }}>
+              Select at least one member to create a group
+            </Text>
+          </div>
+        </Space>
+      </Modal>
     </div>
   );
 };

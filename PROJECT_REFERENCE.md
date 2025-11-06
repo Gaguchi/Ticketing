@@ -296,26 +296,32 @@ import { ProjectProvider } from "./contexts/ProjectContext";
 import { useProject } from "../contexts/ProjectContext";
 
 <AppProvider>
-  <ProjectProvider>  {/* This will fail! */}
+  <ProjectProvider>
+    {" "}
+    {/* This will fail! */}
     <Routes>...</Routes>
   </ProjectProvider>
-</AppProvider>
+</AppProvider>;
 
 // ✅ CORRECT - AppContext provides both useAuth AND useProject
 import { useProject, useAuth } from "../contexts/AppContext";
 
-<AppProvider>  {/* Already includes auth + project */}
+<AppProvider>
+  {" "}
+  {/* Already includes auth + project */}
   <Routes>...</Routes>
-</AppProvider>
+</AppProvider>;
 ```
 
-**Why**: 
+**Why**:
+
 - `AppContext.tsx` is the centralized context that provides BOTH authentication AND project management
 - It exports three hooks: `useApp()`, `useAuth()`, `useProject()`
 - The separate `ProjectContext.tsx` is redundant and tries to use `useAuth` before it's available
 - Always use `AppContext` for both auth and project functionality
 
 **Exports from AppContext.tsx**:
+
 ```typescript
 export const useApp = (): AppContextType => { ... }     // Full context
 export const useAuth = () => { ... }                    // Auth-only subset
@@ -336,7 +342,7 @@ AppProvider (AppContext.tsx)
 ├── State: user, token, selectedProject, availableProjects
 └── Combines authentication + project management
 
-CompanyProvider (CompanyContext.tsx)  
+CompanyProvider (CompanyContext.tsx)
 ├── Provides: useCompany()
 └── State: companies, selectedCompany
 
@@ -345,12 +351,14 @@ WebSocketProvider (WebSocketContext.tsx)
 └── State: WebSocket connections, notifications
 ```
 
-**⚠️ IMPORTANT**: 
+**⚠️ IMPORTANT**:
+
 - Always import `useAuth` and `useProject` from `./contexts/AppContext`
 - Do NOT use `ProjectContext.tsx` (it's redundant and incompatible)
 - Provider order in App.tsx: `AppProvider` → `CompanyProvider` → `BrowserRouter` → `WebSocketProvider`
 
 **Correct imports**:
+
 ```typescript
 // ✅ CORRECT
 import { useAuth, useProject } from "../contexts/AppContext";
@@ -488,6 +496,36 @@ When encountering errors, check these common issues:
 2. ✅ Verify nested route parameters (e.g., `ticket_id`) are in URL
 3. ✅ Check urls.py includes the route
 4. ✅ Ensure ViewSet is registered with router
+5. ✅ **Restart Django server** after adding new apps or URL configurations
+
+### API Returns HTML Instead of JSON
+
+**Problem**: Getting `SyntaxError: Unexpected token '<', "<!doctype "... is not valid JSON`
+
+**Cause**: Django server hasn't been restarted after:
+
+- Adding new app to `INSTALLED_APPS`
+- Adding new URL patterns to `urls.py`
+- Deploying new code changes
+
+**Solution**:
+
+```bash
+# Development (local)
+# Stop the server (Ctrl+C) and restart:
+python manage.py runserver
+
+# Production (Dokploy/systemd)
+sudo systemctl restart your-app-service
+# OR
+dokploy restart
+```
+
+**Why it happens**:
+
+- Django loads URL configurations and app registries on startup
+- New endpoints won't be available until the server reloads
+- The 404 page returns HTML, which causes JSON parsing errors in the frontend
 
 ### 400 Bad Request
 

@@ -19,6 +19,7 @@ export interface ChatParticipant {
 
 export interface MessageReaction {
   id: number;
+  message: number;
   user: ChatUser;
   emoji: string;
   created_at: string;

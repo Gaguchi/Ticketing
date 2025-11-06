@@ -34,7 +34,7 @@ class MessageReactionSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = MessageReaction
-        fields = ['id', 'emoji', 'user', 'created_at']
+        fields = ['id', 'message', 'emoji', 'user', 'created_at']
         read_only_fields = ['user', 'created_at']
 
 

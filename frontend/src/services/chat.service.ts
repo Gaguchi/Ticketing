@@ -22,7 +22,8 @@ class ChatService {
     const url = projectId 
       ? `${this.BASE_URL}/rooms/?project=${projectId}` 
       : `${this.BASE_URL}/rooms/`;
-    return await apiService.get<ChatRoom[]>(url);
+    const response = await apiService.get<{ count: number; results: ChatRoom[] }>(url);
+    return response.results;
   }
 
   /**
@@ -75,7 +76,10 @@ class ChatService {
    * Get messages for a room
    */
   async getMessages(roomId: number): Promise<ChatMessage[]> {
-    return await apiService.get<ChatMessage[]>(`${this.BASE_URL}/messages/?room=${roomId}`);
+    const response = await apiService.get<{ count: number; results: ChatMessage[] }>(
+      `${this.BASE_URL}/messages/?room=${roomId}`
+    );
+    return response.results;
   }
 
   /**
@@ -148,7 +152,8 @@ class ChatService {
     if (roomId) {
       url += `&room=${roomId}`;
     }
-    return await apiService.get<ChatMessage[]>(url);
+    const response = await apiService.get<{ count: number; results: ChatMessage[] }>(url);
+    return response.results;
   }
 }
 
