@@ -203,6 +203,10 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
       style={{
         width: 380,
         maxHeight: 500,
+        backgroundColor: "#ffffff",
+        borderRadius: 8,
+        boxShadow:
+          "0 3px 6px -4px rgba(0, 0, 0, 0.12), 0 6px 16px 0 rgba(0, 0, 0, 0.08), 0 9px 28px 8px rgba(0, 0, 0, 0.05)",
         overflow: "hidden",
         display: "flex",
         flexDirection: "column",
@@ -213,6 +217,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
         style={{
           padding: "12px 16px",
           borderBottom: "1px solid #f0f0f0",
+          backgroundColor: "#fafafa",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
@@ -324,6 +329,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
       open={dropdownVisible}
       onOpenChange={setDropdownVisible}
       placement="bottomRight"
+      overlayStyle={{ paddingTop: 8 }}
     >
       <Badge count={displayUnreadCount} offset={[-5, 5]} size="small">
         <Button

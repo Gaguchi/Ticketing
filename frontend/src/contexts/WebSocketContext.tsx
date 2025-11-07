@@ -246,9 +246,9 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
         console.log("📨 [WebSocketContext] Notification:", data);
 
         // Handle different notification events
-        if (data.type === "notification" && data.notification) {
-          // New notification received
-          addNotification(data.notification);
+        if (data.type === "notification" && data.data) {
+          // New notification received - notification is in data.data
+          addNotification(data.data);
         } else if (data.type === "notification_read" && data.notification_id) {
           // Notification marked as read
           markAsRead(data.notification_id);
