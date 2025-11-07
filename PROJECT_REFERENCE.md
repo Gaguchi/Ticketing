@@ -899,6 +899,34 @@ Frontend (React):
 
 ## Version History
 
+### v1.8 - November 7, 2025
+
+- **Fixed**: Chat re-rendering due to loading state toggling
+  - **Issue**: Chat re-rendered every 10 seconds with `loading` flipping `true`→`false`→`true`
+  - **Root Cause**: `loadRooms()` called `setLoading(true)` on every refresh (every 10s interval)
+  - **Impact**: Even with activeRoom reference preserved, loading state change caused full re-renders
+  - **Solution**: Only set loading state on initial load, not on background refreshes
+  - **Implementation**:
+
+    ```typescript
+    const isInitialLoadRef = useRef(true);
+
+    const loadRooms = async () => {
+      if (isInitialLoadRef.current) {
+        setLoading(true); // Only on first load
+      }
+      // ... fetch rooms ...
+      if (isInitialLoadRef.current) {
+        setLoading(false);
+        isInitialLoadRef.current = false; // Mark complete
+      }
+    };
+    ```
+
+  - **Result**: Chat only shows loading spinner on first load, silent background refreshes don't trigger re-renders
+
+**Key Pattern**: When implementing periodic refreshes, distinguish between **initial load** (show loading UI) and **background refresh** (silent update). Use a ref to track this state.
+
 ### v1.7 - November 7, 2025
 
 - **Fixed**: Chat still re-rendering every 10 seconds (functional setState reference issue)

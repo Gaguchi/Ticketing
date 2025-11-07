@@ -61,6 +61,7 @@ const Chat: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<number | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  const isInitialLoadRef = useRef(true); // Track if this is the first load
 
   // Render counter for debugging
   const renderCount = useRef(0);
@@ -105,7 +106,11 @@ const Chat: React.FC = () => {
 
     const loadRooms = async () => {
       try {
-        setLoading(true);
+        // Only show loading spinner on initial load, not on refreshes
+        if (isInitialLoadRef.current) {
+          setLoading(true);
+        }
+
         const data = await chatService.getRooms(selectedProject.id);
         console.log("📥 [Chat] Loaded rooms:", data.length);
         setRooms(data);
@@ -152,7 +157,11 @@ const Chat: React.FC = () => {
         console.error("Failed to load chat rooms:", error);
         antMessage.error("Failed to load conversations");
       } finally {
-        setLoading(false);
+        // Only set loading false on initial load
+        if (isInitialLoadRef.current) {
+          setLoading(false);
+          isInitialLoadRef.current = false; // Mark initial load complete
+        }
       }
     };
 
@@ -163,6 +172,7 @@ const Chat: React.FC = () => {
     return () => {
       console.log("🔴 [Chat Effect] Cleaning up rooms interval");
       clearInterval(interval);
+      isInitialLoadRef.current = true; // Reset for next project
     };
   }, [selectedProject?.id]); // Only depend on project ID
 
