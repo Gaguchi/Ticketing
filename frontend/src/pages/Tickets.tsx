@@ -137,7 +137,7 @@ const Tickets: React.FC = () => {
     };
 
     fetchData();
-  }, [selectedProject]);
+  }, [selectedProject?.id]); // Only depend on project ID
 
   // Fetch full ticket details before opening modal
   const handleTicketClick = async (ticket: Ticket) => {

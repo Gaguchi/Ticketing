@@ -283,7 +283,7 @@ const Dashboard: React.FC = () => {
     if (selectedProject) {
       fetchTickets();
     }
-  }, [selectedProject]);
+  }, [selectedProject?.id]); // Only depend on project ID
 
   // Handle ticket creation success
   const handleTicketCreated = (newTicket: Ticket) => {

@@ -62,6 +62,22 @@ const Chat: React.FC = () => {
   const typingTimeoutRef = useRef<number | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
 
+  // Render counter for debugging
+  const renderCount = useRef(0);
+  renderCount.current += 1;
+
+  // Log every render with details
+  console.log(`🔄 [Chat] Render #${renderCount.current}`, {
+    selectedProjectId: selectedProject?.id,
+    userId: user?.id,
+    activeRoomId: activeRoom?.id,
+    roomsCount: rooms.length,
+    messagesCount: messages.length,
+    loading,
+    messagesLoading,
+    typingUsersCount: typingUsers.size,
+  });
+
   // Get project members
   const projectMembers: ProjectMember[] = selectedProject?.members || [];
 
@@ -81,12 +97,17 @@ const Chat: React.FC = () => {
 
   // Load rooms on mount or when project changes
   useEffect(() => {
+    console.log(
+      "🔵 [Chat Effect] Load rooms triggered - selectedProject:",
+      selectedProject?.id
+    );
     if (!selectedProject) return;
 
     const loadRooms = async () => {
       try {
         setLoading(true);
         const data = await chatService.getRooms(selectedProject.id);
+        console.log("📥 [Chat] Loaded rooms:", data.length);
         setRooms(data);
 
         // Calculate and dispatch total unread count for MainLayout
@@ -123,11 +144,18 @@ const Chat: React.FC = () => {
 
     // Refresh rooms every 10 seconds to update unread counts
     const interval = setInterval(loadRooms, 10000);
-    return () => clearInterval(interval);
-  }, [selectedProject]);
+    return () => {
+      console.log("🔴 [Chat Effect] Cleaning up rooms interval");
+      clearInterval(interval);
+    };
+  }, [selectedProject?.id]); // Only depend on project ID
 
   // Load messages when active room changes
   useEffect(() => {
+    console.log(
+      "🟢 [Chat Effect] Load messages triggered - activeRoom:",
+      activeRoom?.id
+    );
     if (!activeRoom) return;
 
     const loadMessages = async () => {
@@ -175,6 +203,12 @@ const Chat: React.FC = () => {
 
   // Connect to WebSocket when room is selected
   useEffect(() => {
+    console.log(
+      "🟡 [Chat Effect] WebSocket connection triggered - activeRoom:",
+      activeRoom?.id,
+      "user:",
+      user?.id
+    );
     if (!activeRoom || !user) return;
 
     // Clear typing users when switching rooms

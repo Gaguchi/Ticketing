@@ -890,6 +890,37 @@ Frontend (React):
 
 ## Version History
 
+### v1.6 - November 7, 2025
+
+- **Fixed**: Chat and entire app constantly re-rendering (comprehensive fix)
+  - **Added**: Detailed console logging to Chat component for debugging renders
+  - **Fixed**: Multiple files still using full object dependencies:
+    - `AppContext.tsx`: Changed `[user, authLoading, selectedProject]` to `[user?.id, authLoading, selectedProject?.id]`
+    - `Chat.tsx`: Changed `[selectedProject]` to `[selectedProject?.id]`
+    - `Dashboard.tsx`: Changed `[selectedProject]` to `[selectedProject?.id]`
+    - `Tickets.tsx`: Changed `[selectedProject]` to `[selectedProject?.id]`
+  - **Root Cause**: `selectedProject` object recreated when projects load, triggering cascading re-renders
+  - **Added Logging**:
+    - Chat component logs every render with details (render count, state values)
+    - Each useEffect logs when triggered with relevant IDs
+    - Cleanup functions log when running
+  - **Result**: Eliminated constant re-renders across entire application
+
+**Debugging Pattern Added**:
+
+```typescript
+// Track renders
+const renderCount = useRef(0);
+renderCount.current += 1;
+console.log(`🔄 [Component] Render #${renderCount.current}`, { ...state });
+
+// Track effect triggers
+useEffect(() => {
+  console.log("🔵 [Effect] Triggered - dependency:", dependency);
+  return () => console.log("🔴 [Effect] Cleanup");
+}, [dependency?.id]); // Always use primitive values
+```
+
 ### v1.5 - November 7, 2025
 
 - **Fixed**: Constant re-rendering and WebSocket reconnections in entire app

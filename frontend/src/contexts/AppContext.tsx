@@ -155,7 +155,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
     }
 
     setProjectLoading(false);
-  }, [user, authLoading, selectedProject]);
+  }, [user?.id, authLoading, selectedProject?.id]); // Use primitive values only
 
   // ===== Memoized actions =====
   const login = useCallback((newToken: string, newUser: User) => {
