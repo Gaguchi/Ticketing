@@ -17,7 +17,6 @@ import {
   SettingOutlined,
   UserOutlined,
   LogoutOutlined,
-  BellOutlined,
   PlusOutlined,
   MessageOutlined,
   UsergroupAddOutlined,
@@ -28,6 +27,7 @@ import { useAuth } from "../contexts/AppContext";
 import { useProject } from "../contexts/AppContext";
 import { useWebSocketContext } from "../contexts/WebSocketContext";
 import { CreateProjectModal } from "../components/CreateProjectModal";
+import { NotificationBell } from "../components/NotificationBell";
 import type { MenuProps } from "antd";
 import "./MainLayout.css";
 
@@ -59,6 +59,10 @@ const MainLayout: React.FC = () => {
     connectPresence,
     disconnectTickets,
     disconnectPresence,
+    notifications,
+    unreadCount,
+    markAsRead,
+    markAllAsRead,
   } = useWebSocketContext();
 
   // Connect to WebSocket channels when project changes
@@ -426,37 +430,15 @@ const MainLayout: React.FC = () => {
                 Create Your First Project
               </Button>
             )}
-            <div
-              style={{
-                cursor: "pointer",
-                padding: "6px 8px",
-                borderRadius: 2,
-                transition: "all 0.15s",
-                display: "flex",
-                alignItems: "center",
-                position: "relative",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "#f0f0f0";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "transparent";
-              }}
-            >
-              <BellOutlined style={{ fontSize: 16, color: "#595959" }} />
-              <span
-                style={{
-                  position: "absolute",
-                  top: 4,
-                  right: 6,
-                  width: 6,
-                  height: 6,
-                  borderRadius: "50%",
-                  background: "#ff4d4f",
-                  border: "1px solid white",
-                }}
-              />
-            </div>
+
+            {/* Notification Bell */}
+            <NotificationBell
+              notifications={notifications}
+              unreadCount={unreadCount}
+              onNotificationRead={markAsRead}
+              onAllNotificationsRead={markAllAsRead}
+            />
+
             <Dropdown
               menu={{ items: userMenuItems, onClick: handleMenuClick }}
               placement="bottomRight"

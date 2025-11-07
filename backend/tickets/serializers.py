@@ -2,7 +2,8 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import (
     Ticket, Project, Column, Comment, Attachment,
-    Tag, Contact, TagContact, UserTag, TicketTag, IssueLink, Company, UserRole, TicketSubtask
+    Tag, Contact, TagContact, UserTag, TicketTag, IssueLink, Company, UserRole, TicketSubtask,
+    Notification
 )
 
 
@@ -607,3 +608,23 @@ class IssueLinkSerializer(serializers.ModelSerializer):
         if request and hasattr(request, 'user'):
             validated_data['created_by'] = request.user
         return super().create(validated_data)
+
+
+class NotificationSerializer(serializers.ModelSerializer):
+    """Serializer for Notification model"""
+    user = UserSimpleSerializer(read_only=True)
+    
+    class Meta:
+        model = Notification
+        fields = [
+            'id', 'user', 'notification_type', 'title', 'message',
+            'link', 'is_read', 'data', 'created_at'
+        ]
+        read_only_fields = ['user', 'created_at']
+    
+    def to_representation(self, instance):
+        """Add formatted timestamp for frontend"""
+        data = super().to_representation(instance)
+        # Frontend expects 'type' not 'notification_type'
+        data['type'] = data.pop('notification_type')
+        return data

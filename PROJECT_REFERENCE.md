@@ -6,6 +6,65 @@
 
 ---
 
+## Python Virtual Environment
+
+### ⚠️ CRITICAL: Always Activate venv Before Running Commands
+
+**Location**: `backend/venv/`
+
+**Activation Commands**:
+
+```powershell
+# Windows PowerShell (ALWAYS use this first!)
+# From project root (E:\Work\WebDev\Ticketing\)
+.\backend\venv\Scripts\Activate.ps1
+
+# Or if already in backend directory
+..\backend\venv\Scripts\Activate.ps1
+# OR
+.\venv\Scripts\Activate.ps1
+
+# Then run commands
+python manage.py makemigrations
+pip install <package>
+```
+
+**Why This Matters**:
+
+- Installing packages globally causes conflicts and permission errors
+- Django commands must run in the venv to find project dependencies
+- Each project has its own isolated Python environment
+
+**Common Mistakes**:
+
+```powershell
+# ❌ WRONG - No venv activation
+cd backend
+python manage.py migrate  # Will fail or use wrong Python
+
+# ❌ WRONG - Installing globally
+pip install django  # Installs to system Python
+
+# ✅ CORRECT - Always activate first
+.\backend\venv\Scripts\Activate.ps1
+cd backend
+python manage.py migrate
+```
+
+**When venv is Active**:
+
+- PowerShell prompt shows `(venv)` prefix
+- `python` points to `backend/venv/Scripts/python.exe`
+- `pip install` adds packages to `backend/venv/Lib/site-packages/`
+
+**Deactivation**:
+
+```powershell
+deactivate  # Return to system Python
+```
+
+---
+
 ## Table of Contents
 
 1. [Model Field Names](#model-field-names)
@@ -502,7 +561,7 @@ When encountering errors, check these common issues:
 
 **Problem**: Getting `SyntaxError: Unexpected token '<', "<!doctype "... is not valid JSON`
 
-**Cause**: Django server hasn't been restarted after:
+**Cause 1 - Django Server Not Restarted**: After adding new apps or URL patterns:
 
 - Adding new app to `INSTALLED_APPS`
 - Adding new URL patterns to `urls.py`
@@ -527,6 +586,79 @@ dokploy restart
 - New endpoints won't be available until the server reloads
 - The 404 page returns HTML, which causes JSON parsing errors in the frontend
 
+---
+
+**Cause 2 - Production Frontend Making Requests to Itself**: Frontend using relative URLs in production without API base URL
+
+**Problem**: API requests go to frontend domain instead of backend:
+
+```
+POST http://tickets-frontend-xyz.../api/chat/rooms/ 405 (Method Not Allowed)
+```
+
+**Root Cause**:
+
+- In **development**: Vite proxy forwards `/api/*` to backend ✅
+- In **production**: No proxy exists, relative URLs stay on frontend domain ❌
+
+**Solution**: Update `frontend/src/services/api.service.ts` to handle base URLs:
+
+```typescript
+import { API_BASE_URL } from "../config/api";
+
+class APIService {
+  private isDevelopment = import.meta.env.DEV;
+
+  /**
+   * Build full URL from relative path
+   * In development: use relative URLs (Vite proxy handles routing)
+   * In production: prepend API_BASE_URL
+   */
+  private buildUrl(path: string): string {
+    // If already an absolute URL, return as-is
+    if (path.startsWith("http://") || path.startsWith("https://")) {
+      return path;
+    }
+
+    // In development, use relative URLs (Vite dev server proxy)
+    if (this.isDevelopment) {
+      return path;
+    }
+
+    // In production, prepend API_BASE_URL
+    return `${API_BASE_URL}${path}`;
+  }
+
+  private async request<T>(url: string, options: RequestInit = {}): Promise<T> {
+    // Build full URL (adds base URL in production)
+    const fullUrl = this.buildUrl(url);
+
+    // ... rest of method uses fullUrl
+    const response = await fetch(fullUrl, config);
+    // ...
+  }
+}
+```
+
+**Environment Configuration**:
+
+Ensure `.env.production` has the correct backend URL:
+
+```bash
+VITE_API_BASE_URL=http://your-backend-domain.com
+```
+
+**Why this works**:
+
+- Development: `buildUrl('/api/chat/rooms/')` → `/api/chat/rooms/` → Vite proxy forwards to `http://localhost:8000`
+- Production: `buildUrl('/api/chat/rooms/')` → `http://backend-domain/api/chat/rooms/` → Direct backend request
+
+**After deploying the fix**:
+
+1. Rebuild frontend: `npm run build`
+2. Deploy new `dist/` folder to production
+3. Clear browser cache to load new JavaScript bundle
+
 ### 400 Bad Request
 
 1. ✅ Check serializer validation rules
@@ -543,7 +675,128 @@ dokploy restart
 
 ---
 
+## Production Deployment Configuration
+
+### Frontend Environment Variables
+
+**Location**: `frontend/.env.production`
+
+```bash
+# Backend API base URL (REQUIRED in production)
+VITE_API_BASE_URL=http://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me
+
+# Optional: WebSocket base URL (if different from API)
+VITE_WS_BASE_URL=ws://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me
+
+# App metadata
+VITE_APP_NAME=Ticketing System
+VITE_APP_VERSION=1.0.0
+```
+
+**⚠️ CRITICAL**:
+
+- `VITE_API_BASE_URL` must point to the **backend domain**, not frontend
+- Without this, API requests will go to the frontend's static file server (405/404 errors)
+- Vite embeds these at **build time**, so rebuild after changes: `npm run build`
+
+### Vite Proxy vs Production
+
+**Development (vite.config.ts proxy)**:
+
+```typescript
+export default defineConfig({
+  server: {
+    proxy: {
+      "/api": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+      },
+      "/ws": {
+        target: "ws://localhost:8000",
+        ws: true,
+      },
+    },
+  },
+});
+```
+
+**Why proxies don't work in production**:
+
+- Vite dev server (`npm run dev`) includes a proxy server
+- Production build (`npm run build`) creates static files served by Nginx/Traefik
+- Static file servers can't proxy requests
+- **Solution**: Use `VITE_API_BASE_URL` to build absolute URLs
+
+### API Service URL Construction
+
+**Pattern**: Smart URL building based on environment
+
+```typescript
+// frontend/src/services/api.service.ts
+private buildUrl(path: string): string {
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path;  // Already absolute
+  }
+
+  if (import.meta.env.DEV) {
+    return path;  // Development: use relative URLs (proxy handles it)
+  }
+
+  // Production: prepend base URL
+  return `${API_BASE_URL}${path}`;
+}
+```
+
+**Result**:
+
+- Development: `/api/chat/rooms/` → Vite proxy → `http://localhost:8000/api/chat/rooms/`
+- Production: `/api/chat/rooms/` → `http://backend-domain/api/chat/rooms/`
+
+### Deployment Checklist
+
+**When deploying new API endpoints**:
+
+Backend (Django):
+
+1. ✅ Add to `INSTALLED_APPS` if new app
+2. ✅ Add URL patterns to `urls.py`
+3. ✅ Run migrations if needed: `python manage.py migrate`
+4. ✅ **Restart Django server** (Dokploy/systemd/Docker)
+5. ✅ Test endpoint directly: `curl http://backend/api/new-endpoint/`
+
+Frontend (React):
+
+1. ✅ Verify `.env.production` has correct `VITE_API_BASE_URL`
+2. ✅ Rebuild: `npm run build`
+3. ✅ Deploy new `dist/` folder to production
+4. ✅ Clear browser cache (or hard refresh: Ctrl+Shift+R)
+5. ✅ Test in browser network tab (requests should go to backend domain)
+
+### Common Production Issues
+
+| Symptom                           | Cause                          | Solution                                          |
+| --------------------------------- | ------------------------------ | ------------------------------------------------- |
+| 405 Method Not Allowed            | Frontend requesting itself     | Add `VITE_API_BASE_URL`, rebuild                  |
+| 404 Not Found (returns HTML)      | Django server not restarted    | Restart backend service                           |
+| WebSocket fails to connect        | Wrong WS protocol or domain    | Check `VITE_WS_BASE_URL`, use `ws://` or `wss://` |
+| Old code still running            | Browser cache                  | Hard refresh (Ctrl+Shift+R)                       |
+| API works locally, not production | Missing env vars in production | Check Dokploy environment variables               |
+
+---
+
 ## Version History
+
+### v1.1 - November 7, 2025
+
+- **Added**: Production deployment configuration section
+- **Added**: Frontend environment variables documentation
+- **Added**: Vite proxy vs production URL handling explanation
+- **Updated**: "API Returns HTML Instead of JSON" with two causes:
+  - Cause 1: Django server not restarted (original issue)
+  - Cause 2: Frontend making requests to itself in production (new issue)
+- **Added**: API service `buildUrl()` pattern for environment-aware URL construction
+- **Added**: Deployment checklist for backend and frontend
+- **Added**: Common production issues troubleshooting table
 
 ### v1.0 - November 5, 2025
 

@@ -13,7 +13,8 @@ from .permissions import (
 )
 from .models import (
     Ticket, Column, Project, Comment, Attachment,
-    Tag, Contact, TagContact, UserTag, TicketTag, IssueLink, Company, UserRole, TicketSubtask
+    Tag, Contact, TagContact, UserTag, TicketTag, IssueLink, Company, UserRole, TicketSubtask,
+    Notification
 )
 from .serializers import (
     TicketSerializer, TicketListSerializer, ColumnSerializer,
@@ -21,7 +22,8 @@ from .serializers import (
     TagSerializer, TagListSerializer, ContactSerializer,
     TagContactSerializer, UserTagSerializer, TicketTagSerializer,
     IssueLinkSerializer, CompanySerializer, CompanyListSerializer,
-    UserManagementSerializer, UserCreateUpdateSerializer, UserRoleSerializer, TicketSubtaskSerializer
+    UserManagementSerializer, UserCreateUpdateSerializer, UserRoleSerializer, TicketSubtaskSerializer,
+    NotificationSerializer
 )
 
 
@@ -1008,3 +1010,54 @@ class IssueLinkViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user if self.request.user.is_authenticated else None)
+
+
+class NotificationViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for Notification - user notifications
+    
+    Provides:
+    - List: GET /api/tickets/notifications/ - Get current user's notifications
+    - Retrieve: GET /api/tickets/notifications/{id}/ - Get specific notification
+    - Delete: DELETE /api/tickets/notifications/{id}/ - Delete notification
+    - mark_read: POST /api/tickets/notifications/{id}/mark_read/ - Mark as read
+    - mark_all_read: POST /api/tickets/notifications/mark_all_read/ - Mark all as read
+    - unread_count: GET /api/tickets/notifications/unread_count/ - Get unread count
+    """
+    serializer_class = NotificationSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        """Return only notifications for the current user"""
+        return Notification.objects.filter(user=self.request.user).select_related('user')
+    
+    @action(detail=True, methods=['post'])
+    def mark_read(self, request, pk=None):
+        """Mark a specific notification as read"""
+        notification = self.get_object()
+        notification.is_read = True
+        notification.save(update_fields=['is_read'])
+        serializer = self.get_serializer(notification)
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=['post'])
+    def mark_all_read(self, request):
+        """Mark all user's notifications as read"""
+        updated_count = Notification.objects.filter(
+            user=request.user,
+            is_read=False
+        ).update(is_read=True)
+        return Response({
+            'success': True,
+            'updated_count': updated_count,
+            'message': f'{updated_count} notifications marked as read'
+        })
+    
+    @action(detail=False, methods=['get'])
+    def unread_count(self, request):
+        """Get count of unread notifications"""
+        count = Notification.objects.filter(
+            user=request.user,
+            is_read=False
+        ).count()
+        return Response({'unread_count': count})

@@ -7,6 +7,7 @@ import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.contrib.auth.models import AnonymousUser
+from .models import Notification
 
 
 class BaseAuthConsumer(AsyncWebsocketConsumer):
@@ -109,8 +110,16 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         """
         Mark notification as read in database
         """
-        # TODO: Implement when Notification model is created
-        pass
+        try:
+            notification = Notification.objects.get(
+                id=notification_id,
+                user=self.user
+            )
+            notification.is_read = True
+            notification.save(update_fields=['is_read'])
+            return True
+        except Notification.DoesNotExist:
+            return False
 
 
 class TicketConsumer(AsyncWebsocketConsumer):

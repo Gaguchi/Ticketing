@@ -422,3 +422,41 @@ class IssueLink(models.Model):
     
     def __str__(self):
         return f"{self.source_ticket.project.key}-{self.source_ticket.id} {self.link_type} {self.target_ticket.project.key}-{self.target_ticket.id}"
+
+
+class Notification(models.Model):
+    """
+    User notifications for real-time updates.
+    Tracks events like ticket assignments, comments, mentions, status changes.
+    """
+    NOTIFICATION_TYPES = [
+        ('ticket_assigned', 'Ticket Assigned'),
+        ('ticket_created', 'Ticket Created'),
+        ('ticket_updated', 'Ticket Updated'),
+        ('comment_added', 'Comment Added'),
+        ('mention', 'Mentioned'),
+        ('status_changed', 'Status Changed'),
+        ('priority_changed', 'Priority Changed'),
+        ('general', 'General'),
+    ]
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES, default='general')
+    title = models.CharField(max_length=255)
+    message = models.TextField()
+    link = models.CharField(max_length=500, blank=True, null=True, help_text='Optional URL to navigate to')
+    is_read = models.BooleanField(default=False)
+    data = models.JSONField(default=dict, blank=True, help_text='Additional metadata (ticket_id, comment_id, etc.)')
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        db_table = 'notifications'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', '-created_at']),
+            models.Index(fields=['user', 'is_read']),
+        ]
+    
+    def __str__(self):
+        status = "✓" if self.is_read else "●"
+        return f"{status} {self.user.username}: {self.title}"

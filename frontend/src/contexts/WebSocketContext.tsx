@@ -11,8 +11,11 @@ import React, {
   useState,
   useCallback,
 } from "react";
+import { message as antMessage } from "antd";
 import { webSocketService } from "../services/websocket.service";
+import { notificationService } from "../services/notification.service";
 import { useAuth } from "./AppContext";
+import type { Notification } from "../types/notification";
 
 interface WebSocketContextType {
   // Connection states
@@ -35,6 +38,16 @@ interface WebSocketContextType {
   sendNotificationMessage: (data: any) => boolean;
   sendTicketMessage: (data: any) => boolean;
   sendPresenceMessage: (data: any) => boolean;
+
+  // Notification state
+  notifications: Notification[];
+  unreadCount: number;
+
+  // Notification handlers
+  addNotification: (notification: Notification) => void;
+  markAsRead: (id: number) => void;
+  markAllAsRead: () => void;
+  removeNotification: (id: number) => void;
 }
 
 const WebSocketContext = createContext<WebSocketContextType | undefined>(
@@ -49,6 +62,10 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
   const [isTicketConnected, setIsTicketConnected] = useState(false);
   const [isPresenceConnected, setIsPresenceConnected] = useState(false);
 
+  // Notification state
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
   const currentProjectId = useRef<number | null>(null);
   const heartbeatInterval = useRef<number | null>(null);
 
@@ -59,11 +76,14 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
         "🔌 [WebSocketContext] User authenticated, connecting to notifications..."
       );
       connectNotifications();
+      loadInitialNotifications();
     } else {
       console.log(
         "🔌 [WebSocketContext] User not authenticated, disconnecting all..."
       );
       disconnectAll();
+      setNotifications([]);
+      setUnreadCount(0);
     }
 
     // Cleanup on unmount
@@ -72,6 +92,75 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, user]);
+
+  /**
+   * Load initial notifications from API
+   */
+  const loadInitialNotifications = useCallback(async () => {
+    try {
+      const response = await notificationService.getNotifications({
+        limit: 20,
+      });
+      setNotifications(response.results);
+
+      const count = response.results.filter((n) => !n.is_read).length;
+      setUnreadCount(count);
+    } catch (error) {
+      console.error("Failed to load initial notifications:", error);
+    }
+  }, []);
+
+  /**
+   * Add a new notification (from WebSocket)
+   */
+  const addNotification = useCallback((notification: Notification) => {
+    setNotifications((prev) => [notification, ...prev]);
+
+    if (!notification.is_read) {
+      setUnreadCount((prev) => prev + 1);
+
+      // Show toast notification
+      antMessage.info({
+        content: notification.title,
+        duration: 4,
+      });
+    }
+  }, []);
+
+  /**
+   * Mark a notification as read
+   */
+  const markAsRead = useCallback((id: number) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
+    );
+    setUnreadCount((prev) => Math.max(0, prev - 1));
+  }, []);
+
+  /**
+   * Mark all notifications as read
+   */
+  const markAllAsRead = useCallback(() => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    setUnreadCount(0);
+  }, []);
+
+  /**
+   * Remove a notification
+   */
+  const removeNotification = useCallback((id: number) => {
+    setNotifications((prev) => {
+      const notification = prev.find((n) => n.id === id);
+      const newNotifications = prev.filter((n) => n.id !== id);
+
+      // Update unread count if the removed notification was unread
+      if (notification && !notification.is_read) {
+        setUnreadCount((prevCount) => Math.max(0, prevCount - 1));
+      }
+
+      return newNotifications;
+    });
+  }, []);
 
   // Start heartbeat to keep connections alive
   useEffect(() => {
@@ -155,7 +244,15 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
       "ws/notifications/",
       (data) => {
         console.log("📨 [WebSocketContext] Notification:", data);
-        // Notifications will be handled by useNotifications hook
+
+        // Handle different notification events
+        if (data.type === "notification" && data.notification) {
+          // New notification received
+          addNotification(data.notification);
+        } else if (data.type === "notification_read" && data.notification_id) {
+          // Notification marked as read
+          markAsRead(data.notification_id);
+        }
       },
       (error) => {
         console.error("❌ [WebSocketContext] Notification error:", error);
@@ -170,7 +267,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
     if (ws) {
       setIsNotificationConnected(true);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, addNotification, markAsRead]);
 
   const connectTickets = useCallback(
     (projectId: number) => {
@@ -281,6 +378,12 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
     sendNotificationMessage,
     sendTicketMessage,
     sendPresenceMessage,
+    notifications,
+    unreadCount,
+    addNotification,
+    markAsRead,
+    markAllAsRead,
+    removeNotification,
   };
 
   return (

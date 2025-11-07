@@ -10,7 +10,7 @@ from django.dispatch import receiver
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from django.utils import timezone
-from .models import Ticket, Comment
+from .models import Ticket, Comment, Notification
 
 
 def send_to_channel_layer(group_name: str, message_type: str, data: dict):
@@ -51,6 +51,58 @@ def send_notification(user_id: int, notification_data: dict):
         'notification_message',
         {'data': notification_data}
     )
+
+
+def create_and_send_notification(user_id: int, notification_type: str, title: str, message: str, link: str = None, data: dict = None):
+    """
+    Create a notification in the database AND send it via WebSocket.
+    
+    Args:
+        user_id: The user ID to send notification to
+        notification_type: Type of notification (ticket_assigned, comment_added, etc.)
+        title: Notification title
+        message: Notification message
+        link: Optional URL to navigate to
+        data: Optional additional metadata
+    """
+    from django.contrib.auth.models import User
+    
+    try:
+        user = User.objects.get(id=user_id)
+        
+        # Create notification in database
+        notification = Notification.objects.create(
+            user=user,
+            notification_type=notification_type,
+            title=title,
+            message=message,
+            link=link or '',
+            data=data or {},
+        )
+        
+        # Prepare notification data for WebSocket
+        notification_data = {
+            'id': notification.id,
+            'type': notification_type,
+            'title': title,
+            'message': message,
+            'link': link,
+            'is_read': False,
+            'data': data or {},
+            'created_at': notification.created_at.isoformat(),
+            'timestamp': timezone.now().isoformat(),
+        }
+        
+        # Send via WebSocket
+        send_notification(user_id, notification_data)
+        
+        return notification
+    except User.DoesNotExist:
+        print(f"❌ [Notification] User {user_id} not found")
+        return None
+    except Exception as e:
+        print(f"❌ [Notification] Error creating notification: {e}")
+        return None
 
 
 @receiver(post_save, sender=Ticket)
@@ -107,16 +159,16 @@ def ticket_saved(sender, instance, created, **kwargs):
     
     # Send notification to first assignee if ticket was just created and has assignees
     if created and assignee:
-        send_notification(
-            assignee.id,
-            {
-                'id': f'ticket_{instance.id}_assigned',
-                'notification_type': 'ticket_assigned',
-                'title': 'Ticket Assigned',
-                'message': f'You were assigned to {ticket_key}: {instance.name}',
+        create_and_send_notification(
+            user_id=assignee.id,
+            notification_type='ticket_assigned',
+            title='Ticket Assigned',
+            message=f'You were assigned to {ticket_key}: {instance.name}',
+            link=f'/tickets/{instance.id}',
+            data={
                 'ticket_id': instance.id,
                 'ticket_key': ticket_key,
-                'timestamp': timezone.now().isoformat(),
+                'project_id': instance.project_id,
             }
         )
 
@@ -179,17 +231,17 @@ def comment_saved(sender, instance, created, **kwargs):
     
     # Notify ticket assignee (if not the commenter)
     if assignee and instance.user and assignee.id != instance.user.id:
-        send_notification(
-            assignee.id,
-            {
-                'id': f'comment_{instance.id}_added',
-                'notification_type': 'comment_added',
-                'title': 'New Comment',
-                'message': f'{instance.user.username} commented on {ticket_key}',
+        create_and_send_notification(
+            user_id=assignee.id,
+            notification_type='comment_added',
+            title='New Comment',
+            message=f'{instance.user.username} commented on {ticket_key}',
+            link=f'/tickets/{instance.ticket.id}',
+            data={
                 'ticket_id': instance.ticket.id,
                 'ticket_key': ticket_key,
                 'comment_id': instance.id,
-                'timestamp': timezone.now().isoformat(),
+                'project_id': instance.ticket.project_id,
             }
         )
     
@@ -197,17 +249,17 @@ def comment_saved(sender, instance, created, **kwargs):
     if (instance.ticket.reporter and instance.user and
         instance.ticket.reporter.id != instance.user.id and
         (not assignee or instance.ticket.reporter.id != assignee.id)):
-        send_notification(
-            instance.ticket.reporter.id,
-            {
-                'id': f'comment_{instance.id}_added',
-                'notification_type': 'comment_added',
-                'title': 'New Comment',
-                'message': f'{instance.user.username} commented on {ticket_key}',
+        create_and_send_notification(
+            user_id=instance.ticket.reporter.id,
+            notification_type='comment_added',
+            title='New Comment',
+            message=f'{instance.user.username} commented on {ticket_key}',
+            link=f'/tickets/{instance.ticket.id}',
+            data={
                 'ticket_id': instance.ticket.id,
                 'ticket_key': ticket_key,
                 'comment_id': instance.id,
-                'timestamp': timezone.now().isoformat(),
+                'project_id': instance.ticket.project_id,
             }
         )
 
