@@ -375,7 +375,79 @@ let timeout: number;
 timeout = window.setTimeout(() => {}, 1000);
 ```
 
-### 5. ❌ React Context Provider Ordering
+### 5. ❌ React useEffect Dependency Issues - Object References
+
+**Problem**: Using full objects in useEffect dependencies causes infinite re-renders or constant reconnections
+
+**Location**: `frontend/src/pages/Chat.tsx`
+
+**Issue**: WebSocket constantly disconnecting and reconnecting every 10 seconds
+
+**Root Cause**:
+
+- The `loadRooms` function runs every 10 seconds via `setInterval`
+- It calls `setRooms(data)` with a new array, creating new object references
+- `setActiveRoom` gets called with a room from the new array
+- The `activeRoom` object reference changes (even though the ID is the same)
+- useEffect with `[activeRoom]` dependency sees a "change" and re-runs
+- WebSocket disconnects and reconnects unnecessarily
+
+```typescript
+// ❌ WRONG - Causes constant WebSocket reconnections
+useEffect(() => {
+  if (!activeRoom || !user) return;
+
+  const wsUrl = `ws/chat/${activeRoom.id}/`;
+  webSocketService.connect(wsUrl, onMessage);
+
+  return () => webSocketService.disconnect(wsUrl);
+}, [activeRoom, user]); // Full objects - reference changes on every state update!
+
+// ✅ CORRECT - Only depend on primitive values (IDs)
+useEffect(() => {
+  if (!activeRoom || !user) return;
+
+  const wsUrl = `ws/chat/${activeRoom.id}/`;
+  webSocketService.connect(wsUrl, onMessage);
+
+  return () => webSocketService.disconnect(wsUrl);
+}, [activeRoom?.id, user?.id]); // Only IDs - stable references
+```
+
+**Additional Fix**: Use functional setState to prevent unnecessary activeRoom updates
+
+```typescript
+// ❌ WRONG - Always updates activeRoom, causing reference change
+if (data.length > 0 && !activeRoom) {
+  setActiveRoom(data[0]);
+}
+
+// ✅ CORRECT - Only update if necessary, preserve same room
+setActiveRoom((current) => {
+  if (!current || !data.find((r) => r.id === current.id)) {
+    return data[0]; // Set new room if none or current not in list
+  }
+  // Keep same room but with updated data from API
+  return data.find((r) => r.id === current.id) || data[0];
+});
+```
+
+**Why this matters**:
+
+- Objects and arrays are compared by reference in JavaScript
+- Even if data is identical, `{id: 1} !== {id: 1}`
+- useEffect re-runs whenever dependency reference changes
+- For WebSocket connections, this causes constant disconnect/reconnect cycles
+- Users see chat re-rendering, lose scroll position, bad UX
+
+**Best Practice**:
+
+- Always use primitive values (strings, numbers, booleans) in useEffect dependencies
+- Use `object?.property` instead of full objects
+- Use functional setState when updating state based on previous state
+- Use `useMemo` or `useCallback` for complex objects if full object is needed
+
+### 6. ❌ React Context Provider Ordering
 
 **Problem**: Using `ProjectProvider` from `ProjectContext.tsx` when `AppContext.tsx` already provides both auth and project functionality
 
@@ -818,9 +890,25 @@ Frontend (React):
 
 ## Version History
 
+### v1.4 - November 7, 2025
+
+- **Fixed**: Critical WebSocket reconnection bug in Chat
+  - **Issue**: Chat WebSocket was disconnecting and reconnecting every 10 seconds
+  - **Root Cause**: useEffect dependencies using full objects instead of primitive IDs
+  - **Solution**: Changed dependencies from `[activeRoom, user]` to `[activeRoom?.id, user?.id]`
+  - **Impact**: Eliminated constant reconnections, improved chat UX
+  - **Additional Fix**: Updated `setActiveRoom` to use functional setState to preserve room reference when data updates
+- **Added**: Common Pitfall #5 - React useEffect Dependency Issues
+  - Documented object reference problem in useEffect
+  - Explained why objects cause infinite re-renders
+  - Added best practices for useEffect dependencies
+  - Included code examples showing wrong vs correct patterns
+  - Emphasized using primitive values (IDs) instead of full objects
+
 ### v1.3 - November 7, 2025
 
 - **Updated**: Chat unread count feature - Real-time WebSocket updates
+
   - Replaced 30-second polling with event-driven architecture
   - MainLayout listens for custom `chatUnreadUpdate` events from Chat page
   - MainLayout listens for `storage` events for cross-tab synchronization

@@ -100,8 +100,16 @@ const Chat: React.FC = () => {
           })
         );
 
-        if (data.length > 0 && !activeRoom) {
-          setActiveRoom(data[0]);
+        // Only set active room if there isn't one already
+        if (data.length > 0) {
+          setActiveRoom((current) => {
+            // If no active room, or current room not in new list, select first
+            if (!current || !data.find((r) => r.id === current.id)) {
+              return data[0];
+            }
+            // Otherwise keep current active room (but update its data)
+            return data.find((r) => r.id === current.id) || data[0];
+          });
         }
       } catch (error) {
         console.error("Failed to load chat rooms:", error);
@@ -163,7 +171,7 @@ const Chat: React.FC = () => {
     };
 
     loadMessages();
-  }, [activeRoom]);
+  }, [activeRoom?.id]); // Only depend on ID, not full object
 
   // Connect to WebSocket when room is selected
   useEffect(() => {
@@ -291,7 +299,7 @@ const Chat: React.FC = () => {
       webSocketService.disconnect(wsUrl);
       wsRef.current = null;
     };
-  }, [activeRoom, user]);
+  }, [activeRoom?.id, user?.id]); // Only depend on IDs, not full objects
 
   // Send message
   const handleSendMessage = async () => {
