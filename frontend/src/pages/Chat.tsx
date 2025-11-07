@@ -113,7 +113,35 @@ const Chat: React.FC = () => {
 
         const data = await chatService.getRooms(selectedProject.id);
         console.log("📥 [Chat] Loaded rooms:", data.length);
-        setRooms(data);
+
+        // Only update rooms if data has changed (compare by IDs and unread counts)
+        setRooms((prevRooms) => {
+          // If room count changed, definitely update
+          if (prevRooms.length !== data.length) {
+            console.log("📝 [Chat] Room count changed, updating");
+            return data;
+          }
+
+          // Check if any room IDs or unread counts changed
+          const hasChanges = data.some((newRoom, index) => {
+            const prevRoom = prevRooms[index];
+            return (
+              !prevRoom ||
+              prevRoom.id !== newRoom.id ||
+              prevRoom.unread_count !== newRoom.unread_count ||
+              prevRoom.last_message?.id !== newRoom.last_message?.id
+            );
+          });
+
+          if (hasChanges) {
+            console.log("📝 [Chat] Room data changed, updating");
+            return data;
+          }
+
+          // No changes, keep same reference to prevent re-render
+          console.log("✓ [Chat] Rooms unchanged, keeping current reference");
+          return prevRooms;
+        });
 
         // Calculate and dispatch total unread count for MainLayout
         const totalUnread = data.reduce(

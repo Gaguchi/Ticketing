@@ -899,9 +899,48 @@ Frontend (React):
 
 ## Version History
 
+### v1.9 - November 7, 2025
+
+- **Fixed**: Chat still rendering on every room refresh despite UX appearing fine
+  - **Issue**: Chat rendered every 10 seconds (renders #10, #21, #22, #23... continuously)
+  - **Root Cause**: `setRooms(data)` called unconditionally, creating new array reference
+  - **Why UX seemed fine**: Loading state fixed, activeRoom reference preserved, so no visual glitches
+  - **Why still problematic**: Unnecessary re-renders waste CPU, re-run all component logic, could cause scroll jumps
+  - **Solution**: Use functional setState to compare data before updating
+  - **Implementation**:
+    ```typescript
+    setRooms((prevRooms) => {
+      // Check if room count changed
+      if (prevRooms.length !== data.length) return data;
+
+      // Check if any meaningful data changed
+      const hasChanges = data.some((newRoom, index) => {
+        const prevRoom = prevRooms[index];
+        return (
+          !prevRoom ||
+          prevRoom.id !== newRoom.id ||
+          prevRoom.unread_count !== newRoom.unread_count ||
+          prevRoom.last_message?.id !== newRoom.last_message?.id
+        );
+      });
+
+      // Only update if changed, otherwise keep same reference
+      return hasChanges ? data : prevRooms;
+    });
+    ```
+  - **Result**: Chat only re-renders when rooms actually change, not on every 10s refresh
+
+**Critical Learning**:
+
+- `setState(newValue)` **ALWAYS** triggers re-render, even if value is "equal"
+- React compares by **reference**, not deep equality
+- Solution: Use `setState(prev => { ... })` and return same reference when unchanged
+- This pattern applies to **all** periodic data fetching
+
 ### v1.8 - November 7, 2025
 
 - **Fixed**: Chat re-rendering due to loading state toggling
+
   - **Issue**: Chat re-rendered every 10 seconds with `loading` flipping `true`→`false`→`true`
   - **Root Cause**: `loadRooms()` called `setLoading(true)` on every refresh (every 10s interval)
   - **Impact**: Even with activeRoom reference preserved, loading state change caused full re-renders
