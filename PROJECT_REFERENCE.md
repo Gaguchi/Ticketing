@@ -818,6 +818,37 @@ Frontend (React):
 
 ## Version History
 
+### v1.3 - November 7, 2025
+
+- **Updated**: Chat unread count feature - Real-time WebSocket updates
+  - Replaced 30-second polling with event-driven architecture
+  - MainLayout listens for custom `chatUnreadUpdate` events from Chat page
+  - MainLayout listens for `storage` events for cross-tab synchronization
+  - Chat page dispatches events when:
+    - Rooms list is loaded/refreshed (every 10s)
+    - User opens a room (unread count reset to 0)
+    - New message received in active room (unread count reset)
+  - Event payload: `{ detail: { unreadCount: number } }`
+  - Badge positioning improved: offset changed from `[10, -10]` to `[5, 0]` for collapsed sidebar
+  - **Key Implementation**:
+
+    ```typescript
+    // Chat.tsx - Dispatch event when unread count changes
+    const totalUnread = updatedRooms.reduce(
+      (sum, room) => sum + room.unread_count,
+      0
+    );
+    window.dispatchEvent(
+      new CustomEvent("chatUnreadUpdate", {
+        detail: { unreadCount: totalUnread },
+      })
+    );
+
+    // MainLayout.tsx - Listen for events
+    window.addEventListener("chatUnreadUpdate", handleChatUpdate);
+    window.addEventListener("storage", handleStorageChange);
+    ```
+
 ### v1.2 - November 7, 2025
 
 - **Added**: WebSocket notification system documentation

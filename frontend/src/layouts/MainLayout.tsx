@@ -130,6 +130,43 @@ const MainLayout: React.FC = () => {
     return () => clearInterval(interval);
   }, [selectedProject]);
 
+  // WebSocket listener for real-time chat updates
+  useEffect(() => {
+    if (!selectedProject) return;
+
+    // Listen to all chat room WebSocket connections for new messages
+    // This is a simplified approach - ideally you'd have a global chat notification channel
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "chat_message_received") {
+        // Reload unread count when a message is received
+        chatService.getRooms(selectedProject.id).then((rooms) => {
+          const totalUnread = rooms.reduce(
+            (sum, room) => sum + room.unread_count,
+            0
+          );
+          setUnreadChatCount(totalUnread);
+        });
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+
+    // Also listen for custom events from Chat page
+    const handleChatUpdate = ((e: CustomEvent) => {
+      const { unreadCount } = e.detail;
+      if (typeof unreadCount === "number") {
+        setUnreadChatCount(unreadCount);
+      }
+    }) as EventListener;
+
+    window.addEventListener("chatUnreadUpdate", handleChatUpdate);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("chatUnreadUpdate", handleChatUpdate);
+    };
+  }, [selectedProject]);
+
   const handleMenuClick: MenuProps["onClick"] = ({ key }) => {
     if (key === "logout") {
       logout();
@@ -312,7 +349,10 @@ const MainLayout: React.FC = () => {
                   <Badge
                     count={unreadChatCount}
                     size="small"
-                    offset={collapsed ? [10, -10] : [15, 0]}
+                    offset={collapsed ? [5, 0] : [10, 0]}
+                    style={{
+                      fontSize: collapsed ? 10 : 11,
+                    }}
                   >
                     <span style={{ fontSize: collapsed ? 20 : 16 }}>
                       {item.icon}

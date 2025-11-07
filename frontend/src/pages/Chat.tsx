@@ -88,6 +88,18 @@ const Chat: React.FC = () => {
         setLoading(true);
         const data = await chatService.getRooms(selectedProject.id);
         setRooms(data);
+
+        // Calculate and dispatch total unread count for MainLayout
+        const totalUnread = data.reduce(
+          (sum, room) => sum + room.unread_count,
+          0
+        );
+        window.dispatchEvent(
+          new CustomEvent("chatUnreadUpdate", {
+            detail: { unreadCount: totalUnread },
+          })
+        );
+
         if (data.length > 0 && !activeRoom) {
           setActiveRoom(data[0]);
         }
@@ -124,11 +136,24 @@ const Chat: React.FC = () => {
         await chatService.markRoomAsRead(activeRoom.id);
 
         // Update the room's unread count in local state
-        setRooms((prev) =>
-          prev.map((room) =>
+        setRooms((prev) => {
+          const updated = prev.map((room) =>
             room.id === activeRoom.id ? { ...room, unread_count: 0 } : room
-          )
-        );
+          );
+
+          // Calculate total unread and dispatch event for MainLayout
+          const totalUnread = updated.reduce(
+            (sum, room) => sum + room.unread_count,
+            0
+          );
+          window.dispatchEvent(
+            new CustomEvent("chatUnreadUpdate", {
+              detail: { unreadCount: totalUnread },
+            })
+          );
+
+          return updated;
+        });
       } catch (error) {
         console.error("Failed to load messages:", error);
         antMessage.error("Failed to load messages");
@@ -161,13 +186,26 @@ const Chat: React.FC = () => {
           }
 
           // Update room's last_message and reset unread_count (since we're viewing it)
-          setRooms((prev) =>
-            prev.map((room) =>
+          setRooms((prev) => {
+            const updated = prev.map((room) =>
               room.id === event.message.room
                 ? { ...room, last_message: event.message, unread_count: 0 }
                 : room
-            )
-          );
+            );
+
+            // Calculate total unread and dispatch event for MainLayout
+            const totalUnread = updated.reduce(
+              (sum, room) => sum + room.unread_count,
+              0
+            );
+            window.dispatchEvent(
+              new CustomEvent("chatUnreadUpdate", {
+                detail: { unreadCount: totalUnread },
+              })
+            );
+
+            return updated;
+          });
           break;
 
         case "message_edited":
