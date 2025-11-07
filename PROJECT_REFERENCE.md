@@ -417,18 +417,27 @@ useEffect(() => {
 **Additional Fix**: Use functional setState to prevent unnecessary activeRoom updates
 
 ```typescript
-// ❌ WRONG - Always updates activeRoom, causing reference change
-if (data.length > 0 && !activeRoom) {
-  setActiveRoom(data[0]);
-}
-
-// ✅ CORRECT - Only update if necessary, preserve same room
+// ❌ WRONG - Returns NEW object from array, creates new reference
 setActiveRoom((current) => {
   if (!current || !data.find((r) => r.id === current.id)) {
-    return data[0]; // Set new room if none or current not in list
+    return data[0];
   }
-  // Keep same room but with updated data from API
-  return data.find((r) => r.id === current.id) || data[0];
+  return data.find((r) => r.id === current.id) || data[0]; // NEW object!
+});
+
+// ✅ CORRECT - Returns SAME reference when ID matches
+setActiveRoom((current) => {
+  if (!current) {
+    return data[0]; // Set initial room
+  }
+
+  const stillExists = data.find((r) => r.id === current.id);
+  if (!stillExists) {
+    return data[0]; // Room removed, select first
+  }
+
+  // CRITICAL: Return current (same reference), not new object from array
+  return current; // Prevents re-render trigger!
 });
 ```
 
@@ -889,6 +898,34 @@ Frontend (React):
 ---
 
 ## Version History
+
+### v1.7 - November 7, 2025
+
+- **Fixed**: Chat still re-rendering every 10 seconds (functional setState reference issue)
+  - **Issue**: Despite fixing dependencies, chat rendered every 10 seconds when rooms refreshed
+  - **Root Cause**: `setActiveRoom` was returning NEW object from `data.find()` instead of keeping same reference
+  - **Problem Code**:
+    ```typescript
+    return data.find((r) => r.id === current.id); // Returns NEW object!
+    ```
+  - **Solution**: Return `current` (same reference) when room ID hasn't changed
+  - **Added Logging**: Active room changes now log with 🎯/⚠️/✓ indicators
+  - **Result**: Chat no longer re-renders when rooms refresh if active room unchanged
+
+**Critical Pattern**:
+
+```typescript
+// ❌ WRONG - Creates new reference even if ID matches
+setActiveRoom((current) => data.find((r) => r.id === current.id));
+
+// ✅ CORRECT - Preserves reference when ID unchanged
+setActiveRoom((current) => {
+  const exists = data.find((r) => r.id === current.id);
+  return exists ? current : data[0]; // Return SAME reference!
+});
+```
+
+**Why**: `array.find()` returns a NEW object from the array, not the original. Even if the data is identical, `data[0] !== data[0]` from different API calls. Always preserve the original reference when the identifier hasn't changed.
 
 ### v1.6 - November 7, 2025
 

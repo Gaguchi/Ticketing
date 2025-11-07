@@ -124,12 +124,28 @@ const Chat: React.FC = () => {
         // Only set active room if there isn't one already
         if (data.length > 0) {
           setActiveRoom((current) => {
-            // If no active room, or current room not in new list, select first
-            if (!current || !data.find((r) => r.id === current.id)) {
+            // If no active room, select first
+            if (!current) {
+              console.log("🎯 [Chat] Setting initial active room:", data[0].id);
               return data[0];
             }
-            // Otherwise keep current active room (but update its data)
-            return data.find((r) => r.id === current.id) || data[0];
+
+            // Check if current room still exists in the list
+            const currentStillExists = data.find((r) => r.id === current.id);
+
+            // If current room doesn't exist anymore, select first
+            if (!currentStillExists) {
+              console.log(
+                "⚠️ [Chat] Active room not found, selecting first:",
+                data[0].id
+              );
+              return data[0];
+            }
+
+            // Otherwise, KEEP the current reference (don't replace with new object)
+            // This prevents unnecessary re-renders when room data is the same
+            console.log("✓ [Chat] Keeping current active room:", current.id);
+            return current; // Return same reference, not new object from data
           });
         }
       } catch (error) {
