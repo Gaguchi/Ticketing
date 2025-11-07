@@ -3,7 +3,7 @@
  * Handles all API requests with proper error handling and type safety
  */
 
-import { API_HEADERS, API_CONFIG } from '../config/api';
+import { API_HEADERS, API_CONFIG, API_BASE_URL } from '../config/api';
 import { tokenInterceptor } from '../utils/token-interceptor';
 
 export interface APIError {
@@ -14,6 +14,26 @@ export interface APIError {
 
 class APIService {
   private isDevelopment = import.meta.env.DEV;
+
+  /**
+   * Build full URL from relative path
+   * In development: use relative URLs (Vite proxy handles routing)
+   * In production: prepend API_BASE_URL
+   */
+  private buildUrl(path: string): string {
+    // If already an absolute URL, return as-is
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return path;
+    }
+    
+    // In development, use relative URLs (Vite dev server proxy)
+    if (this.isDevelopment) {
+      return path;
+    }
+    
+    // In production, prepend API_BASE_URL
+    return `${API_BASE_URL}${path}`;
+  }
 
   /**
    * Get authorization header with JWT token
@@ -86,6 +106,9 @@ class APIService {
   ): Promise<T> {
     const startTime = performance.now();
     
+    // Build full URL (adds base URL in production)
+    const fullUrl = this.buildUrl(url);
+    
     const config: RequestInit = {
       ...options,
       headers: {
@@ -98,15 +121,15 @@ class APIService {
     };
 
     // Log the request
-    this.logRequest(url, config);
+    this.logRequest(fullUrl, config);
 
     try {
-      const response = await fetch(url, config);
+      const response = await fetch(fullUrl, config);
       const duration = Math.round(performance.now() - startTime);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        this.logResponse(url, response, errorData, duration);
+        this.logResponse(fullUrl, response, errorData, duration);
 
         // Check if this is a token refresh endpoint - don't retry these
         const isRefreshEndpoint = url.includes('/auth/token/refresh/');
@@ -146,16 +169,16 @@ class APIService {
 
       // Handle 204 No Content
       if (response.status === 204) {
-        this.logResponse(url, response, {}, duration);
+        this.logResponse(fullUrl, response, {}, duration);
         return {} as T;
       }
 
       const data = await response.json();
-      this.logResponse(url, response, data, duration);
+      this.logResponse(fullUrl, response, data, duration);
       return data;
     } catch (error) {
       const duration = Math.round(performance.now() - startTime);
-      this.logError(url, error, duration);
+      this.logError(fullUrl, error, duration);
       
       if ((error as APIError).status) {
         throw error;
