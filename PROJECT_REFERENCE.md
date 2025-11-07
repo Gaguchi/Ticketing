@@ -216,6 +216,38 @@ serializer.save(
 
 - `connection_established` - Sent when WebSocket connects
 - `notification` - General notification event
+  - **Data Structure**: `{ type: 'notification', data: { /* Notification object */ } }`
+  - Note: Notification data is nested in `data.data` field
+
+**Notification Event Structure**:
+
+```json
+{
+  "type": "notification",
+  "data": {
+    "id": 1,
+    "type": "comment_added",
+    "title": "New Comment",
+    "message": "User commented on TICK-12",
+    "link": "/tickets/12",
+    "is_read": false,
+    "data": {
+      "ticket_id": 12,
+      "ticket_key": "TICK-12",
+      "comment_id": 8,
+      "project_id": 4
+    },
+    "created_at": "2025-11-07T14:47:38.063269+00:00",
+    "timestamp": "2025-11-07T14:47:38.065488+00:00"
+  }
+}
+```
+
+**⚠️ CRITICAL**:
+
+- Backend sends notifications wrapped in `{ type: 'notification', data: { /* notification */ } }`
+- Frontend must access `data.data`, NOT `data.notification`
+- Fixed in `WebSocketContext.tsx`: `if (data.type === 'notification' && data.data)`
 
 #### Project Ticket Channel
 
@@ -785,6 +817,19 @@ Frontend (React):
 ---
 
 ## Version History
+
+### v1.2 - November 7, 2025
+
+- **Added**: WebSocket notification system documentation
+  - Documented notification event structure with nested `data.data` field
+  - Added critical note about accessing notification data correctly
+  - Explained frontend must check `data.data` not `data.notification`
+- **Added**: Chat unread count feature
+  - MainLayout displays badge on Chat icon showing total unread messages
+  - Badge updates in real-time as messages are read/received
+  - Chat page properly resets unread_count when room is opened
+  - Rooms list refreshes every 10 seconds to update counts
+  - MainLayout refreshes chat count every 30 seconds
 
 ### v1.1 - November 7, 2025
 

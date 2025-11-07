@@ -7,6 +7,7 @@ import {
   Typography,
   Select,
   Button,
+  Badge,
 } from "antd";
 import {
   MenuFoldOutlined,
@@ -28,6 +29,7 @@ import { useProject } from "../contexts/AppContext";
 import { useWebSocketContext } from "../contexts/WebSocketContext";
 import { CreateProjectModal } from "../components/CreateProjectModal";
 import { NotificationBell } from "../components/NotificationBell";
+import { chatService } from "../services/chat.service";
 import type { MenuProps } from "antd";
 import "./MainLayout.css";
 
@@ -45,6 +47,7 @@ const MainLayout: React.FC = () => {
   const [collapsed, setCollapsed] = useState(true);
   const [isCreateProjectModalOpen, setIsCreateProjectModalOpen] =
     useState(false);
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
   const navigate = useNavigate();
   const location = useLocation();
   const { logout, user, loading: authLoading } = useAuth();
@@ -102,6 +105,30 @@ const MainLayout: React.FC = () => {
       selectedProject ? selectedProject.name : "NULL"
     );
   }, [authLoading, projectLoading, user, availableProjects, selectedProject]);
+
+  // Load unread chat count
+  useEffect(() => {
+    if (!selectedProject) return;
+
+    const loadUnreadCount = async () => {
+      try {
+        const rooms = await chatService.getRooms(selectedProject.id);
+        const totalUnread = rooms.reduce(
+          (sum, room) => sum + room.unread_count,
+          0
+        );
+        setUnreadChatCount(totalUnread);
+      } catch (error) {
+        console.error("Failed to load unread chat count:", error);
+      }
+    };
+
+    loadUnreadCount();
+
+    // Refresh every 30 seconds
+    const interval = setInterval(loadUnreadCount, 30000);
+    return () => clearInterval(interval);
+  }, [selectedProject]);
 
   const handleMenuClick: MenuProps["onClick"] = ({ key }) => {
     if (key === "logout") {
@@ -253,6 +280,8 @@ const MainLayout: React.FC = () => {
         <div style={{ padding: collapsed ? "8px 6px" : "8px" }}>
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
+            const isChatItem = item.key === "/chat";
+
             return (
               <div
                 key={item.key}
@@ -276,11 +305,24 @@ const MainLayout: React.FC = () => {
                     ? "2px solid #1890ff"
                     : "2px solid transparent",
                   color: isActive ? "#1890ff" : "#595959",
+                  position: "relative",
                 }}
               >
-                <span style={{ fontSize: collapsed ? 20 : 16 }}>
-                  {item.icon}
-                </span>
+                {isChatItem && unreadChatCount > 0 ? (
+                  <Badge
+                    count={unreadChatCount}
+                    size="small"
+                    offset={collapsed ? [10, -10] : [15, 0]}
+                  >
+                    <span style={{ fontSize: collapsed ? 20 : 16 }}>
+                      {item.icon}
+                    </span>
+                  </Badge>
+                ) : (
+                  <span style={{ fontSize: collapsed ? 20 : 16 }}>
+                    {item.icon}
+                  </span>
+                )}
                 <span
                   style={{
                     fontSize: collapsed ? 10 : 13,

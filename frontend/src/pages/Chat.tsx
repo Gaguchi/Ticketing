@@ -100,6 +100,10 @@ const Chat: React.FC = () => {
     };
 
     loadRooms();
+
+    // Refresh rooms every 10 seconds to update unread counts
+    const interval = setInterval(loadRooms, 10000);
+    return () => clearInterval(interval);
   }, [selectedProject]);
 
   // Load messages when active room changes
@@ -118,6 +122,13 @@ const Chat: React.FC = () => {
 
         // Mark as read
         await chatService.markRoomAsRead(activeRoom.id);
+
+        // Update the room's unread count in local state
+        setRooms((prev) =>
+          prev.map((room) =>
+            room.id === activeRoom.id ? { ...room, unread_count: 0 } : room
+          )
+        );
       } catch (error) {
         console.error("Failed to load messages:", error);
         antMessage.error("Failed to load messages");
@@ -143,11 +154,20 @@ const Chat: React.FC = () => {
 
       switch (event.type) {
         case "message_new":
-          // Only add message if it's from another user (avoid duplicates)
+          // Add message to list
           if (event.message.user.id !== user?.id) {
             setMessages((prev) => [...prev, event.message]);
             setTimeout(scrollToBottom, 100);
           }
+
+          // Update room's last_message and reset unread_count (since we're viewing it)
+          setRooms((prev) =>
+            prev.map((room) =>
+              room.id === event.message.room
+                ? { ...room, last_message: event.message, unread_count: 0 }
+                : room
+            )
+          );
           break;
 
         case "message_edited":
