@@ -91,7 +91,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
       disconnectAll();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user?.id]); // Only depend on user ID, not full object
 
   /**
    * Load initial notifications from API

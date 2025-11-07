@@ -104,7 +104,13 @@ const MainLayout: React.FC = () => {
       "  - selectedProject:",
       selectedProject ? selectedProject.name : "NULL"
     );
-  }, [authLoading, projectLoading, user, availableProjects, selectedProject]);
+  }, [
+    authLoading,
+    projectLoading,
+    user?.username,
+    availableProjects.length,
+    selectedProject?.name,
+  ]); // Use primitive values
 
   // Load unread chat count
   useEffect(() => {
@@ -128,7 +134,7 @@ const MainLayout: React.FC = () => {
     // Refresh every 30 seconds
     const interval = setInterval(loadUnreadCount, 30000);
     return () => clearInterval(interval);
-  }, [selectedProject]);
+  }, [selectedProject?.id]); // Only depend on project ID
 
   // WebSocket listener for real-time chat updates
   useEffect(() => {
@@ -165,7 +171,7 @@ const MainLayout: React.FC = () => {
       window.removeEventListener("storage", handleStorageChange);
       window.removeEventListener("chatUnreadUpdate", handleChatUpdate);
     };
-  }, [selectedProject]);
+  }, [selectedProject?.id]); // Only depend on project ID
 
   const handleMenuClick: MenuProps["onClick"] = ({ key }) => {
     if (key === "logout") {

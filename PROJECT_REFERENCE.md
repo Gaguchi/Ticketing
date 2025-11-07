@@ -890,6 +890,29 @@ Frontend (React):
 
 ## Version History
 
+### v1.5 - November 7, 2025
+
+- **Fixed**: Constant re-rendering and WebSocket reconnections in entire app
+  - **Issue**: App was re-rendering every few seconds, WebSocket connections kept disconnecting/reconnecting
+  - **Root Cause**: Multiple useEffect hooks using full objects (`user`, `selectedProject`, `availableProjects`) as dependencies
+  - **When objects are fetched/refreshed**: New object references are created even if data is identical
+  - **Impact**: useEffect sees "change" and re-runs, causing unnecessary renders and WebSocket reconnections
+  - **Files Fixed**:
+    - `WebSocketContext.tsx`: Changed `[isAuthenticated, user]` to `[isAuthenticated, user?.id]`
+    - `MainLayout.tsx`: Changed `[selectedProject]` to `[selectedProject?.id]` in 2 effects
+    - `MainLayout.tsx`: Changed debug effect to use primitive values: `[user?.username, availableProjects.length, selectedProject?.name]`
+  - **Result**: Eliminated constant re-renders, WebSocket connections now stable
+
+**Key Learning**:
+
+```typescript
+// ❌ WRONG - Objects compared by reference, always "different"
+useEffect(() => { ... }, [user, selectedProject]);
+
+// ✅ CORRECT - Primitives compared by value
+useEffect(() => { ... }, [user?.id, selectedProject?.id]);
+```
+
 ### v1.4 - November 7, 2025
 
 - **Fixed**: Critical WebSocket reconnection bug in Chat
