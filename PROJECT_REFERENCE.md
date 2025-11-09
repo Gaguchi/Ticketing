@@ -921,15 +921,22 @@ Frontend (React):
     - Updated to "Add User" instead of "Send Invitation"
     - Alert message explains user must already exist
     - **Location**: Integrated into Users page (not Settings)
+  - **User Management Page Enhancements**:
+    - **Project-Based Filtering**: When a project is selected, only shows users who are members of that project
+    - **Visual Indicator**: Project name tag displayed next to "User Management" title
+    - **Member Count**: Shows count like "Showing 5 members of Project Name"
+    - **No Project Selected**: Shows all users in the system
+    - **Dynamic UI**: "Add to Project" button only visible when project is selected
   - **Usage Flow**:
     1. Go to Users page
-    2. Click "Add to Project" button (visible when project is selected)
-    3. Enter email address of existing user and select role
-    4. User is instantly added to project
-    5. Success message shows user's name and confirmation
+    2. Select a project from header → User list automatically filters to show only that project's members
+    3. Click "Add to Project" button (visible when project is selected)
+    4. Enter email address of existing user and select role
+    5. User is instantly added to project and appears in the filtered list
+    6. Success message shows user's name and confirmation
   - **UI Enhancement**: Button only appears when a project is selected in the app context
   - **Future Enhancement**: Email-based invitations with signup will be added later
-  - **Result**: Simple way to add existing users to projects without complex invitation flow
+  - **Result**: Simple way to view and manage project members with instant user addition
 
 ### v1.10 - November 9, 2025
 

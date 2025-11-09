@@ -544,12 +544,25 @@ const Users: React.FC = () => {
     },
   ];
 
-  const filteredUsers = users.filter(
-    (user) =>
-      user.username.toLowerCase().includes(searchText.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchText.toLowerCase()) ||
-      user.full_name.toLowerCase().includes(searchText.toLowerCase())
-  );
+  // Filter users by selected project
+  const filteredUsers = users
+    .filter((user) => {
+      // If a project is selected, only show users who are members of that project
+      if (selectedProject) {
+        const isProjectMember = user.project_roles.some(
+          (role) => role.project === selectedProject.id
+        );
+        return isProjectMember;
+      }
+      // If no project selected, show all users
+      return true;
+    })
+    .filter(
+      (user) =>
+        user.username.toLowerCase().includes(searchText.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchText.toLowerCase()) ||
+        user.full_name.toLowerCase().includes(searchText.toLowerCase())
+    );
 
   return (
     <div style={{ padding: 24 }}>
@@ -564,8 +577,17 @@ const Users: React.FC = () => {
         <div>
           <Title level={3} style={{ margin: 0 }}>
             User Management
+            {selectedProject && (
+              <Tag color="blue" style={{ marginLeft: 12, fontSize: 14 }}>
+                {selectedProject.name}
+              </Tag>
+            )}
           </Title>
-          <Text type="secondary">Manage users, roles, and permissions</Text>
+          <Text type="secondary">
+            {selectedProject
+              ? `Showing ${filteredUsers.length} members of ${selectedProject.name}`
+              : "Manage users, roles, and permissions"}
+          </Text>
         </div>
         <Space>
           {selectedProject && (
