@@ -69,8 +69,8 @@ interface User {
   last_name: string;
   full_name: string;
   is_active: boolean;
-  is_staff: boolean;
-  is_superuser: boolean;
+  is_staff?: boolean; // Optional - only present for superusers
+  is_superuser?: boolean; // Optional - only present for superusers
   date_joined: string;
   last_login: string | null;
   last_login_display: string;
@@ -88,7 +88,7 @@ interface Project {
 }
 
 const Users: React.FC = () => {
-  const { selectedProject } = useApp();
+  const { selectedProject, user: currentUser } = useApp();
   const [users, setUsers] = useState<User[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -419,6 +419,7 @@ const Users: React.FC = () => {
           <div>
             <div style={{ fontWeight: 500 }}>
               {record.full_name}
+              {/* Only show superuser/staff tags if fields are present */}
               {record.is_superuser && (
                 <Tag color="red" style={{ marginLeft: 8 }}>
                   Superuser
@@ -566,6 +567,22 @@ const Users: React.FC = () => {
         user.full_name.toLowerCase().includes(searchText.toLowerCase())
     );
 
+  // Filter projects to only show those where current user is a superadmin
+  // This is used when assigning roles to new/existing users
+  const superadminProjects = projects.filter((project) => {
+    if (currentUser?.is_superuser) {
+      // True superusers can see all projects
+      return true;
+    }
+    // Regular users: check if they have superadmin role in this project
+    const currentUserData = users.find((u) => u.id === currentUser?.id);
+    if (!currentUserData) return false;
+
+    return currentUserData.project_roles.some(
+      (role) => role.project === project.id && role.role === "superadmin"
+    );
+  });
+
   return (
     <div style={{ padding: 24 }}>
       <div
@@ -705,21 +722,26 @@ const Users: React.FC = () => {
             <Switch />
           </Form.Item>
 
-          <Form.Item
-            name="is_staff"
-            label="Staff Member"
-            valuePropName="checked"
-          >
-            <Switch />
-          </Form.Item>
+          {/* Only show is_staff and is_superuser for superusers */}
+          {currentUser?.is_superuser && (
+            <>
+              <Form.Item
+                name="is_staff"
+                label="Staff Member"
+                valuePropName="checked"
+              >
+                <Switch />
+              </Form.Item>
 
-          <Form.Item
-            name="is_superuser"
-            label="Superuser"
-            valuePropName="checked"
-          >
-            <Switch />
-          </Form.Item>
+              <Form.Item
+                name="is_superuser"
+                label="Superuser"
+                valuePropName="checked"
+              >
+                <Switch />
+              </Form.Item>
+            </>
+          )}
         </Form>
       </Modal>
 
@@ -743,7 +765,8 @@ const Users: React.FC = () => {
             style={{ width: 250 }}
           >
             <Select placeholder="Select Project">
-              {projects.map((project) => (
+              {/* Only show projects where current user is a superadmin */}
+              {superadminProjects.map((project) => (
                 <Option key={project.id} value={project.id}>
                   {project.key}: {project.name}
                 </Option>

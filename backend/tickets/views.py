@@ -358,7 +358,7 @@ class UserManagementViewSet(viewsets.ModelViewSet):
         return UserManagementSerializer
     
     def get_queryset(self):
-        """Filter users based on permissions"""
+        """Filter users based on permissions and shared projects"""
         user = self.request.user
         
         # Superusers see all users
@@ -369,16 +369,17 @@ class UserManagementViewSet(viewsets.ModelViewSet):
         if user.is_staff:
             return self.queryset
         
-        # Regular users see members of their projects
-        # Get all projects where the user is a member
+        # Regular users only see users from SHARED projects
+        # Get all projects where the current user is a member
         user_projects = user.project_memberships.all()
         
-        # Get all users who are members of those projects
-        project_members = User.objects.filter(
+        # Get users who share at least one project with the current user
+        # This ensures users only see colleagues from common projects
+        shared_project_members = User.objects.filter(
             project_memberships__in=user_projects
         ).distinct()
         
-        return project_members
+        return shared_project_members
     
     @action(detail=True, methods=['post'])
     def assign_role(self, request, pk=None):

@@ -899,14 +899,96 @@ Frontend (React):
 
 ## Version History
 
+### v1.13 - November 9, 2025
+
+- **Added**: Role-Based Access Control for User Management
+  - **Feature**: Implemented comprehensive permission system to control user visibility and management capabilities
+  - **User Visibility**:
+    - Regular users only see users from **shared projects** (projects where both users are members)
+    - Prevents users from seeing colleagues in projects they don't share
+    - Superusers and staff still see all users
+  - **Superuser/Staff Field Protection**:
+    - Non-superusers cannot see `is_superuser` or `is_staff` fields on other users
+    - Backend serializer conditionally excludes these fields based on requester permissions
+    - Frontend hides Superuser/Staff Member toggles in Create User modal for non-superusers
+    - Frontend User interface makes these fields optional (`is_staff?`, `is_superuser?`)
+  - **User Creation Restrictions**:
+    - Non-superusers cannot create superusers or staff members
+    - Backend validation prevents privilege escalation attempts
+    - Frontend only shows toggles to superusers
+  - **Project Role Assignment**:
+    - Users can only assign roles in projects where they are a **superadmin**
+    - Project selector in "Manage Roles" filtered based on user's superadmin status
+    - True superusers see all projects
+    - Regular users only see projects where they have superadmin role
+  - **Backend Changes** (`tickets/views.py`):
+    ```python
+    def get_queryset(self):
+        # ... superuser/staff logic ...
+
+        # Regular users only see users from SHARED projects
+        user_projects = user.project_memberships.all()
+        shared_project_members = User.objects.filter(
+            project_memberships__in=user_projects
+        ).distinct()
+        return shared_project_members
+    ```
+  - **Backend Changes** (`tickets/serializers.py`):
+
+    ```python
+    class UserManagementSerializer:
+        def to_representation(self, instance):
+            data = super().to_representation(instance)
+            request = self.context.get('request')
+
+            # Only superusers can see is_superuser and is_staff fields
+            if request and not request.user.is_superuser:
+                data.pop('is_superuser', None)
+                data.pop('is_staff', None)
+            return data
+
+    class UserCreateUpdateSerializer:
+        def validate(self, attrs):
+            # Prevent non-superusers from creating superusers/staff
+            if not request.user.is_superuser:
+                if attrs.get('is_superuser') or attrs.get('is_staff'):
+                    raise ValidationError(...)
+    ```
+
+  - **Frontend Changes** (`pages/Users.tsx`):
+
+    ```typescript
+    // Conditionally hide sensitive fields
+    {currentUser?.is_superuser && (
+      <>
+        <Form.Item name="is_staff" ...><Switch /></Form.Item>
+        <Form.Item name="is_superuser" ...><Switch /></Form.Item>
+      </>
+    )}
+
+    // Filter projects for role assignment
+    const superadminProjects = projects.filter((project) => {
+      if (currentUser?.is_superuser) return true;
+      return currentUserData.project_roles.some(
+        (role) => role.project === project.id && role.role === 'superadmin'
+      );
+    });
+    ```
+
+  - **Security**: Maintains proper access control and prevents privilege escalation
+  - **UX**: Clean interface that only shows relevant options based on user permissions
+  - **Result**: Complete role-based access control system for user management
+
 ### v1.12 - November 9, 2025
 
 - **Fixed**: User Management page showing incomplete user list
+
   - **Issue**: Regular (non-superuser) users could only see themselves in the Users page, not other project members
   - **Root Cause**: `UserManagementViewSet.get_queryset()` returned only `User.objects.filter(id=user.id)` for non-superuser/non-staff users
   - **Impact**: When user "Dima" (non-superuser) viewed Users page with IT-Tech project selected, only saw himself despite 2 members existing
   - **Solution**: Modified `get_queryset()` to return all users who are members of the requesting user's projects
   - **Implementation** (`backend/tickets/views.py`):
+
     ```python
     def get_queryset(self):
         """Filter users based on permissions"""
@@ -928,6 +1010,7 @@ Frontend (React):
 
         return project_members
     ```
+
   - **Result**: Regular users can now see all members of projects they belong to, enabling proper collaboration
   - **Security**: Users still cannot see users outside their project scope (maintains proper access control)
   - **Removed**: Debug console.log statements from Users.tsx after identifying the issue

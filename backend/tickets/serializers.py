@@ -486,6 +486,18 @@ class UserManagementSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['date_joined', 'last_login']
     
+    def to_representation(self, instance):
+        """Conditionally exclude sensitive fields based on requester permissions"""
+        data = super().to_representation(instance)
+        request = self.context.get('request')
+        
+        # Only superusers can see is_superuser and is_staff fields
+        if request and not request.user.is_superuser:
+            data.pop('is_superuser', None)
+            data.pop('is_staff', None)
+        
+        return data
+    
     def get_full_name(self, obj):
         return f"{obj.first_name} {obj.last_name}".strip() or obj.username
     
@@ -528,8 +540,29 @@ class UserCreateUpdateSerializer(serializers.ModelSerializer):
             'password', 'is_active', 'is_staff', 'is_superuser'
         ]
     
+    def validate(self, attrs):
+        """Prevent non-superusers from creating superusers or staff members"""
+        request = self.context.get('request')
+        if request and not request.user.is_superuser:
+            # Non-superusers cannot set is_superuser or is_staff to True
+            if attrs.get('is_superuser', False):
+                raise serializers.ValidationError({
+                    'is_superuser': 'You do not have permission to create superusers.'
+                })
+            if attrs.get('is_staff', False):
+                raise serializers.ValidationError({
+                    'is_staff': 'You do not have permission to create staff members.'
+                })
+        return attrs
+    
     def create(self, validated_data):
         password = validated_data.pop('password', None)
+        # Ensure non-superusers cannot create superusers/staff
+        request = self.context.get('request')
+        if request and not request.user.is_superuser:
+            validated_data['is_superuser'] = False
+            validated_data['is_staff'] = False
+        
         user = User.objects.create(**validated_data)
         if password:
             user.set_password(password)
@@ -538,6 +571,12 @@ class UserCreateUpdateSerializer(serializers.ModelSerializer):
     
     def update(self, instance, validated_data):
         password = validated_data.pop('password', None)
+        # Prevent non-superusers from elevating privileges
+        request = self.context.get('request')
+        if request and not request.user.is_superuser:
+            validated_data.pop('is_superuser', None)
+            validated_data.pop('is_staff', None)
+        
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         if password:
