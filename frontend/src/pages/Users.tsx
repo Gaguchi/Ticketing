@@ -99,8 +99,6 @@ const Users: React.FC = () => {
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-
-  console.log("👁️ Users component render - selectedProject:", selectedProject);
   const [submitting, setSubmitting] = useState(false);
   const [form] = Form.useForm();
   const [roleForm] = Form.useForm();
@@ -148,16 +146,6 @@ const Users: React.FC = () => {
       // API returns paginated response: {count, next, previous, results}
       const usersData = response.results || response;
       setUsers(Array.isArray(usersData) ? usersData : []);
-
-      console.log(
-        "📊 Loaded users:",
-        usersData.map((u: User) => ({
-          id: u.id,
-          username: u.username,
-          project_memberships: u.project_memberships,
-        }))
-      );
-
       debug.log(
         LogCategory.USER,
         LogLevel.INFO,
@@ -566,15 +554,6 @@ const Users: React.FC = () => {
         const isProjectMember = user.project_memberships?.includes(
           selectedProject.id
         );
-
-        // Debug logging
-        console.log(`🔍 Filtering user ${user.username}:`, {
-          userId: user.id,
-          selectedProjectId: selectedProject.id,
-          projectMemberships: user.project_memberships,
-          isProjectMember,
-        });
-
         return isProjectMember;
       }
       // If no project selected, show all users

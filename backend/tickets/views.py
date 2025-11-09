@@ -369,8 +369,16 @@ class UserManagementViewSet(viewsets.ModelViewSet):
         if user.is_staff:
             return self.queryset
         
-        # Regular users only see themselves
-        return User.objects.filter(id=user.id)
+        # Regular users see members of their projects
+        # Get all projects where the user is a member
+        user_projects = user.project_memberships.all()
+        
+        # Get all users who are members of those projects
+        project_members = User.objects.filter(
+            project_memberships__in=user_projects
+        ).distinct()
+        
+        return project_members
     
     @action(detail=True, methods=['post'])
     def assign_role(self, request, pk=None):

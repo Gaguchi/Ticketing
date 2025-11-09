@@ -899,6 +899,39 @@ Frontend (React):
 
 ## Version History
 
+### v1.12 - November 9, 2025
+
+- **Fixed**: User Management page showing incomplete user list
+  - **Issue**: Regular (non-superuser) users could only see themselves in the Users page, not other project members
+  - **Root Cause**: `UserManagementViewSet.get_queryset()` returned only `User.objects.filter(id=user.id)` for non-superuser/non-staff users
+  - **Impact**: When user "Dima" (non-superuser) viewed Users page with IT-Tech project selected, only saw himself despite 2 members existing
+  - **Solution**: Modified `get_queryset()` to return all users who are members of the requesting user's projects
+  - **Implementation** (`backend/tickets/views.py`):
+    ```python
+    def get_queryset(self):
+        """Filter users based on permissions"""
+        user = self.request.user
+        
+        # Superusers see all users
+        if user.is_superuser:
+            return self.queryset
+        
+        # Staff users see all users (read-only for non-superusers)
+        if user.is_staff:
+            return self.queryset
+        
+        # Regular users see members of their projects
+        user_projects = user.project_memberships.all()
+        project_members = User.objects.filter(
+            project_memberships__in=user_projects
+        ).distinct()
+        
+        return project_members
+    ```
+  - **Result**: Regular users can now see all members of projects they belong to, enabling proper collaboration
+  - **Security**: Users still cannot see users outside their project scope (maintains proper access control)
+  - **Removed**: Debug console.log statements from Users.tsx after identifying the issue
+
 ### v1.11 - November 9, 2025
 
 - **Added**: Simplified user addition to projects
