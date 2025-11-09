@@ -75,6 +75,7 @@ interface User {
   last_login: string | null;
   last_login_display: string;
   project_roles: UserRole[];
+  project_memberships: number[];
   administered_companies: Company[];
   member_companies: Company[];
   ticket_count: number;
@@ -549,8 +550,9 @@ const Users: React.FC = () => {
     .filter((user) => {
       // If a project is selected, only show users who are members of that project
       if (selectedProject) {
-        const isProjectMember = user.project_roles.some(
-          (role) => role.project === selectedProject.id
+        // Check if user is a member of the selected project
+        const isProjectMember = user.project_memberships?.includes(
+          selectedProject.id
         );
         return isProjectMember;
       }

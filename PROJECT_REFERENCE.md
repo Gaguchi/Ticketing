@@ -927,16 +927,25 @@ Frontend (React):
     - **Member Count**: Shows count like "Showing 5 members of Project Name"
     - **No Project Selected**: Shows all users in the system
     - **Dynamic UI**: "Add to Project" button only visible when project is selected
+  - **Backend Enhancement**:
+    - Added `project_memberships` field to `UserManagementSerializer`
+    - Returns list of project IDs where user is a member (from `project.members` M2M relationship)
+    - **Critical Fix**: Frontend now filters by actual project membership, not just UserRole assignments
+    - **Why this matters**: Users can be members of projects via `project.members.add(user)` without having explicit UserRole entries
   - **Usage Flow**:
     1. Go to Users page
     2. Select a project from header → User list automatically filters to show only that project's members
     3. Click "Add to Project" button (visible when project is selected)
     4. Enter email address of existing user and select role
-    5. User is instantly added to project and appears in the filtered list
+    5. User is instantly added to project via `project.members.add(user)` and appears in the filtered list
     6. Success message shows user's name and confirmation
+  - **Data Model**:
+    - Project membership: `Project.members` (ManyToMany with User)
+    - Project roles: `UserRole` table (optional, for role-based permissions)
+    - Users appear in project when added to `members`, regardless of `UserRole` entries
   - **UI Enhancement**: Button only appears when a project is selected in the app context
   - **Future Enhancement**: Email-based invitations with signup will be added later
-  - **Result**: Simple way to view and manage project members with instant user addition
+  - **Result**: Simple way to view and manage project members with instant user addition, showing ALL project members regardless of role assignments
 
 ### v1.10 - November 9, 2025
 

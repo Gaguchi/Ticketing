@@ -468,6 +468,7 @@ class UserRoleSerializer(serializers.ModelSerializer):
 class UserManagementSerializer(serializers.ModelSerializer):
     """Comprehensive user serializer for user management page"""
     project_roles = UserRoleSerializer(many=True, read_only=True)
+    project_memberships = serializers.SerializerMethodField()
     administered_companies = serializers.SerializerMethodField()
     member_companies = serializers.SerializerMethodField()
     full_name = serializers.SerializerMethodField()
@@ -480,13 +481,17 @@ class UserManagementSerializer(serializers.ModelSerializer):
             'id', 'username', 'email', 'first_name', 'last_name', 'full_name',
             'is_active', 'is_staff', 'is_superuser',
             'date_joined', 'last_login', 'last_login_display',
-            'project_roles', 'administered_companies', 'member_companies',
+            'project_roles', 'project_memberships', 'administered_companies', 'member_companies',
             'ticket_count'
         ]
         read_only_fields = ['date_joined', 'last_login']
     
     def get_full_name(self, obj):
         return f"{obj.first_name} {obj.last_name}".strip() or obj.username
+    
+    def get_project_memberships(self, obj):
+        """Return list of project IDs where user is a member"""
+        return list(obj.project_memberships.values_list('id', flat=True))
     
     def get_administered_companies(self, obj):
         return [{'id': c.id, 'name': c.name} for c in obj.administered_companies.all()]
