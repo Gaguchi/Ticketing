@@ -920,13 +920,14 @@ Frontend (React):
     - `InviteUserModal.tsx` - Modal for adding users (email + role selector)
     - Updated to "Add User" instead of "Send Invitation"
     - Alert message explains user must already exist
-    - Integrated into Settings → "Team & Projects" tab
+    - **Location**: Integrated into Users page (not Settings)
   - **Usage Flow**:
-    1. Admin goes to Settings → Team & Projects tab
-    2. Clicks "Add User" button
-    3. Enters email address of existing user and selects role
+    1. Go to Users page
+    2. Click "Add to Project" button (visible when project is selected)
+    3. Enter email address of existing user and select role
     4. User is instantly added to project
     5. Success message shows user's name and confirmation
+  - **UI Enhancement**: Button only appears when a project is selected in the app context
   - **Future Enhancement**: Email-based invitations with signup will be added later
   - **Result**: Simple way to add existing users to projects without complex invitation flow
 

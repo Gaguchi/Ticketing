@@ -39,6 +39,8 @@ import type { MenuProps } from "antd";
 import { API_ENDPOINTS } from "../config/api";
 import apiService from "../services/api.service";
 import { debug, LogLevel, LogCategory } from "../utils/debug";
+import { InviteUserModal } from "../components/InviteUserModal";
+import { useApp } from "../contexts/AppContext";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -85,6 +87,7 @@ interface Project {
 }
 
 const Users: React.FC = () => {
+  const { selectedProject } = useApp();
   const [users, setUsers] = useState<User[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,6 +95,7 @@ const Users: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -563,13 +567,23 @@ const Users: React.FC = () => {
           </Title>
           <Text type="secondary">Manage users, roles, and permissions</Text>
         </div>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={handleCreateUser}
-        >
-          Create User
-        </Button>
+        <Space>
+          {selectedProject && (
+            <Button
+              icon={<TeamOutlined />}
+              onClick={() => setIsInviteModalOpen(true)}
+            >
+              Add to Project
+            </Button>
+          )}
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={handleCreateUser}
+          >
+            Create User
+          </Button>
+        </Space>
       </div>
 
       {/* Search */}
@@ -808,6 +822,20 @@ const Users: React.FC = () => {
           </Form.Item>
         </Form>
       </Modal>
+
+      {/* Add User to Project Modal */}
+      {selectedProject && (
+        <InviteUserModal
+          open={isInviteModalOpen}
+          onClose={() => setIsInviteModalOpen(false)}
+          onSuccess={() => {
+            message.success("User added to project successfully");
+            setIsInviteModalOpen(false);
+          }}
+          projectId={selectedProject.id}
+          projectName={selectedProject.name}
+        />
+      )}
     </div>
   );
 };

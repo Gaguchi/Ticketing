@@ -10,9 +10,6 @@ import {
   Button,
   message,
   Tabs,
-  Table,
-  Tag,
-  Popconfirm,
 } from "antd";
 import {
   BgColorsOutlined,
@@ -20,11 +17,7 @@ import {
   GlobalOutlined,
   SafetyOutlined,
   UserOutlined,
-  TeamOutlined,
-  MailOutlined,
-  DeleteOutlined,
 } from "@ant-design/icons";
-import { InviteUserModal } from "../components/InviteUserModal";
 
 const { Title, Text } = Typography;
 
@@ -39,11 +32,6 @@ const Settings: React.FC = () => {
     push: true,
     updates: false,
   });
-  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
-  const [invitations] = useState<any[]>([]);
-
-  // Mock project data - in real app, get from context or props
-  const currentProject = { id: 1, name: "Current Project" };
 
   const handleSave = () => {
     // In a real app, this would save to backend/localStorage
@@ -61,79 +49,6 @@ const Settings: React.FC = () => {
     });
     message.info("Settings reset to defaults");
   };
-
-  const handleInviteSuccess = () => {
-    message.success("Invitation sent successfully!");
-    setIsInviteModalOpen(false);
-    // Refresh invitations list if needed
-  };
-
-  const handleRevokeInvitation = (_id: number) => {
-    // In real app, call API to revoke
-    message.success("Invitation revoked");
-  };
-
-  const invitationColumns = [
-    {
-      title: "Email",
-      dataIndex: "email",
-      key: "email",
-    },
-    {
-      title: "Role",
-      dataIndex: "role",
-      key: "role",
-      render: (role: string) => <Tag color="blue">{role}</Tag>,
-    },
-    {
-      title: "Status",
-      dataIndex: "status",
-      key: "status",
-      render: (status: string) => {
-        const colorMap: Record<string, string> = {
-          pending: "orange",
-          accepted: "green",
-          expired: "red",
-          revoked: "default",
-        };
-        return <Tag color={colorMap[status] || "default"}>{status}</Tag>;
-      },
-    },
-    {
-      title: "Sent",
-      dataIndex: "created_at",
-      key: "created_at",
-      render: (date: string) => new Date(date).toLocaleDateString(),
-    },
-    {
-      title: "Expires",
-      dataIndex: "expires_at",
-      key: "expires_at",
-      render: (date: string) => new Date(date).toLocaleDateString(),
-    },
-    {
-      title: "Action",
-      key: "action",
-      render: (_: any, record: any) => {
-        if (record.status === "pending") {
-          return (
-            <Popconfirm
-              title="Revoke this invitation?"
-              description="The invitation link will no longer work."
-              onConfirm={() => handleRevokeInvitation(record.id)}
-              okText="Yes"
-              cancelText="No"
-            >
-              <Button type="link" danger icon={<DeleteOutlined />} size="small">
-                Revoke
-              </Button>
-            </Popconfirm>
-          );
-        }
-        return null;
-      },
-    },
-  ];
 
   const tabItems = [
     {
@@ -518,55 +433,6 @@ const Settings: React.FC = () => {
       ),
     },
     {
-      key: "team",
-      label: (
-        <span>
-          <TeamOutlined />
-          Team & Projects
-        </span>
-      ),
-      children: (
-        <Space direction="vertical" size="large" style={{ width: "100%" }}>
-          <div>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: 16,
-              }}
-            >
-              <div>
-                <Text strong style={{ fontSize: 15, display: "block" }}>
-                  Project Members
-                </Text>
-                <Text type="secondary" style={{ fontSize: 13 }}>
-                  Add existing users to {currentProject?.name || "your project"}
-                </Text>
-              </div>
-              <Button
-                type="primary"
-                icon={<MailOutlined />}
-                onClick={() => setIsInviteModalOpen(true)}
-              >
-                Add User
-              </Button>
-            </div>
-
-            <Table
-              columns={invitationColumns}
-              dataSource={invitations}
-              rowKey="id"
-              pagination={{ pageSize: 5 }}
-              locale={{
-                emptyText: "No invitations sent yet",
-              }}
-            />
-          </div>
-        </Space>
-      ),
-    },
-    {
       key: "privacy",
       label: (
         <span>
@@ -679,17 +545,6 @@ const Settings: React.FC = () => {
             </Button>
           </div>
         </Card>
-
-        {/* Invite User Modal */}
-        {currentProject && (
-          <InviteUserModal
-            open={isInviteModalOpen}
-            onClose={() => setIsInviteModalOpen(false)}
-            onSuccess={handleInviteSuccess}
-            projectId={currentProject.id}
-            projectName={currentProject.name}
-          />
-        )}
       </div>
     </div>
   );
