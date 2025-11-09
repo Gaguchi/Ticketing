@@ -899,9 +899,41 @@ Frontend (React):
 
 ## Version History
 
+### v1.11 - November 9, 2025
+
+- **Added**: Simplified user addition to projects
+  - **Feature**: Instantly add existing users to projects by email (no email sending)
+  - **Implementation**:
+    - Modified invitation endpoint to directly add users instead of sending emails
+    - Validates that user exists in database before adding
+    - User must already have an account (no signup via invitation)
+    - Creates invitation record with `accepted` status for tracking
+  - **API Endpoint**:
+    - `POST /api/tickets/invitations/send/` - Add existing user to project
+    - Body: `{ "project_id": 1, "email": "user@example.com", "role": "user" }`
+    - Response: Immediate success with user details, or error if not found
+  - **Error Messages**:
+    - "User with this email not found" - Email doesn't exist in database
+    - "User is already a member of this project" - User already added
+    - "You do not have permission..." - Requester not a project member
+  - **Frontend Components**:
+    - `InviteUserModal.tsx` - Modal for adding users (email + role selector)
+    - Updated to "Add User" instead of "Send Invitation"
+    - Alert message explains user must already exist
+    - Integrated into Settings → "Team & Projects" tab
+  - **Usage Flow**:
+    1. Admin goes to Settings → Team & Projects tab
+    2. Clicks "Add User" button
+    3. Enters email address of existing user and selects role
+    4. User is instantly added to project
+    5. Success message shows user's name and confirmation
+  - **Future Enhancement**: Email-based invitations with signup will be added later
+  - **Result**: Simple way to add existing users to projects without complex invitation flow
+
 ### v1.10 - November 9, 2025
 
 - **Added**: Real-time ticket updates via WebSocket
+
   - **Feature**: New tickets appear immediately when created (no manual refresh needed)
   - **Implementation**:
     - WebSocketContext now dispatches custom `ticketUpdate` events when receiving ticket changes

@@ -14,7 +14,7 @@ from .permissions import (
 from .models import (
     Ticket, Column, Project, Comment, Attachment,
     Tag, Contact, TagContact, UserTag, TicketTag, IssueLink, Company, UserRole, TicketSubtask,
-    Notification
+    Notification, ProjectInvitation
 )
 from .serializers import (
     TicketSerializer, TicketListSerializer, ColumnSerializer,
@@ -23,8 +23,9 @@ from .serializers import (
     TagContactSerializer, UserTagSerializer, TicketTagSerializer,
     IssueLinkSerializer, CompanySerializer, CompanyListSerializer,
     UserManagementSerializer, UserCreateUpdateSerializer, UserRoleSerializer, TicketSubtaskSerializer,
-    NotificationSerializer
+    NotificationSerializer, ProjectInvitationSerializer, InviteUserSerializer, AcceptInvitationSerializer
 )
+from .email_service import send_invitation_email
 
 
 # ==================== Authentication Views ====================
@@ -1061,3 +1062,227 @@ class NotificationViewSet(viewsets.ModelViewSet):
             is_read=False
         ).count()
         return Response({'unread_count': count})
+
+
+class ProjectInvitationViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing project invitations
+    """
+    serializer_class = ProjectInvitationSerializer
+    permission_classes = [IsAuthenticated]
+    queryset = ProjectInvitation.objects.all()
+    
+    def get_queryset(self):
+        """Filter invitations based on user permissions"""
+        user = self.request.user
+        
+        # Superusers see all
+        if user.is_superuser:
+            return ProjectInvitation.objects.all()
+        
+        # Users see invitations for projects they're members of
+        return ProjectInvitation.objects.filter(
+            project__members=user
+        )
+    
+    @action(detail=False, methods=['post'], url_path='send')
+    def send_invitation(self, request):
+        """
+        Add an existing user to project by email (simplified - no email sending)
+        
+        POST /api/tickets/invitations/send/
+        Body: {
+            "project_id": 1,
+            "email": "user@example.com",
+            "role": "user"  # optional, defaults to 'user'
+        }
+        """
+        serializer = InviteUserSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(
+                serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        project_id = request.data.get('project_id')
+        email = serializer.validated_data['email']
+        role = serializer.validated_data.get('role', 'user')
+        
+        # Get project
+        try:
+            project = Project.objects.get(id=project_id)
+        except Project.DoesNotExist:
+            return Response(
+                {'error': 'Project not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Check if user has permission to invite to this project
+        if not request.user.is_superuser and request.user not in project.members.all():
+            return Response(
+                {'error': 'You do not have permission to invite users to this project'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Check if user with this email exists
+        try:
+            user_to_add = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response(
+                {'error': 'User with this email not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Check if user is already a member
+        if user_to_add in project.members.all():
+            return Response(
+                {'error': 'User is already a member of this project'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Add user to project instantly
+        project.members.add(user_to_add)
+        
+        # Optionally create an invitation record for tracking (marked as accepted immediately)
+        invitation = ProjectInvitation.objects.create(
+            project=project,
+            email=email,
+            role=role,
+            invited_by=request.user,
+            accepted_by=user_to_add,
+            status='accepted'
+        )
+        
+        return Response({
+            'success': True,
+            'message': f'{user_to_add.first_name} {user_to_add.last_name} ({email}) has been added to {project.name}',
+            'user': {
+                'id': user_to_add.id,
+                'email': user_to_add.email,
+                'first_name': user_to_add.first_name,
+                'last_name': user_to_add.last_name
+            },
+            'project': {
+                'id': project.id,
+                'name': project.name,
+                'key': project.key
+            }
+        }, status=status.HTTP_201_CREATED)
+    
+    @action(detail=False, methods=['post'], url_path='accept', permission_classes=[IsAuthenticated])
+    def accept_invitation(self, request):
+        """
+        Accept a project invitation
+        
+        POST /api/tickets/invitations/accept/
+        Body: {
+            "token": "unique_token_string"
+        }
+        """
+        serializer = AcceptInvitationSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(
+                serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        token = serializer.validated_data['token']
+        
+        # Get invitation
+        try:
+            invitation = ProjectInvitation.objects.get(token=token)
+        except ProjectInvitation.DoesNotExist:
+            return Response(
+                {'error': 'Invalid invitation token'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Check if valid
+        if not invitation.is_valid():
+            return Response(
+                {'error': f'Invitation is {invitation.status}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Accept invitation
+        try:
+            invitation.accept(request.user)
+            return Response({
+                'success': True,
+                'message': f'You have been added to {invitation.project.name}',
+                'project': {
+                    'id': invitation.project.id,
+                    'name': invitation.project.name,
+                    'key': invitation.project.key
+                },
+                'role': invitation.role
+            })
+        except ValueError as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+    
+    @action(detail=False, methods=['get'], url_path='check', permission_classes=[AllowAny])
+    def check_invitation(self, request):
+        """
+        Check if an invitation is valid without accepting it
+        
+        GET /api/tickets/invitations/check/?token=xyz
+        """
+        token = request.query_params.get('token')
+        if not token:
+            return Response(
+                {'error': 'Token parameter is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            invitation = ProjectInvitation.objects.get(token=token)
+        except ProjectInvitation.DoesNotExist:
+            return Response(
+                {'error': 'Invalid invitation token'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        return Response({
+            'valid': invitation.is_valid(),
+            'status': invitation.status,
+            'project_name': invitation.project.name,
+            'project_key': invitation.project.key,
+            'role': invitation.get_role_display(),
+            'email': invitation.email,
+            'expires_at': invitation.expires_at,
+            'invited_by': invitation.invited_by.username if invitation.invited_by else None
+        })
+    
+    @action(detail=True, methods=['post'], url_path='revoke')
+    def revoke_invitation(self, request, pk=None):
+        """
+        Revoke a pending invitation
+        
+        POST /api/tickets/invitations/{id}/revoke/
+        """
+        invitation = self.get_object()
+        
+        # Check permission
+        if not request.user.is_superuser and request.user != invitation.invited_by:
+            return Response(
+                {'error': 'You do not have permission to revoke this invitation'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        if invitation.status != 'pending':
+            return Response(
+                {'error': f'Cannot revoke {invitation.status} invitation'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        invitation.status = 'revoked'
+        invitation.save(update_fields=['status', 'updated_at'])
+        
+        return Response({
+            'success': True,
+            'message': 'Invitation revoked'
+        })
+

@@ -14,6 +14,7 @@ import Chat from "./pages/Chat";
 import Companies from "./pages/Companies";
 import Users from "./pages/Users";
 import Settings from "./pages/Settings";
+import AcceptInvitationPage from "./pages/AcceptInvitationPage";
 import theme from "./theme/antd-theme";
 
 function App() {
@@ -27,6 +28,10 @@ function App() {
                 {/* Public routes */}
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
+                <Route
+                  path="/invite/accept"
+                  element={<AcceptInvitationPage />}
+                />
 
                 {/* Project setup (protected) */}
                 <Route

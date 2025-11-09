@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from .models import (
     Ticket, Project, Column, Comment, Attachment,
     Tag, Contact, TagContact, UserTag, TicketTag, IssueLink, Company, UserRole, TicketSubtask,
-    Notification
+    Notification, ProjectInvitation
 )
 
 
@@ -628,3 +628,48 @@ class NotificationSerializer(serializers.ModelSerializer):
         # Frontend expects 'type' not 'notification_type'
         data['type'] = data.pop('notification_type')
         return data
+
+
+class ProjectInvitationSerializer(serializers.ModelSerializer):
+    """Serializer for project invitations"""
+    invited_by_username = serializers.CharField(source='invited_by.username', read_only=True)
+    project_name = serializers.CharField(source='project.name', read_only=True)
+    project_key = serializers.CharField(source='project.key', read_only=True)
+    is_valid = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = ProjectInvitation
+        fields = [
+            'id', 'project', 'project_name', 'project_key', 'email', 
+            'token', 'role', 'invited_by', 'invited_by_username',
+            'status', 'expires_at', 'accepted_at', 'accepted_by',
+            'created_at', 'is_valid'
+        ]
+        read_only_fields = [
+            'token', 'invited_by', 'status', 'accepted_at', 
+            'accepted_by', 'created_at'
+        ]
+    
+    def get_is_valid(self, obj):
+        """Check if invitation is still valid"""
+        return obj.is_valid()
+
+
+class InviteUserSerializer(serializers.Serializer):
+    """Serializer for creating new invitations"""
+    email = serializers.EmailField(required=True)
+    role = serializers.ChoiceField(
+        choices=UserRole.ROLE_CHOICES,
+        default='user',
+        required=False
+    )
+    
+    def validate_email(self, value):
+        """Normalize email to lowercase"""
+        return value.lower().strip()
+
+
+class AcceptInvitationSerializer(serializers.Serializer):
+    """Serializer for accepting invitations"""
+    token = serializers.CharField(required=True, max_length=64)
+

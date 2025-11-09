@@ -44,5 +44,16 @@ export type { Subtask, CreateSubtaskData, UpdateSubtaskData } from './subtask.se
 export { linkedItemService, LINK_TYPES } from './linkedItem.service';
 export type { IssueLink, LinkedTicket, CreateIssueLinkData } from './linkedItem.service';
 
+// Invitation Service
+export { invitationService } from './invitation.service';
+export type { 
+  ProjectInvitation, 
+  SendInvitationRequest, 
+  SendInvitationResponse,
+  AcceptInvitationRequest,
+  AcceptInvitationResponse,
+  CheckInvitationResponse
+} from './invitation.service';
+
 // Re-export all types from centralized types/api.ts
 export type * from '../types/api';

@@ -306,3 +306,25 @@ CHANNEL_LAYERS = {
         } if not DEBUG else {},
     },
 }
+
+# ============================================
+# EMAIL CONFIGURATION
+# ============================================
+
+# Email backend - use console for development, SMTP for production
+EMAIL_BACKEND = os.getenv(
+    'EMAIL_BACKEND',
+    'django.core.mail.backends.console.EmailBackend' if DEBUG else 'django.core.mail.backends.smtp.EmailBackend'
+)
+
+# SMTP Configuration (for production)
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() in ('true', '1', 'yes')
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@ticketing.local')
+
+# Frontend URL for invitation links
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173')
+

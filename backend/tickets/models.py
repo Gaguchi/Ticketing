@@ -1,5 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import User
+import secrets
+from datetime import timedelta
+from django.utils import timezone
 
 
 class UserRole(models.Model):
@@ -460,3 +463,137 @@ class Notification(models.Model):
     def __str__(self):
         status = "✓" if self.is_read else "●"
         return f"{status} {self.user.username}: {self.title}"
+
+
+class ProjectInvitation(models.Model):
+    """
+    Project invitation model for email-based project access.
+    
+    Users receive an email with a unique token link.
+    Only the invited email can accept the invitation.
+    Tokens expire after 7 days by default.
+    """
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('accepted', 'Accepted'),
+        ('expired', 'Expired'),
+        ('revoked', 'Revoked'),
+    ]
+    
+    project = models.ForeignKey(
+        Project, 
+        on_delete=models.CASCADE, 
+        related_name='invitations'
+    )
+    email = models.EmailField(
+        help_text='Email address of the invited user'
+    )
+    token = models.CharField(
+        max_length=64, 
+        unique=True, 
+        editable=False,
+        help_text='Unique token for invitation link'
+    )
+    role = models.CharField(
+        max_length=20,
+        choices=UserRole.ROLE_CHOICES,
+        default='user',
+        help_text='Role to assign when invitation is accepted'
+    )
+    invited_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='sent_invitations',
+        help_text='User who sent the invitation'
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending'
+    )
+    expires_at = models.DateTimeField(
+        help_text='When this invitation expires'
+    )
+    accepted_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='When the invitation was accepted'
+    )
+    accepted_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='accepted_invitations',
+        help_text='User who accepted the invitation'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['token']),
+            models.Index(fields=['email', 'status']),
+            models.Index(fields=['project', 'status']),
+        ]
+        verbose_name = 'Project Invitation'
+        verbose_name_plural = 'Project Invitations'
+    
+    def __str__(self):
+        return f"{self.email} → {self.project.name} ({self.get_status_display()})"
+    
+    def save(self, *args, **kwargs):
+        """Generate unique token and set expiry on creation"""
+        if not self.token:
+            self.token = secrets.token_urlsafe(48)
+        if not self.expires_at:
+            self.expires_at = timezone.now() + timedelta(days=7)
+        super().save(*args, **kwargs)
+    
+    def is_valid(self):
+        """Check if invitation is still valid"""
+        return (
+            self.status == 'pending' and
+            timezone.now() < self.expires_at
+        )
+    
+    def mark_expired(self):
+        """Mark invitation as expired"""
+        if self.status == 'pending':
+            self.status = 'expired'
+            self.save(update_fields=['status', 'updated_at'])
+    
+    def accept(self, user):
+        """
+        Accept the invitation and add user to project.
+        Validates that user's email matches invitation email.
+        """
+        if not self.is_valid():
+            raise ValueError('Invitation is not valid')
+        
+        if user.email.lower() != self.email.lower():
+            raise ValueError('Email does not match invitation')
+        
+        # Add user to project
+        self.project.members.add(user)
+        
+        # Assign role
+        UserRole.objects.get_or_create(
+            user=user,
+            project=self.project,
+            defaults={
+                'role': self.role,
+                'assigned_by': self.invited_by
+            }
+        )
+        
+        # Mark as accepted
+        self.status = 'accepted'
+        self.accepted_at = timezone.now()
+        self.accepted_by = user
+        self.save(update_fields=['status', 'accepted_at', 'accepted_by', 'updated_at'])
+        
+        return True
+
