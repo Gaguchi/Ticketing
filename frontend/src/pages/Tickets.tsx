@@ -139,6 +139,61 @@ const Tickets: React.FC = () => {
     fetchData();
   }, [selectedProject?.id]); // Only depend on project ID
 
+  // Listen for real-time ticket updates via WebSocket
+  useEffect(() => {
+    const handleTicketUpdate = async (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { type, data, projectId } = customEvent.detail;
+
+      // Only update if it's for the current project
+      if (!selectedProject || projectId !== selectedProject.id) {
+        return;
+      }
+
+      console.log(`🎫 [Tickets] Received ${type} event:`, data);
+
+      if (type === "ticket_created") {
+        // Fetch the full ticket details and add to list
+        try {
+          const newTicket = await ticketService.getTicket(data.ticket_id);
+          setTickets((prev) => [newTicket, ...prev]);
+          message.success(
+            `New ticket created: ${data.ticket_key || `#${data.ticket_id}`}`
+          );
+        } catch (error) {
+          console.error("Failed to fetch new ticket:", error);
+          // Fallback: refresh all tickets
+          const response = await ticketService.getTickets({
+            project: selectedProject.id,
+          });
+          setTickets(response.results);
+        }
+      } else if (type === "ticket_updated") {
+        // Update existing ticket in list
+        try {
+          const updatedTicket = await ticketService.getTicket(data.ticket_id);
+          setTickets((prev) =>
+            prev.map((t) => (t.id === data.ticket_id ? updatedTicket : t))
+          );
+        } catch (error) {
+          console.error("Failed to fetch updated ticket:", error);
+        }
+      } else if (type === "ticket_deleted") {
+        // Remove ticket from list
+        setTickets((prev) => prev.filter((t) => t.id !== data.ticket_id));
+        message.info(
+          `Ticket ${data.ticket_key || `#${data.ticket_id}`} was deleted`
+        );
+      }
+    };
+
+    window.addEventListener("ticketUpdate", handleTicketUpdate);
+
+    return () => {
+      window.removeEventListener("ticketUpdate", handleTicketUpdate);
+    };
+  }, [selectedProject?.id]);
+
   // Fetch full ticket details before opening modal
   const handleTicketClick = async (ticket: Ticket) => {
     try {
@@ -481,9 +536,13 @@ const Tickets: React.FC = () => {
       <CreateTicketModal
         open={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        onSuccess={(_newTicket) => {
+        onSuccess={(newTicket) => {
           setIsCreateModalOpen(false);
-          // Optionally refresh the ticket list here
+          // Add the new ticket to the list immediately (optimistic update)
+          if (newTicket) {
+            setTickets((prev) => [newTicket, ...prev]);
+            message.success(`Ticket ${newTicket.name} created successfully`);
+          }
         }}
       />
     </div>

@@ -899,15 +899,64 @@ Frontend (React):
 
 ## Version History
 
+### v1.10 - November 9, 2025
+
+- **Added**: Real-time ticket updates via WebSocket
+  - **Feature**: New tickets appear immediately when created (no manual refresh needed)
+  - **Implementation**:
+    - WebSocketContext now dispatches custom `ticketUpdate` events when receiving ticket changes
+    - Event types: `ticket_created`, `ticket_updated`, `ticket_deleted`
+    - Tickets page listens for these events and updates the list in real-time
+  - **User Experience**:
+    - Create a ticket → appears instantly in the list
+    - Update a ticket → changes reflect immediately
+    - Delete a ticket → removed from list instantly
+  - **Code Pattern**:
+
+    ```typescript
+    // WebSocketContext.tsx - Dispatch events
+    if (
+      data.type === "ticket_created" ||
+      data.type === "ticket_updated" ||
+      data.type === "ticket_deleted"
+    ) {
+      window.dispatchEvent(
+        new CustomEvent("ticketUpdate", {
+          detail: { type: data.type, data: data.data, projectId: projectId },
+        })
+      );
+    }
+
+    // Tickets.tsx - Listen for events
+    useEffect(() => {
+      const handleTicketUpdate = async (event: Event) => {
+        const { type, data, projectId } = (event as CustomEvent).detail;
+        if (type === "ticket_created") {
+          const newTicket = await ticketService.getTicket(data.ticket_id);
+          setTickets((prev) => [newTicket, ...prev]);
+        }
+        // ... handle update/delete
+      };
+      window.addEventListener("ticketUpdate", handleTicketUpdate);
+      return () =>
+        window.removeEventListener("ticketUpdate", handleTicketUpdate);
+    }, [selectedProject?.id]);
+    ```
+
+  - **Optimistic Updates**: CreateTicketModal immediately adds ticket to list on success
+  - **Result**: Seamless real-time collaboration, no manual refreshes needed
+
 ### v1.9 - November 7, 2025
 
 - **Fixed**: Chat still rendering on every room refresh despite UX appearing fine
+
   - **Issue**: Chat rendered every 10 seconds (renders #10, #21, #22, #23... continuously)
   - **Root Cause**: `setRooms(data)` called unconditionally, creating new array reference
   - **Why UX seemed fine**: Loading state fixed, activeRoom reference preserved, so no visual glitches
   - **Why still problematic**: Unnecessary re-renders waste CPU, re-run all component logic, could cause scroll jumps
   - **Solution**: Use functional setState to compare data before updating
   - **Implementation**:
+
     ```typescript
     setRooms((prevRooms) => {
       // Check if room count changed
@@ -928,6 +977,7 @@ Frontend (React):
       return hasChanges ? data : prevRooms;
     });
     ```
+
   - **Result**: Chat only re-renders when rooms actually change, not on every 10s refresh
 
 **Critical Learning**:

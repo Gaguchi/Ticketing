@@ -290,7 +290,24 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
         `ws/projects/${projectId}/tickets/`,
         (data) => {
           console.log("📨 [WebSocketContext] Ticket update:", data);
-          // Ticket updates will be handled by custom hooks
+
+          // Dispatch custom events for ticket changes
+          if (
+            data.type === "ticket_created" ||
+            data.type === "ticket_updated" ||
+            data.type === "ticket_deleted"
+          ) {
+            console.log(`🎫 [WebSocketContext] Dispatching ${data.type} event`);
+            window.dispatchEvent(
+              new CustomEvent("ticketUpdate", {
+                detail: {
+                  type: data.type,
+                  data: data.data,
+                  projectId: projectId,
+                },
+              })
+            );
+          }
         },
         (error) => {
           console.error("❌ [WebSocketContext] Ticket error:", error);

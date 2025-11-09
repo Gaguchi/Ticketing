@@ -200,10 +200,14 @@ class TicketConsumer(AsyncWebsocketConsumer):
         """
         Handle ticket update events from channel layer
         """
+        # Extract action and data from event
+        action = event.get('action', 'updated')
+        data = event.get('data', {})
+        
+        # Send message with type matching the action
         await self.send(text_data=json.dumps({
-            'type': 'ticket_update',
-            'action': event['action'],  # created, updated, deleted
-            'data': event['data'],
+            'type': f'ticket_{action}',  # ticket_created, ticket_updated, ticket_deleted
+            'data': data,
         }))
     
     async def comment_added(self, event):
