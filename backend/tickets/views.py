@@ -205,20 +205,29 @@ class CompanyViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """
-        Filter companies based on user role:
-        - Superusers see all companies
-        - IT Admins see companies they're assigned to
-        - Company Users see only their company
+        Filter companies based on user role and selected project:
+        - Superusers see all companies (filtered by project if specified)
+        - IT Admins see companies they're assigned to (filtered by project if specified)
+        - Company Users see only their company (filtered by project if specified)
+        - If ?project=<id> is provided, only show companies assigned to that project
         """
         user = self.request.user
         
+        # Start with base queryset based on user permissions
         if user.is_superuser:
-            return Company.objects.all()
+            queryset = Company.objects.all()
+        else:
+            # Get companies where user is an admin or a member
+            queryset = Company.objects.filter(
+                Q(admins=user) | Q(users=user)
+            ).distinct()
         
-        # Get companies where user is an admin or a member
-        return Company.objects.filter(
-            Q(admins=user) | Q(users=user)
-        ).distinct()
+        # Filter by selected project if provided
+        project_id = self.request.query_params.get('project')
+        if project_id:
+            queryset = queryset.filter(projects__id=project_id)
+        
+        return queryset
     
     @action(detail=True, methods=['post'])
     def assign_admin(self, request, pk=None):

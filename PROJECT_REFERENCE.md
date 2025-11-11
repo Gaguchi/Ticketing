@@ -899,9 +899,54 @@ Frontend (React):
 
 ## Version History
 
+### v1.14 - November 9, 2025
+
+- **Added**: Project-Based Company Filtering
+  - **Issue**: Companies page showed all companies regardless of selected project
+  - **Solution**: Filter companies by selected project using Project-Company M2M relationship
+  - **Backend Changes** (`tickets/views.py` - CompanyViewSet):
+    ```python
+    def get_queryset(self):
+        # Existing permission-based filtering...
+
+        # Filter by selected project if provided
+        project_id = self.request.query_params.get('project')
+        if project_id:
+            queryset = queryset.filter(projects__id=project_id)
+
+        return queryset
+    ```
+  - **Frontend Changes** (`pages/Companies.tsx`):
+
+    ```typescript
+    // Import AppContext to get selectedProject
+    const { selectedProject } = useApp();
+
+    // Re-fetch when project changes
+    useEffect(() => {
+      if (initRef.current) {
+        fetchCompanies();
+      }
+    }, [selectedProject]);
+
+    // Include project parameter in API request
+    let url = API_ENDPOINTS.COMPANIES;
+    if (selectedProject) {
+      url = `${url}?project=${selectedProject.id}`;
+    }
+    ```
+
+  - **Relationship**: Uses `Project.companies` M2M field with `related_name='projects'`
+  - **Behavior**:
+    - If no project selected → Shows all companies (based on user permissions)
+    - If project selected → Shows only companies assigned to that project
+    - IT-Tech project with 0 companies shows empty list correctly
+  - **Result**: Companies page now respects selected project context, similar to Users page
+
 ### v1.13 - November 9, 2025
 
 - **Added**: Role-Based Access Control for User Management
+
   - **Feature**: Implemented comprehensive permission system to control user visibility and management capabilities
   - **User Visibility**:
     - Regular users only see users from **shared projects** (projects where both users are members)
@@ -922,6 +967,7 @@ Frontend (React):
     - True superusers see all projects
     - Regular users only see projects where they have superadmin role
   - **Backend Changes** (`tickets/views.py`):
+
     ```python
     def get_queryset(self):
         # ... superuser/staff logic ...
@@ -933,6 +979,7 @@ Frontend (React):
         ).distinct()
         return shared_project_members
     ```
+
   - **Backend Changes** (`tickets/serializers.py`):
 
     ```python

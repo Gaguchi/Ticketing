@@ -42,6 +42,7 @@ import type { MenuProps } from "antd";
 import { API_ENDPOINTS } from "../config/api";
 import apiService from "../services/api.service";
 import { debug, LogLevel, LogCategory } from "../utils/debug";
+import { useApp } from "../contexts/AppContext";
 
 const { Title, Text } = Typography;
 
@@ -71,6 +72,7 @@ interface Company {
 }
 
 const Companies: React.FC = () => {
+  const { selectedProject } = useApp();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -107,6 +109,13 @@ const Companies: React.FC = () => {
     fetchCompanies();
   }, []);
 
+  // Re-fetch companies when selected project changes
+  useEffect(() => {
+    if (initRef.current) {
+      fetchCompanies();
+    }
+  }, [selectedProject]);
+
   const fetchCompanies = async () => {
     // Prevent concurrent identical requests
     if (fetchInProgressRef.current) {
@@ -123,7 +132,14 @@ const Companies: React.FC = () => {
 
     try {
       debug.log(LogCategory.COMPANY, LogLevel.INFO, "Fetching companies...");
-      const response = await apiService.get<any>(API_ENDPOINTS.COMPANIES);
+
+      // Build URL with project filter if selected
+      let url = API_ENDPOINTS.COMPANIES;
+      if (selectedProject) {
+        url = `${url}?project=${selectedProject.id}`;
+      }
+
+      const response = await apiService.get<any>(url);
       // API returns paginated response: {count, next, previous, results}
       const companiesData = response.results || response;
       setCompanies(Array.isArray(companiesData) ? companiesData : []);
@@ -132,7 +148,9 @@ const Companies: React.FC = () => {
         LogLevel.INFO,
         `Loaded ${
           Array.isArray(companiesData) ? companiesData.length : 0
-        } companies`
+        } companies${
+          selectedProject ? ` for project ${selectedProject.name}` : ""
+        }`
       );
       setLoading(false);
     } catch (error: any) {
