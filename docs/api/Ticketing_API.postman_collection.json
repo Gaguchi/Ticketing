@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "ticketing-system-api",
 		"name": "Ticketing System API",
-		"description": "Complete API collection for the Ticketing System with authentication, tickets, projects, tags, contacts, and more.\n\n## Authentication\n\nThis collection is pre-configured to use the **Super Secret Key** authentication method for all requests. The `X-Super-Secret-Key` header is automatically added to every request.\n\n### Authentication Methods Available:\n\n1. **Super Secret Key** (Default - Pre-configured)\n   - Header: `X-Super-Secret-Key: dev-super-secret-key-12345`\n   - Automatically added to all requests\n   - Perfect for testing without login\n   - ⚠️ **Development/Testing Only - Never use in production!**\n\n2. **JWT Bearer Token** (Optional)\n   - Login to get access token\n   - Add to Authorization header: `Bearer <token>`\n   - Can be used instead of super-secret-key\n\n## Getting Started\n\n1. **Import this collection** into Postman\n2. **Set environment variable** (optional):\n   - `base_url`: http://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me/api\n3. **Start testing!** All requests will work immediately with super-secret-key\n\n## Environment Variables\n\nThe collection includes these variables:\n- `base_url`: http://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me/api\n- `super_secret_key`: dev-super-secret-key-12345 (pre-configured)\n- `access_token`: (optional - auto-set after login)\n- `refresh_token`: (optional - auto-set after login)",
+		"description": "Complete API collection for the Ticketing System with authentication, tickets, projects, companies, tags, contacts, and more.\n\n## Authentication\n\nThis collection is pre-configured to use the **Super Secret Key** authentication method for all requests. The `X-Super-Secret-Key` header is automatically added to every request.\n\n### Authentication Methods Available:\n\n1. **Super Secret Key** (Default - Pre-configured)\n   - Header: `X-Super-Secret-Key: dev-super-secret-key-12345`\n   - Automatically added to all requests\n   - Perfect for testing without login\n   - ⚠️ **Development/Testing Only - Never use in production!**\n\n2. **JWT Bearer Token** (Optional)\n   - Login to get access token\n   - Add to Authorization header: `Bearer <token>`\n   - Can be used instead of super-secret-key\n\n## Getting Started\n\n1. **Import this collection** into Postman\n2. **Set environment variables** (optional):\n   - `base_url`: http://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me/api\n   - `project_id`: Set to your current project ID (e.g., 4 for TICK project)\n3. **Start testing!** All requests will work immediately with super-secret-key\n\n## Environment Variables\n\nThe collection includes these variables:\n- `base_url`: http://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me/api\n- `super_secret_key`: dev-super-secret-key-12345 (pre-configured)\n- `access_token`: (optional - auto-set after login)\n- `refresh_token`: (optional - auto-set after login)\n- `project_id`: Current project ID for filtering (e.g., 4 for TICK project)",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
@@ -408,6 +408,292 @@
 					"response": []
 				}
 			]
+		},
+		{
+			"name": "Companies",
+			"item": [
+				{
+					"name": "List Companies",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tickets/companies/?project={{project_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tickets",
+								"companies",
+								""
+							],
+							"query": [
+								{
+									"key": "project",
+									"value": "{{project_id}}",
+									"description": "Filter companies by project ID"
+								},
+								{
+									"key": "search",
+									"value": "Nikora",
+									"disabled": true,
+									"description": "Search by company name or description"
+								}
+							]
+						},
+						"description": "Get all companies. Use ?project=<id> to filter by project. Returns lightweight list serializer."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Company",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Acme Corporation\",\n    \"description\": \"Leading technology solutions provider\",\n    \"primary_contact_email\": \"contact@acme.com\",\n    \"phone\": \"+995 555 123 456\",\n    \"admin_ids\": [1, 2],\n    \"user_ids\": [3]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/tickets/companies/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tickets",
+								"companies",
+								""
+							]
+						},
+						"description": "Create a new company with optional admins and users. Only superusers can create companies."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Company Detail",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tickets/companies/1/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tickets",
+								"companies",
+								"1",
+								""
+							]
+						},
+						"description": "Get detailed information about a specific company including admins, users, and counts."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Company (PATCH)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"description\": \"Updated company description\",\n    \"phone\": \"+995 555 999 888\",\n    \"admin_ids\": [1, 2, 3]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/tickets/companies/1/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tickets",
+								"companies",
+								"1",
+								""
+							]
+						},
+						"description": "Partially update a company. Only send the fields you want to change."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Company",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tickets/companies/1/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tickets",
+								"companies",
+								"1",
+								""
+							]
+						},
+						"description": "Delete a company permanently. Only superusers can delete companies."
+					},
+					"response": []
+				},
+				{
+					"name": "Assign Admin to Company",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"user_id\": 2\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/tickets/companies/1/assign_admin/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tickets",
+								"companies",
+								"1",
+								"assign_admin",
+								""
+							]
+						},
+						"description": "Assign an IT staff member as admin to manage this company's tickets."
+					},
+					"response": []
+				},
+				{
+					"name": "Remove Admin from Company",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"user_id\": 2\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/tickets/companies/1/remove_admin/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tickets",
+								"companies",
+								"1",
+								"remove_admin",
+								""
+							]
+						},
+						"description": "Remove an admin from this company."
+					},
+					"response": []
+				},
+				{
+					"name": "Assign User to Company",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"user_id\": 3\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/tickets/companies/1/assign_user/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tickets",
+								"companies",
+								"1",
+								"assign_user",
+								""
+							]
+						},
+						"description": "Assign a client company user who can view/create tickets for this company."
+					},
+					"response": []
+				},
+				{
+					"name": "Remove User from Company",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"user_id\": 3\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/tickets/companies/1/remove_user/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tickets",
+								"companies",
+								"1",
+								"remove_user",
+								""
+							]
+						},
+						"description": "Remove a user from this company."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Company Tickets",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tickets/companies/1/tickets/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tickets",
+								"companies",
+								"1",
+								"tickets",
+								""
+							]
+						},
+						"description": "Get all tickets assigned to this company."
+					},
+					"response": []
+				}
+			],
+			"description": "Company management endpoints for multi-tenant IT business servicing multiple client companies."
 		},
 		{
 			"name": "Columns",
@@ -834,6 +1120,12 @@
 			"key": "super_secret_key",
 			"value": "dev-super-secret-key-12345",
 			"type": "string"
+		},
+		{
+			"key": "project_id",
+			"value": "4",
+			"type": "string",
+			"description": "Current project ID (e.g., 4 for TICK project)"
 		}
 	]
 }
