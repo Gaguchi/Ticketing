@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   Card,
   Table,
@@ -72,7 +72,7 @@ interface Company {
 }
 
 const Companies: React.FC = () => {
-  const { selectedProject } = useApp();
+  const { selectedProject, projectLoading } = useApp();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -90,33 +90,9 @@ const Companies: React.FC = () => {
   >("table");
 
   // Prevent duplicate initialization in React Strict Mode
-  const initRef = useRef(false);
   const fetchInProgressRef = useRef(false);
 
-  useEffect(() => {
-    // Skip if already initialized (React Strict Mode protection)
-    if (initRef.current) {
-      debug.log(
-        LogCategory.COMPANY,
-        LogLevel.INFO,
-        "Already initialized, skipping"
-      );
-      return;
-    }
-
-    initRef.current = true;
-    debug.log(LogCategory.COMPANY, LogLevel.INFO, "Initializing...");
-    fetchCompanies();
-  }, []);
-
-  // Re-fetch companies when selected project changes
-  useEffect(() => {
-    if (initRef.current) {
-      fetchCompanies();
-    }
-  }, [selectedProject]);
-
-  const fetchCompanies = async () => {
+  const fetchCompanies = useCallback(async () => {
     // Prevent concurrent identical requests
     if (fetchInProgressRef.current) {
       debug.log(
@@ -159,7 +135,29 @@ const Companies: React.FC = () => {
     } finally {
       fetchInProgressRef.current = false;
     }
-  };
+  }, [selectedProject]);
+
+  // Fetch companies when project is loaded or changes
+  useEffect(() => {
+    // Wait for project loading to complete before fetching
+    if (projectLoading) {
+      debug.log(
+        LogCategory.COMPANY,
+        LogLevel.INFO,
+        "Waiting for project to load..."
+      );
+      return;
+    }
+
+    debug.log(
+      LogCategory.COMPANY,
+      LogLevel.INFO,
+      selectedProject 
+        ? `Fetching companies for project: ${selectedProject.name}` 
+        : "Fetching all companies (no project selected)"
+    );
+    fetchCompanies();
+  }, [selectedProject, projectLoading, fetchCompanies]);
 
   const handleCompanyClick = async (company: Company) => {
     setSelectedCompany(company);

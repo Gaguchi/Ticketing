@@ -899,6 +899,49 @@ Frontend (React):
 
 ## Version History
 
+### v1.15 - November 11, 2025
+
+- **Fixed**: Companies Page Race Condition on Initial Load
+  - **Issue**: 
+    - On initial page load, all companies were shown regardless of selected project
+    - When switching projects via project selector, companies would disappear
+    - On page reload, all companies would show again (ignoring project filter)
+  - **Root Cause**: 
+    - Component fetched companies before AppContext finished auto-selecting a project
+    - Initial `useEffect` ran with `selectedProject = null`, fetching all companies
+    - When project auto-selection completed, a second fetch occurred with the filter
+    - This created a race condition where unfiltered data showed first
+  - **Solution**: 
+    - Wait for `projectLoading` to complete before fetching companies
+    - Removed the dual `useEffect` approach (initial + project change)
+    - Combined into single `useEffect` that waits for project to be ready
+    - Wrapped `fetchCompanies` in `useCallback` with `selectedProject` dependency
+  - **Frontend Changes** (`pages/Companies.tsx`):
+    ```typescript
+    // Get projectLoading from context
+    const { selectedProject, projectLoading } = useApp();
+    
+    // Wrap in useCallback to capture selectedProject
+    const fetchCompanies = useCallback(async () => {
+      // ... fetch logic using selectedProject
+    }, [selectedProject]);
+    
+    // Single useEffect that waits for project to load
+    useEffect(() => {
+      // Wait for project loading to complete
+      if (projectLoading) {
+        return;
+      }
+      fetchCompanies();
+    }, [selectedProject, projectLoading, fetchCompanies]);
+    ```
+  - **Behavior Now**:
+    - ✅ Initial load waits for project selection, then fetches filtered companies
+    - ✅ Switching projects correctly updates the company list
+    - ✅ No race condition showing unfiltered companies
+    - ✅ Proper loading states throughout
+  - **Result**: Companies page now correctly filters by selected project from initial load
+
 ### v1.14 - November 9, 2025
 
 - **Added**: Project-Based Company Filtering
