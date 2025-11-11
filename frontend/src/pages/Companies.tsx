@@ -152,8 +152,8 @@ const Companies: React.FC = () => {
     debug.log(
       LogCategory.COMPANY,
       LogLevel.INFO,
-      selectedProject 
-        ? `Fetching companies for project: ${selectedProject.name}` 
+      selectedProject
+        ? `Fetching companies for project: ${selectedProject.name}`
         : "Fetching all companies (no project selected)"
     );
     fetchCompanies();
