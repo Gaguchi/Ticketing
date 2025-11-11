@@ -899,9 +899,72 @@ Frontend (React):
 
 ## Version History
 
+### v1.16 - November 11, 2025
+
+- **Added**: Automatic Project Association for New Companies
+  - **Issue**: Companies created were not automatically attached to the active project
+  - **Error**: `400 Bad Request - JSON parse error` when creating company due to missing project_ids handling
+  - **Backend Changes** (`tickets/serializers.py` - CompanySerializer):
+
+    ```python
+    # Added project_ids field
+    project_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        write_only=True,
+        required=False,
+        help_text='List of project IDs to associate with this company'
+    )
+
+    def create(self, validated_data):
+        # ... existing code ...
+        project_ids = validated_data.pop('project_ids', [])
+        company = Company.objects.create(**validated_data)
+
+        # Associate with projects
+        if project_ids:
+            from .models import Project
+            for project_id in project_ids:
+                try:
+                    project = Project.objects.get(id=project_id)
+                    project.companies.add(company)
+                except Project.DoesNotExist:
+                    pass
+        return company
+
+    def update(self, instance, validated_data):
+        # ... existing code ...
+        project_ids = validated_data.pop('project_ids', None)
+
+        # Update project associations
+        if project_ids is not None:
+            # Clear existing and add new
+            for project in instance.projects.all():
+                project.companies.remove(instance)
+            for project_id in project_ids:
+                project = Project.objects.get(id=project_id)
+                project.companies.add(instance)
+        return instance
+    ```
+
+  - **Frontend Changes** (`pages/Companies.tsx`):
+    ```typescript
+    // Auto-attach to current project when creating
+    if (!editingCompany && selectedProject) {
+      formData.append("project_ids", selectedProject.id.toString());
+    }
+    ```
+  - **Relationship**: Uses `Project.companies` M2M field (defined on Project model)
+  - **Behavior**:
+    - ✅ New companies automatically attached to currently selected project
+    - ✅ Companies only visible in projects they're assigned to
+    - ✅ Supports multiple project associations via project_ids array
+  - **Note**: Ticket model has `company` ForeignKey field, but TicketModal doesn't have company selector yet (future feature)
+  - **Result**: Companies are now properly scoped to projects from creation
+
 ### v1.15 - November 11, 2025
 
 - **Fixed**: Companies Page Race Condition on Initial Load
+
   - **Issue**:
     - On initial page load, all companies were shown regardless of selected project
     - When switching projects via project selector, companies would disappear

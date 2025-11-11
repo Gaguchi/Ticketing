@@ -250,6 +250,11 @@ const Companies: React.FC = () => {
         });
       }
 
+      // Attach to current project when creating
+      if (!editingCompany && selectedProject) {
+        formData.append("project_ids", selectedProject.id.toString());
+      }
+
       if (editingCompany) {
         // Update existing company
         await apiService.patchFormData(

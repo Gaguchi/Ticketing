@@ -63,6 +63,12 @@ class CompanySerializer(serializers.ModelSerializer):
         required=False,
         help_text='List of user IDs to assign as company users'
     )
+    project_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        write_only=True,
+        required=False,
+        help_text='List of project IDs to associate with this company'
+    )
     ticket_count = serializers.IntegerField(read_only=True)
     admin_count = serializers.IntegerField(read_only=True)
     user_count = serializers.IntegerField(read_only=True)
@@ -74,7 +80,7 @@ class CompanySerializer(serializers.ModelSerializer):
             'primary_contact_email', 'phone',
             'admins', 'admin_ids', 'admin_count',
             'users', 'user_ids', 'user_count',
-            'ticket_count', 'project_count',
+            'ticket_count', 'project_count', 'project_ids',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at']
@@ -82,6 +88,7 @@ class CompanySerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         admin_ids = validated_data.pop('admin_ids', [])
         user_ids = validated_data.pop('user_ids', [])
+        project_ids = validated_data.pop('project_ids', [])
         
         company = Company.objects.create(**validated_data)
         
@@ -89,12 +96,22 @@ class CompanySerializer(serializers.ModelSerializer):
             company.admins.set(admin_ids)
         if user_ids:
             company.users.set(user_ids)
+        if project_ids:
+            # Update the reverse M2M relationship (Project.companies)
+            from .models import Project
+            for project_id in project_ids:
+                try:
+                    project = Project.objects.get(id=project_id)
+                    project.companies.add(company)
+                except Project.DoesNotExist:
+                    pass
         
         return company
     
     def update(self, instance, validated_data):
         admin_ids = validated_data.pop('admin_ids', None)
         user_ids = validated_data.pop('user_ids', None)
+        project_ids = validated_data.pop('project_ids', None)
         
         instance.name = validated_data.get('name', instance.name)
         instance.description = validated_data.get('description', instance.description)
@@ -107,6 +124,18 @@ class CompanySerializer(serializers.ModelSerializer):
             instance.admins.set(admin_ids)
         if user_ids is not None:
             instance.users.set(user_ids)
+        if project_ids is not None:
+            # Update the reverse M2M relationship (Project.companies)
+            from .models import Project
+            # Clear existing associations and add new ones
+            for project in instance.projects.all():
+                project.companies.remove(instance)
+            for project_id in project_ids:
+                try:
+                    project = Project.objects.get(id=project_id)
+                    project.companies.add(instance)
+                except Project.DoesNotExist:
+                    pass
         
         return instance
 
