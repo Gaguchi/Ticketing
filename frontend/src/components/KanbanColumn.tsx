@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   useSortable,
   SortableContext,
@@ -6,8 +6,9 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Button } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
+import { PlusOutlined, CloseOutlined } from "@ant-design/icons";
 import { TicketCard } from "./TicketCard";
+import { QuickTicketCreator } from "./QuickTicketCreator";
 import type { Ticket } from "../types/api";
 
 interface KanbanColumnProps {
@@ -15,9 +16,11 @@ interface KanbanColumnProps {
   items: string[];
   name: string;
   tickets: Ticket[];
+  columnId: number; // Add actual column ID for ticket creation
   isSortingContainer?: boolean;
   dragOverlay?: boolean;
   onTicketClick?: (ticket: Ticket) => void;
+  onTicketCreated?: (ticket: Ticket) => void;
 }
 
 export const KanbanColumn: React.FC<KanbanColumnProps> = ({
@@ -25,10 +28,14 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
   items,
   name,
   tickets,
+  columnId,
   isSortingContainer,
   dragOverlay,
   onTicketClick,
+  onTicketCreated,
 }) => {
+  const [showQuickCreate, setShowQuickCreate] = useState(false);
+
   const {
     attributes,
     isDragging,
@@ -118,24 +125,53 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
             );
           })}
         </SortableContext>
-        <Button
-          type="text"
-          icon={<PlusOutlined style={{ fontSize: "14px" }} />}
-          size="small"
-          style={{
-            width: "100%",
-            textAlign: "left",
-            fontSize: "14px",
-            height: "32px",
-            marginTop: "4px",
-            padding: "4px 8px",
-            color: "#5e6c84",
-            justifyContent: "flex-start",
-            fontWeight: 400,
-          }}
-        >
-          Create
-        </Button>
+
+        {/* Quick Ticket Creator or Create Button */}
+        {showQuickCreate ? (
+          <div style={{ marginTop: "8px" }}>
+            <QuickTicketCreator
+              columnId={columnId}
+              onSuccess={(ticket) => {
+                onTicketCreated?.(ticket);
+              }}
+              onClose={() => setShowQuickCreate(false)}
+            />
+            <Button
+              type="text"
+              icon={<CloseOutlined />}
+              size="small"
+              onClick={() => setShowQuickCreate(false)}
+              style={{
+                width: "100%",
+                marginTop: "4px",
+                color: "#5e6c84",
+                fontSize: "13px",
+              }}
+            >
+              Cancel
+            </Button>
+          </div>
+        ) : (
+          <Button
+            type="text"
+            icon={<PlusOutlined style={{ fontSize: "14px" }} />}
+            size="small"
+            onClick={() => setShowQuickCreate(true)}
+            style={{
+              width: "100%",
+              textAlign: "left",
+              fontSize: "14px",
+              height: "32px",
+              marginTop: "4px",
+              padding: "4px 8px",
+              color: "#5e6c84",
+              justifyContent: "flex-start",
+              fontWeight: 400,
+            }}
+          >
+            Create
+          </Button>
+        )}
       </div>
     </div>
   );

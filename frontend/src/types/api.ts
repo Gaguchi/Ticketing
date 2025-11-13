@@ -31,6 +31,7 @@ export interface User {
   last_name: string;
   is_superuser?: boolean;
   projects?: Project[];
+  project_memberships?: number[]; // Array of project IDs where user is a member
   has_projects?: boolean;
   companies?: Company[];
   administered_companies?: Company[];

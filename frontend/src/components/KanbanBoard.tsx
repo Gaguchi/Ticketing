@@ -34,6 +34,7 @@ interface KanbanBoardProps {
   columns: TicketColumn[];
   onTicketClick?: (ticket: Ticket) => void;
   onTicketMove?: (ticketId: number, newColumnId: number) => void;
+  onTicketCreated?: (ticket: Ticket) => void;
 }
 
 export const KanbanBoard: React.FC<KanbanBoardProps> = ({
@@ -41,6 +42,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   columns,
   onTicketClick,
   onTicketMove,
+  onTicketCreated,
 }) => {
   const [data, setData] = useState<Ticket[] | null>(null);
   const [items, setItems] = useState<KanbanItems>({});
@@ -411,6 +413,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                   tickets={data || []}
                   isSortingContainer={isSortingContainer}
                   onTicketClick={onTicketClick}
+                  columnId={column.id}
+                  onTicketCreated={onTicketCreated}
                 />
               );
             })}
@@ -466,6 +470,10 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
               tickets={data || []}
               dragOverlay
               onTicketClick={onTicketClick}
+              columnId={
+                columns.find((c) => `column-${c.id}` === activeId)?.id || 0
+              }
+              onTicketCreated={onTicketCreated}
             />
           ) : activeId ? (
             <TicketCard

@@ -546,6 +546,10 @@ const Tickets: React.FC = () => {
             columns={kanbanColumns}
             onTicketClick={handleTicketClick}
             onTicketMove={handleTicketMove}
+            onTicketCreated={(ticket) => {
+              receivedTicketIdsRef.current.add(ticket.id);
+              setTickets((prev) => [ticket, ...prev]);
+            }}
           />
         ) : (
           <DeadlineView

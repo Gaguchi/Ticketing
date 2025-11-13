@@ -24,6 +24,13 @@ const Login: React.FC = () => {
   const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY;
   const turnstileEnabled = import.meta.env.VITE_TURNSTILE_ENABLED === "true";
 
+  // Clear any invalid tokens when login page loads
+  React.useEffect(() => {
+    console.log("🧹 [Login] Clearing any existing tokens");
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
+  }, []);
+
   const onFinish = async (values: LoginFormValues) => {
     if (turnstileEnabled && turnstileSiteKey && !captchaToken) {
       setError("Please complete the CAPTCHA verification");
