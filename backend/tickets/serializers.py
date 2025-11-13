@@ -275,6 +275,8 @@ class TicketSerializer(serializers.ModelSerializer):
     )
     reporter = UserSerializer(read_only=True)
     project_key = serializers.CharField(source='project.key', read_only=True)
+    project_number = serializers.IntegerField(read_only=True)
+    ticket_key = serializers.CharField(read_only=True)
     column_name = serializers.CharField(source='column.name', read_only=True)
     company_name = serializers.CharField(source='company.name', read_only=True)
     comments_count = serializers.IntegerField(read_only=True)
@@ -287,7 +289,8 @@ class TicketSerializer(serializers.ModelSerializer):
             'id', 'name', 'description', 'type', 'status',
             'priority_id', 'urgency', 'importance',
             'company', 'company_name',
-            'project', 'project_key', 'column', 'column_name',
+            'project', 'project_key', 'project_number', 'ticket_key',
+            'column', 'column_name',
             'assignees', 'assignee_ids', 'reporter',
             'parent', 'subtasks', 'following', 'tags', 'tags_detail',
             'due_date', 'start_date', 'comments_count',
@@ -309,6 +312,8 @@ class TicketListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for list views"""
     assignee_ids = serializers.SerializerMethodField()
     project_key = serializers.CharField(source='project.key', read_only=True)
+    project_number = serializers.IntegerField(read_only=True)
+    ticket_key = serializers.CharField(read_only=True)
     column_name = serializers.CharField(source='column.name', read_only=True)
     company_name = serializers.CharField(source='company.name', read_only=True)
     comments_count = serializers.IntegerField(read_only=True)
@@ -320,7 +325,8 @@ class TicketListSerializer(serializers.ModelSerializer):
             'id', 'name', 'type', 'status', 'priority_id',
             'urgency', 'importance',
             'company', 'company_name',
-            'project', 'project_key', 'column', 'column_name',
+            'project', 'project_key', 'project_number', 'ticket_key',
+            'column', 'column_name',
             'assignee_ids', 'following', 'comments_count', 'tag_names',
             'due_date', 'start_date',
             'created_at', 'updated_at'
@@ -644,10 +650,11 @@ class TicketSubtaskSerializer(serializers.ModelSerializer):
 class TicketSimpleSerializer(serializers.ModelSerializer):
     """Simple serializer for tickets used in IssueLink"""
     project_key = serializers.CharField(source='project.key', read_only=True)
+    ticket_key = serializers.CharField(read_only=True)
     
     class Meta:
         model = Ticket
-        fields = ['id', 'name', 'type', 'status', 'project', 'project_key']
+        fields = ['id', 'name', 'type', 'status', 'project', 'project_key', 'ticket_key']
 
 
 class IssueLinkSerializer(serializers.ModelSerializer):

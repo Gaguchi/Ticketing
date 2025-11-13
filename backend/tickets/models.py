@@ -194,6 +194,11 @@ class Ticket(models.Model):
     description = models.TextField(blank=True, null=True)
     type = models.CharField(max_length=10, choices=TYPE_CHOICES, default='task')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='new')
+    project_number = models.IntegerField(
+        null=True, 
+        blank=True,
+        help_text='Project-scoped ticket number (e.g., 1, 2, 3 for TICK-1, TICK-2, TICK-3)'
+    )
     
     # Priority and urgency
     priority_id = models.IntegerField(choices=PRIORITY_CHOICES, default=2)
@@ -227,13 +232,40 @@ class Ticket(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+        unique_together = [['project', 'project_number']]
 
     def __str__(self):
+        if self.project_number:
+            return f"{self.project.key}-{self.project_number}: {self.name}"
         return f"{self.project.key}-{self.id}: {self.name}"
+    
+    def save(self, *args, **kwargs):
+        """Auto-generate project_number if not set"""
+        if not self.project_number and self.project:
+            # Get the highest project_number for this project
+            last_ticket = Ticket.objects.filter(
+                project=self.project
+            ).exclude(
+                project_number__isnull=True
+            ).order_by('-project_number').first()
+            
+            if last_ticket and last_ticket.project_number:
+                self.project_number = last_ticket.project_number + 1
+            else:
+                self.project_number = 1
+        
+        super().save(*args, **kwargs)
 
     @property
     def comments_count(self):
         return self.comments.count()
+    
+    @property
+    def ticket_key(self):
+        """Return formatted ticket key like TICK-1, PROJ-5"""
+        if self.project_number:
+            return f"{self.project.key}-{self.project_number}"
+        return f"{self.project.key}-{self.id}"
 
 
 class Comment(models.Model):

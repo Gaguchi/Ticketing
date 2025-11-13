@@ -37,9 +37,15 @@ const getTypeIcon = (type?: string) => {
 };
 
 // Helper function to format ticket ID with type prefix
-const formatTicketId = (projectKey?: string, id?: number) => {
-  const key = projectKey || "TICK";
-  return `${key}-${id}`;
+const formatTicketId = (ticket: Ticket) => {
+  // Prefer ticket_key if available (project-scoped number)
+  if (ticket.ticket_key) {
+    return ticket.ticket_key;
+  }
+  // Fallback to old format for backward compatibility
+  const key = ticket.project_key || "TICK";
+  const num = ticket.project_number || ticket.id;
+  return `${key}-${num}`;
 };
 
 export const TicketCard: React.FC<TicketCardProps> = ({
@@ -139,7 +145,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({
                     fontWeight: 500,
                   }}
                 >
-                  {formatTicketId(ticket.project_key, ticket.id)}
+                  {formatTicketId(ticket)}
                 </span>
               </Space>
               {ticket.following && <EyeOutlined style={{ fontSize: "14px" }} />}

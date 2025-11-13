@@ -34,6 +34,10 @@ export interface Ticket {
   project: number;
   project_key?: string;
   projectKey?: string; // Alias for backward compatibility
+  project_number?: number;
+  projectNumber?: number; // Alias for backward compatibility
+  ticket_key?: string;
+  ticketKey?: string; // Alias for backward compatibility
   column: number;
   column_name?: string;
   columnName?: string; // Alias for backward compatibility

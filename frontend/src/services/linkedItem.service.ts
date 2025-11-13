@@ -9,6 +9,8 @@ export interface LinkedTicket {
   status: string;
   project: number;
   project_key: string;
+  project_number?: number;
+  ticket_key?: string;
 }
 
 export interface IssueLink {

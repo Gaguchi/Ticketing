@@ -802,7 +802,10 @@ export const TicketModal: React.FC<TicketModalProps> = ({
               <span style={{ color: "#2C3E50", fontWeight: 500 }}>
                 {isCreateMode
                   ? "NEW TICKET"
-                  : `${ticket?.project_key || "TICK"}-${ticket?.id}`}
+                  : ticket?.ticket_key ||
+                    `${ticket?.project_key || "TICK"}-${
+                      ticket?.project_number || ticket?.id
+                    }`}
               </span>
             </div>
           </div>
@@ -1155,7 +1158,11 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                       >
                         {ticketSearchResults.map((ticket) => (
                           <Select.Option key={ticket.id} value={ticket.id}>
-                            {ticket.project_key}-{ticket.id} {ticket.name}
+                            {ticket.ticket_key ||
+                              `${ticket.project_key}-${
+                                ticket.project_number || ticket.id
+                              }`}{" "}
+                            {ticket.name}
                           </Select.Option>
                         ))}
                       </Select>
@@ -1261,7 +1268,11 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                                 color: "#2C3E50",
                               }}
                             >
-                              {relatedTicket.project_key}-{relatedTicket.id}
+                              {relatedTicket.ticket_key ||
+                                `${relatedTicket.project_key}-${
+                                  relatedTicket.project_number ||
+                                  relatedTicket.id
+                                }`}
                             </span>
                             <span
                               style={{ fontSize: "14px", color: "#2C3E50" }}

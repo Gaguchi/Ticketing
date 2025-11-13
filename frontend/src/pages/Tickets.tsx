@@ -536,13 +536,10 @@ const Tickets: React.FC = () => {
       <CreateTicketModal
         open={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        onSuccess={(newTicket) => {
+        onSuccess={() => {
           setIsCreateModalOpen(false);
-          // Add the new ticket to the list immediately (optimistic update)
-          if (newTicket) {
-            setTickets((prev) => [newTicket, ...prev]);
-            message.success(`Ticket ${newTicket.name} created successfully`);
-          }
+          // WebSocket handles adding the ticket via ticket_created event
+          // No need for optimistic update here to avoid duplicates
         }}
       />
     </div>

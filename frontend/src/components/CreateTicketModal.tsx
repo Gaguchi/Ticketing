@@ -696,9 +696,12 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                   }
                   options={openTickets.map((ticket: any) => ({
                     value: ticket.id,
-                    label: `${ticket.project_key || "TICK"}-${ticket.id}: ${
-                      ticket.name
-                    }`,
+                    label: `${
+                      ticket.ticket_key ||
+                      `${ticket.project_key || "TICK"}-${
+                        ticket.project_number || ticket.id
+                      }`
+                    }: ${ticket.name}`,
                   }))}
                 />
               </Form.Item>

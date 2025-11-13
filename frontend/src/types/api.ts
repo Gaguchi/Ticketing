@@ -197,6 +197,8 @@ export interface Ticket {
   company: number | null;
   project: number;
   project_key: string;
+  project_number: number;
+  ticket_key: string;
   column: number;
   column_name: string;
   assignees: User[];

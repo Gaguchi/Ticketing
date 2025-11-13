@@ -899,9 +899,120 @@ Frontend (React):
 
 ## Version History
 
+### v1.17 - November 13, 2025
+
+- **Fixed**: Duplicate Ticket Creation on Kanban Board
+
+  - **Issue**: When creating a ticket, it appeared twice in the kanban board
+  - **Root Cause**: Both WebSocket `ticket_created` event AND optimistic update in `onSuccess` callback were adding the ticket to the list
+  - **Solution**: Removed optimistic update from Tickets.tsx, rely solely on WebSocket for real-time updates
+  - **Frontend Changes** (`pages/Tickets.tsx`):
+    ```typescript
+    // REMOVED optimistic update that caused duplicates
+    onSuccess={() => {
+      setIsCreateModalOpen(false);
+      // WebSocket handles adding the ticket via ticket_created event
+      // No need for optimistic update here to avoid duplicates
+    }}
+    ```
+  - **Pattern**: When using WebSocket for real-time updates, avoid manual state updates in success callbacks to prevent duplicates
+
+- **Added**: Project-Scoped Ticket Numbering System
+  - **Issue**: Ticket IDs were global (ticket ID 17 in TICK project would make next ticket in NEW project start at 18)
+  - **Requirement**: Each project should have independent ticket numbering (TICK-1, TICK-2 vs PROJ-1, PROJ-2)
+  - **Backend Changes** (`tickets/models.py` - Ticket model):
+
+    ```python
+    # Added project_number field
+    project_number = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text='Project-scoped ticket number (e.g., 1, 2, 3 for TICK-1, TICK-2, TICK-3)'
+    )
+
+    # Added unique constraint
+    class Meta:
+        ordering = ['-created_at']
+        unique_together = [['project', 'project_number']]
+
+    # Auto-increment project_number per project
+    def save(self, *args, **kwargs):
+        if not self.project_number and self.project:
+            last_ticket = Ticket.objects.filter(
+                project=self.project
+            ).exclude(
+                project_number__isnull=True
+            ).order_by('-project_number').first()
+
+            if last_ticket and last_ticket.project_number:
+                self.project_number = last_ticket.project_number + 1
+            else:
+                self.project_number = 1
+
+        super().save(*args, **kwargs)
+
+    # Added ticket_key property
+    @property
+    def ticket_key(self):
+        """Return formatted ticket key like TICK-1, PROJ-5"""
+        if self.project_number:
+            return f"{self.project.key}-{self.project_number}"
+        return f"{self.project.key}-{self.id}"
+
+    # Updated __str__
+    def __str__(self):
+        if self.project_number:
+            return f"{self.project.key}-{self.project_number}: {self.name}"
+        return f"{self.project.key}-{self.id}: {self.name}"
+    ```
+
+  - **Serializer Changes** (`tickets/serializers.py`):
+
+    ```python
+    # Added to TicketSerializer, TicketListSerializer, TicketSimpleSerializer
+    project_number = serializers.IntegerField(read_only=True)
+    ticket_key = serializers.CharField(read_only=True)
+
+    # Updated fields list
+    fields = [
+        'id', 'name', 'description', 'type', 'status',
+        'priority_id', 'urgency', 'importance',
+        'company', 'company_name',
+        'project', 'project_key', 'project_number', 'ticket_key',  # NEW
+        'column', 'column_name',
+        # ... rest of fields
+    ]
+    ```
+
+  - **Migration**: Created migration to add `project_number` field and backfill existing tickets
+    - `0013_ticket_project_number_alter_ticket_unique_together.py` - Schema changes
+    - `0014_auto_20251113_1453.py` - Data migration to backfill existing tickets with sequential numbers per project
+    - Backfilled 18 tickets across 4 projects successfully
+  - **Frontend Type Updates** (`types/api.ts`, `types/ticket.ts`):
+    ```typescript
+    export interface Ticket {
+      // ... existing fields
+      project_key: string;
+      project_number: number; // NEW
+      ticket_key: string; // NEW - formatted "TICK-1"
+      // ... rest of fields
+    }
+    ```
+  - **Frontend Display Updates**:
+    - `TicketCard.tsx`: Updated `formatTicketId()` to use `ticket_key` or fallback to `project_key-project_number`
+    - `TicketModal.tsx`: Updated modal title to show `ticket_key`
+    - `TicketModal.tsx`: Updated linked tickets display to use `ticket_key`
+    - `CreateTicketModal.tsx`: Updated parent ticket selector to display `ticket_key`
+  - **Result**:
+    - ✅ Each project now has independent ticket numbering starting from 1
+    - ✅ TICK-1, TICK-2, TICK-3 vs PROJ-1, PROJ-2 vs BUGS-1, BUGS-2
+    - ✅ Existing tickets backfilled with correct project-scoped numbers
+    - ✅ All UI displays updated to show project-scoped ticket keys
+
 ### v1.16 - November 11, 2025
 
 - **Added**: Automatic Project Association for New Companies
+
   - **Issue**: Companies created were not automatically attached to the active project
   - **Error**: `400 Bad Request - JSON parse error` when creating company due to missing project_ids handling
   - **Backend Changes** (`tickets/serializers.py` - CompanySerializer):
