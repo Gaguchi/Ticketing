@@ -223,6 +223,12 @@ export const theme: ThemeConfig = {
       color: '#F5F5F5',              // Gray 100
       colorGradientEnd: '#E0E0E0',   // Gray 300
     },
+    
+    // ===== TOOLTIP =====
+    Tooltip: {
+      colorBgSpotlight: '#FAFAFA',   // Light background
+      colorTextLightSolid: '#1A1A1A', // Black text (replaces white)
+    },
   },
 };
 

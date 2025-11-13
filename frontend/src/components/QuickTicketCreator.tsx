@@ -56,6 +56,7 @@ export const QuickTicketCreator: React.FC<QuickTicketCreatorProps> = ({
   const typePickerRef = useRef<HTMLDivElement>(null);
   const assigneePickerRef = useRef<HTMLDivElement>(null);
   const datePickerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const { selectedProject } = useProject();
 
@@ -99,29 +100,43 @@ export const QuickTicketCreator: React.FC<QuickTicketCreatorProps> = ({
   // Close pickers when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        typePickerRef.current &&
-        !typePickerRef.current.contains(event.target as Node)
-      ) {
+      const target = event.target as Node;
+
+      // Close type picker
+      if (typePickerRef.current && !typePickerRef.current.contains(target)) {
         setShowTypePicker(false);
       }
+
+      // Close assignee picker
       if (
         assigneePickerRef.current &&
-        !assigneePickerRef.current.contains(event.target as Node)
+        !assigneePickerRef.current.contains(target)
       ) {
         setShowAssigneePicker(false);
       }
-      if (
-        datePickerRef.current &&
-        !datePickerRef.current.contains(event.target as Node)
-      ) {
+
+      // Close date picker
+      if (datePickerRef.current && !datePickerRef.current.contains(target)) {
         setShowDatePicker(false);
+      }
+
+      // Close entire component when clicking outside
+      // BUT exclude clicks on the pickers themselves or Ant Design dropdowns
+      if (containerRef.current && !containerRef.current.contains(target)) {
+        // Check if click is on an Ant Design dropdown/picker
+        const isAntDropdown = (target as HTMLElement).closest(
+          ".ant-picker-dropdown, .ant-select-dropdown, .quick-ticket-dropdown"
+        );
+
+        if (!isAntDropdown) {
+          onClose?.();
+        }
       }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [onClose]);
 
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -200,7 +215,7 @@ export const QuickTicketCreator: React.FC<QuickTicketCreatorProps> = ({
   const selectedUser = users.find((u) => u.id === assignee);
 
   return (
-    <div className="quick-ticket-creator">
+    <div className="quick-ticket-creator" ref={containerRef}>
       <form onSubmit={handleSubmit} className="quick-ticket-form">
         <div className="quick-ticket-input-container">
           <TextArea

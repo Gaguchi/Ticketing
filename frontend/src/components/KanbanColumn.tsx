@@ -128,7 +128,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
 
         {/* Quick Ticket Creator or Create Button */}
         {showQuickCreate ? (
-          <div style={{ marginTop: "8px" }}>
+          <div>
             <QuickTicketCreator
               columnId={columnId}
               onSuccess={(ticket) => {
