@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect, useRef } from "react";
 import { Input, Table, Tag, Badge, Button, message } from "antd";
 import {
   SearchOutlined,
@@ -57,10 +57,16 @@ const getTypeIcon = (type?: string) => {
   }
 };
 
-// Helper function to format ticket ID with type prefix
-const formatTicketId = (projectKey?: string, id?: number) => {
-  const key = projectKey || "TICK";
-  return `${key}-${id}`;
+// Helper function to format ticket ID from backend data
+const formatTicketId = (ticket: Ticket) => {
+  // Prefer ticket_key from backend (includes project-scoped number)
+  if (ticket.ticket_key) {
+    return ticket.ticket_key;
+  }
+  // Fallback to constructing from available fields
+  const key = ticket.project_key || "TICK";
+  const num = ticket.project_number || ticket.id;
+  return `${key}-${num}`;
 };
 
 // Sortable Filter Box Component
@@ -175,7 +181,7 @@ const SortableFilterBox: React.FC<{
               <span
                 style={{ color: "#0052cc", fontWeight: 500, flexShrink: 0 }}
               >
-                {formatTicketId(ticket.project_key, ticket.id)}
+                {formatTicketId(ticket)}
               </span>
               <span
                 style={{
@@ -213,6 +219,11 @@ const Dashboard: React.FC = () => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(false);
   const [networkError, setNetworkError] = useState(false);
+
+  // Track optimistic tickets to avoid duplicates when WebSocket confirms
+  // Maps temporary negative ID -> real ticket ID from backend
+  const optimisticTicketsRef = useRef<Map<number, number>>(new Map());
+  let nextTempId = useRef(-1); // Temporary IDs for optimistic tickets
 
   const [filterBoxes, setFilterBoxes] = useState<FilterBox[]>([
     {
@@ -285,11 +296,108 @@ const Dashboard: React.FC = () => {
     }
   }, [selectedProject?.id]); // Only depend on project ID
 
-  // Handle ticket creation success
+  // Listen for real-time ticket updates via WebSocket
+  useEffect(() => {
+    const handleTicketUpdate = async (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { type, data, projectId } = customEvent.detail;
+
+      // Only update if it's for the current project
+      if (!selectedProject || projectId !== selectedProject.id) {
+        return;
+      }
+
+      console.log(`🎫 [Dashboard] Received ${type} event:`, data);
+
+      if (type === "ticket_created") {
+        // Check if we have an optimistic ticket for this
+        const optimisticId = Array.from(
+          optimisticTicketsRef.current.entries()
+        ).find(([_, realId]) => realId === data.ticket_id)?.[0];
+
+        if (optimisticId) {
+          // Replace optimistic ticket with real one
+          console.log(
+            `🔄 Replacing optimistic ticket ${optimisticId} with real ticket ${data.ticket_id}`
+          );
+          try {
+            const newTicket = await ticketService.getTicket(data.ticket_id);
+            setTickets((prev) =>
+              prev.map((t) => (t.id === optimisticId ? newTicket : t))
+            );
+            optimisticTicketsRef.current.delete(optimisticId);
+          } catch (error) {
+            console.error("Failed to fetch new ticket:", error);
+          }
+        } else {
+          // This is from another user/session, add it normally
+          console.log(`➕ Adding new ticket from WebSocket: ${data.ticket_id}`);
+          try {
+            const newTicket = await ticketService.getTicket(data.ticket_id);
+            // Check if ticket already exists (edge case)
+            setTickets((prev) => {
+              if (prev.some((t) => t.id === newTicket.id)) {
+                console.log(
+                  `⚠️ Ticket ${newTicket.id} already exists, skipping`
+                );
+                return prev;
+              }
+              return [newTicket, ...prev];
+            });
+            message.success(
+              `New ticket created: ${data.ticket_key || `#${data.ticket_id}`}`
+            );
+          } catch (error) {
+            console.error("Failed to fetch new ticket:", error);
+          }
+        }
+      } else if (type === "ticket_updated") {
+        // Update existing ticket in list
+        try {
+          const updatedTicket = await ticketService.getTicket(data.ticket_id);
+          setTickets((prev) =>
+            prev.map((t) => (t.id === data.ticket_id ? updatedTicket : t))
+          );
+        } catch (error) {
+          console.error("Failed to fetch updated ticket:", error);
+        }
+      } else if (type === "ticket_deleted") {
+        // Remove ticket from list
+        setTickets((prev) => prev.filter((t) => t.id !== data.ticket_id));
+        message.info(
+          `Ticket ${data.ticket_key || `#${data.ticket_id}`} was deleted`
+        );
+      }
+    };
+
+    window.addEventListener("ticketUpdate", handleTicketUpdate);
+
+    return () => {
+      window.removeEventListener("ticketUpdate", handleTicketUpdate);
+    };
+  }, [selectedProject?.id]);
+
+  // Handle ticket creation success - optimistic update with tracking
   const handleTicketCreated = (newTicket: Ticket) => {
-    setTickets((prev) => [newTicket, ...prev]);
+    console.log(`✨ Optimistic ticket created:`, newTicket);
+
+    // Create a temporary ID for this optimistic ticket
+    const tempId = nextTempId.current--;
+
+    // Track the mapping: tempId -> real ticket ID
+    optimisticTicketsRef.current.set(tempId, newTicket.id);
+
+    // Create optimistic ticket with temporary ID
+    const optimisticTicket = { ...newTicket, id: tempId };
+
+    // Add optimistic ticket immediately for instant feedback
+    setTickets((prev) => [optimisticTicket, ...prev]);
     setIsCreateModalOpen(false);
-    message.success("Ticket created successfully!");
+
+    // Success message will come from WebSocket when real ticket arrives
+    console.log(
+      `📝 Optimistic ticket added with tempId: ${tempId}, will replace with real ID: ${newTicket.id}`
+    );
   };
 
   // Handle ticket update success
@@ -362,7 +470,7 @@ const Dashboard: React.FC = () => {
               flexShrink: 0,
             }}
           >
-            {formatTicketId(record.project_key, record.id)}
+            {formatTicketId(record)}
           </span>
           <span style={{ color: "#172b4d", fontSize: "14px" }}>
             {record.name}

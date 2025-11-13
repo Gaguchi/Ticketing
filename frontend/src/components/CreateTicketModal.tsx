@@ -64,6 +64,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
   const [saving, setSaving] = useState(false);
   const [createAnother, setCreateAnother] = useState(false);
   const [ticketType, setTicketType] = useState("task");
+  const [showDetailedForm, setShowDetailedForm] = useState(false);
   const { selectedProject, availableProjects, setSelectedProject } =
     useProject();
   const [actualColumnId, setActualColumnId] = useState<number | null>(null);
@@ -308,7 +309,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
         form.setFieldValue("type", values.type);
         form.setFieldValue("project", selectedProject.id);
       } else {
-        onClose();
+        handleClose(); // Use handleClose to properly reset form
       }
     } catch (error: any) {
       console.error("❌ Failed to create ticket:", error);
@@ -324,6 +325,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
     form.resetFields();
     setCreateAnother(false);
     setCurrentProjectId(null);
+    setShowDetailedForm(false);
     onClose();
   };
 
@@ -391,19 +393,33 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
             borderTopRightRadius: 8,
           }}
         >
-          <h1
-            style={{
-              margin: 0,
-              fontSize: "15px",
-              fontWeight: 600,
-              color: "#262626",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-            }}
-          >
-            Create {ticketType.charAt(0).toUpperCase() + ticketType.slice(1)}
-          </h1>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <h1
+              style={{
+                margin: 0,
+                fontSize: "15px",
+                fontWeight: 600,
+                color: "#262626",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+              }}
+            >
+              Create {ticketType.charAt(0).toUpperCase() + ticketType.slice(1)}
+            </h1>
+            <Button
+              type="link"
+              size="small"
+              onClick={() => setShowDetailedForm(!showDetailedForm)}
+              style={{
+                fontSize: "12px",
+                padding: "0 8px",
+                height: "24px",
+              }}
+            >
+              {showDetailedForm ? "Show simple form" : "Show detailed form"}
+            </Button>
+          </div>
           <Button
             type="text"
             size="small"
@@ -486,109 +502,114 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               </Select>
             </Form.Item>
 
-            {/* Work Type */}
-            <Form.Item
-              label="Work type"
-              name="type"
-              required
-              rules={[{ required: true, message: "Work type is required" }]}
-              style={{ marginBottom: "10px" }}
-            >
-              <Select
-                placeholder="Select type"
-                onChange={(value) => setTicketType(value)}
-              >
-                <Option value="task">
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                    }}
+            {/* Show detailed fields only when toggled */}
+            {showDetailedForm && (
+              <>
+                {/* Work Type */}
+                <Form.Item
+                  label="Work type"
+                  name="type"
+                  required
+                  rules={[{ required: true, message: "Work type is required" }]}
+                  style={{ marginBottom: "10px" }}
+                >
+                  <Select
+                    placeholder="Select type"
+                    onChange={(value) => setTicketType(value)}
                   >
-                    <FontAwesomeIcon
-                      icon={getTypeIcon("task").icon}
-                      style={{
-                        fontSize: "16px",
-                        color: getTypeIcon("task").color,
-                      }}
-                    />
-                    <span>Task</span>
-                  </div>
-                </Option>
-                <Option value="bug">
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                    }}
-                  >
-                    <FontAwesomeIcon
-                      icon={getTypeIcon("bug").icon}
-                      style={{
-                        fontSize: "16px",
-                        color: getTypeIcon("bug").color,
-                      }}
-                    />
-                    <span>Bug</span>
-                  </div>
-                </Option>
-                <Option value="story">
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                    }}
-                  >
-                    <FontAwesomeIcon
-                      icon={getTypeIcon("story").icon}
-                      style={{
-                        fontSize: "16px",
-                        color: getTypeIcon("story").color,
-                      }}
-                    />
-                    <span>Story</span>
-                  </div>
-                </Option>
-                <Option value="epic">
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                    }}
-                  >
-                    <FontAwesomeIcon
-                      icon={getTypeIcon("epic").icon}
-                      style={{
-                        fontSize: "16px",
-                        color: getTypeIcon("epic").color,
-                      }}
-                    />
-                    <span>Epic</span>
-                  </div>
-                </Option>
-              </Select>
-            </Form.Item>
+                    <Option value="task">
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                        }}
+                      >
+                        <FontAwesomeIcon
+                          icon={getTypeIcon("task").icon}
+                          style={{
+                            fontSize: "16px",
+                            color: getTypeIcon("task").color,
+                          }}
+                        />
+                        <span>Task</span>
+                      </div>
+                    </Option>
+                    <Option value="bug">
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                        }}
+                      >
+                        <FontAwesomeIcon
+                          icon={getTypeIcon("bug").icon}
+                          style={{
+                            fontSize: "16px",
+                            color: getTypeIcon("bug").color,
+                          }}
+                        />
+                        <span>Bug</span>
+                      </div>
+                    </Option>
+                    <Option value="story">
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                        }}
+                      >
+                        <FontAwesomeIcon
+                          icon={getTypeIcon("story").icon}
+                          style={{
+                            fontSize: "16px",
+                            color: getTypeIcon("story").color,
+                          }}
+                        />
+                        <span>Story</span>
+                      </div>
+                    </Option>
+                    <Option value="epic">
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                        }}
+                      >
+                        <FontAwesomeIcon
+                          icon={getTypeIcon("epic").icon}
+                          style={{
+                            fontSize: "16px",
+                            color: getTypeIcon("epic").color,
+                          }}
+                        />
+                        <span>Epic</span>
+                      </div>
+                    </Option>
+                  </Select>
+                </Form.Item>
 
-            {/* Column/Status */}
-            <Form.Item
-              label="Column"
-              name="column"
-              style={{ marginBottom: "10px" }}
-            >
-              <Select placeholder="Select column">
-                {projectColumns.map((col) => (
-                  <Option key={col.id} value={col.id}>
-                    {col.name}
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
+                {/* Column/Status */}
+                <Form.Item
+                  label="Column"
+                  name="column"
+                  style={{ marginBottom: "10px" }}
+                >
+                  <Select placeholder="Select column">
+                    {projectColumns.map((col) => (
+                      <Option key={col.id} value={col.id}>
+                        {col.name}
+                      </Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+              </>
+            )}
 
-            {/* Summary */}
+            {/* Summary - Always visible */}
             <Form.Item
               label="Summary"
               name="summary"
@@ -599,7 +620,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               <Input placeholder="Enter a summary" />
             </Form.Item>
 
-            {/* Description */}
+            {/* Description - Always visible */}
             <Form.Item
               label="Description"
               name="description"
@@ -611,6 +632,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               />
             </Form.Item>
 
+            {/* Assignee and Due Date - Always visible in simple grid */}
             <div
               style={{
                 display: "grid",
@@ -655,100 +677,6 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                 </Select>
               </Form.Item>
 
-              {/* Company */}
-              <Form.Item
-                label="Company"
-                name="company"
-                style={{ marginBottom: "10px" }}
-              >
-                <Select
-                  placeholder="Select company"
-                  allowClear
-                  showSearch
-                  filterOption={(input, option) =>
-                    ((option?.children ?? "") as string)
-                      .toLowerCase()
-                      .includes(input.toLowerCase())
-                  }
-                >
-                  {companies.map((company) => (
-                    <Option key={company.id} value={company.id}>
-                      {company.name}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-
-              {/* Parent */}
-              <Form.Item
-                label="Parent"
-                name="parent"
-                style={{ marginBottom: "10px" }}
-              >
-                <Select
-                  placeholder="Select parent ticket"
-                  allowClear
-                  showSearch
-                  filterOption={(input, option) =>
-                    (option?.label ?? "")
-                      .toLowerCase()
-                      .includes(input.toLowerCase())
-                  }
-                  options={openTickets.map((ticket: any) => ({
-                    value: ticket.id,
-                    label: `${
-                      ticket.ticket_key ||
-                      `${ticket.project_key || "TICK"}-${
-                        ticket.project_number || ticket.id
-                      }`
-                    }: ${ticket.name}`,
-                  }))}
-                />
-              </Form.Item>
-
-              {/* Priority */}
-              <Form.Item
-                label="Priority"
-                name="priority"
-                style={{ marginBottom: "10px" }}
-              >
-                <Select placeholder="Select priority">
-                  <Option value={1}>{getPriorityIcon(1)}</Option>
-                  <Option value={2}>{getPriorityIcon(2)}</Option>
-                  <Option value={3}>{getPriorityIcon(3)}</Option>
-                  <Option value={4}>{getPriorityIcon(4)}</Option>
-                </Select>
-              </Form.Item>
-
-              {/* Urgency */}
-              <Form.Item
-                label="Urgency"
-                name="urgency"
-                initialValue="normal"
-                style={{ marginBottom: "10px" }}
-              >
-                <Select placeholder="Select urgency">
-                  <Option value="low">Low</Option>
-                  <Option value="normal">Normal</Option>
-                  <Option value="high">High</Option>
-                </Select>
-              </Form.Item>
-
-              {/* Importance */}
-              <Form.Item
-                label="Importance"
-                name="importance"
-                initialValue="normal"
-                style={{ marginBottom: "10px" }}
-              >
-                <Select placeholder="Select importance">
-                  <Option value="low">Low</Option>
-                  <Option value="normal">Normal</Option>
-                  <Option value="high">High</Option>
-                  <Option value="critical">Critical</Option>
-                </Select>
-              </Form.Item>
-
               {/* Due date */}
               <Form.Item
                 label="Due date"
@@ -761,161 +689,289 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                   format="YYYY-MM-DD"
                 />
               </Form.Item>
-
-              {/* Tags */}
-              <Form.Item
-                label="Tags"
-                name="tags"
-                style={{ marginBottom: "10px" }}
-              >
-                <Select
-                  mode="tags"
-                  placeholder="Type to add tags (e.g., Nikora, Nokia, High Priority)"
-                  allowClear
-                  showSearch
-                  filterOption={(input, option) =>
-                    (option?.label ?? "")
-                      .toLowerCase()
-                      .includes(input.toLowerCase())
-                  }
-                  options={
-                    Array.isArray(projectTags)
-                      ? projectTags.map((tag) => ({
-                          value: tag.name,
-                          label: tag.name,
-                        }))
-                      : []
-                  }
-                  tokenSeparators={[","]}
-                />
-              </Form.Item>
-
-              {/* Start date */}
-              <Form.Item
-                label="Start date"
-                name="startDate"
-                style={{ marginBottom: "10px" }}
-              >
-                <DatePicker
-                  style={{ width: "100%" }}
-                  placeholder="Add date"
-                  format="YYYY-MM-DD"
-                />
-              </Form.Item>
-
-              {/* Reporter */}
-              <Form.Item
-                label="Reporter"
-                name="reporter"
-                style={{ marginBottom: "10px" }}
-              >
-                <Select placeholder="Select reporter" disabled>
-                  <Option value={1}>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: 24,
-                          height: 24,
-                          borderRadius: "50%",
-                          backgroundColor: "#0052cc",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          color: "#fff",
-                          fontSize: "12px",
-                          fontWeight: 600,
-                        }}
-                      >
-                        BK
-                      </div>
-                      <span>Boris Karaya</span>
-                    </div>
-                  </Option>
-                </Select>
-              </Form.Item>
             </div>
 
-            {/* Attachment */}
-            <Form.Item
-              label="Attachment"
-              name="attachment"
-              style={{ marginBottom: "10px" }}
-            >
-              <div
-                style={{
-                  border: "2px dashed #dfe1e6",
-                  borderRadius: "3px",
-                  padding: "12px",
-                  textAlign: "center",
-                  color: "#5e6c84",
-                  cursor: "pointer",
-                  backgroundColor: "#fafbfc",
-                  fontSize: "13px",
-                }}
-              >
-                Drop files to attach or{" "}
-                <Button type="link" size="small" style={{ padding: 0 }}>
-                  Browse
-                </Button>
-              </div>
-            </Form.Item>
+            {/* Detailed form fields */}
+            {showDetailedForm && (
+              <>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "10px",
+                  }}
+                >
+                  {/* Company */}
+                  <Form.Item
+                    label="Company"
+                    name="company"
+                    style={{ marginBottom: "10px" }}
+                  >
+                    <Select
+                      placeholder="Select company"
+                      allowClear
+                      showSearch
+                      filterOption={(input, option) =>
+                        ((option?.children ?? "") as string)
+                          .toLowerCase()
+                          .includes(input.toLowerCase())
+                      }
+                    >
+                      {companies.map((company) => (
+                        <Option key={company.id} value={company.id}>
+                          {company.name}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
 
-            {/* Linked Work items */}
-            <Form.Item
-              label="Linked Work items"
-              style={{ marginBottom: "10px" }}
-            >
-              <div style={{ display: "flex", width: "100%" }}>
-                <Form.Item name="linkedItemsType" noStyle initialValue="blocks">
-                  <Select
-                    placeholder="blocks"
+                  {/* Parent */}
+                  <Form.Item
+                    label="Parent"
+                    name="parent"
+                    style={{ marginBottom: "10px" }}
+                  >
+                    <Select
+                      placeholder="Select parent ticket"
+                      allowClear
+                      showSearch
+                      filterOption={(input, option) =>
+                        (option?.label ?? "")
+                          .toLowerCase()
+                          .includes(input.toLowerCase())
+                      }
+                      options={openTickets.map((ticket: any) => ({
+                        value: ticket.id,
+                        label: `${
+                          ticket.ticket_key ||
+                          `${ticket.project_key || "TICK"}-${
+                            ticket.project_number || ticket.id
+                          }`
+                        }: ${ticket.name}`,
+                      }))}
+                    />
+                  </Form.Item>
+
+                  {/* Priority */}
+                  <Form.Item
+                    label="Priority"
+                    name="priority"
+                    style={{ marginBottom: "10px" }}
+                  >
+                    <Select placeholder="Select priority">
+                      <Option value={1}>{getPriorityIcon(1)}</Option>
+                      <Option value={2}>{getPriorityIcon(2)}</Option>
+                      <Option value={3}>{getPriorityIcon(3)}</Option>
+                      <Option value={4}>{getPriorityIcon(4)}</Option>
+                    </Select>
+                  </Form.Item>
+
+                  {/* Urgency */}
+                  <Form.Item
+                    label="Urgency"
+                    name="urgency"
+                    initialValue="normal"
+                    style={{ marginBottom: "10px" }}
+                  >
+                    <Select placeholder="Select urgency">
+                      <Option value="low">Low</Option>
+                      <Option value="normal">Normal</Option>
+                      <Option value="high">High</Option>
+                    </Select>
+                  </Form.Item>
+
+                  {/* Importance */}
+                  <Form.Item
+                    label="Importance"
+                    name="importance"
+                    initialValue="normal"
+                    style={{ marginBottom: "10px" }}
+                  >
+                    <Select placeholder="Select importance">
+                      <Option value="low">Low</Option>
+                      <Option value="normal">Normal</Option>
+                      <Option value="high">High</Option>
+                      <Option value="critical">Critical</Option>
+                    </Select>
+                  </Form.Item>
+
+                  {/* Due date */}
+                  <Form.Item
+                    label="Due date"
+                    name="dueDate"
+                    style={{ marginBottom: "10px" }}
+                  >
+                    <DatePicker
+                      style={{ width: "100%" }}
+                      placeholder="Add due date"
+                      format="YYYY-MM-DD"
+                    />
+                  </Form.Item>
+
+                  {/* Tags */}
+                  <Form.Item
+                    label="Tags"
+                    name="tags"
+                    style={{ marginBottom: "10px" }}
+                  >
+                    <Select
+                      mode="tags"
+                      placeholder="Type to add tags (e.g., Nikora, Nokia, High Priority)"
+                      allowClear
+                      showSearch
+                      filterOption={(input, option) =>
+                        (option?.label ?? "")
+                          .toLowerCase()
+                          .includes(input.toLowerCase())
+                      }
+                      options={
+                        Array.isArray(projectTags)
+                          ? projectTags.map((tag) => ({
+                              value: tag.name,
+                              label: tag.name,
+                            }))
+                          : []
+                      }
+                      tokenSeparators={[","]}
+                    />
+                  </Form.Item>
+
+                  {/* Start date */}
+                  <Form.Item
+                    label="Start date"
+                    name="startDate"
+                    style={{ marginBottom: "10px" }}
+                  >
+                    <DatePicker
+                      style={{ width: "100%" }}
+                      placeholder="Add date"
+                      format="YYYY-MM-DD"
+                    />
+                  </Form.Item>
+
+                  {/* Reporter */}
+                  <Form.Item
+                    label="Reporter"
+                    name="reporter"
+                    style={{ marginBottom: "10px" }}
+                  >
+                    <Select placeholder="Select reporter" disabled>
+                      <Option value={1}>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: 24,
+                              height: 24,
+                              borderRadius: "50%",
+                              backgroundColor: "#0052cc",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              color: "#fff",
+                              fontSize: "12px",
+                              fontWeight: 600,
+                            }}
+                          >
+                            BK
+                          </div>
+                          <span>Boris Karaya</span>
+                        </div>
+                      </Option>
+                    </Select>
+                  </Form.Item>
+                </div>
+              </>
+            )}
+
+            {/* Attachment - Only in detailed form */}
+            {showDetailedForm && (
+              <>
+                <Form.Item
+                  label="Attachment"
+                  name="attachment"
+                  style={{ marginBottom: "10px" }}
+                >
+                  <div
                     style={{
-                      width: "30%",
-                      borderTopRightRadius: 0,
-                      borderBottomRightRadius: 0,
+                      border: "2px dashed #dfe1e6",
+                      borderRadius: "3px",
+                      padding: "12px",
+                      textAlign: "center",
+                      color: "#5e6c84",
+                      cursor: "pointer",
+                      backgroundColor: "#fafbfc",
+                      fontSize: "13px",
                     }}
                   >
-                    <Option value="blocks">blocks</Option>
-                    <Option value="is blocked by">is blocked by</Option>
-                    <Option value="relates to">relates to</Option>
-                    <Option value="duplicates">duplicates</Option>
-                  </Select>
+                    Drop files to attach or{" "}
+                    <Button type="link" size="small" style={{ padding: 0 }}>
+                      Browse
+                    </Button>
+                  </div>
                 </Form.Item>
-                <Form.Item name="linkedItemsValue" noStyle>
-                  <Select
-                    mode="multiple"
-                    placeholder="Type, search or paste URL"
-                    allowClear
-                    showSearch
-                    style={{
-                      width: "70%",
-                      borderTopLeftRadius: 0,
-                      borderBottomLeftRadius: 0,
-                      marginLeft: -1,
-                    }}
-                  />
-                </Form.Item>
-              </div>
-            </Form.Item>
 
-            {/* Flagged */}
-            <Form.Item
-              name="flagged"
-              valuePropName="checked"
-              style={{ marginBottom: 0 }}
-            >
-              <Checkbox>
-                <span style={{ color: "#172b4d", fontSize: "13px" }}>
-                  Impediment
-                </span>
-              </Checkbox>
-            </Form.Item>
+                {/* Linked Work items */}
+                <Form.Item
+                  label="Linked Work items"
+                  style={{ marginBottom: "10px" }}
+                >
+                  <div style={{ display: "flex", width: "100%" }}>
+                    <Form.Item
+                      name="linkedItemsType"
+                      noStyle
+                      initialValue="blocks"
+                    >
+                      <Select
+                        placeholder="blocks"
+                        style={{
+                          width: "30%",
+                          borderTopRightRadius: 0,
+                          borderBottomRightRadius: 0,
+                        }}
+                      >
+                        <Option value="blocks">blocks</Option>
+                        <Option value="is blocked by">is blocked by</Option>
+                        <Option value="relates to">relates to</Option>
+                        <Option value="duplicates">duplicates</Option>
+                      </Select>
+                    </Form.Item>
+                    <Form.Item name="linkedItemsValue" noStyle>
+                      <Select
+                        mode="multiple"
+                        placeholder="Type, search or paste URL"
+                        allowClear
+                        showSearch
+                        style={{
+                          width: "70%",
+                          borderTopLeftRadius: 0,
+                          borderBottomLeftRadius: 0,
+                          marginLeft: -1,
+                        }}
+                      />
+                    </Form.Item>
+                  </div>
+                </Form.Item>
+
+                {/* Flagged */}
+                <Form.Item
+                  name="flagged"
+                  valuePropName="checked"
+                  style={{ marginBottom: 0 }}
+                >
+                  <Checkbox>
+                    <span style={{ color: "#172b4d", fontSize: "13px" }}>
+                      Impediment
+                    </span>
+                  </Checkbox>
+                </Form.Item>
+              </>
+            )}
           </Form>
         </div>
 

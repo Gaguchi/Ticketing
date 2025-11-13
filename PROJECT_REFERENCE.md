@@ -901,23 +901,101 @@ Frontend (React):
 
 ### v1.17 - November 13, 2025
 
-- **Fixed**: Duplicate Ticket Creation on Kanban Board
+- **Fixed**: Duplicate Ticket Creation from WebSocket Double-Firing
 
-  - **Issue**: When creating a ticket, it appeared twice in the kanban board
-  - **Root Cause**: Both WebSocket `ticket_created` event AND optimistic update in `onSuccess` callback were adding the ticket to the list
-  - **Solution**: Removed optimistic update from Tickets.tsx, rely solely on WebSocket for real-time updates
+  - **Issue**: When creating a ticket, it appeared 3 times - once from the API response, twice from WebSocket `ticket_created` events
+  - **Root Cause**: Backend Django signal (`post_save`) was firing `ticket_created` WebSocket event twice, likely due to related field saves (assignees)
+  - **Previous Attempts**:
+    - First tried removing optimistic updates → slow UX
+    - Then tried optimistic updates with tempId replacement → complex, still had duplicates from double WebSocket
+  - **Final Solution**: Simple deduplication with Set-based tracking
+  - **How It Works**:
+    1. User creates ticket → API returns ticket → Add to UI immediately
+    2. Mark ticket ID as "received" in `receivedTicketIdsRef` Set
+    3. WebSocket fires `ticket_created` (1st time) → Check Set → Already received → Skip
+    4. WebSocket fires `ticket_created` (2nd time) → Check Set → Already received → Skip
   - **Frontend Changes** (`pages/Tickets.tsx`):
+
     ```typescript
-    // REMOVED optimistic update that caused duplicates
-    onSuccess={() => {
+    // Track received ticket IDs to prevent duplicates
+    const receivedTicketIdsRef = useRef<Set<number>>(new Set());
+
+    // On ticket creation - add immediately
+    const handleTicketCreated = (newTicket: Ticket) => {
+      receivedTicketIdsRef.current.add(newTicket.id); // Mark as received
+      setTickets((prev) => [newTicket, ...prev]); // Instant UI
       setIsCreateModalOpen(false);
-      // WebSocket handles adding the ticket via ticket_created event
-      // No need for optimistic update here to avoid duplicates
-    }}
+    };
+
+    // WebSocket listener - deduplicate
+    if (type === "ticket_created") {
+      if (receivedTicketIdsRef.current.has(data.ticket_id)) {
+        console.log(
+          `⏭️ Skipping duplicate ticket_created for ID ${data.ticket_id}`
+        );
+        return; // Already have it
+      }
+
+      // Mark as received
+      receivedTicketIdsRef.current.add(data.ticket_id);
+
+      // Fetch and add (for other users' tickets)
+      const newTicket = await ticketService.getTicket(data.ticket_id);
+      setTickets((prev) => {
+        if (prev.some((t) => t.id === newTicket.id)) return prev; // Safety check
+        return [newTicket, ...prev];
+      });
+    }
+
+    // Reset tracking when project changes
+    useEffect(() => {
+      if (!selectedProject) {
+        receivedTicketIdsRef.current.clear();
+        return;
+      }
+      // ... fetch tickets ...
+      receivedTicketIdsRef.current = new Set(response.results.map((t) => t.id));
+    }, [selectedProject?.id]);
     ```
-  - **Pattern**: When using WebSocket for real-time updates, avoid manual state updates in success callbacks to prevent duplicates
+
+  - **Benefits**:
+    - ✅ Instant UI feedback (ticket appears immediately from API)
+    - ✅ No duplicates (Set prevents processing same ID twice)
+    - ✅ Works for multi-user (other users' tickets added via WebSocket)
+    - ✅ Simple & reliable (no complex tempId mapping)
+    - ✅ Handles double-firing WebSocket gracefully
+  - **Pattern**: Simpler than optimistic updates - just track what you've received and ignore duplicates
+
+- **Fixed**: Inconsistent Ticket Number Display
+
+  - **Issue**: Dashboard and other pages showed global database IDs instead of project-scoped ticket numbers
+  - **Root Cause**: Frontend was constructing ticket keys using `projectKey-id` instead of using backend's `ticket_key` field
+  - **Solution**: Updated all `formatTicketId` functions to use backend data
+  - **Files Updated**: `Dashboard.tsx`, `Tickets.tsx`, `DeadlineView.tsx`
+  - **Pattern Change**:
+
+    ```typescript
+    // ❌ OLD - Used database ID
+    const formatTicketId = (projectKey?: string, id?: number) => {
+      const key = projectKey || "TICK";
+      return `${key}-${id}`;
+    };
+
+    // ✅ NEW - Uses backend ticket_key and project_number
+    const formatTicketId = (ticket: Ticket) => {
+      if (ticket.ticket_key) {
+        return ticket.ticket_key; // Backend-provided "TICK-1"
+      }
+      const key = ticket.project_key || "TICK";
+      const num = ticket.project_number || ticket.id; // Fallback to ID
+      return `${key}-${num}`;
+    };
+    ```
+
+  - **Result**: All pages display correct project-scoped ticket numbers (TICK-1, PROJ-1, etc.)
 
 - **Added**: Project-Scoped Ticket Numbering System
+
   - **Issue**: Ticket IDs were global (ticket ID 17 in TICK project would make next ticket in NEW project start at 18)
   - **Requirement**: Each project should have independent ticket numbering (TICK-1, TICK-2 vs PROJ-1, PROJ-2)
   - **Backend Changes** (`tickets/models.py` - Ticket model):

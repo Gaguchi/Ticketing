@@ -34,9 +34,15 @@ const getTypeIcon = (type?: string) => {
   }
 };
 
-const formatTicketId = (projectKey?: string, id?: number) => {
-  const key = projectKey || "TICK";
-  return `${key}-${id}`;
+const formatTicketId = (ticket: Ticket) => {
+  // Prefer ticket_key from backend (includes project-scoped number)
+  if (ticket.ticket_key) {
+    return ticket.ticket_key;
+  }
+  // Fallback to constructing from available fields
+  const key = ticket.project_key || "TICK";
+  const num = ticket.project_number || ticket.id;
+  return `${key}-${num}`;
 };
 
 // Function to categorize tickets by deadline
@@ -239,7 +245,7 @@ const DeadlineColumn: React.FC<{
                   <Text
                     style={{ fontSize: 11, color: "#5e6c84", fontWeight: 500 }}
                   >
-                    {formatTicketId(ticket.project_key, ticket.id)}
+                    {formatTicketId(ticket)}
                   </Text>
 
                   {/* Priority */}

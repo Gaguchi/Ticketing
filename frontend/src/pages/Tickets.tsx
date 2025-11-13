@@ -44,10 +44,16 @@ const getTypeIcon = (type?: string) => {
   }
 };
 
-// Helper function to format ticket ID with type prefix
-const formatTicketId = (projectKey?: string, id?: number) => {
-  const key = projectKey || "TICK";
-  return `${key}-${id}`;
+// Helper function to format ticket ID from backend data
+const formatTicketId = (ticket: Ticket) => {
+  // Prefer ticket_key from backend (includes project-scoped number)
+  if (ticket.ticket_key) {
+    return ticket.ticket_key;
+  }
+  // Fallback to constructing from available fields
+  const key = ticket.project_key || "TICK";
+  const num = ticket.project_number || ticket.id;
+  return `${key}-${num}`;
 };
 
 const Tickets: React.FC = () => {
@@ -70,6 +76,9 @@ const Tickets: React.FC = () => {
   // Track pending API requests for optimistic updates (used internally, no visual indicator)
   const [, setPendingUpdates] = useState<Set<number>>(new Set());
 
+  // Track ticket IDs we've received via WebSocket to prevent duplicates
+  const receivedTicketIdsRef = useRef<Set<number>>(new Set());
+
   // Prevent duplicate initialization
   const fetchInProgressRef = useRef(false);
 
@@ -79,6 +88,7 @@ const Tickets: React.FC = () => {
       if (!selectedProject) {
         setTickets([]);
         setKanbanColumns([]);
+        receivedTicketIdsRef.current.clear();
         return;
       }
 
@@ -127,6 +137,11 @@ const Tickets: React.FC = () => {
           project: selectedProject.id,
         });
         setTickets(response.results);
+
+        // Track all existing ticket IDs
+        receivedTicketIdsRef.current = new Set(
+          response.results.map((t) => t.id)
+        );
       } catch (error: any) {
         console.error("Failed to fetch data:", error);
         message.error("Failed to load tickets");
@@ -153,20 +168,36 @@ const Tickets: React.FC = () => {
       console.log(`🎫 [Tickets] Received ${type} event:`, data);
 
       if (type === "ticket_created") {
-        // Fetch the full ticket details and add to list
+        // Check if we've already processed this ticket ID
+        if (receivedTicketIdsRef.current.has(data.ticket_id)) {
+          console.log(
+            `⏭️ Skipping duplicate ticket_created for ID ${data.ticket_id}`
+          );
+          return;
+        }
+
+        // Mark as received
+        receivedTicketIdsRef.current.add(data.ticket_id);
+
+        // Fetch and add the new ticket
+        console.log(`➕ Adding new ticket from WebSocket: ${data.ticket_id}`);
         try {
           const newTicket = await ticketService.getTicket(data.ticket_id);
-          setTickets((prev) => [newTicket, ...prev]);
+          setTickets((prev) => {
+            // Double-check it doesn't exist
+            if (prev.some((t) => t.id === newTicket.id)) {
+              console.log(`⚠️ Ticket ${newTicket.id} already exists, skipping`);
+              return prev;
+            }
+            return [newTicket, ...prev];
+          });
           message.success(
-            `New ticket created: ${data.ticket_key || `#${data.ticket_id}`}`
+            `New ticket created: ${data.key || `#${data.ticket_id}`}`
           );
         } catch (error) {
           console.error("Failed to fetch new ticket:", error);
-          // Fallback: refresh all tickets
-          const response = await ticketService.getTickets({
-            project: selectedProject.id,
-          });
-          setTickets(response.results);
+          // Remove from set so it can retry
+          receivedTicketIdsRef.current.delete(data.ticket_id);
         }
       } else if (type === "ticket_updated") {
         // Update existing ticket in list
@@ -315,10 +346,10 @@ const Tickets: React.FC = () => {
               color: "#0052cc",
               fontWeight: 500,
               fontSize: "14px",
-              flexShrink: 0,
+              marginRight: "8px",
             }}
           >
-            {formatTicketId(record.project_key, record.id)}
+            {formatTicketId(record)}
           </span>
           <span style={{ color: "#172b4d", fontSize: "14px" }}>
             {record.name}
@@ -536,10 +567,20 @@ const Tickets: React.FC = () => {
       <CreateTicketModal
         open={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        onSuccess={() => {
+        onSuccess={(newTicket) => {
+          console.log(`✨ Ticket created:`, newTicket);
+
+          // Mark this ticket ID as received (it will come via WebSocket soon)
+          receivedTicketIdsRef.current.add(newTicket.id);
+
+          // Add the ticket immediately for instant feedback
+          // The WebSocket duplicate check will prevent double-adding
+          setTickets((prev) => [newTicket, ...prev]);
           setIsCreateModalOpen(false);
-          // WebSocket handles adding the ticket via ticket_created event
-          // No need for optimistic update here to avoid duplicates
+
+          console.log(
+            `✅ Ticket ${newTicket.id} added to UI, WebSocket will be ignored`
+          );
         }}
       />
     </div>
