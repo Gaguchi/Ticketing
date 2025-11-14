@@ -14,14 +14,17 @@ import type {
   Ticket,
 } from '../types/api';
 
+type CompanyQueryParams = PaginationParams & { project?: number };
+
 class CompanyService {
   /**
    * Get all companies with pagination
    */
-  async getCompanies(params?: PaginationParams): Promise<PaginatedResponse<Company>> {
+  async getCompanies(params?: CompanyQueryParams): Promise<PaginatedResponse<Company>> {
     const queryParams = new URLSearchParams();
     if (params?.page) queryParams.append('page', params.page.toString());
     if (params?.page_size) queryParams.append('page_size', params.page_size.toString());
+    if (params?.project) queryParams.append('project', params.project.toString());
     
     const url = queryParams.toString()
       ? `${API_ENDPOINTS.COMPANIES}?${queryParams.toString()}`
@@ -33,8 +36,8 @@ class CompanyService {
   /**
    * Get all companies (unpaginated)
    */
-  async getAllCompanies(): Promise<Company[]> {
-    const response = await this.getCompanies({ page_size: 1000 });
+  async getAllCompanies(projectId?: number): Promise<Company[]> {
+    const response = await this.getCompanies({ page_size: 1000, project: projectId });
     return response.results;
   }
 

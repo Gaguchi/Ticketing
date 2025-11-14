@@ -214,6 +214,11 @@ export interface Ticket {
   due_date: string | null;
   start_date: string | null;
   comments_count: number;
+  is_archived: boolean;
+  archived_at: string | null;
+  archived_by?: User | null;
+  archived_reason?: string | null;
+  done_at?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -266,6 +271,8 @@ export interface TicketFilterParams extends PaginationParams {
   reporter?: number;
   tag?: number;
   ordering?: string;
+  archived?: boolean | 'all';
+  include_archived?: boolean;
 }
 
 export interface ToggleFollowResponse {

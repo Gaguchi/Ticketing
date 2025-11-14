@@ -85,21 +85,34 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
     }
   }, [open, selectedProject, form]);
 
-  // Fetch companies when modal opens
+  // Fetch companies scoped to current project when modal opens/project changes
   useEffect(() => {
-    if (open) {
-      companyService
-        .getAllCompanies()
-        .then((companiesData) => {
-          setCompanies(companiesData);
-          console.log("Fetched companies:", companiesData.length);
-        })
-        .catch((error) => {
-          console.error("❌ Failed to load companies:", error);
-          setCompanies([]);
-        });
+    if (!open) {
+      setCompanies([]);
+      return;
     }
-  }, [open]);
+
+    const activeProjectId = watchedProject || selectedProject?.id;
+
+    if (!activeProjectId) {
+      setCompanies([]);
+      return;
+    }
+
+    companyService
+      .getAllCompanies(activeProjectId)
+      .then((companiesData) => {
+        setCompanies(companiesData);
+        console.log(
+          `Fetched companies for project ${activeProjectId}:`,
+          companiesData.length
+        );
+      })
+      .catch((error) => {
+        console.error("❌ Failed to load companies:", error);
+        setCompanies([]);
+      });
+  }, [open, watchedProject, selectedProject?.id]);
 
   // Load project data when project selection changes
   useEffect(() => {
@@ -335,6 +348,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
       column: undefined,
       parent: undefined,
       tags: undefined,
+      company: undefined,
     });
     setActualColumnId(null);
     setOpenTickets([]);

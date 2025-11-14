@@ -1,26 +1,30 @@
 import React, { useState, useEffect } from "react";
 import {
   Modal,
-  Input,
+  Button,
   Select,
   DatePicker,
   Avatar,
-  Button,
   Tabs,
   message,
   Dropdown,
   Checkbox,
   Popconfirm,
   Spin,
+  Tag,
+  Input,
 } from "antd";
+import type { MenuProps } from "antd";
 import {
-  CloseOutlined,
   FullscreenOutlined,
   ShareAltOutlined,
   EllipsisOutlined,
   PlusOutlined,
   DownOutlined,
   DeleteOutlined,
+  InboxOutlined,
+  RollbackOutlined,
+  CloseOutlined,
 } from "@ant-design/icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -180,6 +184,67 @@ export const TicketModal: React.FC<TicketModalProps> = ({
     LinkedTicket[]
   >([]);
   const [showLinkForm, setShowLinkForm] = useState(false);
+  const [archiveActionLoading, setArchiveActionLoading] = useState(false);
+
+  const archiveMenuItems =
+    React.useMemo<MenuProps["items"]>(() => {
+      if (isCreateMode) {
+        return [] as MenuProps["items"];
+      }
+      return [
+        {
+          key: "archive",
+          label: "Move to archive",
+          icon: <InboxOutlined />,
+          disabled: !ticket || ticket.is_archived,
+        },
+        {
+          key: "restore",
+          label: "Restore ticket",
+          icon: <RollbackOutlined />,
+          disabled: !ticket || !ticket.is_archived,
+        },
+      ];
+    }, [isCreateMode, ticket]) || [];
+
+  const handleArchiveActionClick: MenuProps["onClick"] = async ({ key }) => {
+    if (key === "archive") {
+      await handleArchiveTicket();
+    } else if (key === "restore") {
+      await handleRestoreTicket();
+    }
+  };
+
+  const handleArchiveTicket = async () => {
+    if (!ticket?.id) return;
+    setArchiveActionLoading(true);
+    try {
+      const updatedTicket = await ticketService.archiveTicket(ticket.id);
+      message.success("Ticket moved to archive");
+      onSuccess?.(updatedTicket);
+      onClose();
+    } catch (error) {
+      console.error("Failed to archive ticket", error);
+      message.error("Failed to archive ticket");
+    } finally {
+      setArchiveActionLoading(false);
+    }
+  };
+
+  const handleRestoreTicket = async () => {
+    if (!ticket?.id) return;
+    setArchiveActionLoading(true);
+    try {
+      const updatedTicket = await ticketService.restoreTicket(ticket.id);
+      message.success("Ticket restored");
+      onSuccess?.(updatedTicket);
+    } catch (error) {
+      console.error("Failed to restore ticket", error);
+      message.error("Failed to restore ticket");
+    } finally {
+      setArchiveActionLoading(false);
+    }
+  };
 
   // Load current project from localStorage when modal opens
   useEffect(() => {
@@ -807,6 +872,11 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                       ticket?.project_number || ticket?.id
                     }`}
               </span>
+              {ticket?.is_archived && (
+                <Tag color="default" style={{ marginLeft: 8 }}>
+                  Archived
+                </Tag>
+              )}
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -818,12 +888,24 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                   icon={<ShareAltOutlined />}
                   style={{ color: "#9E9E9E" }}
                 />
-                <Button
-                  type="text"
-                  size="small"
-                  icon={<EllipsisOutlined />}
-                  style={{ color: "#9E9E9E" }}
-                />
+                <Dropdown
+                  menu={{
+                    items: archiveMenuItems,
+                    onClick: handleArchiveActionClick,
+                  }}
+                  trigger={["click"]}
+                  disabled={
+                    archiveActionLoading || archiveMenuItems.length === 0
+                  }
+                >
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<EllipsisOutlined />}
+                    style={{ color: "#9E9E9E" }}
+                    loading={archiveActionLoading}
+                  />
+                </Dropdown>
                 <Button
                   type="text"
                   size="small"

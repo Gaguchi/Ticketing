@@ -282,6 +282,7 @@ class TicketSerializer(serializers.ModelSerializer):
     comments_count = serializers.IntegerField(read_only=True)
     subtasks = serializers.SerializerMethodField()
     tags_detail = serializers.SerializerMethodField()
+    archived_by = UserSerializer(read_only=True)
     
     class Meta:
         model = Ticket
@@ -294,6 +295,7 @@ class TicketSerializer(serializers.ModelSerializer):
             'assignees', 'assignee_ids', 'reporter',
             'parent', 'subtasks', 'following', 'tags', 'tags_detail',
             'due_date', 'start_date', 'comments_count',
+            'is_archived', 'archived_at', 'archived_by', 'archived_reason', 'done_at',
             'created_at', 'updated_at'
         ]
     
@@ -329,6 +331,7 @@ class TicketListSerializer(serializers.ModelSerializer):
             'column', 'column_name',
             'assignee_ids', 'following', 'comments_count', 'tag_names',
             'due_date', 'start_date',
+            'is_archived', 'archived_at', 'archived_reason', 'done_at',
             'created_at', 'updated_at'
         ]
     

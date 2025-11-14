@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Avatar, Row, Col, Space } from "antd";
@@ -48,7 +48,7 @@ const formatTicketId = (ticket: Ticket) => {
   return `${key}-${num}`;
 };
 
-export const TicketCard: React.FC<TicketCardProps> = ({
+const TicketCardComponent: React.FC<TicketCardProps> = ({
   id,
   ticket,
   disabled,
@@ -149,7 +149,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({
                 </span>
               </Space>
               {ticket.following && <EyeOutlined style={{ fontSize: "14px" }} />}
-              {ticket.comments_count && ticket.comments_count > 0 && (
+              {(ticket.comments_count ?? 0) > 0 && (
                 <Space size={4}>
                   <MessageOutlined style={{ fontSize: "14px" }} />
                   <span>{ticket.comments_count}</span>
@@ -189,3 +189,15 @@ export const TicketCard: React.FC<TicketCardProps> = ({
     </div>
   );
 };
+
+export const TicketCard = memo(TicketCardComponent, (prev, next) => {
+  return (
+    prev.id === next.id &&
+    prev.disabled === next.disabled &&
+    prev.dragOverlay === next.dragOverlay &&
+    prev.ticket === next.ticket &&
+    prev.onClick === next.onClick
+  );
+});
+
+TicketCard.displayName = "TicketCard";

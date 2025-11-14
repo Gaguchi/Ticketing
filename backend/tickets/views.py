@@ -26,6 +26,11 @@ from .serializers import (
     NotificationSerializer, ProjectInvitationSerializer, InviteUserSerializer, AcceptInvitationSerializer
 )
 from .email_service import send_invitation_email
+from .services import auto_archive_completed_tickets
+
+
+TRUE_VALUES = {'true', '1', 'yes', 'on'}
+FALSE_VALUES = {'false', '0', 'no', 'off'}
 
 
 # ==================== Authentication Views ====================
@@ -599,16 +604,41 @@ class TicketViewSet(viewsets.ModelViewSet):
     queryset = Ticket.objects.select_related('company', 'column', 'project', 'reporter').prefetch_related('assignees', 'tags')
     permission_classes = [IsAuthenticated]  # Basic authentication only, filtering handled in get_queryset
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['status', 'type', 'priority_id', 'column', 'project', 'tags', 'company']
+    filterset_fields = ['status', 'type', 'priority_id', 'column', 'project', 'tags', 'company', 'is_archived']
     search_fields = ['name', 'description']
     ordering_fields = ['created_at', 'updated_at', 'priority_id', 'due_date']
     ordering = ['-created_at']
     
     def get_serializer_class(self):
-        if self.action == 'list':
+        if self.action in ['list', 'archived']:
             return TicketListSerializer
         return TicketSerializer
     
+    def _get_accessible_queryset(self):
+        user = self.request.user
+
+        base_queryset = Ticket.objects.select_related('company', 'column', 'project', 'reporter').prefetch_related('assignees', 'tags')
+
+        if user.is_superuser:
+            return base_queryset
+
+        member_projects = Project.objects.filter(members=user).values_list('id', flat=True)
+
+        user_companies = Company.objects.filter(
+            Q(admins=user) | Q(users=user)
+        ).values_list('id', flat=True)
+
+        company_projects = Project.objects.filter(
+            companies__id__in=user_companies
+        ).values_list('id', flat=True)
+
+        all_project_ids = set(member_projects) | set(company_projects)
+
+        if not all_project_ids:
+            return base_queryset.none()
+
+        return base_queryset.filter(project_id__in=all_project_ids)
+
     def get_queryset(self):
         """
         Filter tickets based on user's project/company access:
@@ -616,32 +646,32 @@ class TicketViewSet(viewsets.ModelViewSet):
         - Project members: Tickets from their projects
         - Company admins/users: Tickets from projects associated with their companies
         """
-        user = self.request.user
-        
-        # Superusers see everything
-        if user.is_superuser:
-            return Ticket.objects.select_related('company', 'column', 'project', 'reporter').prefetch_related('assignees', 'tags')
-        
-        # Get projects where user is a member
-        member_projects = Project.objects.filter(members=user).values_list('id', flat=True)
-        
-        # Get companies where user is admin or member
-        user_companies = Company.objects.filter(
-            Q(admins=user) | Q(users=user)
-        ).values_list('id', flat=True)
-        
-        # Get projects associated with those companies
-        company_projects = Project.objects.filter(
-            companies__id__in=user_companies
-        ).values_list('id', flat=True)
-        
-        # Combine both project sets
-        all_project_ids = set(member_projects) | set(company_projects)
-        
-        # Filter tickets by those projects
-        return Ticket.objects.filter(
-            project_id__in=all_project_ids
-        ).select_related('company', 'column', 'project', 'reporter').prefetch_related('assignees', 'tags')
+        queryset = self._get_accessible_queryset()
+        archived_param = self.request.query_params.get('archived')
+        include_archived = self.request.query_params.get('include_archived')
+
+        if archived_param:
+            archived_value = archived_param.strip().lower()
+            if archived_value in TRUE_VALUES:
+                queryset = queryset.filter(is_archived=True)
+            elif archived_value in FALSE_VALUES:
+                queryset = queryset.filter(is_archived=False)
+            elif archived_value != 'all':
+                queryset = queryset.filter(is_archived=False)
+        elif not include_archived or include_archived.strip().lower() not in TRUE_VALUES:
+            queryset = queryset.filter(is_archived=False)
+
+        return queryset
+    def list(self, request, *args, **kwargs):
+        """Trigger automatic archiving before returning the ticket list."""
+        project_id = request.query_params.get('project')
+        try:
+            project_id_int = int(project_id) if project_id else None
+        except (TypeError, ValueError):
+            project_id_int = None
+
+        auto_archive_completed_tickets(project_id_int)
+        return super().list(request, *args, **kwargs)
     
     def perform_create(self, serializer):
         """
@@ -679,6 +709,50 @@ class TicketViewSet(viewsets.ModelViewSet):
         ticket.following = not ticket.following
         ticket.save()
         return Response({'following': ticket.following})
+
+    @action(detail=True, methods=['post'])
+    def archive(self, request, pk=None):
+        """Manually archive a ticket."""
+        ticket = self.get_object()
+        if ticket.is_archived:
+            return Response({'detail': 'Ticket is already archived.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        reason = request.data.get('reason')
+        ticket.archive(archived_by=request.user, reason=reason)
+        serializer = self.get_serializer(ticket)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'], url_path='archived')
+    def archived(self, request):
+        """Return paginated archived tickets accessible to the user."""
+        project_id = request.query_params.get('project')
+        try:
+            project_id_int = int(project_id) if project_id else None
+        except (TypeError, ValueError):
+            project_id_int = None
+
+        auto_archive_completed_tickets(project_id_int)
+
+        queryset = self._get_accessible_queryset().filter(is_archived=True)
+        queryset = self.filter_queryset(queryset)
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+    @action(detail=True, methods=['post'])
+    def restore(self, request, pk=None):
+        """Restore a ticket from the archive."""
+        ticket = self.get_object()
+        if not ticket.is_archived:
+            return Response({'detail': 'Ticket is not archived.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        ticket.restore()
+        serializer = self.get_serializer(ticket)
+        return Response(serializer.data)
 
 
 class ColumnViewSet(viewsets.ModelViewSet):

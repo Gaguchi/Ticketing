@@ -15,26 +15,104 @@
   min-height: 100%;
 }
 
-/* Custom Scroll for kanban */
-.kanban::-webkit-scrollbar,
-.kanban-column > div:nth-child(2)::-webkit-scrollbar {
+/* Custom Scroll for kanban wrapper */
+.kanban {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(9, 30, 66, 0.25) transparent;
+}
+
+.kanban::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
-.kanban::-webkit-scrollbar-track,
-.kanban-column > div:nth-child(2)::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 3px;
+.kanban::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-.kanban::-webkit-scrollbar-thumb,
-.kanban-column > div:nth-child(2)::-webkit-scrollbar-thumb {
-  background: #aaa;
-  border-radius: 3px;
+.kanban::-webkit-scrollbar-thumb {
+  background: rgba(9, 30, 66, 0.25);
+  border-radius: 8px;
 }
 
-.kanban::-webkit-scrollbar-thumb:hover,
-.kanban-column > div:nth-child(2)::-webkit-scrollbar-thumb:hover {
-  background: #555;
+.kanban::-webkit-scrollbar-thumb:hover {
+  background: rgba(9, 30, 66, 0.4);
+}
+
+/* Minimal column scrollbars */
+.kanban-column__body {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(9, 30, 66, 0.25) transparent;
+}
+
+.kanban-column__body::-webkit-scrollbar {
+  width: 4px;
+}
+
+.kanban-column__body::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 4px 0;
+}
+
+.kanban-column__body::-webkit-scrollbar-thumb {
+  background: rgba(9, 30, 66, 0.2);
+  border-radius: 999px;
+}
+
+.kanban-column__body::-webkit-scrollbar-thumb:hover {
+  background: rgba(9, 30, 66, 0.35);
+}
+
+.archive-panel {
+  margin: 16px 20px;
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(9, 30, 66, 0.1);
+}
+
+.archive-panel__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.archive-panel__header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.archive-panel__header p {
+  margin: 4px 0 0;
+  color: #6b778c;
+  font-size: 12px;
+}
+
+.archive-panel__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.archive-panel__body {
+  padding: 16px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.archive-panel__loading {
+  display: flex;
+  justify-content: center;
+  padding: 32px 0;
+}
+
+.archive-panel__item-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #0052cc;
+  font-weight: 500;
 }

@@ -22,8 +22,11 @@ export const API_ENDPOINTS = {
   
   // Tickets
   TICKETS: `${API_BASE_URL}/api/tickets/tickets/`,
+  TICKETS_ARCHIVED: `${API_BASE_URL}/api/tickets/tickets/archived/`,
   TICKET_DETAIL: (id: number) => `${API_BASE_URL}/api/tickets/tickets/${id}/`,
   TICKET_FOLLOW: (id: number) => `${API_BASE_URL}/api/tickets/tickets/${id}/toggle_follow/`,
+  TICKET_ARCHIVE: (id: number) => `${API_BASE_URL}/api/tickets/tickets/${id}/archive/`,
+  TICKET_RESTORE: (id: number) => `${API_BASE_URL}/api/tickets/tickets/${id}/restore/`,
   
   // Columns
   COLUMNS: `${API_BASE_URL}/api/tickets/columns/`,

@@ -15,7 +15,7 @@ interface KanbanColumnProps {
   id: string;
   items: string[];
   name: string;
-  tickets: Ticket[];
+  ticketMap: Record<string, Ticket>;
   columnId: number; // Add actual column ID for ticket creation
   isSortingContainer?: boolean;
   dragOverlay?: boolean;
@@ -27,7 +27,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
   id,
   items,
   name,
-  tickets,
+  ticketMap,
   columnId,
   isSortingContainer,
   dragOverlay,
@@ -61,15 +61,15 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
     display: "flex",
     flexDirection: "column",
     marginRight: "8px",
-    minWidth: "272px",
-    maxWidth: "272px",
+    minWidth: "288px",
+    maxWidth: "288px",
     borderRadius: "3px",
     backgroundColor: "#f4f5f7",
     height: "calc(100vh - 180px)",
   };
 
   return (
-    <div ref={setNodeRef} style={style}>
+    <div ref={setNodeRef} style={style} className="kanban-column">
       <div
         ref={setActivatorNodeRef}
         {...attributes}
@@ -102,6 +102,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
         </span>
       </div>
       <div
+        className="kanban-column__body"
         style={{
           display: "flex",
           flexDirection: "column",
@@ -112,7 +113,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
       >
         <SortableContext items={items} strategy={verticalListSortingStrategy}>
           {items.map((item) => {
-            const ticket = tickets.find((t) => `ticket-${t.id}` === item);
+            const ticket = ticketMap[item];
             if (!ticket) return null;
             return (
               <TicketCard

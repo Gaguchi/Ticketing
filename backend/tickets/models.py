@@ -154,6 +154,8 @@ class Column(models.Model):
 
 class Ticket(models.Model):
     """Ticket model"""
+
+    DONE_COLUMN_NAMES = ('done', 'completed', 'closed')
     
     TYPE_CHOICES = [
         ('task', 'Task'),
@@ -226,6 +228,19 @@ class Ticket(models.Model):
     due_date = models.DateField(null=True, blank=True)
     start_date = models.DateField(null=True, blank=True)
     
+    # Archive metadata
+    is_archived = models.BooleanField(default=False)
+    archived_at = models.DateTimeField(null=True, blank=True)
+    archived_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='archived_tickets'
+    )
+    archived_reason = models.CharField(max_length=255, null=True, blank=True)
+    done_at = models.DateTimeField(null=True, blank=True, help_text='Timestamp for when the ticket entered the Done column')
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -240,7 +255,7 @@ class Ticket(models.Model):
         return f"{self.project.key}-{self.id}: {self.name}"
     
     def save(self, *args, **kwargs):
-        """Auto-generate project_number if not set"""
+        """Auto-generate project_number if not set and track Done transitions"""
         if not self.project_number and self.project:
             # Get the highest project_number for this project
             last_ticket = Ticket.objects.filter(
@@ -253,6 +268,26 @@ class Ticket(models.Model):
                 self.project_number = last_ticket.project_number + 1
             else:
                 self.project_number = 1
+
+        previous_column_id = None
+        if self.pk:
+            try:
+                previous = Ticket.objects.get(pk=self.pk)
+                previous_column_id = previous.column_id
+            except Ticket.DoesNotExist:
+                previous_column_id = None
+
+        # Update done_at when entering/leaving Done column
+        if self.column_id:
+            is_done_column = self._is_done_column()
+            column_changed = previous_column_id != self.column_id if previous_column_id is not None else True
+
+            if is_done_column and (column_changed or not self.done_at):
+                self.done_at = timezone.now()
+            elif not is_done_column and column_changed:
+                self.done_at = None
+        else:
+            self.done_at = None
         
         super().save(*args, **kwargs)
 
@@ -266,6 +301,41 @@ class Ticket(models.Model):
         if self.project_number:
             return f"{self.project.key}-{self.project_number}"
         return f"{self.project.key}-{self.id}"
+
+    def _is_done_column(self):
+        if not self.column_id:
+            return False
+        column = getattr(self, 'column', None)
+        if column is None or column.id != self.column_id:
+            column = Column.objects.filter(id=self.column_id).first()
+        if not column or not column.name:
+            return False
+        return column.name.strip().lower() in self.DONE_COLUMN_NAMES
+
+    def archive(self, archived_by=None, reason=None, auto=False):
+        if self.is_archived:
+            return False
+        self.is_archived = True
+        self.archived_at = timezone.now()
+        self.archived_by = archived_by
+        if reason:
+            self.archived_reason = reason
+        elif auto:
+            self.archived_reason = 'Auto-archived after 3 days in Done'
+        else:
+            self.archived_reason = 'Archived manually'
+        self.save(update_fields=['is_archived', 'archived_at', 'archived_by', 'archived_reason'])
+        return True
+
+    def restore(self, restored_by=None):
+        if not self.is_archived:
+            return False
+        self.is_archived = False
+        self.archived_at = None
+        self.archived_by = None
+        self.archived_reason = None
+        self.save(update_fields=['is_archived', 'archived_at', 'archived_by', 'archived_reason'])
+        return True
 
 
 class Comment(models.Model):

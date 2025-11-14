@@ -54,27 +54,80 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   const isSortingContainer = activeId ? containers.includes(activeId) : false;
 
   useEffect(() => {
-    if (tickets) {
-      setData(tickets);
-      const cols: KanbanItems = {};
-      const sortedColumns = [...columns].sort((a, b) => a.order - b.order);
-
-      sortedColumns.forEach((c) => {
-        cols[`column-${c.id}`] = [];
-      });
-
-      tickets.forEach((d) => {
-        const columnKey = `column-${d.column}`;
-        if (!(columnKey in cols)) {
-          cols[columnKey] = [];
-        }
-        cols[columnKey].push(`ticket-${d.id}`);
-      });
-
-      setItems(cols);
-      setContainers(Object.keys(cols));
+    if (!tickets) {
+      return;
     }
+
+    setData(tickets);
+
+    const sortedColumns = [...columns].sort((a, b) => a.order - b.order);
+    const columnKeys = sortedColumns.map((column) => `column-${column.id}`);
+    const ticketToColumnMap = new Map<string, string>();
+
+    tickets.forEach((ticket) => {
+      ticketToColumnMap.set(`ticket-${ticket.id}`, `column-${ticket.column}`);
+    });
+
+    setItems((prevItems) => {
+      let changed = false;
+      const nextItems: KanbanItems = {};
+
+      columnKeys.forEach((columnKey) => {
+        nextItems[columnKey] = prevItems[columnKey]
+          ? [...prevItems[columnKey]]
+          : [];
+      });
+
+      Object.entries(nextItems).forEach(([columnKey, ticketList]) => {
+        const filtered = ticketList.filter(
+          (ticketId) => ticketToColumnMap.get(ticketId) === columnKey
+        );
+        if (filtered.length !== ticketList.length) {
+          changed = true;
+        }
+        nextItems[columnKey] = filtered;
+      });
+
+      ticketToColumnMap.forEach((columnKey, ticketId) => {
+        if (!nextItems[columnKey]) {
+          nextItems[columnKey] = [];
+          changed = true;
+        }
+
+        if (!nextItems[columnKey].includes(ticketId)) {
+          nextItems[columnKey].push(ticketId);
+          changed = true;
+        }
+      });
+
+      // Remove columns that no longer exist
+      Object.keys(prevItems).forEach((columnKey) => {
+        if (!nextItems[columnKey]) {
+          changed = true;
+        }
+      });
+
+      return changed ? nextItems : prevItems;
+    });
+
+    setContainers((prevContainers) => {
+      const hasChanged =
+        prevContainers.length !== columnKeys.length ||
+        columnKeys.some((key, index) => prevContainers[index] !== key);
+      return hasChanged ? columnKeys : prevContainers;
+    });
   }, [tickets, columns]);
+
+  const ticketMap = React.useMemo<Record<string, Ticket>>(() => {
+    if (!data) {
+      return {};
+    }
+
+    return data.reduce((acc, ticket) => {
+      acc[`ticket-${ticket.id}`] = ticket;
+      return acc;
+    }, {} as Record<string, Ticket>);
+  }, [data]);
 
   const moveBetweenContainers = useCallback(
     (
@@ -410,7 +463,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                   key={containerId}
                   items={containerItems}
                   name={column.name}
-                  tickets={data || []}
+                  ticketMap={ticketMap}
                   isSortingContainer={isSortingContainer}
                   onTicketClick={onTicketClick}
                   columnId={column.id}
@@ -467,7 +520,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
               name={
                 columns.find((c) => `column-${c.id}` === activeId)?.name || ""
               }
-              tickets={data || []}
+              ticketMap={ticketMap}
               dragOverlay
               onTicketClick={onTicketClick}
               columnId={
@@ -478,10 +531,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           ) : activeId ? (
             <TicketCard
               id={activeId}
-              ticket={
-                data?.find((d) => `ticket-${d.id}` === activeId) ||
-                ({} as Ticket)
-              }
+              ticket={ticketMap[activeId] || ({} as Ticket)}
               dragOverlay
             />
           ) : null}
