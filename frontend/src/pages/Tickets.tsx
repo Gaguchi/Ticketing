@@ -576,10 +576,9 @@ const Tickets: React.FC = () => {
         width: 180,
         render: (_: any, record: Ticket) => {
           const archivedAt =
-            record.archived_at || (record as { archivedAt?: string }).archivedAt;
-          return archivedAt
-            ? new Date(archivedAt).toLocaleString()
-            : "-";
+            record.archived_at ||
+            (record as { archivedAt?: string }).archivedAt;
+          return archivedAt ? new Date(archivedAt).toLocaleString() : "-";
         },
       },
       {
@@ -681,9 +680,7 @@ const Tickets: React.FC = () => {
           <Segmented
             value={viewMode}
             onChange={(value) =>
-              setViewMode(
-                value as "list" | "kanban" | "deadline" | "archive"
-              )
+              setViewMode(value as "list" | "kanban" | "deadline" | "archive")
             }
             options={[
               { label: "List", value: "list", icon: <UnorderedListOutlined /> },

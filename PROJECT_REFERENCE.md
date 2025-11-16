@@ -2,7 +2,7 @@
 
 > **Purpose**: This document maintains critical information about the codebase to prevent errors from incorrect references, wrong variable names, and inconsistent field naming.
 
-**Last Updated**: November 5, 2025
+**Last Updated**: November 14, 2025
 
 ---
 
@@ -114,6 +114,57 @@ comment.author.username  # WRONG
 
 ---
 
+#### Company Model
+
+**Location**: `backend/tickets/models.py`
+
+```python
+class Company(models.Model):
+    name = models.CharField(max_length=255)                    # NOT unique - duplicates allowed
+    description = models.TextField(...)
+    logo = models.ImageField(...)
+    primary_contact_email = models.EmailField(...)
+    phone = models.CharField(...)
+    admins = models.ManyToManyField(User, ...)                 # IT staff managing this company
+    users = models.ManyToManyField(User, ...)                  # Client company employees
+    created_at = models.DateTimeField(...)
+    updated_at = models.DateTimeField(...)
+```
+
+**✅ Key Features**:
+
+```python
+company.name              # Can be duplicate across different projects
+company.admins.all()      # IT staff assigned to manage this company
+company.users.all()       # Client employees who can see company tickets
+company.projects.all()    # Projects this company is assigned to (via reverse M2M)
+company.tickets.all()     # Tickets specifically assigned to this company
+```
+
+**⚠️ CRITICAL - Non-Unique Company Names**:
+
+```python
+# ✅ CORRECT - Multiple companies can have the same name
+Company.objects.create(name="Acme Corp")  # id=1, assigned to Project A
+Company.objects.create(name="Acme Corp")  # id=2, assigned to Project B
+
+# ❌ WRONG - Don't filter by name alone
+company = Company.objects.get(name="Acme Corp")  # MultipleObjectsReturned error!
+
+# ✅ CORRECT - Always filter by ID or combine with project
+company = Company.objects.get(id=1)
+company = Company.objects.filter(name="Acme Corp", projects__id=project_id).first()
+```
+
+**Project Relationship**:
+
+- Companies are assigned to projects via `Project.companies` (M2M)
+- Same company name can exist in different projects
+- Tickets link to specific company instance (by ID), ensuring separation
+- When displaying companies, always filter by project context
+
+---
+
 #### Ticket Model
 
 **Location**: `backend/tickets/models.py`
@@ -201,6 +252,74 @@ serializer.save(
     ticket_id=ticket_id  # Django ORM expects the object for ForeignKey
 )
 ```
+
+#### Archived Tickets Endpoint
+
+- **URL**: `GET /api/tickets/tickets/archived/`
+- **Purpose**: Returns only tickets that are already archived (`is_archived=True`) while reusing the same access rules as the regular ticket list.
+- **Backend Implementation**:
+  - `TicketViewSet` exposes an `@action(detail=False, url_path="archived")` that filters `self._get_accessible_queryset().filter(is_archived=True)`.
+  - The shared `_get_accessible_queryset` helper now powers both the default list endpoint and the archived list so visibility, project filtering, and auto-archive hooks stay consistent.
+  - Response uses `TicketListSerializer` so the payload matches the standard ticket list shape (including `ticket_key`, `project_number`, etc.).
+- **Frontend Usage**:
+  - `ticketService.getArchivedTickets()` hits `API_ENDPOINTS.TICKETS_ARCHIVED` and reuses the same query builder as the active ticket list (search, filters, pagination).
+  - `Tickets.tsx` now loads the archive tab by calling `getArchivedTickets()` instead of pulling everything and filtering client-side, eliminating false positives when non-archived tickets slipped through.
+- **Testing**: `python manage.py test tickets` passes, covering TicketViewSet behavior after the change.
+
+#### Company Management
+
+- **Feature**: Project-scoped companies with non-unique names
+- **Key Concept**: Multiple companies can have identical names if assigned to different projects
+- **Backend Endpoint**: `GET /api/tickets/companies/?project={project_id}`
+- **Filtering**:
+  - Without `?project=` parameter: Returns all companies based on user permissions
+  - With `?project={id}` parameter: Returns only companies assigned to that specific project
+  - Permission-based: Regular users only see companies they're admin/member of
+  - Superusers: See all companies regardless of assignment
+- **Creating Companies**:
+  - Frontend automatically associates new companies with the selected project
+  - Payload includes `project_ids` array: `{ name: "...", project_ids: [1, 2, 3] }`
+  - Backend creates company and links it via `Project.companies.add(company)`
+- **Relationship Structure**:
+  ```python
+  # Many-to-Many: Company ↔ Project
+  project.companies.all()    # Companies assigned to this project
+  company.projects.all()     # Projects this company is assigned to
+  
+  # ForeignKey: Ticket → Company
+  ticket.company             # The specific company instance for this ticket
+  company.tickets.all()      # All tickets assigned to this company
+  ```
+- **Non-Unique Names Example**:
+  ```python
+  # Project A: IT Support
+  company_a = Company.objects.create(name="Acme Corp")  # id=1
+  project_a.companies.add(company_a)
+  
+  # Project B: Consulting
+  company_b = Company.objects.create(name="Acme Corp")  # id=2
+  project_b.companies.add(company_b)
+  
+  # Tickets are separate
+  ticket_1.company = company_a  # Links to id=1
+  ticket_2.company = company_b  # Links to id=2
+  
+  # Result: Same name, different instances, separate tickets
+  ```
+- **Frontend Usage** (`pages/Companies.tsx`):
+  ```typescript
+  const { selectedProject } = useApp();
+  
+  // API call includes project filter
+  let url = API_ENDPOINTS.COMPANIES;
+  if (selectedProject) {
+    url = `${url}?project=${selectedProject.id}`;
+  }
+  
+  // Only shows companies for selected project
+  ```
+- **Important**: Always reference companies by **ID**, not by name, since names can be duplicated
+- **Use Case**: Multi-tenant environment where different departments/projects manage their own company lists independently
 
 ---
 
@@ -456,7 +575,61 @@ setActiveRoom((current) => {
 - Use functional setState when updating state based on previous state
 - Use `useMemo` or `useCallback` for complex objects if full object is needed
 
-### 6. ❌ React Context Provider Ordering
+### 6. ❌ Querying Non-Unique Company Names
+
+**Problem**: Attempting to query companies by name when multiple companies can have the same name
+
+**Location**: `backend/tickets/models.py` - Company model
+
+**Issue**: Company names are **not unique** - multiple companies can share the same name across different projects
+
+**Impact**: Using `.get(name=...)` will raise `MultipleObjectsReturned` error
+
+```python
+# ❌ WRONG - Will fail if multiple "Acme Corp" companies exist
+company = Company.objects.get(name="Acme Corp")  # MultipleObjectsReturned!
+
+# ❌ WRONG - Filtering tickets by company name
+tickets = Ticket.objects.filter(company__name="Acme Corp")  # May return wrong tickets
+
+# ✅ CORRECT - Always use company ID
+company = Company.objects.get(id=company_id)
+tickets = Ticket.objects.filter(company_id=company_id)
+
+# ✅ CORRECT - Filter by name + project context
+company = Company.objects.filter(
+    name="Acme Corp",
+    projects__id=project_id
+).first()
+
+# ✅ CORRECT - Get all companies with same name (aware of duplicates)
+companies = Company.objects.filter(name="Acme Corp")
+for company in companies:
+    print(f"{company.name} (ID: {company.id}) - Projects: {company.projects.count()}")
+```
+
+**Why Companies Allow Duplicates**:
+
+- Different projects may need companies with the same name
+- Examples: "Acme Corp" in IT Support project vs "Acme Corp" in Consulting project
+- Companies are scoped by project via `Project.companies` M2M relationship
+- Tickets reference specific company instances (by ID), ensuring proper separation
+
+**When This Causes Issues**:
+
+- Backend views using `.get(name=...)` instead of `.get(id=...)`
+- Frontend code assuming company names are unique identifiers
+- Dropdown selections that only show company name without distinguishing between duplicates
+- Search functionality that doesn't account for project context
+
+**Best Practice**:
+
+- Always reference companies by **ID**, never by name alone
+- When displaying companies to users, include project context if duplicates exist
+- Use `get_object_or_404(Company, id=company_id)` in views
+- Filter companies by project when showing in dropdowns: `companies.filter(projects__id=project_id)`
+
+### 7. ❌ React Context Provider Ordering
 
 **Problem**: Using `ProjectProvider` from `ProjectContext.tsx` when `AppContext.tsx` already provides both auth and project functionality
 
@@ -898,6 +1071,85 @@ Frontend (React):
 ---
 
 ## Version History
+
+### v1.19 - November 16, 2025
+
+- **Feature**: Project-Scoped Company Names (Duplicate Company Names Allowed)
+
+  - **Requirement**: Allow multiple companies with identical names if they are assigned to different projects, ensuring their tickets remain separate.
+  - **Implementation**:
+    - Company names are **not unique globally** - multiple companies can share the same name
+    - Companies are scoped to projects via `Project.companies` many-to-many relationship
+    - Each company can be assigned to multiple projects
+    - Tickets are linked to companies via `Ticket.company` ForeignKey
+    - Companies in different projects with the same name maintain completely separate ticket lists
+  - **Backend Changes** (`tickets/models.py`):
+    ```python
+    class Company(models.Model):
+        name = models.CharField(max_length=255)  # No unique constraint
+        # ... other fields
+        
+        class Meta:
+            ordering = ['name']
+            # Note: No unique constraint on 'name' field
+    ```
+  - **Migration**: `0016_company_name_nonunique.py`
+    - Removed any unique constraint on `Company.name` field
+    - Allows companies with identical names to coexist in the database
+  - **Company Filtering** (`tickets/views.py` - CompanyViewSet):
+    ```python
+    def get_queryset(self):
+        # ... permission filtering ...
+        
+        # Filter by selected project if provided
+        project_id = self.request.query_params.get('project')
+        if project_id:
+            queryset = queryset.filter(projects__id=project_id)
+        
+        return queryset
+    ```
+  - **Use Cases**:
+    - **Same Client, Different Projects**: 
+      - Company "Acme Corp" exists in Project A (internal IT support)
+      - Company "Acme Corp" exists in Project B (external consulting)
+      - Both have separate ticket queues and are managed independently
+    - **Multi-Tenant Environment**:
+      - Multiple departments/teams can use the same company name without conflicts
+      - Each project maintains its own company list
+  - **Behavior**:
+    - ✅ Companies with the same name can exist in different projects
+    - ✅ Tickets are always associated with a specific company instance (not just the name)
+    - ✅ Company filtering respects project context
+    - ✅ No naming conflicts when creating companies
+  - **Frontend** (`pages/Companies.tsx`):
+    - Automatically filters companies by selected project
+    - Only shows companies assigned to the current project context
+    - New companies are automatically associated with the selected project
+  - **Data Model**:
+    ```
+    Project 1 → Companies [Acme Corp (id=1), TechCo (id=2)]
+    Project 2 → Companies [Acme Corp (id=3), StartupX (id=4)]
+    
+    Ticket A → Company (id=1) "Acme Corp" in Project 1
+    Ticket B → Company (id=3) "Acme Corp" in Project 2
+    
+    Result: Tickets A and B are completely separate despite same company name
+    ```
+  - **Important**: When referencing companies in code, always use the company **ID**, not the name, since names are not unique.
+  - **Result**: Flexible company management with project-based scoping, allowing identical names across different project contexts.
+
+### v1.18 - November 14, 2025
+
+- **Added**: Server-side archived tickets endpoint and frontend integration
+
+  - **Problem**: Archive tab in the Tickets page sometimes showed active tickets because it was filtering client-side after pulling the general ticket list.
+  - **Backend Changes**:
+    - Introduced `_get_accessible_queryset` in `TicketViewSet` so the base filtering (project membership, auto-archive hook, query params) is shared across list variants.
+    - Added `@action(detail=False, url_path='archived')` that returns `TicketListSerializer` data limited to `is_archived=True` items, ensuring the API enforces the archive boundary.
+  - **Frontend Changes**:
+    - `frontend/src/config/api.ts` gained `TICKETS_ARCHIVED`, and `ticket.service.ts` now exposes `getArchivedTickets()` using the same query builder as `getTickets()`.
+    - `Tickets.tsx` archive loader now calls the new service method instead of filtering the active list, so archived view can't leak in-progress items.
+  - **Validation**: `python manage.py test tickets` executed in the backend virtual environment to confirm the updated viewset behavior.
 
 ### v1.17 - November 13, 2025
 

@@ -57,7 +57,7 @@ class Company(models.Model):
     Company model representing client companies serviced by the IT business.
     Each company is isolated and has its own tickets, admins, and users.
     """
-    name = models.CharField(max_length=255, unique=True)
+    name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
     logo = models.ImageField(upload_to='company_logos/', blank=True, null=True, help_text='Company logo image')
     primary_contact_email = models.EmailField(blank=True, null=True, help_text='Primary contact email for this company')
