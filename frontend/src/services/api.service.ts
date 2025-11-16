@@ -61,7 +61,26 @@ class APIService {
       console.log('Method:', config.method || 'GET');
       console.log('Headers:', config.headers);
       if (config.body) {
-        console.log('Body:', JSON.parse(config.body as string));
+        // Handle different body types
+        if (config.body instanceof FormData) {
+          console.log('Body: FormData');
+          // Optionally log FormData entries (be careful with file sizes)
+          const entries: any = {};
+          (config.body as FormData).forEach((value, key) => {
+            if (value instanceof File) {
+              entries[key] = `File: ${value.name} (${value.size} bytes)`;
+            } else {
+              entries[key] = value;
+            }
+          });
+          console.log('FormData entries:', entries);
+        } else {
+          try {
+            console.log('Body:', JSON.parse(config.body as string));
+          } catch {
+            console.log('Body:', config.body);
+          }
+        }
       }
       console.log('Timestamp:', new Date().toISOString());
       console.groupEnd();
@@ -109,10 +128,13 @@ class APIService {
     // Build full URL (adds base URL in production)
     const fullUrl = this.buildUrl(url);
     
+    // Check if body is FormData - if so, don't set Content-Type (browser will auto-set with boundary)
+    const isFormData = options.body instanceof FormData;
+    
     const config: RequestInit = {
       ...options,
       headers: {
-        ...API_HEADERS,
+        ...(isFormData ? {} : API_HEADERS), // Skip default headers for FormData
         ...this.getAuthHeader(),
         ...this.getProjectHeader(),
         ...options.headers,

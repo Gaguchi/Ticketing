@@ -228,7 +228,11 @@ const Companies: React.FC = () => {
       // Prepare form data for file upload
       const formData = new FormData();
       formData.append("name", values.name);
-      formData.append("description", values.description);
+      
+      // Only add description if it has a value
+      if (values.description) {
+        formData.append("description", values.description);
+      }
 
       if (values.primary_contact_email) {
         formData.append("primary_contact_email", values.primary_contact_email);
@@ -278,6 +282,12 @@ const Companies: React.FC = () => {
         // Form validation error
         return;
       }
+      
+      // Log the full error response for debugging
+      if (error.response) {
+        console.error("Backend error response:", error.response);
+      }
+      
       message.error(error.message || "Failed to save company");
     } finally {
       setSubmitting(false);

@@ -1,22 +1,26 @@
 # Duplicate Company Names Feature
 
 ## Overview
+
 The ticketing system now supports multiple companies with identical names, as long as they are assigned to different projects. This feature enables flexible multi-tenant environments where different teams or departments can manage their own company lists independently.
 
 ## Key Features
 
 ### 1. Non-Unique Company Names
+
 - Company names are **NOT globally unique**
 - Multiple companies can share the same name in the database
 - Companies are distinguished by their unique `id` field
 
 ### 2. Project-Based Scoping
+
 - Companies are associated with projects via `Project.companies` (Many-to-Many relationship)
 - Each company can belong to multiple projects
 - Each project can have multiple companies
 - The UI filters companies based on the selected project
 
 ### 3. Separate Ticket Queues
+
 - Tickets reference companies by `id`, not by name
 - Two companies with the same name maintain completely separate ticket lists
 - Ticket filtering and assignment work correctly regardless of duplicate names
@@ -30,7 +34,7 @@ class Company(models.Model):
     name = models.CharField(max_length=255)  # No unique constraint
     description = models.TextField(...)
     # ... other fields
-    
+
     class Meta:
         ordering = ['name']
         # Note: No unique_together or unique constraint on 'name'
@@ -46,6 +50,7 @@ class Ticket(models.Model):
 ```
 
 ### Migration
+
 - **File**: `backend/tickets/migrations/0016_company_name_nonunique.py`
 - **Purpose**: Ensures the `Company.name` field has no unique constraint
 - **Applied**: Yes (already in production)
@@ -55,9 +60,11 @@ class Ticket(models.Model):
 **Endpoint**: `GET /api/tickets/companies/`
 
 **Query Parameters**:
+
 - `?project={id}` - Filter companies by project (optional)
 
 **Examples**:
+
 ```bash
 # Get all companies user has access to
 GET /api/tickets/companies/
@@ -67,6 +74,7 @@ GET /api/tickets/companies/?project=5
 ```
 
 **Creating Companies**:
+
 ```json
 POST /api/tickets/companies/
 {
@@ -79,11 +87,13 @@ POST /api/tickets/companies/
 ### Frontend Implementation
 
 **Companies Page** (`frontend/src/pages/Companies.tsx`):
+
 - Automatically filters companies by selected project
 - Shows project context in the header
 - New companies are auto-associated with the selected project
 
 **Company Selection**:
+
 - Always uses company `id` for referencing
 - Dropdowns and selectors work correctly with duplicate names
 - Users see only companies relevant to their current project context
@@ -91,17 +101,19 @@ POST /api/tickets/companies/
 ## Use Cases
 
 ### Case 1: Same Client, Different Services
+
 ```
 Project: IT Support
 └── Company: "Acme Corp" (id=1) - Internal IT tickets
 
-Project: Consulting Services  
+Project: Consulting Services
 └── Company: "Acme Corp" (id=2) - External consulting tickets
 
 Result: Complete separation of ticket queues
 ```
 
 ### Case 2: Multi-Tenant Departments
+
 ```
 Project: HR Department
 └── Company: "Main Office" (id=1)
@@ -117,6 +129,7 @@ Result: Each department manages their own "Main Office" company independently
 ```
 
 ### Case 3: Testing/Staging Environments
+
 ```
 Project: Production
 └── Company: "Test Client" (id=1) - Real production data
@@ -132,6 +145,7 @@ Result: Same name, different data, no conflicts
 ### ✅ DO
 
 **Always reference companies by ID**:
+
 ```python
 # Backend
 company = Company.objects.get(id=company_id)
@@ -145,6 +159,7 @@ POST /api/tickets/tickets/
 ```
 
 **Filter by project when showing companies**:
+
 ```python
 # Backend
 companies = Company.objects.filter(projects__id=project_id)
@@ -154,10 +169,11 @@ const url = `${API_ENDPOINTS.COMPANIES}?project=${selectedProject.id}`;
 ```
 
 **Include project context in displays** (if needed):
+
 ```jsx
 // Show company with project indicator if duplicates might exist
 <Select>
-  {companies.map(company => (
+  {companies.map((company) => (
     <Option key={company.id} value={company.id}>
       {company.name}
       {company.project_count > 1 && ` (${company.project_count} projects)`}
@@ -169,6 +185,7 @@ const url = `${API_ENDPOINTS.COMPANIES}?project=${selectedProject.id}`;
 ### ❌ DON'T
 
 **Don't query by name alone**:
+
 ```python
 # ❌ WRONG - Will fail if multiple "Acme Corp" exist
 company = Company.objects.get(name="Acme Corp")  # MultipleObjectsReturned!
@@ -178,6 +195,7 @@ company = Company.objects.get(id=company_id)
 ```
 
 **Don't assume names are unique**:
+
 ```python
 # ❌ WRONG - Assumes unique name
 company_name = "Acme Corp"
@@ -188,6 +206,7 @@ ticket.company_id = 5
 ```
 
 **Don't filter tickets by company name**:
+
 ```python
 # ❌ WRONG - May return tickets from wrong company
 tickets = Ticket.objects.filter(company__name="Acme Corp")
@@ -225,7 +244,7 @@ tickets = Ticket.objects.filter(
     company__name="Acme Corp"
 )
 
-# After (fixed)  
+# After (fixed)
 tickets = Ticket.objects.filter(
     project=project,
     company_id=company_id
@@ -240,7 +259,7 @@ tickets = Ticket.objects.filter(
 
 ```jsx
 <Select>
-  {companies.map(company => (
+  {companies.map((company) => (
     <Option key={company.id} value={company.id}>
       {company.name}
       {showProjectInfo && ` (Projects: ${company.project_count})`}
@@ -252,14 +271,16 @@ tickets = Ticket.objects.filter(
 ## Testing Scenarios
 
 ### Test 1: Create Duplicate Company Names
+
 1. Select Project A
 2. Create company named "Test Company"
-3. Select Project B  
+3. Select Project B
 4. Create another company named "Test Company"
 5. Verify both appear in their respective projects
 6. Verify they have different IDs
 
 ### Test 2: Ticket Assignment with Duplicates
+
 1. Create two companies with same name in different projects
 2. Create ticket in Project A, assign to first company
 3. Create ticket in Project B, assign to second company
@@ -267,6 +288,7 @@ tickets = Ticket.objects.filter(
 5. Verify ticket counts are separate
 
 ### Test 3: Company Filtering
+
 1. Create company "Shared Co" assigned to Projects A and B
 2. Select Project A → verify "Shared Co" appears
 3. Select Project B → verify "Shared Co" appears
@@ -280,9 +302,9 @@ If your installation previously enforced unique company names:
 2. **Check for Unique Constraint**:
    ```sql
    -- PostgreSQL
-   SELECT constraint_name 
-   FROM information_schema.table_constraints 
-   WHERE table_name = 'tickets_company' 
+   SELECT constraint_name
+   FROM information_schema.table_constraints
+   WHERE table_name = 'tickets_company'
    AND constraint_type = 'UNIQUE';
    ```
 3. **Apply Migration**: `python manage.py migrate tickets 0016`
