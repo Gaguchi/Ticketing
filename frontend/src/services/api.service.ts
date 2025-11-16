@@ -109,10 +109,14 @@ class APIService {
     // Build full URL (adds base URL in production)
     const fullUrl = this.buildUrl(url);
     
+    // For FormData, don't include default API_HEADERS (especially Content-Type)
+    // Let the browser set Content-Type with the correct boundary
+    const isFormData = options.body instanceof FormData;
+    
     const config: RequestInit = {
       ...options,
       headers: {
-        ...API_HEADERS,
+        ...(isFormData ? {} : API_HEADERS),
         ...this.getAuthHeader(),
         ...this.getProjectHeader(),
         ...options.headers,
