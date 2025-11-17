@@ -30,7 +30,8 @@ export interface Ticket {
 export interface Comment {
   id: number;
   ticket: number;
-  author: User;
+  author?: User;
+  user?: User; // Backend returns 'user' instead of 'author'
   content: string;
   created_at: string;
   updated_at: string;
