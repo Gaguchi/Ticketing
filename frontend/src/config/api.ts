@@ -75,6 +75,7 @@ export const API_ENDPOINTS = {
   COMPANY_REMOVE_ADMIN: (id: number) => `${API_BASE_URL}/api/tickets/companies/${id}/remove_admin/`,
   COMPANY_ASSIGN_USER: (id: number) => `${API_BASE_URL}/api/tickets/companies/${id}/assign_user/`,
   COMPANY_REMOVE_USER: (id: number) => `${API_BASE_URL}/api/tickets/companies/${id}/remove_user/`,
+  COMPANY_CREATE_USER: (id: number) => `${API_BASE_URL}/api/tickets/companies/${id}/create_user/`,
   COMPANY_TICKETS: (id: number) => `${API_BASE_URL}/api/tickets/companies/${id}/tickets/`,
   
   // User Management

@@ -284,6 +284,18 @@ class TicketSerializer(serializers.ModelSerializer):
     tags_detail = serializers.SerializerMethodField()
     archived_by = UserSerializer(read_only=True)
     
+    # Make project and column optional for servicedesk users (will be set in perform_create)
+    project = serializers.PrimaryKeyRelatedField(
+        queryset=Project.objects.all(),
+        required=False,
+        allow_null=True
+    )
+    column = serializers.PrimaryKeyRelatedField(
+        queryset=Column.objects.all(),
+        required=False,
+        allow_null=True
+    )
+    
     class Meta:
         model = Ticket
         fields = [

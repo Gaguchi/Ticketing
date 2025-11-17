@@ -185,11 +185,12 @@ SIMPLE_JWT = {
 # CORS settings
 cors_origins_env = os.getenv(
     'CORS_ALLOWED_ORIGINS',
-    'http://localhost:5173,http://localhost:3000,http://31.146.76.40:5173,http://31.146.76.40:8000'
+    'http://localhost:5173,http://localhost:3000,http://localhost:3001,http://31.146.76.40:5173,http://31.146.76.40:8000'
 )
 CORS_ALLOWED_ORIGINS = [origin.strip() for origin in cors_origins_env.split(',') if origin.strip()]
 
 CORS_ALLOW_CREDENTIALS = True
+CORS_PREFLIGHT_MAX_AGE = 86400  # 24 hours
 
 # Additional CORS settings for better compatibility
 CORS_ALLOW_METHODS = [

@@ -341,6 +341,90 @@ class CompanyViewSet(viewsets.ModelViewSet):
         tickets = company.tickets.all()
         serializer = TicketListSerializer(tickets, many=True)
         return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'])
+    def create_user(self, request, pk=None):
+        """
+        Create a new user account and assign to this company.
+        This is for creating end-customer accounts who will access the service desk portal.
+        Body: {
+            "username": "string",
+            "email": "string", 
+            "password": "string",
+            "first_name": "string" (optional),
+            "last_name": "string" (optional)
+        }
+        """
+        company = self.get_object()
+        
+        username = request.data.get('username')
+        email = request.data.get('email')
+        password = request.data.get('password')
+        first_name = request.data.get('first_name', '')
+        last_name = request.data.get('last_name', '')
+        
+        # Validation
+        if not username or not email or not password:
+            return Response(
+                {'error': 'username, email, and password are required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check if username already exists
+        if User.objects.filter(username=username).exists():
+            return Response(
+                {'error': 'Username already exists'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check if email already exists
+        if User.objects.filter(email=email).exists():
+            return Response(
+                {'error': 'Email already exists'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            # Create user
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                password=password,
+                first_name=first_name,
+                last_name=last_name
+            )
+            
+            # Assign user to company
+            company.users.add(user)
+            
+            # Get the company's projects and assign user role to each
+            for project in company.projects.all():
+                UserRole.objects.get_or_create(
+                    user=user,
+                    project=project,
+                    defaults={
+                        'role': 'user',
+                        'assigned_by': request.user
+                    }
+                )
+            
+            return Response({
+                'message': f'User {username} created and assigned to {company.name}',
+                'user': {
+                    'id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                    'first_name': user.first_name,
+                    'last_name': user.last_name,
+                },
+                'company': CompanySerializer(company).data
+            }, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class UserManagementViewSet(viewsets.ModelViewSet):
@@ -622,14 +706,25 @@ class TicketViewSet(viewsets.ModelViewSet):
         if user.is_superuser:
             return base_queryset
 
+        # Check if user is a regular company user (not admin, not IT staff)
+        # Regular company users should only see tickets they created
+        user_companies = Company.objects.filter(users=user)
+        is_company_admin = Company.objects.filter(admins=user).exists()
+        
+        # If user is a company user but NOT an admin and NOT staff, show only their created tickets
+        if user_companies.exists() and not is_company_admin and not user.is_staff:
+            # Regular company user accessing via servicedesk - only see their tickets
+            return base_queryset.filter(reporter=user)
+
+        # For IT staff, admins, and project members, use the original logic
         member_projects = Project.objects.filter(members=user).values_list('id', flat=True)
 
-        user_companies = Company.objects.filter(
+        user_companies_all = Company.objects.filter(
             Q(admins=user) | Q(users=user)
         ).values_list('id', flat=True)
 
         company_projects = Project.objects.filter(
-            companies__id__in=user_companies
+            companies__id__in=user_companies_all
         ).values_list('id', flat=True)
 
         all_project_ids = set(member_projects) | set(company_projects)
@@ -675,15 +770,73 @@ class TicketViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         """
-        When creating a ticket with a company, automatically assign it to all admins of that company.
+        When creating a ticket:
+        1. For servicedesk users (non-staff, non-admin), automatically assign company and project
+        2. Auto-assign to company admins if ticket has a company
         """
-        ticket = serializer.save(reporter=self.request.user)
+        user = self.request.user
+        print(f"🎫 Creating ticket for user: {user.username}")
+        
+        # Check if user is a regular company user (servicedesk user)
+        user_companies = Company.objects.filter(users=user)
+        is_company_admin = Company.objects.filter(admins=user).exists()
+        
+        print(f"   User companies: {user_companies.count()}")
+        print(f"   Is company admin: {is_company_admin}")
+        print(f"   Is staff: {user.is_staff}")
+        print(f"   Request data: {self.request.data}")
+        
+        # If this is a servicedesk user (company member, not admin, not staff)
+        if user_companies.exists() and not is_company_admin and not user.is_staff:
+            print("   📋 Servicedesk user detected - auto-assigning project/company")
+            # Get the user's company
+            user_company = user_companies.first()
+            
+            # Get or create a default support project for this company
+            company_projects = Project.objects.filter(companies=user_company)
+            
+            if company_projects.exists():
+                support_project = company_projects.first()
+                print(f"   ✅ Using existing project: {support_project.name}")
+            else:
+                # Create a default support project if none exists
+                support_project = Project.objects.create(
+                    name=f"{user_company.name} Support",
+                    key=user_company.name[:3].upper() + "SUP",
+                    description=f"Support tickets for {user_company.name}"
+                )
+                support_project.companies.add(user_company)
+                
+                # Create default columns for the new project
+                Column.objects.create(project=support_project, name='New', order=1)
+                Column.objects.create(project=support_project, name='In Progress', order=2)
+                Column.objects.create(project=support_project, name='Resolved', order=3)
+                Column.objects.create(project=support_project, name='Closed', order=4)
+                print(f"   ✅ Created new project: {support_project.name}")
+            
+            # Get the first column for this project
+            first_column = Column.objects.filter(project=support_project).order_by('order').first()
+            print(f"   📌 Assigning to column: {first_column.name}")
+            
+            # Save with auto-assigned company, project, and column
+            ticket = serializer.save(
+                reporter=user,
+                company=user_company,
+                project=support_project,
+                column=first_column
+            )
+            print(f"   ✅ Ticket created: {ticket.id}")
+        else:
+            print("   ⚠️ Not a servicedesk user - requires project/column in request")
+            # For staff/admin users, save normally
+            ticket = serializer.save(reporter=user)
         
         # Auto-assign to company admins if ticket has a company
         if ticket.company:
             company_admins = ticket.company.admins.all()
             if company_admins.exists():
                 ticket.assignees.set(company_admins)
+                print(f"   👥 Auto-assigned to {company_admins.count()} company admin(s)")
     
     @action(detail=True, methods=['post'])
     def move_to_column(self, request, pk=None):

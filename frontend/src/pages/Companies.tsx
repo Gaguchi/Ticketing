@@ -19,6 +19,8 @@ import {
   message,
   Upload,
   Badge,
+  List,
+  Popconfirm,
 } from "antd";
 import type { UploadFile } from "antd";
 import {
@@ -37,6 +39,8 @@ import {
   TableOutlined,
   SettingOutlined,
   AppstoreOutlined,
+  MinusCircleOutlined,
+  UserAddOutlined,
 } from "@ant-design/icons";
 import type { MenuProps } from "antd";
 import { API_ENDPOINTS } from "../config/api";
@@ -71,6 +75,14 @@ interface Company {
   }>;
 }
 
+interface User {
+  id: number;
+  username: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+}
+
 const Companies: React.FC = () => {
   const { selectedProject, projectLoading } = useApp();
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -88,6 +100,16 @@ const Companies: React.FC = () => {
   const [ticketViewMode, setTicketViewMode] = useState<
     "table" | "kanban" | "timeline"
   >("table");
+
+  // User management state
+  const [manageUsersModalOpen, setManageUsersModalOpen] = useState(false);
+  const [manageAdminsModalOpen, setManageAdminsModalOpen] = useState(false);
+  const [managingCompany, setManagingCompany] = useState<Company | null>(null);
+  const [availableUsers, setAvailableUsers] = useState<User[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [userSearchQuery, setUserSearchQuery] = useState("");
+  const [createUserForm] = Form.useForm();
+  const [creatingUser, setCreatingUser] = useState(false);
 
   // Prevent duplicate initialization in React Strict Mode
   const fetchInProgressRef = useRef(false);
@@ -294,6 +316,200 @@ const Companies: React.FC = () => {
     }
   };
 
+  // ============================================
+  // User Management Functions
+  // ============================================
+
+  const fetchAvailableUsers = async () => {
+    setLoadingUsers(true);
+    try {
+      const response = await apiService.get<any>(API_ENDPOINTS.USERS);
+      const usersData = response.results || response;
+      setAvailableUsers(Array.isArray(usersData) ? usersData : []);
+    } catch (error: any) {
+      message.error(error.message || "Failed to load users");
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  const handleManageUsers = async (company: Company) => {
+    setManagingCompany(company);
+    setManageUsersModalOpen(true);
+    createUserForm.resetFields();
+  };
+
+  const handleManageAdmins = async (company: Company) => {
+    setManagingCompany(company);
+    setManageAdminsModalOpen(true);
+    await fetchAvailableUsers();
+  };
+
+  const generateRandomPassword = () => {
+    const length = 12;
+    const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+    let password = "";
+    for (let i = 0; i < length; i++) {
+      password += charset.charAt(Math.floor(Math.random() * charset.length));
+    }
+    createUserForm.setFieldsValue({ password });
+  };
+
+  const handleCreateUser = async () => {
+    if (!managingCompany) return;
+    
+    try {
+      setCreatingUser(true);
+      const values = await createUserForm.validateFields();
+      
+      await apiService.post(
+        API_ENDPOINTS.COMPANY_CREATE_USER(managingCompany.id),
+        values
+      );
+      
+      message.success("Company user created successfully");
+      
+      // Refresh company data
+      const response = await apiService.get<Company>(
+        API_ENDPOINTS.COMPANY_DETAIL(managingCompany.id)
+      );
+      setManagingCompany(response);
+      fetchCompanies();
+      
+      // Update selected company if it's the same
+      if (selectedCompany?.id === managingCompany.id) {
+        setSelectedCompany(response);
+      }
+      
+      // Reset form
+      createUserForm.resetFields();
+    } catch (error: any) {
+      if (error.errorFields) {
+        // Form validation error
+        return;
+      }
+      message.error(error.message || "Failed to create user");
+    } finally {
+      setCreatingUser(false);
+    }
+  };
+
+  const handleAddUser = async (userId: number) => {
+    if (!managingCompany) return;
+    
+    try {
+      await apiService.post(
+        `${API_ENDPOINTS.COMPANY_DETAIL(managingCompany.id)}/assign_user/`,
+        { user_id: userId }
+      );
+      message.success("User added successfully");
+      
+      // Refresh company data
+      const response = await apiService.get<Company>(
+        API_ENDPOINTS.COMPANY_DETAIL(managingCompany.id)
+      );
+      setManagingCompany(response);
+      fetchCompanies();
+      
+      // Update selected company if it's the same
+      if (selectedCompany?.id === managingCompany.id) {
+        setSelectedCompany(response);
+      }
+    } catch (error: any) {
+      message.error(error.message || "Failed to add user");
+    }
+  };
+
+  const handleRemoveUser = async (userId: number) => {
+    if (!managingCompany) return;
+    
+    try {
+      await apiService.post(
+        `${API_ENDPOINTS.COMPANY_DETAIL(managingCompany.id)}/remove_user/`,
+        { user_id: userId }
+      );
+      message.success("User removed successfully");
+      
+      // Refresh company data
+      const response = await apiService.get<Company>(
+        API_ENDPOINTS.COMPANY_DETAIL(managingCompany.id)
+      );
+      setManagingCompany(response);
+      fetchCompanies();
+      
+      // Update selected company if it's the same
+      if (selectedCompany?.id === managingCompany.id) {
+        setSelectedCompany(response);
+      }
+    } catch (error: any) {
+      message.error(error.message || "Failed to remove user");
+    }
+  };
+
+  const handleAddAdmin = async (userId: number) => {
+    if (!managingCompany) return;
+    
+    try {
+      await apiService.post(
+        `${API_ENDPOINTS.COMPANY_DETAIL(managingCompany.id)}/assign_admin/`,
+        { user_id: userId }
+      );
+      message.success("Admin added successfully");
+      
+      // Refresh company data
+      const response = await apiService.get<Company>(
+        API_ENDPOINTS.COMPANY_DETAIL(managingCompany.id)
+      );
+      setManagingCompany(response);
+      fetchCompanies();
+      
+      // Update selected company if it's the same
+      if (selectedCompany?.id === managingCompany.id) {
+        setSelectedCompany(response);
+      }
+    } catch (error: any) {
+      message.error(error.message || "Failed to add admin");
+    }
+  };
+
+  const handleRemoveAdmin = async (userId: number) => {
+    if (!managingCompany) return;
+    
+    try {
+      await apiService.post(
+        `${API_ENDPOINTS.COMPANY_DETAIL(managingCompany.id)}/remove_admin/`,
+        { user_id: userId }
+      );
+      message.success("Admin removed successfully");
+      
+      // Refresh company data
+      const response = await apiService.get<Company>(
+        API_ENDPOINTS.COMPANY_DETAIL(managingCompany.id)
+      );
+      setManagingCompany(response);
+      fetchCompanies();
+      
+      // Update selected company if it's the same
+      if (selectedCompany?.id === managingCompany.id) {
+        setSelectedCompany(response);
+      }
+    } catch (error: any) {
+      message.error(error.message || "Failed to remove admin");
+    }
+  };
+
+  const getFilteredAvailableUsers = (excludeIds: number[]) => {
+    return availableUsers.filter(
+      (user) =>
+        !excludeIds.includes(user.id) &&
+        (userSearchQuery === "" ||
+          user.username.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+          user.email.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+          user.first_name?.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+          user.last_name?.toLowerCase().includes(userSearchQuery.toLowerCase()))
+    );
+  };
+
   const getActionMenu = (company: Company): MenuProps["items"] => [
     {
       key: "edit",
@@ -305,11 +521,13 @@ const Companies: React.FC = () => {
       key: "manage-admins",
       icon: <UserOutlined />,
       label: "Manage Admins",
+      onClick: () => handleManageAdmins(company),
     },
     {
       key: "manage-users",
       icon: <TeamOutlined />,
       label: "Manage Users",
+      onClick: () => handleManageUsers(company),
     },
     {
       type: "divider",
@@ -773,6 +991,273 @@ const Companies: React.FC = () => {
             </Form.Item>
           )}
         </Form>
+      </Modal>
+
+      {/* Manage Company Users Modal */}
+      <Modal
+        title={
+          <Space>
+            <TeamOutlined />
+            <span>Manage Company Users - {managingCompany?.name}</span>
+          </Space>
+        }
+        open={manageUsersModalOpen}
+        onCancel={() => {
+          setManageUsersModalOpen(false);
+          setManagingCompany(null);
+          createUserForm.resetFields();
+        }}
+        footer={null}
+        width={800}
+      >
+        <div style={{ marginTop: 24 }}>
+          {/* Create New User Form */}
+          <Card 
+            title="Create New Company User" 
+            style={{ marginBottom: 24 }}
+            size="small"
+          >
+            <Form 
+              form={createUserForm} 
+              layout="vertical"
+              onFinish={handleCreateUser}
+            >
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                    name="username"
+                    label="Username"
+                    rules={[
+                      { required: true, message: "Please enter username" },
+                      { min: 3, message: "Username must be at least 3 characters" }
+                    ]}
+                  >
+                    <Input placeholder="johndoe" />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                    name="email"
+                    label="Email"
+                    rules={[
+                      { required: true, message: "Please enter email" },
+                      { type: "email", message: "Please enter valid email" }
+                    ]}
+                  >
+                    <Input placeholder="john@example.com" />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                    name="first_name"
+                    label="First Name"
+                  >
+                    <Input placeholder="John" />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                    name="last_name"
+                    label="Last Name"
+                  >
+                    <Input placeholder="Doe" />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              <Form.Item
+                name="password"
+                label="Password"
+                rules={[
+                  { required: true, message: "Please enter password" },
+                  { min: 6, message: "Password must be at least 6 characters" }
+                ]}
+              >
+                <Input.Password 
+                  placeholder="Enter password"
+                  addonAfter={
+                    <Button 
+                      type="link" 
+                      size="small"
+                      onClick={generateRandomPassword}
+                      style={{ padding: 0 }}
+                    >
+                      Generate
+                    </Button>
+                  }
+                />
+              </Form.Item>
+
+              <Form.Item>
+                <Button 
+                  type="primary" 
+                  htmlType="submit"
+                  loading={creatingUser}
+                  icon={<UserAddOutlined />}
+                  block
+                >
+                  Create User
+                </Button>
+              </Form.Item>
+            </Form>
+          </Card>
+
+          {/* Current Users List */}
+          <div>
+            <Title level={5}>Current Users ({managingCompany?.users?.length || 0})</Title>
+            <List
+              loading={loadingUsers}
+              dataSource={managingCompany?.users || []}
+              locale={{ emptyText: "No users assigned yet" }}
+              renderItem={(user) => (
+                <List.Item
+                  actions={[
+                    <Popconfirm
+                      title="Remove this user from the company?"
+                      onConfirm={() => handleRemoveUser(user.id)}
+                      okText="Remove"
+                      cancelText="Cancel"
+                    >
+                      <Button
+                        type="text"
+                        danger
+                        icon={<MinusCircleOutlined />}
+                        size="small"
+                      >
+                        Remove
+                      </Button>
+                    </Popconfirm>,
+                  ]}
+                >
+                  <List.Item.Meta
+                    avatar={
+                      <Avatar style={{ backgroundColor: "#1890ff" }}>
+                        {user.first_name?.[0] || user.email[0].toUpperCase()}
+                      </Avatar>
+                    }
+                    title={`${user.first_name || ""} ${user.last_name || ""}`.trim() || user.email}
+                    description={
+                      <Space direction="vertical" size={0}>
+                        <Text type="secondary">{user.email}</Text>
+                        <Text type="secondary" style={{ fontSize: 12 }}>
+                          Username: {(user as any).username || user.email.split('@')[0]}
+                        </Text>
+                      </Space>
+                    }
+                  />
+                </List.Item>
+              )}
+            />
+          </div>
+        </div>
+      </Modal>
+
+      {/* Manage Company Admins Modal */}
+      <Modal
+        title={
+          <Space>
+            <UserOutlined />
+            <span>Manage IT Admins - {managingCompany?.name}</span>
+          </Space>
+        }
+        open={manageAdminsModalOpen}
+        onCancel={() => {
+          setManageAdminsModalOpen(false);
+          setManagingCompany(null);
+          setUserSearchQuery("");
+        }}
+        footer={null}
+        width={700}
+      >
+        <div style={{ marginTop: 24 }}>
+          {/* Current Admins */}
+          <div style={{ marginBottom: 24 }}>
+            <Title level={5}>Current Admins ({managingCompany?.admins?.length || 0})</Title>
+            <List
+              loading={loadingUsers}
+              dataSource={managingCompany?.admins || []}
+              locale={{ emptyText: "No admins assigned yet" }}
+              renderItem={(admin) => (
+                <List.Item
+                  actions={[
+                    <Popconfirm
+                      title="Remove this admin from the company?"
+                      onConfirm={() => handleRemoveAdmin(admin.id)}
+                      okText="Remove"
+                      cancelText="Cancel"
+                    >
+                      <Button
+                        type="text"
+                        danger
+                        icon={<MinusCircleOutlined />}
+                        size="small"
+                      >
+                        Remove
+                      </Button>
+                    </Popconfirm>,
+                  ]}
+                >
+                  <List.Item.Meta
+                    avatar={
+                      <Avatar style={{ backgroundColor: "#722ed1" }}>
+                        {admin.first_name?.[0] || admin.email[0].toUpperCase()}
+                      </Avatar>
+                    }
+                    title={`${admin.first_name || ""} ${admin.last_name || ""}`.trim() || admin.email}
+                    description={admin.email}
+                  />
+                </List.Item>
+              )}
+            />
+          </div>
+
+          {/* Add New Admins */}
+          <div>
+            <Title level={5}>Add IT Staff as Admins</Title>
+            <Input
+              placeholder="Search users by name or email..."
+              prefix={<UserOutlined />}
+              value={userSearchQuery}
+              onChange={(e) => setUserSearchQuery(e.target.value)}
+              style={{ marginBottom: 16 }}
+            />
+            <List
+              loading={loadingUsers}
+              dataSource={getFilteredAvailableUsers(
+                managingCompany?.admins?.map((a) => a.id) || []
+              )}
+              locale={{ emptyText: "No available users found" }}
+              style={{ maxHeight: 300, overflow: "auto" }}
+              renderItem={(user) => (
+                <List.Item
+                  actions={[
+                    <Button
+                      type="primary"
+                      icon={<UserAddOutlined />}
+                      size="small"
+                      onClick={() => handleAddAdmin(user.id)}
+                    >
+                      Add as Admin
+                    </Button>,
+                  ]}
+                >
+                  <List.Item.Meta
+                    avatar={
+                      <Avatar style={{ backgroundColor: "#52c41a" }}>
+                        {user.first_name?.[0] || user.username[0].toUpperCase()}
+                      </Avatar>
+                    }
+                    title={`${user.first_name || ""} ${user.last_name || ""}`.trim() || user.username}
+                    description={user.email}
+                  />
+                </List.Item>
+              )}
+            />
+          </div>
+        </div>
       </Modal>
     </>
   );
