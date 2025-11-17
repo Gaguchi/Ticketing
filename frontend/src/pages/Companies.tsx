@@ -250,7 +250,7 @@ const Companies: React.FC = () => {
       // Prepare form data for file upload
       const formData = new FormData();
       formData.append("name", values.name);
-      
+
       // Only add description if it has a value
       if (values.description) {
         formData.append("description", values.description);
@@ -304,12 +304,12 @@ const Companies: React.FC = () => {
         // Form validation error
         return;
       }
-      
+
       // Log the full error response for debugging
       if (error.response) {
         console.error("Backend error response:", error.response);
       }
-      
+
       message.error(error.message || "Failed to save company");
     } finally {
       setSubmitting(false);
@@ -347,7 +347,8 @@ const Companies: React.FC = () => {
 
   const generateRandomPassword = () => {
     const length = 12;
-    const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+    const charset =
+      "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
     let password = "";
     for (let i = 0; i < length; i++) {
       password += charset.charAt(Math.floor(Math.random() * charset.length));
@@ -357,30 +358,30 @@ const Companies: React.FC = () => {
 
   const handleCreateUser = async () => {
     if (!managingCompany) return;
-    
+
     try {
       setCreatingUser(true);
       const values = await createUserForm.validateFields();
-      
+
       await apiService.post(
         API_ENDPOINTS.COMPANY_CREATE_USER(managingCompany.id),
         values
       );
-      
+
       message.success("Company user created successfully");
-      
+
       // Refresh company data
       const response = await apiService.get<Company>(
         API_ENDPOINTS.COMPANY_DETAIL(managingCompany.id)
       );
       setManagingCompany(response);
       fetchCompanies();
-      
+
       // Update selected company if it's the same
       if (selectedCompany?.id === managingCompany.id) {
         setSelectedCompany(response);
       }
-      
+
       // Reset form
       createUserForm.resetFields();
     } catch (error: any) {
@@ -396,21 +397,21 @@ const Companies: React.FC = () => {
 
   const handleRemoveUser = async (userId: number) => {
     if (!managingCompany) return;
-    
+
     try {
       await apiService.post(
         `${API_ENDPOINTS.COMPANY_DETAIL(managingCompany.id)}/remove_user/`,
         { user_id: userId }
       );
       message.success("User removed successfully");
-      
+
       // Refresh company data
       const response = await apiService.get<Company>(
         API_ENDPOINTS.COMPANY_DETAIL(managingCompany.id)
       );
       setManagingCompany(response);
       fetchCompanies();
-      
+
       // Update selected company if it's the same
       if (selectedCompany?.id === managingCompany.id) {
         setSelectedCompany(response);
@@ -422,21 +423,21 @@ const Companies: React.FC = () => {
 
   const handleAddAdmin = async (userId: number) => {
     if (!managingCompany) return;
-    
+
     try {
       await apiService.post(
         `${API_ENDPOINTS.COMPANY_DETAIL(managingCompany.id)}/assign_admin/`,
         { user_id: userId }
       );
       message.success("Admin added successfully");
-      
+
       // Refresh company data
       const response = await apiService.get<Company>(
         API_ENDPOINTS.COMPANY_DETAIL(managingCompany.id)
       );
       setManagingCompany(response);
       fetchCompanies();
-      
+
       // Update selected company if it's the same
       if (selectedCompany?.id === managingCompany.id) {
         setSelectedCompany(response);
@@ -448,21 +449,21 @@ const Companies: React.FC = () => {
 
   const handleRemoveAdmin = async (userId: number) => {
     if (!managingCompany) return;
-    
+
     try {
       await apiService.post(
         `${API_ENDPOINTS.COMPANY_DETAIL(managingCompany.id)}/remove_admin/`,
         { user_id: userId }
       );
       message.success("Admin removed successfully");
-      
+
       // Refresh company data
       const response = await apiService.get<Company>(
         API_ENDPOINTS.COMPANY_DETAIL(managingCompany.id)
       );
       setManagingCompany(response);
       fetchCompanies();
-      
+
       // Update selected company if it's the same
       if (selectedCompany?.id === managingCompany.id) {
         setSelectedCompany(response);
@@ -479,7 +480,9 @@ const Companies: React.FC = () => {
         (userSearchQuery === "" ||
           user.username.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
           user.email.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
-          user.first_name?.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+          user.first_name
+            ?.toLowerCase()
+            .includes(userSearchQuery.toLowerCase()) ||
           user.last_name?.toLowerCase().includes(userSearchQuery.toLowerCase()))
     );
   };
@@ -986,13 +989,13 @@ const Companies: React.FC = () => {
       >
         <div style={{ marginTop: 24 }}>
           {/* Create New User Form */}
-          <Card 
-            title="Create New Company User" 
+          <Card
+            title="Create New Company User"
             style={{ marginBottom: 24 }}
             size="small"
           >
-            <Form 
-              form={createUserForm} 
+            <Form
+              form={createUserForm}
               layout="vertical"
               onFinish={handleCreateUser}
             >
@@ -1003,7 +1006,10 @@ const Companies: React.FC = () => {
                     label="Username"
                     rules={[
                       { required: true, message: "Please enter username" },
-                      { min: 3, message: "Username must be at least 3 characters" }
+                      {
+                        min: 3,
+                        message: "Username must be at least 3 characters",
+                      },
                     ]}
                   >
                     <Input placeholder="johndoe" />
@@ -1015,7 +1021,7 @@ const Companies: React.FC = () => {
                     label="Email"
                     rules={[
                       { required: true, message: "Please enter email" },
-                      { type: "email", message: "Please enter valid email" }
+                      { type: "email", message: "Please enter valid email" },
                     ]}
                   >
                     <Input placeholder="john@example.com" />
@@ -1025,18 +1031,12 @@ const Companies: React.FC = () => {
 
               <Row gutter={16}>
                 <Col span={12}>
-                  <Form.Item
-                    name="first_name"
-                    label="First Name"
-                  >
+                  <Form.Item name="first_name" label="First Name">
                     <Input placeholder="John" />
                   </Form.Item>
                 </Col>
                 <Col span={12}>
-                  <Form.Item
-                    name="last_name"
-                    label="Last Name"
-                  >
+                  <Form.Item name="last_name" label="Last Name">
                     <Input placeholder="Doe" />
                   </Form.Item>
                 </Col>
@@ -1047,14 +1047,14 @@ const Companies: React.FC = () => {
                 label="Password"
                 rules={[
                   { required: true, message: "Please enter password" },
-                  { min: 6, message: "Password must be at least 6 characters" }
+                  { min: 6, message: "Password must be at least 6 characters" },
                 ]}
               >
-                <Input.Password 
+                <Input.Password
                   placeholder="Enter password"
                   addonAfter={
-                    <Button 
-                      type="link" 
+                    <Button
+                      type="link"
                       size="small"
                       onClick={generateRandomPassword}
                       style={{ padding: 0 }}
@@ -1066,8 +1066,8 @@ const Companies: React.FC = () => {
               </Form.Item>
 
               <Form.Item>
-                <Button 
-                  type="primary" 
+                <Button
+                  type="primary"
                   htmlType="submit"
                   loading={creatingUser}
                   icon={<UserAddOutlined />}
@@ -1081,7 +1081,9 @@ const Companies: React.FC = () => {
 
           {/* Current Users List */}
           <div>
-            <Title level={5}>Current Users ({managingCompany?.users?.length || 0})</Title>
+            <Title level={5}>
+              Current Users ({managingCompany?.users?.length || 0})
+            </Title>
             <List
               loading={loadingUsers}
               dataSource={managingCompany?.users || []}
@@ -1112,12 +1114,17 @@ const Companies: React.FC = () => {
                         {user.first_name?.[0] || user.email[0].toUpperCase()}
                       </Avatar>
                     }
-                    title={`${user.first_name || ""} ${user.last_name || ""}`.trim() || user.email}
+                    title={
+                      `${user.first_name || ""} ${
+                        user.last_name || ""
+                      }`.trim() || user.email
+                    }
                     description={
                       <Space direction="vertical" size={0}>
                         <Text type="secondary">{user.email}</Text>
                         <Text type="secondary" style={{ fontSize: 12 }}>
-                          Username: {(user as any).username || user.email.split('@')[0]}
+                          Username:{" "}
+                          {(user as any).username || user.email.split("@")[0]}
                         </Text>
                       </Space>
                     }
@@ -1149,7 +1156,9 @@ const Companies: React.FC = () => {
         <div style={{ marginTop: 24 }}>
           {/* Current Admins */}
           <div style={{ marginBottom: 24 }}>
-            <Title level={5}>Current Admins ({managingCompany?.admins?.length || 0})</Title>
+            <Title level={5}>
+              Current Admins ({managingCompany?.admins?.length || 0})
+            </Title>
             <List
               loading={loadingUsers}
               dataSource={managingCompany?.admins || []}
@@ -1180,7 +1189,11 @@ const Companies: React.FC = () => {
                         {admin.first_name?.[0] || admin.email[0].toUpperCase()}
                       </Avatar>
                     }
-                    title={`${admin.first_name || ""} ${admin.last_name || ""}`.trim() || admin.email}
+                    title={
+                      `${admin.first_name || ""} ${
+                        admin.last_name || ""
+                      }`.trim() || admin.email
+                    }
                     description={admin.email}
                   />
                 </List.Item>
@@ -1224,7 +1237,11 @@ const Companies: React.FC = () => {
                         {user.first_name?.[0] || user.username[0].toUpperCase()}
                       </Avatar>
                     }
-                    title={`${user.first_name || ""} ${user.last_name || ""}`.trim() || user.username}
+                    title={
+                      `${user.first_name || ""} ${
+                        user.last_name || ""
+                      }`.trim() || user.username
+                    }
                     description={user.email}
                   />
                 </List.Item>
