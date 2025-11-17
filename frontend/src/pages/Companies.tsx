@@ -394,32 +394,6 @@ const Companies: React.FC = () => {
     }
   };
 
-  const handleAddUser = async (userId: number) => {
-    if (!managingCompany) return;
-    
-    try {
-      await apiService.post(
-        `${API_ENDPOINTS.COMPANY_DETAIL(managingCompany.id)}/assign_user/`,
-        { user_id: userId }
-      );
-      message.success("User added successfully");
-      
-      // Refresh company data
-      const response = await apiService.get<Company>(
-        API_ENDPOINTS.COMPANY_DETAIL(managingCompany.id)
-      );
-      setManagingCompany(response);
-      fetchCompanies();
-      
-      // Update selected company if it's the same
-      if (selectedCompany?.id === managingCompany.id) {
-        setSelectedCompany(response);
-      }
-    } catch (error: any) {
-      message.error(error.message || "Failed to add user");
-    }
-  };
-
   const handleRemoveUser = async (userId: number) => {
     if (!managingCompany) return;
     
