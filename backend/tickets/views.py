@@ -5,6 +5,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
+from django.db import models
 from django.db.models import Q
 from django_filters.rest_framework import DjangoFilterBackend
 from .permissions import (
@@ -690,8 +691,8 @@ class TicketViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'type', 'priority_id', 'column', 'project', 'tags', 'company', 'is_archived']
     search_fields = ['name', 'description']
-    ordering_fields = ['created_at', 'updated_at', 'priority_id', 'due_date']
-    ordering = ['-created_at']
+    ordering_fields = ['created_at', 'updated_at', 'priority_id', 'due_date', 'column_order']
+    ordering = ['column', 'column_order', '-created_at']
     
     def get_serializer_class(self):
         if self.action in ['list', 'archived']:
@@ -701,7 +702,13 @@ class TicketViewSet(viewsets.ModelViewSet):
     def _get_accessible_queryset(self):
         user = self.request.user
 
-        base_queryset = Ticket.objects.select_related('company', 'column', 'project', 'reporter').prefetch_related('assignees', 'tags')
+        base_queryset = Ticket.objects.select_related(
+            'company', 'column', 'project', 'reporter'
+        ).prefetch_related(
+            'assignees', 'tags'
+        ).annotate(
+            comments_count=models.Count('comments', distinct=True)
+        )
 
         if user.is_superuser:
             return base_queryset
@@ -757,6 +764,19 @@ class TicketViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(is_archived=False)
 
         return queryset
+    
+    def retrieve(self, request, *args, **kwargs):
+        """Optimize single ticket retrieval with prefetch."""
+        # Get the ticket with optimizations
+        instance = self.get_queryset().filter(pk=kwargs['pk']).first()
+        if not instance:
+            return Response(
+                {'detail': 'Not found.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
+    
     def list(self, request, *args, **kwargs):
         """Trigger automatic archiving before returning the ticket list."""
         project_id = request.query_params.get('project')
@@ -838,21 +858,140 @@ class TicketViewSet(viewsets.ModelViewSet):
                 ticket.assignees.set(company_admins)
                 print(f"   👥 Auto-assigned to {company_admins.count()} company admin(s)")
     
+    def update(self, request, *args, **kwargs):
+        """
+        Custom update to handle column_order when provided.
+        If both 'column' and 'order' are provided, use move_to_position for atomic updates.
+        """
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        
+        # Check if both column and order are being updated
+        column_id = request.data.get('column')
+        order = request.data.get('order')
+        
+        print(f"📥 PATCH /api/tickets/{instance.id}/ received:", {
+            'ticket': instance.ticket_key,
+            'current_column': instance.column_id,
+            'current_order': instance.column_order,
+            'requested_column': column_id,
+            'requested_order': order,
+            'full_data': request.data,
+        })
+        
+        if column_id is not None and order is not None:
+            # Use move_to_position for atomic column+order update
+            print(f"🎯 Using move_to_position: ticket={instance.ticket_key}, column={column_id}, order={order}")
+            instance.move_to_position(column_id, order)
+            
+            # Refresh and serialize the updated instance
+            instance.refresh_from_db()
+            serializer = self.get_serializer(instance)
+            
+            print(f"📤 Returning updated ticket:", {
+                'ticket': instance.ticket_key,
+                'final_column': instance.column_id,
+                'final_order': instance.column_order,
+            })
+            
+            return Response(serializer.data)
+        
+        # Otherwise, use standard update logic
+        print(f"⚙️ Using standard update (no order provided)")
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        
+        return Response(serializer.data)
+    
     @action(detail=True, methods=['post'])
     def move_to_column(self, request, pk=None):
-        """Move ticket to a different column"""
+        """Move ticket to a different column with proper positioning"""
         ticket = self.get_object()
         column_id = request.data.get('column_id')
+        new_order = request.data.get('order')  # Optional: specify exact position
         
         try:
             column = Column.objects.get(id=column_id)
-            ticket.column = column
-            ticket.save()
-            return Response({'status': 'ticket moved', 'column': column.name})
+            
+            if new_order is not None:
+                # Use the model's positioning method for consistent ordering
+                ticket.move_to_position(column_id, new_order)
+            else:
+                # Just change column, let save() handle positioning at end
+                ticket.column = column
+                ticket.save()
+            
+            return Response({
+                'status': 'ticket moved',
+                'column': column.name,
+                'order': ticket.column_order
+            })
         except Column.DoesNotExist:
             return Response(
                 {'error': 'Column not found'},
                 status=status.HTTP_404_NOT_FOUND
+            )
+    
+    @action(detail=False, methods=['post'])
+    def reorder_tickets(self, request):
+        """
+        Reorder tickets within a column or across columns.
+        Uses backend positioning logic for consistency.
+        Body: {
+            "updates": [
+                {"ticket_id": 1, "column_id": 2, "order": 0},
+                {"ticket_id": 2, "column_id": 2, "order": 1},
+                ...
+            ]
+        }
+        """
+        updates = request.data.get('updates', [])
+        
+        if not updates:
+            return Response(
+                {'error': 'updates array is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            from django.db import transaction
+            
+            updated_tickets = []
+            
+            with transaction.atomic():
+                for update in updates:
+                    ticket_id = update.get('ticket_id')
+                    column_id = update.get('column_id')
+                    order = update.get('order')
+                    
+                    if ticket_id is None or order is None:
+                        continue
+                    
+                    ticket = Ticket.objects.get(id=ticket_id)
+                    
+                    # Use the model's positioning method
+                    if column_id is not None:
+                        ticket.move_to_position(column_id, order)
+                    else:
+                        # Just reorder within current column
+                        ticket.move_to_position(ticket.column_id, order)
+                    
+                    updated_tickets.append(ticket.id)
+            
+            return Response({
+                'status': 'tickets reordered',
+                'updated': updated_tickets
+            })
+        except Ticket.DoesNotExist:
+            return Response(
+                {'error': 'Ticket not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
     @action(detail=True, methods=['post'])

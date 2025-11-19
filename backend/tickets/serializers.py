@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from .models import (
     Ticket, Project, Column, Comment, Attachment,
     Tag, Contact, TagContact, UserTag, TicketTag, IssueLink, Company, UserRole, TicketSubtask,
-    Notification, ProjectInvitation
+    Notification, ProjectInvitation, TicketPosition
 )
 
 
@@ -246,6 +246,26 @@ class ColumnSerializer(serializers.ModelSerializer):
         return obj.tickets.count()
 
 
+class TicketPositionSerializer(serializers.ModelSerializer):
+    """
+    Lightweight serializer for ticket positions.
+    Returns minimal data for fast position updates.
+    """
+    ticket_key = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = TicketPosition
+        fields = ['ticket_id', 'ticket_key', 'column_id', 'order', 'updated_at']
+        read_only_fields = ['ticket_id', 'updated_at']
+    
+    def get_ticket_key(self, obj):
+        """Include ticket key for easier debugging"""
+        try:
+            return obj.ticket.ticket_key
+        except:
+            return f"#{obj.ticket_id}"
+
+
 class CommentSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     
@@ -303,7 +323,7 @@ class TicketSerializer(serializers.ModelSerializer):
             'priority_id', 'urgency', 'importance',
             'company', 'company_name',
             'project', 'project_key', 'project_number', 'ticket_key',
-            'column', 'column_name',
+            'column', 'column_name', 'column_order',
             'assignees', 'assignee_ids', 'reporter',
             'parent', 'subtasks', 'following', 'tags', 'tags_detail',
             'due_date', 'start_date', 'comments_count',
@@ -340,7 +360,7 @@ class TicketListSerializer(serializers.ModelSerializer):
             'urgency', 'importance',
             'company', 'company_name',
             'project', 'project_key', 'project_number', 'ticket_key',
-            'column', 'column_name',
+            'column', 'column_name', 'column_order',
             'assignee_ids', 'following', 'comments_count', 'tag_names',
             'due_date', 'start_date',
             'is_archived', 'archived_at', 'archived_reason', 'done_at',
@@ -348,11 +368,12 @@ class TicketListSerializer(serializers.ModelSerializer):
         ]
     
     def get_assignee_ids(self, obj):
-        return list(obj.assignees.values_list('id', flat=True))
+        # Use the prefetched data to avoid additional queries
+        return [assignee.id for assignee in obj.assignees.all()]
     
     def get_tag_names(self, obj):
-        """Get list of tag names for quick display"""
-        return list(obj.tags.values_list('name', flat=True))
+        """Get list of tag names for quick display using prefetched data"""
+        return [tag.name for tag in obj.tags.all()]
 
 
 class ContactSerializer(serializers.ModelSerializer):

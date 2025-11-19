@@ -112,9 +112,15 @@ const MainLayout: React.FC = () => {
     selectedProject?.name,
   ]); // Use primitive values
 
-  // Load unread chat count
+  // Load unread chat count - DEFERRED: Only load when user visits Chat page
+  // This saves an unnecessary API call on every page load
   useEffect(() => {
     if (!selectedProject) return;
+
+    // Only fetch chat data if user is on the chat page
+    if (!location.pathname.includes("/chat")) {
+      return;
+    }
 
     const loadUnreadCount = async () => {
       try {
@@ -131,10 +137,10 @@ const MainLayout: React.FC = () => {
 
     loadUnreadCount();
 
-    // Refresh every 30 seconds
+    // Refresh every 30 seconds only when on chat page
     const interval = setInterval(loadUnreadCount, 30000);
     return () => clearInterval(interval);
-  }, [selectedProject?.id]); // Only depend on project ID
+  }, [selectedProject?.id, location.pathname]); // Depend on pathname too
 
   // WebSocket listener for real-time chat updates
   useEffect(() => {

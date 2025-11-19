@@ -109,11 +109,12 @@ def create_and_send_notification(user_id: int, notification_type: str, title: st
 def ticket_saved(sender, instance, created, **kwargs):
     """
     Broadcast ticket creation/update to all users in the project.
+    Sends complete ticket data to avoid API fetch.
     """
     action = 'created' if created else 'updated'
     
-    # Get ticket key (project prefix + ticket id)
-    ticket_key = f"{instance.project.key}-{instance.id}"
+    # Get ticket key using the model's property (uses project_number, not id)
+    ticket_key = instance.ticket_key
     
     # Get priority name from choices
     priority_name = dict(Ticket.PRIORITY_CHOICES).get(instance.priority_id, 'Unknown')
@@ -121,33 +122,50 @@ def ticket_saved(sender, instance, created, **kwargs):
     # Get status name from choices
     status_name = dict(Ticket.STATUS_CHOICES).get(instance.status, 'Unknown')
     
-    # Get first assignee if any
-    assignee = instance.assignees.first() if instance.assignees.exists() else None
+    # Get all assignees
+    assignees_list = list(instance.assignees.all())
+    assignee_ids = [a.id for a in assignees_list]
     
-    # Prepare ticket data
+    # Get all tags
+    tags_list = list(instance.tags.all())
+    tag_names = [t.name for t in tags_list]
+    
+    # Get comments count
+    comments_count = instance.comments.count()
+    
+    # Prepare complete ticket data matching TicketListSerializer format
     ticket_data = {
-        'ticket_id': instance.id,
-        'key': ticket_key,
+        'id': instance.id,
+        'ticket_key': ticket_key,
+        'project_key': instance.project.key,
+        'project_number': instance.project_number,
         'name': instance.name,
         'description': instance.description or '',
-        'status': status_name,
-        'priority': priority_name,
         'type': instance.type,
-        'assignee': {
-            'id': assignee.id,
-            'username': assignee.username,
-            'email': assignee.email,
-        } if assignee else None,
-        'reporter': {
-            'id': instance.reporter.id,
-            'username': instance.reporter.username,
-        } if instance.reporter else None,
+        'status': instance.status,
+        'priority_id': instance.priority_id,
+        'urgency': instance.urgency,
+        'column': instance.column_id,
+        'column_order': instance.column_order,
+        'project': instance.project_id,
+        'company': instance.company_id,
+        'reporter': instance.reporter_id,
+        'assignee_ids': assignee_ids,
+        'tag_names': tag_names,
+        'comments_count': comments_count,
+        'due_date': instance.due_date.isoformat() if instance.due_date else None,
         'created_at': instance.created_at.isoformat() if instance.created_at else None,
         'updated_at': instance.updated_at.isoformat() if instance.updated_at else None,
+        'is_archived': instance.is_archived,
     }
     
     # Broadcast to project ticket channel
     project_group = f'project_{instance.project_id}_tickets'
+    
+    print(f"📡 Broadcasting {action} for {ticket_key}:")
+    print(f"   column={instance.column_id}, column_order={instance.column_order}")
+    print(f"   to group: {project_group}")
+    
     send_to_channel_layer(
         project_group,
         'ticket_update',
@@ -157,20 +175,21 @@ def ticket_saved(sender, instance, created, **kwargs):
         }
     )
     
-    # Send notification to first assignee if ticket was just created and has assignees
-    if created and assignee:
-        create_and_send_notification(
-            user_id=assignee.id,
-            notification_type='ticket_assigned',
-            title='Ticket Assigned',
-            message=f'You were assigned to {ticket_key}: {instance.name}',
-            link=f'/tickets/{instance.id}',
-            data={
-                'ticket_id': instance.id,
-                'ticket_key': ticket_key,
-                'project_id': instance.project_id,
-            }
-        )
+    # Send notification to assignees if ticket was just created
+    if created and assignee_ids:
+        for assignee_id in assignee_ids:
+            create_and_send_notification(
+                user_id=assignee_id,
+                notification_type='ticket_assigned',
+                title='Ticket Assigned',
+                message=f'You were assigned to {ticket_key}: {instance.name}',
+                link=f'/tickets/{instance.id}',
+                data={
+                    'ticket_id': instance.id,
+                    'ticket_key': ticket_key,
+                    'project_id': instance.project_id,
+                }
+            )
 
 
 @receiver(post_delete, sender=Ticket)
@@ -178,7 +197,8 @@ def ticket_deleted(sender, instance, **kwargs):
     """
     Broadcast ticket deletion to all users in the project.
     """
-    ticket_key = f"{instance.project.key}-{instance.id}"
+    # Use the model's property for consistent ticket_key
+    ticket_key = instance.ticket_key
     
     project_group = f'project_{instance.project_id}_tickets'
     send_to_channel_layer(
@@ -187,8 +207,8 @@ def ticket_deleted(sender, instance, **kwargs):
         {
             'action': 'deleted',
             'data': {
-                'ticket_id': instance.id,
-                'key': ticket_key,
+                'id': instance.id,
+                'ticket_key': ticket_key,
             }
         }
     )

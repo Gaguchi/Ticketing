@@ -95,6 +95,13 @@ class TicketService {
     return apiService.post<Ticket>(API_ENDPOINTS.TICKET_RESTORE(id), {});
   }
 
+  /**
+   * Reorder tickets within or across columns
+   */
+  async reorderTickets(updates: Array<{ticket_id: number, column_id: number, order: number}>): Promise<{status: string, updated: number[]}> {
+    return apiService.post<{status: string, updated: number[]}>(API_ENDPOINTS.TICKET_REORDER, { updates });
+  }
+
   private buildTicketQuery(params?: TicketFilterParams): string {
     const queryParams = new URLSearchParams();
 

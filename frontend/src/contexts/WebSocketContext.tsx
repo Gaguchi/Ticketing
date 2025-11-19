@@ -307,6 +307,20 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
                 },
               })
             );
+          } else if (data.type === "column_refresh") {
+            // Bulk position update - tells clients to refetch columns
+            console.log(
+              `🔄 [WebSocketContext] Dispatching column_refresh for columns:`,
+              data.column_ids
+            );
+            window.dispatchEvent(
+              new CustomEvent("columnRefresh", {
+                detail: {
+                  columnIds: data.column_ids,
+                  projectId: projectId,
+                },
+              })
+            );
           }
         },
         (error) => {

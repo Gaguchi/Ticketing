@@ -219,6 +219,16 @@ class TicketConsumer(AsyncWebsocketConsumer):
             'data': event['data'],
         }))
     
+    async def column_refresh(self, event):
+        """
+        Handle column refresh events (bulk position updates)
+        Tells clients to refetch tickets for affected columns
+        """
+        await self.send(text_data=json.dumps({
+            'type': 'column_refresh',
+            'column_ids': event.get('column_ids', []),
+        }))
+    
     @database_sync_to_async
     def user_has_project_access(self, user_id, project_id):
         """
