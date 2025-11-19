@@ -1,10 +1,13 @@
 import React from "react";
-import { Card, Tag, Space, Typography } from "antd";
+import { Tag, Space } from "antd";
 import { ClockCircleOutlined, UserOutlined } from "@ant-design/icons";
 import { Ticket } from "../types";
-import { formatDate, getPriorityColor, getPriorityLabel, getStatusColor } from "../utils/helpers";
-
-const { Text, Paragraph } = Typography;
+import {
+  formatDate,
+  getPriorityColor,
+  getPriorityLabel,
+  getStatusColor,
+} from "../utils/helpers";
 
 interface TicketCardProps {
   ticket: Ticket;
@@ -13,67 +16,64 @@ interface TicketCardProps {
 
 const TicketCard: React.FC<TicketCardProps> = ({ ticket, onClick }) => {
   return (
-    <Card hoverable onClick={onClick} style={{ marginBottom: 16 }}>
-      <Space direction="vertical" style={{ width: "100%" }} size="small">
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "start",
-          }}
-        >
-          <div style={{ flex: 1 }}>
-            <Text strong style={{ fontSize: 16 }}>
-              {ticket.key} - {ticket.name}
-            </Text>
-          </div>
-          <Space>
-            <Tag color={getPriorityColor(ticket.priority_id)}>
+    <div
+      onClick={onClick}
+      className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer group mb-4"
+    >
+      <div className="flex justify-between items-start mb-3">
+        <div className="flex-1 pr-4">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-xs font-mono font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+              {ticket.key}
+            </span>
+            <Tag
+              color={getPriorityColor(ticket.priority_id)}
+              className="m-0 border-0"
+            >
               {getPriorityLabel(ticket.priority_id)}
             </Tag>
-            <Tag color={getStatusColor(ticket.status)}>{ticket.status}</Tag>
-          </Space>
+          </div>
+          <h3 className="text-lg font-semibold text-slate-800 group-hover:text-blue-600 transition-colors line-clamp-1">
+            {ticket.name}
+          </h3>
+        </div>
+        <Tag
+          color={getStatusColor(ticket.status)}
+          className="m-0 font-medium px-3 py-0.5"
+        >
+          {ticket.status}
+        </Tag>
+      </div>
+
+      <p className="text-slate-500 text-sm mb-4 line-clamp-2 h-10">
+        {ticket.description?.replace(/<[^>]*>/g, "") ||
+          "No description provided"}
+      </p>
+
+      <div className="flex justify-between items-center pt-3 border-t border-slate-100">
+        <div className="flex items-center gap-3">
+          <Tag className="m-0 bg-slate-100 text-slate-600 border-slate-200">
+            {ticket.type}
+          </Tag>
+
+          {ticket.assignees && ticket.assignees.length > 0 && (
+            <div className="flex items-center gap-1.5 text-xs text-slate-500">
+              <UserOutlined />
+              <span>
+                {ticket.assignees
+                  .map((a) => a.first_name || a.username)
+                  .join(", ")}
+              </span>
+            </div>
+          )}
         </div>
 
-        <Paragraph
-          ellipsis={{ rows: 2 }}
-          type="secondary"
-          style={{ marginBottom: 8 }}
-        >
-          {ticket.description?.replace(/<[^>]*>/g, "") || "No description"}
-        </Paragraph>
-
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <Space>
-            <Tag>{ticket.type}</Tag>
-            {ticket.assignees && ticket.assignees.length > 0 && (
-              <Space size={4}>
-                <UserOutlined style={{ fontSize: 12 }} />
-                <Text type="secondary" style={{ fontSize: 12 }}>
-                  Assigned to:{" "}
-                  {ticket.assignees
-                    .map((a) => a.first_name || a.username)
-                    .join(", ")}
-                </Text>
-              </Space>
-            )}
-          </Space>
-
-          <Space size={4}>
-            <ClockCircleOutlined style={{ fontSize: 12, color: "#8c8c8c" }} />
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              {formatDate(ticket.created_at)}
-            </Text>
-          </Space>
+        <div className="flex items-center gap-1.5 text-xs text-slate-400">
+          <ClockCircleOutlined />
+          <span>{formatDate(ticket.created_at)}</span>
         </div>
-      </Space>
-    </Card>
+      </div>
+    </div>
   );
 };
 

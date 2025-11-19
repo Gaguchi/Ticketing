@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ConfigProvider } from "antd";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
+import MainLayout from "./components/MainLayout";
 import Login from "./pages/Login";
 import MyTickets from "./pages/MyTickets";
 import Profile from "./pages/Profile";
@@ -19,29 +20,16 @@ function App() {
 
             {/* Protected routes */}
             <Route
-              path="/tickets"
               element={
                 <ProtectedRoute>
-                  <MyTickets />
+                  <MainLayout />
                 </ProtectedRoute>
               }
-            />
-            <Route
-              path="/profile"
-              element={
-                <ProtectedRoute>
-                  <Profile />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/change-password"
-              element={
-                <ProtectedRoute>
-                  <ChangePassword />
-                </ProtectedRoute>
-              }
-            />
+            >
+              <Route path="/tickets" element={<MyTickets />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/change-password" element={<ChangePassword />} />
+            </Route>
 
             {/* Default redirect */}
             <Route path="/" element={<Navigate to="/tickets" replace />} />

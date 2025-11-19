@@ -1,22 +1,10 @@
 import React, { useState, useEffect } from "react";
-import {
-  Modal,
-  Typography,
-  Tag,
-  Space,
-  Divider,
-  Input,
-  List,
-  Avatar,
-  Spin,
-  Empty,
-  message,
-  Button,
-} from "antd";
+import { Modal, Tag, Input, Avatar, Spin, Empty, message, Button } from "antd";
 import {
   UserOutlined,
   ClockCircleOutlined,
   SendOutlined,
+  CloseOutlined,
 } from "@ant-design/icons";
 import { Ticket, Comment } from "../types";
 import { API_ENDPOINTS } from "../config/api";
@@ -28,7 +16,6 @@ import {
   getStatusColor,
 } from "../utils/helpers";
 
-const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
 
 interface TicketDetailModalProps {
@@ -81,8 +68,6 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
       );
       // Handle paginated response from backend
       const commentsArray = data.results || data;
-      console.log("Fetched comments data:", data);
-      console.log("Comments array:", commentsArray);
       setComments(Array.isArray(commentsArray) ? commentsArray : []);
     } catch (error: any) {
       console.error("Failed to load comments:", error);
@@ -125,129 +110,202 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
       onCancel={handleClose}
       footer={null}
       width={900}
+      className="rounded-xl overflow-hidden"
+      style={{ paddingBottom: 0 }}
+      styles={{
+        content: {
+          padding: 0,
+          borderRadius: "1rem",
+          maxHeight: "85vh",
+          display: "flex",
+          flexDirection: "column",
+        },
+        body: {
+          flex: 1,
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+        },
+        wrapper: {
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "center",
+          paddingTop: "80px",
+        },
+      }}
+      closeIcon={null}
     >
       {loading ? (
-        <div style={{ textAlign: "center", padding: 48 }}>
+        <div className="flex justify-center items-center h-64">
           <Spin size="large" />
         </div>
       ) : ticket ? (
-        <Space direction="vertical" size="large" style={{ width: "100%" }}>
+        <div className="flex flex-col h-full">
           {/* Header */}
-          <div>
-            <Space wrap>
-              <Tag color={getPriorityColor(ticket.priority_id)}>
-                {getPriorityLabel(ticket.priority_id)}
-              </Tag>
-              <Tag color={getStatusColor(ticket.status)}>{ticket.status}</Tag>
-              <Tag>{ticket.type}</Tag>
-            </Space>
-            <Title level={4} style={{ marginTop: 8 }}>
-              {ticket.key} - {ticket.name}
-            </Title>
-          </div>
-
-          {/* Metadata */}
-          <Space direction="vertical" size="small">
-            <div style={{ display: "flex", gap: 24 }}>
-              <div>
-                <Text type="secondary">Created:</Text>
-                <br />
-                <Text>{formatDate(ticket.created_at)}</Text>
+          <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-start bg-white sticky top-0 z-10 shrink-0">
+            <div className="flex-1 pr-8">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xs font-mono font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                  {ticket.key}
+                </span>
+                <Tag
+                  color={getPriorityColor(ticket.priority_id)}
+                  className="m-0 border-0"
+                >
+                  {getPriorityLabel(ticket.priority_id)}
+                </Tag>
+                <Tag color={getStatusColor(ticket.status)} className="m-0">
+                  {ticket.status}
+                </Tag>
+                <Tag className="m-0 bg-slate-100 text-slate-600 border-slate-200">
+                  {ticket.type}
+                </Tag>
               </div>
-              <div>
-                <Text type="secondary">Last Updated:</Text>
-                <br />
-                <Text>{formatDate(ticket.updated_at)}</Text>
-              </div>
-              {ticket.assignees &&
-                Array.isArray(ticket.assignees) &&
-                ticket.assignees.length > 0 && (
-                  <div>
-                    <Text type="secondary">Assigned To:</Text>
-                    <br />
-                    <Space>
-                      {ticket.assignees.map((assignee) => (
-                        <Tag key={assignee.id} icon={<UserOutlined />}>
-                          {assignee.first_name || assignee.username}
-                        </Tag>
-                      ))}
-                    </Space>
-                  </div>
-                )}
+              <h2 className="text-xl font-bold text-slate-800 leading-tight">
+                {ticket.name}
+              </h2>
             </div>
-          </Space>
-
-          <Divider />
-
-          {/* Description */}
-          <div>
-            <Title level={5}>Description</Title>
-            <Paragraph>
-              {ticket.description?.replace(/<[^>]*>/g, "") ||
-                "No description provided"}
-            </Paragraph>
+            <Button
+              type="text"
+              icon={<CloseOutlined />}
+              onClick={handleClose}
+              className="text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+            />
           </div>
 
-          <Divider />
+          <div className="flex-1 overflow-y-auto">
+            <div className="p-6 space-y-8">
+              {/* Metadata Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                <div>
+                  <div className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">
+                    Created
+                  </div>
+                  <div className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                    <ClockCircleOutlined className="text-slate-400" />
+                    {formatDate(ticket.created_at)}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">
+                    Last Updated
+                  </div>
+                  <div className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                    <ClockCircleOutlined className="text-slate-400" />
+                    {formatDate(ticket.updated_at)}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">
+                    Assigned To
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {ticket.assignees && ticket.assignees.length > 0 ? (
+                      ticket.assignees.map((assignee) => (
+                        <div
+                          key={assignee.id}
+                          className="flex items-center gap-1.5 text-sm font-medium text-slate-700 bg-white px-2 py-0.5 rounded border border-slate-200"
+                        >
+                          <UserOutlined className="text-blue-500" />
+                          {assignee.first_name || assignee.username}
+                        </div>
+                      ))
+                    ) : (
+                      <span className="text-sm text-slate-400 italic">
+                        Unassigned
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
 
-          {/* Comments */}
-          <div>
-            <Title level={5}>
-              Comments ({Array.isArray(comments) ? comments.length : 0})
-            </Title>
+              {/* Description */}
+              <div>
+                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide mb-3">
+                  Description
+                </h3>
+                <div className="prose prose-slate max-w-none text-slate-600 bg-white">
+                  <p className="whitespace-pre-wrap">
+                    {ticket.description?.replace(/<[^>]*>/g, "") ||
+                      "No description provided"}
+                  </p>
+                </div>
+              </div>
 
-            {!Array.isArray(comments) || comments.length === 0 ? (
-              <Empty description="No comments yet" />
-            ) : (
-              <List
-                dataSource={comments}
-                renderItem={(comment) => {
-                  const author = comment.user || comment.author;
-                  return (
-                    <List.Item>
-                      <List.Item.Meta
-                        avatar={<Avatar icon={<UserOutlined />} />}
-                        title={
-                          <Space>
-                            <Text strong>
-                              {author?.first_name && author?.last_name
-                                ? `${author.first_name} ${author.last_name}`
-                                : author?.username || "Unknown"}
-                            </Text>
-                            <Text type="secondary" style={{ fontSize: 12 }}>
-                              <ClockCircleOutlined />{" "}
-                              {formatDate(comment.created_at)}
-                            </Text>
-                          </Space>
-                        }
-                        description={comment.content}
+              <div className="border-t border-slate-100 pt-8">
+                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide mb-4">
+                  Comments ({Array.isArray(comments) ? comments.length : 0})
+                </h3>
+
+                <div className="space-y-6 mb-8">
+                  {!Array.isArray(comments) || comments.length === 0 ? (
+                    <div className="text-center py-8 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                      <Empty
+                        image={Empty.PRESENTED_IMAGE_SIMPLE}
+                        description="No comments yet"
                       />
-                    </List.Item>
-                  );
-                }}
-              />
-            )}
+                    </div>
+                  ) : (
+                    comments.map((comment) => {
+                      const author = comment.user || comment.author;
+                      return (
+                        <div key={comment.id} className="flex gap-4 group">
+                          <Avatar
+                            icon={<UserOutlined />}
+                            className="bg-blue-100 text-blue-600 flex-shrink-0"
+                          />
+                          <div className="flex-1">
+                            <div className="bg-slate-50 p-4 rounded-2xl rounded-tl-none border border-slate-100 group-hover:border-slate-200 transition-colors">
+                              <div className="flex justify-between items-center mb-2">
+                                <span className="font-semibold text-slate-800 text-sm">
+                                  {author?.first_name && author?.last_name
+                                    ? `${author.first_name} ${author.last_name}`
+                                    : author?.username || "Unknown"}
+                                </span>
+                                <span className="text-xs text-slate-400 flex items-center gap-1">
+                                  <ClockCircleOutlined />
+                                  {formatDate(comment.created_at)}
+                                </span>
+                              </div>
+                              <p className="text-slate-600 text-sm whitespace-pre-wrap">
+                                {comment.content}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
 
-            {/* Add Comment */}
-            <div style={{ marginTop: 24 }}>
-              <TextArea
-                rows={4}
-                value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-                placeholder="Add a comment..."
-              />
+          {/* Footer / Comment Input */}
+          <div className="p-4 bg-white border-t border-slate-100">
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <TextArea
+                  rows={2}
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  placeholder="Write a comment..."
+                  className="rounded-lg resize-none"
+                  autoSize={{ minRows: 2, maxRows: 6 }}
+                />
+              </div>
               <Button
                 type="primary"
                 icon={<SendOutlined />}
                 onClick={handleSubmitComment}
                 loading={submitting}
-                style={{ marginTop: 8 }}
+                className="h-auto px-6 bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-600/20 rounded-lg"
               >
-                Add Comment
+                Send
               </Button>
             </div>
           </div>
-        </Space>
+        </div>
       ) : null}
     </Modal>
   );

@@ -1,30 +1,16 @@
 import React, { useState, useEffect } from "react";
-import {
-  Layout,
-  Typography,
-  Input,
-  Select,
-  Space,
-  Empty,
-  Spin,
-  Tag,
-  Button,
-} from "antd";
+import { Input, Select, Empty, Spin, Button } from "antd";
 import {
   SearchOutlined,
   FilterOutlined,
   PlusOutlined,
 } from "@ant-design/icons";
-import Navbar from "../components/Navbar";
 import TicketCard from "../components/TicketCard";
 import CreateTicketModal from "../components/CreateTicketModal";
 import TicketDetailModal from "../components/TicketDetailModal";
 import { Ticket } from "../types";
 import { API_ENDPOINTS } from "../config/api";
 import apiService from "../services/api.service";
-
-const { Content } = Layout;
-const { Title } = Typography;
 
 const MyTickets: React.FC = () => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -76,9 +62,7 @@ const MyTickets: React.FC = () => {
 
     if (priorityFilter !== "all") {
       const priorityId = parseInt(priorityFilter);
-      filtered = filtered.filter(
-        (ticket) => ticket.priority_id === priorityId
-      );
+      filtered = filtered.filter((ticket) => ticket.priority_id === priorityId);
     }
 
     setFilteredTickets(filtered);
@@ -93,105 +77,125 @@ const MyTickets: React.FC = () => {
   ];
 
   return (
-    <Layout style={{ minHeight: "100vh" }}>
-      <Navbar />
-      <Content style={{ padding: "24px 48px" }}>
-        <Space direction="vertical" size="large" style={{ width: "100%" }}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">My Tickets</h1>
+          <p className="text-slate-500">
+            Manage and track your support requests
+          </p>
+        </div>
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          size="large"
+          onClick={() => setIsCreateModalOpen(true)}
+          className="bg-blue-600 shadow-md shadow-blue-600/20"
+        >
+          Create Ticket
+        </Button>
+      </div>
+
+      {/* Filters */}
+      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-4 items-center">
+        <Input
+          placeholder="Search tickets..."
+          prefix={<SearchOutlined className="text-slate-400" />}
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full md:w-64"
+          allowClear
+        />
+
+        <div className="flex flex-wrap gap-2 w-full md:w-auto">
+          <Select
+            value={statusFilter}
+            onChange={setStatusFilter}
+            style={{ width: 150 }}
+            suffixIcon={<FilterOutlined className="text-slate-400" />}
+            className="w-full sm:w-auto"
           >
-            <Title level={2}>My Support Tickets</Title>
+            <Select.Option value="all">All Status</Select.Option>
+            {statuses.map((status) => (
+              <Select.Option key={status} value={status}>
+                {status}
+              </Select.Option>
+            ))}
+          </Select>
+
+          <Select
+            value={priorityFilter}
+            onChange={setPriorityFilter}
+            style={{ width: 150 }}
+            suffixIcon={<FilterOutlined className="text-slate-400" />}
+            className="w-full sm:w-auto"
+          >
+            <Select.Option value="all">All Priorities</Select.Option>
+            {priorities.map((priority) => (
+              <Select.Option key={priority.id} value={priority.id.toString()}>
+                {priority.label}
+              </Select.Option>
+            ))}
+          </Select>
+        </div>
+
+        {(searchQuery ||
+          statusFilter !== "all" ||
+          priorityFilter !== "all") && (
+          <Button
+            type="text"
+            danger
+            onClick={() => {
+              setSearchQuery("");
+              setStatusFilter("all");
+              setPriorityFilter("all");
+            }}
+            className="ml-auto"
+          >
+            Clear Filters
+          </Button>
+        )}
+      </div>
+
+      {/* Tickets List */}
+      {loading ? (
+        <div className="flex justify-center py-12">
+          <Spin size="large" />
+        </div>
+      ) : filteredTickets.length === 0 ? (
+        <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={
+              <span className="text-slate-500">
+                {tickets.length === 0
+                  ? "You haven't created any tickets yet"
+                  : "No tickets match your filters"}
+              </span>
+            }
+          />
+          {tickets.length === 0 && (
             <Button
               type="primary"
-              icon={<PlusOutlined />}
-              size="large"
+              className="mt-4 bg-blue-600"
               onClick={() => setIsCreateModalOpen(true)}
             >
-              Create Ticket
+              Create your first ticket
             </Button>
-          </div>
-
-          {/* Filters */}
-          <Space wrap>
-            <Input
-              placeholder="Search tickets..."
-              prefix={<SearchOutlined />}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ width: 300 }}
-            />
-            <Select
-              value={statusFilter}
-              onChange={setStatusFilter}
-              style={{ width: 150 }}
-              suffixIcon={<FilterOutlined />}
-            >
-              <Select.Option value="all">All Status</Select.Option>
-              {statuses.map((status) => (
-                <Select.Option key={status} value={status}>
-                  {status}
-                </Select.Option>
-              ))}
-            </Select>
-            <Select
-              value={priorityFilter}
-              onChange={setPriorityFilter}
-              style={{ width: 150 }}
-              suffixIcon={<FilterOutlined />}
-            >
-              <Select.Option value="all">All Priorities</Select.Option>
-              {priorities.map((priority) => (
-                <Select.Option key={priority.id} value={priority.id.toString()}>
-                  {priority.label}
-                </Select.Option>
-              ))}
-            </Select>
-            {(searchQuery ||
-              statusFilter !== "all" ||
-              priorityFilter !== "all") && (
-              <Tag
-                closable
-                onClose={() => {
-                  setSearchQuery("");
-                  setStatusFilter("all");
-                  setPriorityFilter("all");
-                }}
-              >
-                Clear Filters
-              </Tag>
-            )}
-          </Space>
-
-          {/* Tickets List */}
-          {loading ? (
-            <div style={{ textAlign: "center", padding: 48 }}>
-              <Spin size="large" />
-            </div>
-          ) : filteredTickets.length === 0 ? (
-            <Empty
-              description={
-                tickets.length === 0
-                  ? "You haven't created any tickets yet"
-                  : "No tickets match your filters"
-              }
-            />
-          ) : (
-            <div>
-              {filteredTickets.map((ticket) => (
-                <TicketCard
-                  key={ticket.id}
-                  ticket={ticket}
-                  onClick={() => setSelectedTicketId(ticket.id)}
-                />
-              ))}
-            </div>
           )}
-        </Space>
-      </Content>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {filteredTickets.map((ticket) => (
+            <TicketCard
+              key={ticket.id}
+              ticket={ticket}
+              onClick={() => setSelectedTicketId(ticket.id)}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Create Ticket Modal */}
       <CreateTicketModal
@@ -206,7 +210,7 @@ const MyTickets: React.FC = () => {
         onClose={() => setSelectedTicketId(null)}
         ticketId={selectedTicketId}
       />
-    </Layout>
+    </div>
   );
 };
 
