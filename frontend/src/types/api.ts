@@ -202,6 +202,7 @@ export interface Ticket {
   ticket_key: string;
   column: number;
   column_name: string;
+  column_order: number; // Position within column (legacy field, kept for backward compatibility)
   assignees: User[];
   reporter: User;
   parent: number | null;
@@ -250,6 +251,7 @@ export interface UpdateTicketData {
   urgency?: TicketUrgency;
   importance?: TicketImportance;
   column?: number;
+  order?: number; // Position within column (for reordering)
   company?: number;
   assignee_ids?: number[];
   parent?: number;
