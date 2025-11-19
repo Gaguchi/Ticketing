@@ -1,5 +1,5 @@
 import React from "react";
-import { Tag, Space } from "antd";
+import { Tag } from "antd";
 import { ClockCircleOutlined, UserOutlined } from "@ant-design/icons";
 import { Ticket } from "../types";
 import {
