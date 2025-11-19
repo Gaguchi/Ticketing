@@ -68,4 +68,3 @@ htmlcov/
 *.bak
 *.tmp
 .cache/
-test_concurrent_moves.py
