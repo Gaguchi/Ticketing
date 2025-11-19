@@ -27,6 +27,13 @@ class ApiService {
     }
 
     if (!response.ok) {
+      // Check if response is HTML (404 page)
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('text/html')) {
+        console.error('API Error: Received HTML instead of JSON. URL:', url);
+        throw new Error(`API endpoint not found: ${url}`);
+      }
+      
       const error = await response.json().catch(() => ({ error: 'Request failed' }));
       console.error('API Error Response:', error);
       // Try to extract the most helpful error message

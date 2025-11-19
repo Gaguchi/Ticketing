@@ -1,20 +1,32 @@
-export const API_BASE_URL = ''; // import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+
+// In development (no VITE_API_BASE_URL), use /api prefix for Vite proxy
+// In production (with VITE_API_BASE_URL), the backend URL already includes the path
+const getEndpoint = (path: string) => {
+  if (API_BASE_URL) {
+    // Production: use full backend URL + path (backend URL should include /api/tickets)
+    return `${API_BASE_URL}${path}`;
+  } else {
+    // Development: use /api prefix for Vite proxy
+    return `/api/tickets${path}`;
+  }
+};
 
 export const API_ENDPOINTS = {
   // Authentication
-  AUTH_LOGIN: `${API_BASE_URL}/api/tickets/auth/login/`,
-  AUTH_ME: `${API_BASE_URL}/api/tickets/auth/me/`,
-  AUTH_CHANGE_PASSWORD: `${API_BASE_URL}/api/tickets/auth/change-password/`,
+  AUTH_LOGIN: getEndpoint('/auth/login/'),
+  AUTH_ME: getEndpoint('/auth/me/'),
+  AUTH_CHANGE_PASSWORD: getEndpoint('/auth/change-password/'),
   
   // Tickets
-  MY_TICKETS: `${API_BASE_URL}/api/tickets/tickets/`,
-  TICKET_DETAIL: (id: number) => `${API_BASE_URL}/api/tickets/tickets/${id}/`,
+  MY_TICKETS: getEndpoint('/tickets/'),
+  TICKET_DETAIL: (id: number) => getEndpoint(`/tickets/${id}/`),
   
   // Comments
-  TICKET_COMMENTS: (ticketId: number) => `${API_BASE_URL}/api/tickets/tickets/${ticketId}/comments/`,
+  TICKET_COMMENTS: (ticketId: number) => getEndpoint(`/tickets/${ticketId}/comments/`),
   
   // Attachments
-  ATTACHMENTS: `${API_BASE_URL}/api/tickets/attachments/`,
+  ATTACHMENTS: getEndpoint('/attachments/'),
 };
 
 export const API_HEADERS = {
