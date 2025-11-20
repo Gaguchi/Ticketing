@@ -21,6 +21,7 @@ import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import { useAuth } from "../contexts/AppContext";
 import { useWebSocketContext } from "../contexts/WebSocketContext";
+import { webSocketService } from "../services/websocket.service";
 import "./TicketComments.css";
 
 dayjs.extend(relativeTime);
@@ -72,12 +73,14 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
   const [sending, setSending] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
-  const commentsEndRef = useRef<HTMLDivElement>(null);
+  const commentsListRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<number | null>(null);
 
   // Scroll to bottom when new comments arrive
   const scrollToBottom = () => {
-    commentsEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (commentsListRef.current) {
+      commentsListRef.current.scrollTop = commentsListRef.current.scrollHeight;
+    }
   };
 
   useEffect(() => {
@@ -142,10 +145,10 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
   useEffect(() => {
     if (!projectId) return;
 
-    const handleWebSocketMessage = (event: MessageEvent) => {
-      try {
-        const data = JSON.parse(event.data);
+    const path = `ws/projects/${projectId}/tickets/`;
 
+    const handleWebSocketMessage = (data: any) => {
+      try {
         // Handle comment added
         if (
           data.type === "comment_added" &&
@@ -196,16 +199,18 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
           }
         }
       } catch (error) {
-        console.error("Failed to parse WebSocket message:", error);
+        console.error("Failed to process WebSocket message:", error);
       }
     };
 
     // Subscribe to WebSocket messages
-    // Note: This is a simple implementation. In production, you'd use the WebSocket service's subscribe method
-    window.addEventListener("message", handleWebSocketMessage);
+    const unsubscribe = webSocketService.subscribe(
+      path,
+      handleWebSocketMessage
+    );
 
     return () => {
-      window.removeEventListener("message", handleWebSocketMessage);
+      unsubscribe();
     };
   }, [ticketId, projectId, user]);
 
@@ -563,6 +568,7 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
       {/* Comments List */}
       <div
         className="comments-list"
+        ref={commentsListRef}
         style={{ maxHeight: "400px", overflowY: "auto" }}
       >
         {loading ? (
@@ -801,7 +807,6 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
             )}
           />
         )}
-        <div ref={commentsEndRef} />
       </div>
     </div>
   );

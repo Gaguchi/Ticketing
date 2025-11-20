@@ -271,6 +271,7 @@ const Dashboard: React.FC = () => {
     try {
       const response = await ticketService.getTickets({
         project: selectedProject.id,
+        page_size: 1000,
       });
       // Use tickets directly from API response (no mapping needed)
       setTickets(response.results);
@@ -344,9 +345,9 @@ const Dashboard: React.FC = () => {
               }
               return [newTicket, ...prev];
             });
-            message.success(
-              `New ticket created: ${data.ticket_key || `#${data.ticket_id}`}`
-            );
+            // message.success(
+            //   `New ticket created: ${data.ticket_key || `#${data.ticket_id}`}`
+            // );
           } catch (error) {
             console.error("Failed to fetch new ticket:", error);
           }

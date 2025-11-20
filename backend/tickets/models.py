@@ -544,6 +544,17 @@ class Ticket(models.Model):
         else:
             self.archived_reason = 'Archived manually'
         self.save(update_fields=['is_archived', 'archived_at', 'archived_by', 'archived_reason'])
+        
+        # Record history
+        from django.apps import apps
+        TicketHistory = apps.get_model('tickets', 'TicketHistory')
+        TicketHistory.objects.create(
+            ticket=self,
+            user=archived_by,
+            field='archived',
+            old_value='Active',
+            new_value=f'Archived ({self.archived_reason})'
+        )
         return True
 
     def restore(self, restored_by=None):
@@ -554,6 +565,17 @@ class Ticket(models.Model):
         self.archived_by = None
         self.archived_reason = None
         self.save(update_fields=['is_archived', 'archived_at', 'archived_by', 'archived_reason'])
+        
+        # Record history
+        from django.apps import apps
+        TicketHistory = apps.get_model('tickets', 'TicketHistory')
+        TicketHistory.objects.create(
+            ticket=self,
+            user=restored_by,
+            field='archived',
+            old_value='Archived',
+            new_value='Restored'
+        )
         return True
 
 
@@ -917,4 +939,23 @@ class ProjectInvitation(models.Model):
         self.save(update_fields=['status', 'accepted_at', 'accepted_by', 'updated_at'])
         
         return True
+
+
+class TicketHistory(models.Model):
+    """
+    History of changes to a ticket.
+    Tracks changes to fields like status, priority, assignment, etc.
+    """
+    ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name='history')
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='ticket_history')
+    field = models.CharField(max_length=50)
+    old_value = models.TextField(null=True, blank=True)
+    new_value = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.ticket.id} - {self.field} changed by {self.user.username if self.user else 'System'}"
 

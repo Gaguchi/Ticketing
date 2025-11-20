@@ -175,7 +175,7 @@ export const QuickTicketCreator: React.FC<QuickTicketCreatorProps> = ({
       }
 
       const newTicket = await ticketService.createTicket(ticketData);
-      message.success("Ticket created!");
+      // message.success("Ticket created!");
 
       // Reset form
       setSummary("");

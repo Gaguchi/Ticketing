@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from .models import (
     Ticket, Project, Column, Comment, Attachment,
     Tag, Contact, TagContact, UserTag, TicketTag, IssueLink, Company, UserRole, TicketSubtask,
-    Notification, ProjectInvitation, TicketPosition
+    Notification, ProjectInvitation, TicketPosition, TicketHistory
 )
 
 
@@ -69,9 +69,10 @@ class CompanySerializer(serializers.ModelSerializer):
         required=False,
         help_text='List of project IDs to associate with this company'
     )
-    ticket_count = serializers.IntegerField(read_only=True)
-    admin_count = serializers.IntegerField(read_only=True)
-    user_count = serializers.IntegerField(read_only=True)
+    ticket_count = serializers.SerializerMethodField()
+    admin_count = serializers.SerializerMethodField()
+    user_count = serializers.SerializerMethodField()
+    project_count = serializers.SerializerMethodField()
     
     class Meta:
         model = Company
@@ -84,6 +85,26 @@ class CompanySerializer(serializers.ModelSerializer):
             'created_at', 'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at']
+    
+    def get_ticket_count(self, obj):
+        if hasattr(obj, 'annotated_ticket_count'):
+            return obj.annotated_ticket_count
+        return obj.ticket_count
+
+    def get_admin_count(self, obj):
+        if hasattr(obj, 'annotated_admin_count'):
+            return obj.annotated_admin_count
+        return obj.admin_count
+
+    def get_user_count(self, obj):
+        if hasattr(obj, 'annotated_user_count'):
+            return obj.annotated_user_count
+        return obj.user_count
+
+    def get_project_count(self, obj):
+        if hasattr(obj, 'annotated_project_count'):
+            return obj.annotated_project_count
+        return obj.project_count
     
     def create(self, validated_data):
         admin_ids = validated_data.pop('admin_ids', [])
@@ -142,10 +163,10 @@ class CompanySerializer(serializers.ModelSerializer):
 
 class CompanyListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for listing companies"""
-    ticket_count = serializers.IntegerField(read_only=True)
-    admin_count = serializers.IntegerField(read_only=True)
-    user_count = serializers.IntegerField(read_only=True)
-    project_count = serializers.IntegerField(read_only=True)
+    ticket_count = serializers.SerializerMethodField()
+    admin_count = serializers.SerializerMethodField()
+    user_count = serializers.SerializerMethodField()
+    project_count = serializers.SerializerMethodField()
     admin_names = serializers.SerializerMethodField()
     
     class Meta:
@@ -157,6 +178,26 @@ class CompanyListSerializer(serializers.ModelSerializer):
             'admin_names', 'created_at'
         ]
     
+    def get_ticket_count(self, obj):
+        if hasattr(obj, 'annotated_ticket_count'):
+            return obj.annotated_ticket_count
+        return obj.ticket_count
+
+    def get_admin_count(self, obj):
+        if hasattr(obj, 'annotated_admin_count'):
+            return obj.annotated_admin_count
+        return obj.admin_count
+
+    def get_user_count(self, obj):
+        if hasattr(obj, 'annotated_user_count'):
+            return obj.annotated_user_count
+        return obj.user_count
+
+    def get_project_count(self, obj):
+        if hasattr(obj, 'annotated_project_count'):
+            return obj.annotated_project_count
+        return obj.project_count
+    
     def get_admin_names(self, obj):
         return [f"{admin.first_name} {admin.last_name}".strip() or admin.username 
                 for admin in obj.admins.all()[:3]]  # Show first 3 admins
@@ -166,7 +207,7 @@ class ProjectSerializer(serializers.ModelSerializer):
     """Serializer for Project model"""
     tickets_count = serializers.SerializerMethodField()
     columns_count = serializers.SerializerMethodField()
-    members = UserSerializer(many=True, read_only=True)
+    members = UserSimpleSerializer(many=True, read_only=True)
     member_usernames = serializers.ListField(
         child=serializers.CharField(),
         write_only=True,
@@ -189,9 +230,13 @@ class ProjectSerializer(serializers.ModelSerializer):
                   'companies', 'company_ids', 'tickets_count', 'columns_count', 'created_at', 'updated_at']
     
     def get_tickets_count(self, obj):
+        if hasattr(obj, 'tickets_count_annotated'):
+            return obj.tickets_count_annotated
         return obj.tickets.count()
     
     def get_columns_count(self, obj):
+        if hasattr(obj, 'columns_count_annotated'):
+            return obj.columns_count_annotated
         return obj.columns.count()
     
     def create(self, validated_data):
@@ -802,4 +847,12 @@ class InviteUserSerializer(serializers.Serializer):
 class AcceptInvitationSerializer(serializers.Serializer):
     """Serializer for accepting invitations"""
     token = serializers.CharField(required=True, max_length=64)
+
+
+class TicketHistorySerializer(serializers.ModelSerializer):
+    user = UserSimpleSerializer(read_only=True)
+    
+    class Meta:
+        model = TicketHistory
+        fields = ['id', 'ticket', 'user', 'field', 'old_value', 'new_value', 'created_at']
 

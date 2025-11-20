@@ -55,6 +55,7 @@ import {
 } from "../services";
 import type {
   Ticket,
+  TicketActivityItem,
   CreateTicketData,
   TicketUrgency,
   TicketImportance,
@@ -185,6 +186,8 @@ export const TicketModal: React.FC<TicketModalProps> = ({
   >([]);
   const [showLinkForm, setShowLinkForm] = useState(false);
   const [archiveActionLoading, setArchiveActionLoading] = useState(false);
+  const [history, setHistory] = useState<TicketActivityItem[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   const archiveMenuItems =
     React.useMemo<MenuProps["items"]>(() => {
@@ -249,154 +252,35 @@ export const TicketModal: React.FC<TicketModalProps> = ({
   // Load current project from localStorage when modal opens
   useEffect(() => {
     if (open) {
-      // Load all available projects
-      projectService
-        .getAllProjects()
-        .then((projects) => {
-          setAvailableProjects(projects);
-        })
-        .catch((error) => {
-          console.error("Failed to load projects:", error);
-        });
-
-      // Load all users for assignee dropdown
-      setLoadingUsers(true);
-      userService
-        .getAllUsers()
-        .then((users) => {
-          setAvailableUsers(users);
-        })
-        .catch((error) => {
-          console.error("Failed to load users:", error);
-        })
-        .finally(() => {
-          setLoadingUsers(false);
-        });
-
-      if (isCreateMode) {
-        console.group(
-          "🔧 TicketModal - Loading project and columns (CREATE mode)"
-        );
-        console.log("Modal opened with columnId:", columnId);
-
-        const projectData = localStorage.getItem("currentProject");
-        console.log("Project data from localStorage:", projectData);
-
-        if (projectData) {
-          try {
-            const project = JSON.parse(projectData);
-            console.log("Parsed project:", project);
-            setCurrentProject(project);
-
-            // Ensure project.id is a number
-            const projectId =
-              typeof project.id === "number"
-                ? project.id
-                : parseInt(project.id, 10);
-            setSelectedProjectId(projectId);
-
-            // Fetch project columns to get the actual column ID
-            console.log("Fetching columns for project ID:", projectId);
-            projectService
-              .getProjectColumns(projectId)
-              .then((columns) => {
-                console.log("Fetched columns:", columns);
-                setProjectColumns(columns);
-                if (columns.length > 0) {
-                  const targetColumn =
-                    columns.find((col: any) => col.id === columnId) ||
-                    columns[0];
-                  console.log("Selected column:", targetColumn);
-                  setActualColumnId(targetColumn.id);
-                  setSelectedColumn(targetColumn.id);
-                  console.groupEnd();
-                } else {
-                  console.warn("⚠️ No columns found");
-                  console.groupEnd();
-                }
-              })
-              .catch((error) => {
-                console.error("❌ Failed to load project columns:", error);
-                console.groupEnd();
-              });
-          } catch (error) {
-            console.error("❌ Failed to parse project data:", error);
-            console.groupEnd();
-          }
-        } else {
-          console.warn("⚠️ No project data in localStorage");
-          console.groupEnd();
-        }
-      }
-    }
-  }, [open, isCreateMode, columnId]);
-
-  // Reset form when ticket changes
-  useEffect(() => {
-    if (open) {
-      console.group("🎫 TicketModal - Loading ticket data");
-      console.log("Ticket object:", ticket);
-      console.log("Description:", ticket?.description);
-      console.log("Due date:", ticket?.due_date);
-      console.log("Assignees:", ticket?.assignees);
-
-      setTitle(ticket?.name || "");
-      setDescription(ticket?.description || "");
-      setTicketType(ticket?.type || "task");
-      setSelectedColumn(ticket?.column || 1);
-      setPriority(ticket?.priority_id || 3);
-      setUrgency((ticket?.urgency as TicketUrgency) || "medium");
-      setImportance((ticket?.importance as TicketImportance) || "medium");
-      setSelectedProjectId(ticket?.project || null);
-      setTags(ticket?.tags || []);
-      setAssignees(ticket?.assignees?.map((a: any) => a.id) || []);
-      setDueDate(ticket?.due_date ? dayjs(ticket.due_date) : null);
-      setStartDate(ticket?.start_date ? dayjs(ticket.start_date) : null);
-
-      console.log("States set:");
-      console.log("- Description state:", ticket?.description || "");
-      console.log(
-        "- Due date state:",
-        ticket?.due_date ? dayjs(ticket.due_date) : null
-      );
-      console.log(
-        "- Assignees state:",
-        ticket?.assignees?.map((a: any) => a.id) || []
-      );
-      console.groupEnd();
-
-      // Load project tags and columns for autocomplete
-      // Use ticket's project if editing, otherwise use current project from localStorage
-      const projectId = ticket?.project || selectedProjectId;
-
-      if (projectId) {
-        // Load columns
+      // Load all available projects if not already loaded
+      if (availableProjects.length === 0) {
         projectService
-          .getProjectColumns(projectId)
-          .then((columns) => {
-            setProjectColumns(columns);
+          .getAllProjects()
+          .then((projects) => {
+            setAvailableProjects(projects);
           })
           .catch((error) => {
-            console.error("Failed to load columns:", error);
-          });
-
-        // Load tags
-        tagService
-          .getTags(projectId)
-          .then((response: any) => {
-            // Handle both array response and paginated response
-            const tags = Array.isArray(response)
-              ? response
-              : response.results || [];
-            setProjectTags(tags);
-          })
-          .catch((error) => {
-            console.error("Failed to load tags:", error);
-            setProjectTags([]); // Ensure it's always an array
+            console.error("Failed to load projects:", error);
           });
       }
 
-      // Also load current project info for context
+      // Load all users for assignee dropdown if not already loaded
+      if (availableUsers.length === 0) {
+        setLoadingUsers(true);
+        userService
+          .getAllUsers()
+          .then((users) => {
+            setAvailableUsers(users);
+          })
+          .catch((error) => {
+            console.error("Failed to load users:", error);
+          })
+          .finally(() => {
+            setLoadingUsers(false);
+          });
+      }
+
+      // Load current project info for context
       const projectData = localStorage.getItem("currentProject");
       if (projectData) {
         try {
@@ -407,7 +291,122 @@ export const TicketModal: React.FC<TicketModalProps> = ({
         }
       }
     }
-  }, [open, ticket, selectedProjectId]);
+  }, [open]);
+
+  // Handle create mode initialization
+  useEffect(() => {
+    if (open && isCreateMode) {
+      console.group(
+        "🔧 TicketModal - Loading project and columns (CREATE mode)"
+      );
+      console.log("Modal opened with columnId:", columnId);
+
+      const projectData = localStorage.getItem("currentProject");
+      console.log("Project data from localStorage:", projectData);
+
+      if (projectData) {
+        try {
+          const project = JSON.parse(projectData);
+          console.log("Parsed project:", project);
+          setCurrentProject(project);
+
+          // Ensure project.id is a number
+          const projectId =
+            typeof project.id === "number"
+              ? project.id
+              : parseInt(project.id, 10);
+          setSelectedProjectId(projectId);
+
+          // Fetch project columns to get the actual column ID
+          console.log("Fetching columns for project ID:", projectId);
+          projectService
+            .getProjectColumns(projectId)
+            .then((columns) => {
+              console.log("Fetched columns:", columns);
+              setProjectColumns(columns);
+              if (columns.length > 0) {
+                const targetColumn =
+                  columns.find((col: any) => col.id === columnId) || columns[0];
+                console.log("Selected column:", targetColumn);
+                setActualColumnId(targetColumn.id);
+                setSelectedColumn(targetColumn.id);
+                console.groupEnd();
+              } else {
+                console.warn("⚠️ No columns found");
+                console.groupEnd();
+              }
+            })
+            .catch((error) => {
+              console.error("❌ Failed to load project columns:", error);
+              console.groupEnd();
+            });
+        } catch (error) {
+          console.error("❌ Failed to parse project data:", error);
+          console.groupEnd();
+        }
+      } else {
+        console.warn("⚠️ No project data in localStorage");
+        console.groupEnd();
+      }
+    }
+  }, [open, isCreateMode, columnId]);
+
+  // Sync form state when ticket changes
+  useEffect(() => {
+    if (open && ticket) {
+      console.group("🎫 TicketModal - Syncing ticket data");
+      console.log("Ticket object:", ticket);
+
+      // Only update if ticket ID changed or if it's the first load
+      // This prevents overwriting user input if ticket updates in background
+      // Note: Ideally we should check if user has unsaved changes
+
+      setTitle(ticket.name || "");
+      setDescription(ticket.description || "");
+      setTicketType(ticket.type || "task");
+      setSelectedColumn(ticket.column || 1);
+      setPriority(ticket.priority_id || 3);
+      setUrgency((ticket.urgency as TicketUrgency) || "medium");
+      setImportance((ticket.importance as TicketImportance) || "medium");
+      setSelectedProjectId(ticket.project || null);
+      setTags(ticket.tags || []);
+      setAssignees(ticket.assignees?.map((a: any) => a.id) || []);
+      setDueDate(ticket.due_date ? dayjs(ticket.due_date) : null);
+      setStartDate(ticket.start_date ? dayjs(ticket.start_date) : null);
+
+      console.groupEnd();
+    }
+  }, [open, ticket]); // Still depends on ticket, but separated from project data fetching
+
+  // Load project data (columns, tags) when project changes
+  useEffect(() => {
+    if (open && selectedProjectId) {
+      // Load columns
+      projectService
+        .getProjectColumns(selectedProjectId)
+        .then((columns) => {
+          setProjectColumns(columns);
+        })
+        .catch((error) => {
+          console.error("Failed to load columns:", error);
+        });
+
+      // Load tags
+      tagService
+        .getTags(selectedProjectId)
+        .then((response: any) => {
+          // Handle both array response and paginated response
+          const tags = Array.isArray(response)
+            ? response
+            : response.results || [];
+          setProjectTags(tags);
+        })
+        .catch((error) => {
+          console.error("Failed to load tags:", error);
+          setProjectTags([]); // Ensure it's always an array
+        });
+    }
+  }, [open, selectedProjectId]); // Only runs when selectedProjectId changes
 
   // Load subtasks when ticket is opened in edit mode
   useEffect(() => {
@@ -458,6 +457,21 @@ export const TicketModal: React.FC<TicketModalProps> = ({
       loadLinkedItems();
     }
   }, [open, ticket?.id, isCreateMode]);
+
+  // Load history when tab is active
+  useEffect(() => {
+    if (activeTab === "history" && ticket?.id && !isCreateMode) {
+      setLoadingHistory(true);
+      ticketService
+        .getTicketHistory(ticket.id)
+        .then((data) => setHistory(data))
+        .catch((err) => {
+          console.error("Failed to load history:", err);
+          message.error("Failed to load history");
+        })
+        .finally(() => setLoadingHistory(false));
+    }
+  }, [activeTab, ticket?.id, isCreateMode]);
 
   const handleProjectChange = async (projectId: number) => {
     setSelectedProjectId(projectId);
@@ -527,10 +541,10 @@ export const TicketModal: React.FC<TicketModalProps> = ({
           (isCreateMode
             ? currentProject.id
             : ticket?.project || currentProject?.id || 1),
-        due_date: dueDate ? dueDate.format("YYYY-MM-DD") : undefined,
-        start_date: startDate ? startDate.format("YYYY-MM-DD") : undefined,
-        assignee_ids: assignees.length > 0 ? assignees : undefined,
-        tags: tags.length > 0 ? tags : undefined,
+        due_date: dueDate ? dueDate.format("YYYY-MM-DD") : null,
+        start_date: startDate ? startDate.format("YYYY-MM-DD") : null,
+        assignee_ids: assignees,
+        tags: tags,
       };
 
       console.log("📤 Ticket data to send:", ticketData);
@@ -539,7 +553,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
       if (isCreateMode) {
         savedTicket = await ticketService.createTicket(ticketData);
         console.log("✅ Ticket created successfully:", savedTicket);
-        message.success("Ticket created successfully!");
+        // message.success("Ticket created successfully!");
       } else if (ticket) {
         savedTicket = await ticketService.updateTicket(ticket.id, ticketData);
         console.log("✅ Ticket updated successfully:", savedTicket);
@@ -1431,14 +1445,111 @@ export const TicketModal: React.FC<TicketModalProps> = ({
 
               {/* History Tab - Placeholder */}
               {activeTab === "history" && (
-                <div
-                  style={{
-                    padding: "24px",
-                    textAlign: "center",
-                    color: "#9E9E9E",
-                  }}
-                >
-                  History feature coming soon...
+                <div style={{ padding: "0 8px" }}>
+                  {loadingHistory ? (
+                    <div style={{ textAlign: "center", padding: "24px" }}>
+                      <Spin />
+                    </div>
+                  ) : history.length === 0 ? (
+                    <div
+                      style={{
+                        textAlign: "center",
+                        padding: "24px",
+                        color: "#9E9E9E",
+                      }}
+                    >
+                      No history available
+                    </div>
+                  ) : (
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "16px",
+                      }}
+                    >
+                      {history.map((item) => (
+                        <div
+                          key={`${item.type}-${item.id}`}
+                          style={{
+                            display: "flex",
+                            gap: "12px",
+                            fontSize: "14px",
+                          }}
+                        >
+                          <Avatar size="small" style={{ marginTop: "2px" }}>
+                            {item.user.first_name?.[0] || item.user.username[0]}
+                          </Avatar>
+                          <div>
+                            <div style={{ marginBottom: "4px" }}>
+                              <span
+                                style={{ fontWeight: 500, marginRight: "4px" }}
+                              >
+                                {item.user.first_name
+                                  ? `${item.user.first_name} ${item.user.last_name}`
+                                  : item.user.username}
+                              </span>
+
+                              {item.type === "comment" ? (
+                                <span style={{ color: "#5E6C84" }}>
+                                  commented
+                                </span>
+                              ) : (
+                                <span style={{ color: "#5E6C84" }}>
+                                  changed {item.field.replace("_", " ")}
+                                </span>
+                              )}
+
+                              <span
+                                style={{
+                                  color: "#9E9E9E",
+                                  marginLeft: "8px",
+                                  fontSize: "12px",
+                                }}
+                              >
+                                {dayjs(item.created_at).format(
+                                  "MMM D, YYYY [at] h:mm A"
+                                )}
+                              </span>
+                            </div>
+
+                            {item.type === "comment" ? (
+                              <div
+                                style={{
+                                  color: "#172b4d",
+                                  whiteSpace: "pre-wrap",
+                                }}
+                              >
+                                {item.content}
+                              </div>
+                            ) : (
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "8px",
+                                  color: "#172b4d",
+                                }}
+                              >
+                                <span
+                                  style={{
+                                    textDecoration: "line-through",
+                                    color: "#9E9E9E",
+                                  }}
+                                >
+                                  {item.old_value || "(empty)"}
+                                </span>
+                                <span style={{ color: "#5E6C84" }}>→</span>
+                                <span style={{ fontWeight: 500 }}>
+                                  {item.new_value || "(empty)"}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1563,20 +1674,49 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                 size="small"
                 allowClear
                 showSearch
-                optionFilterProp="children"
-                filterOption={(input, option) =>
-                  (option?.label ?? "")
-                    .toLowerCase()
-                    .includes(input.toLowerCase())
-                }
-                options={availableUsers.map((user) => ({
-                  label:
-                    user.first_name && user.last_name
-                      ? `${user.first_name} ${user.last_name}`
-                      : user.username,
-                  value: user.id,
-                }))}
-              />
+                filterOption={(input, option) => {
+                  const user = availableUsers.find(
+                    (u) => u.id === option?.value
+                  );
+                  if (!user) return false;
+                  const searchStr =
+                    `${user.first_name} ${user.last_name} ${user.username}`.toLowerCase();
+                  return searchStr.includes(input.toLowerCase());
+                }}
+              >
+                {availableUsers.map((user) => (
+                  <Select.Option key={user.id} value={user.id}>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                      }}
+                    >
+                      <Avatar
+                        size={16}
+                        style={{
+                          backgroundColor: user.first_name
+                            ? "#1890ff"
+                            : "#f56a00",
+                          fontSize: "10px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        {user.first_name?.[0]?.toUpperCase() ||
+                          user.username?.[0]?.toUpperCase()}
+                      </Avatar>
+                      <span>
+                        {user.first_name && user.last_name
+                          ? `${user.first_name} ${user.last_name}`
+                          : user.username}
+                      </span>
+                    </div>
+                  </Select.Option>
+                ))}
+              </Select>
               <Button
                 type="link"
                 size="small"

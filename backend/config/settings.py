@@ -154,6 +154,8 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
+    'PAGE_SIZE_QUERY_PARAM': 'page_size',
+    'MAX_PAGE_SIZE': 1000,
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
@@ -185,7 +187,7 @@ SIMPLE_JWT = {
 # CORS settings
 cors_origins_env = os.getenv(
     'CORS_ALLOWED_ORIGINS',
-    'http://localhost:5173,http://localhost:3000,http://localhost:3001,http://31.146.76.40:5173,http://31.146.76.40:8000'
+    'http://localhost:5173,http://localhost:3000,http://localhost:3001,http://localhost:3002,http://31.146.76.40:5173,http://31.146.76.40:8000'
 )
 CORS_ALLOWED_ORIGINS = [origin.strip() for origin in cors_origins_env.split(',') if origin.strip()]
 

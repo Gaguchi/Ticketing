@@ -129,7 +129,10 @@ const Tickets: React.FC = () => {
         // Fetch columns and tickets in parallel for better performance
         const [projectColumns, ticketsResponse] = await Promise.all([
           projectService.getProjectColumns(selectedProject.id),
-          ticketService.getTickets({ project: selectedProject.id }),
+          ticketService.getTickets({
+            project: selectedProject.id,
+            page_size: 1000,
+          }),
         ]);
 
         debug.log(
@@ -210,9 +213,9 @@ const Tickets: React.FC = () => {
             }
             return [newTicket, ...prev];
           });
-          message.success(
-            `New ticket created: ${data.ticket_key || `#${data.id}`}`
-          );
+          // message.success(
+          //   `New ticket created: ${data.ticket_key || `#${data.id}`}`
+          // );
         } catch (error) {
           console.error("Failed to add new ticket:", error);
           // Remove from set so it can retry
@@ -294,6 +297,7 @@ const Tickets: React.FC = () => {
       try {
         const ticketsResponse = await ticketService.getTickets({
           project: selectedProject.id,
+          page_size: 1000,
         });
         setTickets(ticketsResponse.results);
         console.log(

@@ -12,10 +12,11 @@ from .permissions import (
     IsSuperuserOrCompanyAdmin, IsCompanyAdmin, IsCompanyMember,
     IsSuperuserOrCompanyMember, IsCompanyAdminOrReadOnly
 )
+from .pagination import StandardResultsSetPagination
 from .models import (
     Ticket, Column, Project, Comment, Attachment,
     Tag, Contact, TagContact, UserTag, TicketTag, IssueLink, Company, UserRole, TicketSubtask,
-    Notification, ProjectInvitation
+    Notification, ProjectInvitation, TicketHistory
 )
 from .serializers import (
     TicketSerializer, TicketListSerializer, ColumnSerializer,
@@ -24,7 +25,8 @@ from .serializers import (
     TagContactSerializer, UserTagSerializer, TicketTagSerializer,
     IssueLinkSerializer, CompanySerializer, CompanyListSerializer,
     UserManagementSerializer, UserCreateUpdateSerializer, UserRoleSerializer, TicketSubtaskSerializer,
-    NotificationSerializer, ProjectInvitationSerializer, InviteUserSerializer, AcceptInvitationSerializer
+    NotificationSerializer, ProjectInvitationSerializer, InviteUserSerializer, AcceptInvitationSerializer,
+    TicketHistorySerializer
 )
 from .email_service import send_invitation_email
 from .services import auto_archive_completed_tickets
@@ -139,18 +141,27 @@ def get_current_user(request):
     """
     user = request.user
     
-    # Get projects where user is lead
-    lead_projects = Project.objects.filter(lead_username=user.username)
+    # Get projects where user is lead or member (Optimized)
+    all_projects = Project.objects.filter(
+        Q(lead_username=user.username) | Q(members=user)
+    ).distinct().prefetch_related(
+        'members', 'companies', 'companies__admins'
+    ).annotate(
+        tickets_count_annotated=models.Count('tickets', distinct=True),
+        columns_count_annotated=models.Count('columns', distinct=True)
+    )
     
-    # Get projects where user is a member
-    member_projects = user.project_memberships.all()
-    
-    # Combine and remove duplicates
-    all_projects = (lead_projects | member_projects).distinct()
-    
+    # Base company query with annotations
+    base_company_qs = Company.objects.prefetch_related('admins').annotate(
+        annotated_ticket_count=models.Count('tickets', distinct=True),
+        annotated_admin_count=models.Count('admins', distinct=True),
+        annotated_user_count=models.Count('users', distinct=True),
+        annotated_project_count=models.Count('projects', distinct=True)
+    )
+
     # Get companies where user is admin or member
-    admin_companies = user.administered_companies.all()
-    member_companies = user.member_companies.all()
+    admin_companies = base_company_qs.filter(admins=user)
+    member_companies = base_company_qs.filter(users=user)
     all_companies = (admin_companies | member_companies).distinct()
     
     # Get user roles for all projects
@@ -688,6 +699,7 @@ class TicketViewSet(viewsets.ModelViewSet):
     """
     queryset = Ticket.objects.select_related('company', 'column', 'project', 'reporter', 'position').prefetch_related('assignees', 'tags')
     permission_classes = [IsAuthenticated]  # Basic authentication only, filtering handled in get_queryset
+    pagination_class = StandardResultsSetPagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'type', 'priority_id', 'column', 'project', 'tags', 'company', 'is_archived']
     search_fields = ['name', 'description']
@@ -858,6 +870,122 @@ class TicketViewSet(viewsets.ModelViewSet):
                 ticket.assignees.set(company_admins)
                 print(f"   👥 Auto-assigned to {company_admins.count()} company admin(s)")
     
+    def _capture_state(self, instance):
+        """Capture current state of ticket for history tracking"""
+        return {
+            'name': instance.name,
+            'description': instance.description,
+            'status': instance.get_status_display(),
+            'priority': instance.get_priority_id_display(),
+            'urgency': instance.get_urgency_display(),
+            'importance': instance.get_importance_display(),
+            'column_id': instance.column_id,
+            'column_name': instance.column.name if instance.column else None,
+            'assignees': list(instance.assignees.all().values_list('username', flat=True)),
+            'type': instance.get_type_display(),
+            'due_date': instance.due_date,
+            'start_date': instance.start_date,
+            'project_id': instance.project_id,
+            'project_name': instance.project.name if instance.project else None,
+            'company_id': instance.company_id,
+            'company_name': instance.company.name if instance.company else None,
+            'tags': list(instance.tags.all().values_list('name', flat=True)),
+            'reporter': instance.reporter.username if instance.reporter else None,
+        }
+
+    def _record_changes(self, old_state, new_instance, user):
+        """Compare old state with new instance and record history"""
+        changes = []
+        
+        # Simple fields mapping (field_name, display_name/value_getter)
+        simple_checks = [
+            ('name', 'Title', lambda x: x.name),
+            ('due_date', 'Due Date', lambda x: x.due_date),
+            ('start_date', 'Start Date', lambda x: x.start_date),
+        ]
+
+        for field, label, getter in simple_checks:
+            new_val = getter(new_instance)
+            if old_state.get(field) != new_val:
+                changes.append(TicketHistory(
+                    ticket=new_instance, user=user, field=field,
+                    old_value=str(old_state.get(field)) if old_state.get(field) is not None else None,
+                    new_value=str(new_val) if new_val is not None else None
+                ))
+
+        # Description (special handling to avoid storing large text)
+        if old_state.get('description') != new_instance.description:
+             changes.append(TicketHistory(
+                ticket=new_instance, user=user, field='description',
+                old_value=None,
+                new_value="Description updated"
+            ))
+
+        # Choice fields with display values
+        choice_checks = [
+            ('status', 'Status', lambda x: x.get_status_display()),
+            ('priority', 'Priority', lambda x: x.get_priority_id_display()),
+            ('urgency', 'Urgency', lambda x: x.get_urgency_display()),
+            ('importance', 'Importance', lambda x: x.get_importance_display()),
+            ('type', 'Type', lambda x: x.get_type_display()),
+        ]
+
+        for field, label, getter in choice_checks:
+            new_val = getter(new_instance)
+            if old_state.get(field) != new_val:
+                changes.append(TicketHistory(
+                    ticket=new_instance, user=user, field=field,
+                    old_value=old_state.get(field),
+                    new_value=new_val
+                ))
+
+        # Foreign Keys
+        if old_state['column_id'] != new_instance.column_id:
+             new_col_name = new_instance.column.name if new_instance.column else None
+             changes.append(TicketHistory(
+                ticket=new_instance, user=user, field='column',
+                old_value=old_state['column_name'], new_value=new_col_name
+            ))
+            
+        if old_state['project_id'] != new_instance.project_id:
+             new_proj_name = new_instance.project.name if new_instance.project else None
+             changes.append(TicketHistory(
+                ticket=new_instance, user=user, field='project',
+                old_value=old_state['project_name'], new_value=new_proj_name
+            ))
+
+        if old_state['company_id'] != new_instance.company_id:
+             new_comp_name = new_instance.company.name if new_instance.company else None
+             changes.append(TicketHistory(
+                ticket=new_instance, user=user, field='company',
+                old_value=old_state['company_name'], new_value=new_comp_name
+            ))
+
+        if old_state['reporter'] != (new_instance.reporter.username if new_instance.reporter else None):
+             changes.append(TicketHistory(
+                ticket=new_instance, user=user, field='reporter',
+                old_value=old_state['reporter'], 
+                new_value=new_instance.reporter.username if new_instance.reporter else None
+            ))
+
+        # M2M Fields
+        new_assignees = list(new_instance.assignees.all().values_list('username', flat=True))
+        if set(old_state['assignees']) != set(new_assignees):
+             changes.append(TicketHistory(
+                ticket=new_instance, user=user, field='assignees',
+                old_value=", ".join(old_state['assignees']), new_value=", ".join(new_assignees)
+            ))
+            
+        new_tags = list(new_instance.tags.all().values_list('name', flat=True))
+        if set(old_state['tags']) != set(new_tags):
+             changes.append(TicketHistory(
+                ticket=new_instance, user=user, field='tags',
+                old_value=", ".join(old_state['tags']), new_value=", ".join(new_tags)
+            ))
+            
+        if changes:
+            TicketHistory.objects.bulk_create(changes)
+
     def update(self, request, *args, **kwargs):
         """
         Custom update to handle column_order when provided.
@@ -865,6 +993,9 @@ class TicketViewSet(viewsets.ModelViewSet):
         """
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
+        
+        # Capture state before update
+        old_state = self._capture_state(instance)
         
         # Check if both column and order are being updated
         column_id = request.data.get('column')
@@ -886,6 +1017,10 @@ class TicketViewSet(viewsets.ModelViewSet):
             
             # Refresh and serialize the updated instance
             instance.refresh_from_db()
+            
+            # Record history
+            self._record_changes(old_state, instance, request.user)
+            
             serializer = self.get_serializer(instance)
             
             print(f"📤 Returning updated ticket:", {
@@ -902,8 +1037,35 @@ class TicketViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
         
+        # Refresh to get M2M updates if any
+        instance.refresh_from_db()
+        self._record_changes(old_state, instance, request.user)
+        
         return Response(serializer.data)
     
+    @action(detail=True, methods=['get'])
+    def history(self, request, pk=None):
+        """Get history for a ticket, including comments"""
+        ticket = self.get_object()
+        
+        # Get history records
+        history_qs = ticket.history.select_related('user').all()
+        history_data = TicketHistorySerializer(history_qs, many=True).data
+        for item in history_data:
+            item['type'] = 'history'
+            
+        # Get comments
+        comments_qs = ticket.comments.select_related('user').all()
+        comments_data = CommentSerializer(comments_qs, many=True).data
+        for item in comments_data:
+            item['type'] = 'comment'
+            
+        # Combine and sort by created_at descending
+        combined = history_data + comments_data
+        combined.sort(key=lambda x: x['created_at'], reverse=True)
+        
+        return Response(combined)
+
     @action(detail=True, methods=['post'])
     def move_to_column(self, request, pk=None):
         """Move ticket to a different column with proper positioning"""
@@ -1206,7 +1368,28 @@ class AttachmentViewSet(viewsets.ModelViewSet):
     filterset_fields = ['ticket']
     
     def perform_create(self, serializer):
-        serializer.save(uploaded_by=self.request.user if self.request.user.is_authenticated else None)
+        attachment = serializer.save(uploaded_by=self.request.user if self.request.user.is_authenticated else None)
+        
+        TicketHistory.objects.create(
+            ticket=attachment.ticket,
+            user=self.request.user if self.request.user.is_authenticated else None,
+            field='attachment',
+            old_value=None,
+            new_value=f"Uploaded file: {attachment.filename}"
+        )
+
+    def perform_destroy(self, instance):
+        ticket = instance.ticket
+        filename = instance.filename
+        instance.delete()
+        
+        TicketHistory.objects.create(
+            ticket=ticket,
+            user=self.request.user if self.request.user.is_authenticated else None,
+            field='attachment',
+            old_value=f"File: {filename}",
+            new_value="Deleted file"
+        )
 
 
 class TagViewSet(viewsets.ModelViewSet):
@@ -1389,7 +1572,44 @@ class TicketSubtaskViewSet(viewsets.ModelViewSet):
         return queryset.order_by('order', 'created_at')
     
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user if self.request.user.is_authenticated else None)
+        subtask = serializer.save(created_by=self.request.user if self.request.user.is_authenticated else None)
+        
+        # Record history on parent ticket
+        TicketHistory.objects.create(
+            ticket=subtask.ticket,
+            user=self.request.user if self.request.user.is_authenticated else None,
+            field='subtask',
+            old_value=None,
+            new_value=f"Added subtask: {subtask.title}"
+        )
+
+    def perform_update(self, serializer):
+        instance = self.get_object()
+        old_is_complete = instance.is_complete
+        subtask = serializer.save()
+        
+        if old_is_complete != subtask.is_complete:
+            status = "completed" if subtask.is_complete else "reopened"
+            TicketHistory.objects.create(
+                ticket=subtask.ticket,
+                user=self.request.user if self.request.user.is_authenticated else None,
+                field='subtask',
+                old_value=None,
+                new_value=f"Subtask {status}: {subtask.title}"
+            )
+
+    def perform_destroy(self, instance):
+        ticket = instance.ticket
+        title = instance.title
+        instance.delete()
+        
+        TicketHistory.objects.create(
+            ticket=ticket,
+            user=self.request.user if self.request.user.is_authenticated else None,
+            field='subtask',
+            old_value=f"Subtask: {title}",
+            new_value="Deleted subtask"
+        )
 
 
 class IssueLinkViewSet(viewsets.ModelViewSet):
@@ -1415,7 +1635,47 @@ class IssueLinkViewSet(viewsets.ModelViewSet):
         return queryset.order_by('-created_at')
     
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user if self.request.user.is_authenticated else None)
+        link = serializer.save(created_by=self.request.user if self.request.user.is_authenticated else None)
+        
+        # Record history on source ticket
+        TicketHistory.objects.create(
+            ticket=link.source_ticket,
+            user=self.request.user if self.request.user.is_authenticated else None,
+            field='link',
+            old_value=None,
+            new_value=f"Linked to {link.target_ticket.ticket_key} ({link.link_type})"
+        )
+        
+        # Record history on target ticket
+        TicketHistory.objects.create(
+            ticket=link.target_ticket,
+            user=self.request.user if self.request.user.is_authenticated else None,
+            field='link',
+            old_value=None,
+            new_value=f"Linked from {link.source_ticket.ticket_key} ({link.link_type})"
+        )
+
+    def perform_destroy(self, instance):
+        source = instance.source_ticket
+        target = instance.target_ticket
+        link_type = instance.link_type
+        instance.delete()
+        
+        TicketHistory.objects.create(
+            ticket=source,
+            user=self.request.user if self.request.user.is_authenticated else None,
+            field='link',
+            old_value=f"Linked to {target.ticket_key} ({link_type})",
+            new_value="Removed link"
+        )
+        
+        TicketHistory.objects.create(
+            ticket=target,
+            user=self.request.user if self.request.user.is_authenticated else None,
+            field='link',
+            old_value=f"Linked from {source.ticket_key} ({link_type})",
+            new_value="Removed link"
+        )
 
 
 class NotificationViewSet(viewsets.ModelViewSet):

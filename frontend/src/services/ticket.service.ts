@@ -7,6 +7,7 @@ import { apiService } from './api.service';
 import { API_ENDPOINTS } from '../config/api';
 import type {
   Ticket,
+  TicketActivityItem,
   CreateTicketData,
   UpdateTicketData,
   TicketFilterParams,
@@ -45,6 +46,13 @@ class TicketService {
    */
   async getTicket(id: number): Promise<Ticket> {
     return apiService.get<Ticket>(API_ENDPOINTS.TICKET_DETAIL(id));
+  }
+
+  /**
+   * Get ticket history
+   */
+  async getTicketHistory(id: number): Promise<TicketActivityItem[]> {
+    return apiService.get<TicketActivityItem[]>(API_ENDPOINTS.TICKET_HISTORY(id));
   }
 
   /**

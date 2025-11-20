@@ -1,7 +1,12 @@
 import { API_HEADERS } from '../config/api';
 
 class ApiService {
-  private getAuthHeaders(): HeadersInit {
+  private getAuthHeaders(url?: string): HeadersInit {
+    // Don't send auth token for login endpoint to avoid 403 if token is invalid
+    if (url && url.includes('/auth/login/')) {
+      return API_HEADERS;
+    }
+
     const token = localStorage.getItem('access_token');
     return {
       ...API_HEADERS,
@@ -13,7 +18,7 @@ class ApiService {
     const response = await fetch(url, {
       ...options,
       headers: {
-        ...this.getAuthHeaders(),
+        ...this.getAuthHeaders(url),
         ...options.headers,
       },
     });

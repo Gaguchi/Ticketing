@@ -43,7 +43,7 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
       // Send minimal data - backend should handle company/project assignment
       await apiService.post(API_ENDPOINTS.MY_TICKETS, payload);
 
-      message.success("Ticket created successfully!");
+      // message.success("Ticket created successfully!");
       form.resetFields();
       onSuccess();
       onClose();

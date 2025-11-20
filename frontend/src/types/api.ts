@@ -224,6 +224,29 @@ export interface Ticket {
   updated_at: string;
 }
 
+export interface TicketHistoryItem {
+  id: number;
+  ticket: number;
+  user: User;
+  field: string;
+  old_value: string | null;
+  new_value: string | null;
+  created_at: string;
+  type: 'history';
+}
+
+export interface TicketCommentItem {
+  id: number;
+  ticket: number;
+  user: User;
+  content: string;
+  created_at: string;
+  updated_at?: string;
+  type: 'comment';
+}
+
+export type TicketActivityItem = TicketHistoryItem | TicketCommentItem;
+
 export interface CreateTicketData {
   name: string;
   description?: string;
@@ -238,8 +261,8 @@ export interface CreateTicketData {
   parent?: number;
   tags?: number[];
   tag_names?: string[];
-  due_date?: string;
-  start_date?: string;
+  due_date?: string | null;
+  start_date?: string | null;
 }
 
 export interface UpdateTicketData {
@@ -257,8 +280,8 @@ export interface UpdateTicketData {
   parent?: number;
   tags?: number[];
   tag_names?: string[];
-  due_date?: string;
-  start_date?: string;
+  due_date?: string | null;
+  start_date?: string | null;
 }
 
 export interface TicketFilterParams extends PaginationParams {

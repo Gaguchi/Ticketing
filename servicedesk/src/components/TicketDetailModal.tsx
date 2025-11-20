@@ -146,7 +146,7 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
             <div className="flex-1 pr-8">
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-xs font-mono font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
-                  {ticket.key}
+                  {ticket.ticket_key || ticket.key}
                 </span>
                 <Tag
                   color={getPriorityColor(ticket.priority_id)}

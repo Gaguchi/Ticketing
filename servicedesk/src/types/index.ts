@@ -1,3 +1,10 @@
+export interface Project {
+  id: number;
+  key: string;
+  name: string;
+  description?: string;
+}
+
 export interface User {
   id: number;
   username: string;
@@ -6,25 +13,39 @@ export interface User {
   last_name: string;
 }
 
+export interface Column {
+  id: number;
+  name: string;
+  order: number;
+  project: number;
+}
+
 export interface Ticket {
   id: number;
-  key: string;
+  ticket_key: string;
+  key?: string; // Deprecated, use ticket_key
   name: string;
-  description: string;
+  description?: string;
   type: string;
   priority_id: number;
   status: string;
   column: number;
-  reporter: User;
-  assignees: User[];
-  company: {
-    id: number;
-    name: string;
-  } | null;
+  column_name?: string;
+  column_order?: number;
+  reporter?: User;
+  assignees?: User[];
+  assignee_ids?: number[];
+  company: number | { id: number; name: string; } | null;
+  company_name?: string;
+  project: number | { id: number; name: string; } | null;
+  project_key?: string;
   created_at: string;
   updated_at: string;
   due_date: string | null;
-  comment_count: number;
+  comments_count?: number;
+  comment_count?: number; // Deprecated
+  tag_names?: string[];
+  is_archived?: boolean;
 }
 
 export interface Comment {
