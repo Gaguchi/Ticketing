@@ -187,7 +187,7 @@ class TicketPosition(models.Model):
         return f"Ticket #{self.ticket_id} in {self.column.name} at position {self.order}"
     
     @classmethod
-    def move_ticket(cls, ticket, target_column_id, target_order, max_retries=3):
+    def move_ticket(cls, ticket, target_column_id, target_order, max_retries=3, broadcast=True):
         """
         Move ticket to a specific position in a column with deadlock prevention.
         
@@ -196,6 +196,7 @@ class TicketPosition(models.Model):
             target_column_id: ID of target column
             target_order: Target position (0-based)
             max_retries: Number of retry attempts for deadlock
+            broadcast: Whether to broadcast WebSocket update (default: True)
             
         Returns:
             TicketPosition instance
@@ -299,7 +300,7 @@ class TicketPosition(models.Model):
                 raise
         
         # Broadcast position updates via WebSocket (outside transaction)
-        if affected_columns:
+        if broadcast and affected_columns:
             channel_layer = get_channel_layer()
             async_to_sync(channel_layer.group_send)(
                 f'project_{ticket.project_id}_tickets',
@@ -508,7 +509,7 @@ class Ticket(models.Model):
             return False
         return column.name.strip().lower() in self.DONE_COLUMN_NAMES
     
-    def move_to_position(self, target_column_id, target_order, max_retries=3):
+    def move_to_position(self, target_column_id, target_order, max_retries=3, broadcast=True):
         """
         Move ticket to a specific position in a column.
         
@@ -519,6 +520,7 @@ class Ticket(models.Model):
             target_column_id: The column to move to
             target_order: The position in the column (0-indexed)
             max_retries: Number of retry attempts on deadlock (default: 3)
+            broadcast: Whether to broadcast WebSocket update (default: True)
         
         Returns:
             TicketPosition instance
@@ -527,7 +529,7 @@ class Ticket(models.Model):
         print(f"   Delegating to TicketPosition.move_ticket() (lightweight)")
         
         # Delegate to the new lightweight TicketPosition.move_ticket method
-        return TicketPosition.move_ticket(self, target_column_id, target_order, max_retries)
+        return TicketPosition.move_ticket(self, target_column_id, target_order, max_retries, broadcast)
 
     def archive(self, archived_by=None, reason=None, auto=False):
         if self.is_archived:

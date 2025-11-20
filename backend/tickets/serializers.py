@@ -303,6 +303,7 @@ class TicketSerializer(serializers.ModelSerializer):
     subtasks = serializers.SerializerMethodField()
     tags_detail = serializers.SerializerMethodField()
     archived_by = UserSerializer(read_only=True)
+    column_order = serializers.SerializerMethodField()
     
     # Make project and column optional for servicedesk users (will be set in perform_create)
     project = serializers.PrimaryKeyRelatedField(
@@ -331,6 +332,12 @@ class TicketSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at'
         ]
     
+    def get_column_order(self, obj):
+        """Get order from TicketPosition if available, else fallback to Ticket.column_order"""
+        if hasattr(obj, 'position'):
+            return obj.position.order
+        return obj.column_order
+
     def get_subtasks(self, obj):
         if obj.subtasks.exists():
             return TicketSerializer(obj.subtasks.all(), many=True).data
@@ -352,6 +359,7 @@ class TicketListSerializer(serializers.ModelSerializer):
     company_name = serializers.CharField(source='company.name', read_only=True)
     comments_count = serializers.IntegerField(read_only=True)
     tag_names = serializers.SerializerMethodField()
+    column_order = serializers.SerializerMethodField()
     
     class Meta:
         model = Ticket
@@ -367,6 +375,12 @@ class TicketListSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at'
         ]
     
+    def get_column_order(self, obj):
+        """Get order from TicketPosition if available, else fallback to Ticket.column_order"""
+        if hasattr(obj, 'position'):
+            return obj.position.order
+        return obj.column_order
+
     def get_assignee_ids(self, obj):
         # Use the prefetched data to avoid additional queries
         return [assignee.id for assignee in obj.assignees.all()]

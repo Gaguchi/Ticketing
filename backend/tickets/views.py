@@ -686,7 +686,7 @@ class TicketViewSet(viewsets.ModelViewSet):
     - IT Admins: See tickets for companies they're assigned to
     - Company Users: See only their company's tickets
     """
-    queryset = Ticket.objects.select_related('company', 'column', 'project', 'reporter').prefetch_related('assignees', 'tags')
+    queryset = Ticket.objects.select_related('company', 'column', 'project', 'reporter', 'position').prefetch_related('assignees', 'tags')
     permission_classes = [IsAuthenticated]  # Basic authentication only, filtering handled in get_queryset
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'type', 'priority_id', 'column', 'project', 'tags', 'company', 'is_archived']
@@ -703,7 +703,7 @@ class TicketViewSet(viewsets.ModelViewSet):
         user = self.request.user
 
         base_queryset = Ticket.objects.select_related(
-            'company', 'column', 'project', 'reporter'
+            'company', 'column', 'project', 'reporter', 'position'
         ).prefetch_related(
             'assignees', 'tags'
         ).annotate(
@@ -956,8 +956,12 @@ class TicketViewSet(viewsets.ModelViewSet):
         
         try:
             from django.db import transaction
+            from channels.layers import get_channel_layer
+            from asgiref.sync import async_to_sync
             
             updated_tickets = []
+            affected_columns = set()
+            project_id = None
             
             with transaction.atomic():
                 for update in updates:
@@ -969,15 +973,32 @@ class TicketViewSet(viewsets.ModelViewSet):
                         continue
                     
                     ticket = Ticket.objects.get(id=ticket_id)
+                    if project_id is None:
+                        project_id = ticket.project_id
                     
                     # Use the model's positioning method
                     if column_id is not None:
-                        ticket.move_to_position(column_id, order)
+                        # Add both old and new columns to affected set
+                        affected_columns.add(ticket.column_id)
+                        affected_columns.add(column_id)
+                        ticket.move_to_position(column_id, order, broadcast=False)
                     else:
                         # Just reorder within current column
-                        ticket.move_to_position(ticket.column_id, order)
+                        affected_columns.add(ticket.column_id)
+                        ticket.move_to_position(ticket.column_id, order, broadcast=False)
                     
                     updated_tickets.append(ticket.id)
+            
+            # Broadcast once after all updates are committed
+            if project_id and affected_columns:
+                channel_layer = get_channel_layer()
+                async_to_sync(channel_layer.group_send)(
+                    f'project_{project_id}_tickets',
+                    {
+                        'type': 'column_refresh',
+                        'column_ids': list(affected_columns),
+                    }
+                )
             
             return Response({
                 'status': 'tickets reordered',
