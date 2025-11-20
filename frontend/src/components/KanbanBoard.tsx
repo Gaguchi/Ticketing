@@ -373,14 +373,14 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       const activeIndex = items[finalContainer].indexOf(active.id as string);
       const overIndex = items[finalContainer].indexOf(over.id as string);
 
+      // Calculate new items list locally to get correct positions immediately
+      let newItems = items[finalContainer];
+
       if (activeIndex !== overIndex) {
+        newItems = arrayMove(items[finalContainer], activeIndex, overIndex);
         setItems((items) => ({
           ...items,
-          [finalContainer]: arrayMove(
-            items[finalContainer],
-            activeIndex,
-            overIndex
-          ),
+          [finalContainer]: newItems,
         }));
       }
 
@@ -392,10 +392,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         );
 
         // Calculate the exact drop position in the new column
-        const finalColumnItems = items[finalContainer];
-        const dropPosition = finalColumnItems.indexOf(active.id as string);
+        const dropPosition = newItems.indexOf(active.id as string);
 
-        const allTicketsInColumn = finalColumnItems.map((id) => {
+        const allTicketsInColumn = newItems.map((id) => {
           const t = tickets.find((ticket) => `ticket-${ticket.id}` === id);
           return t ? `${t.ticket_key}(${t.column_order})` : id;
         });
@@ -407,7 +406,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           fromColumn: originalContainer,
           toColumn: finalContainer,
           finalColumnItems: allTicketsInColumn,
-          totalInColumn: finalColumnItems.length,
+          totalInColumn: newItems.length,
         });
 
         onTicketMove(ticketId, newColumnId, dropPosition);
@@ -416,7 +415,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         const columnId = parseInt(
           finalContainer.toString().replace("column-", "")
         );
-        const ticketIds = items[finalContainer];
+        const ticketIds = newItems;
 
         const updates = ticketIds.map((ticketId, index) => ({
           ticket_id: parseInt(ticketId.toString().replace("ticket-", "")),
