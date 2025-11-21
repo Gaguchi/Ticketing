@@ -289,7 +289,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
       const ws = webSocketService.connect(
         `ws/projects/${projectId}/tickets/`,
         (data) => {
-          console.log("📨 [WebSocketContext] Ticket update:", data);
+          // console.log("📨 [WebSocketContext] Ticket update:", data);
 
           // Dispatch custom events for ticket changes
           if (
@@ -297,7 +297,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
             data.type === "ticket_updated" ||
             data.type === "ticket_deleted"
           ) {
-            console.log(`🎫 [WebSocketContext] Dispatching ${data.type} event`);
+            // console.log(`🎫 [WebSocketContext] Dispatching ${data.type} event`);
             window.dispatchEvent(
               new CustomEvent("ticketUpdate", {
                 detail: {
@@ -309,10 +309,10 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
             );
           } else if (data.type === "column_refresh") {
             // Bulk position update - tells clients to refetch columns
-            console.log(
-              `🔄 [WebSocketContext] Dispatching column_refresh for columns:`,
-              data.column_ids
-            );
+            // console.log(
+            //   `🔄 [WebSocketContext] Dispatching column_refresh for columns:`,
+            //   data.column_ids
+            // );
             window.dispatchEvent(
               new CustomEvent("columnRefresh", {
                 detail: {

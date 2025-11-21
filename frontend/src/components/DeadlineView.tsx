@@ -121,38 +121,57 @@ const DeadlineColumn: React.FC<{
   return (
     <div
       style={{
-        width: 280,
-        minWidth: 280,
-        marginRight: 12,
+        width: 240,
+        minWidth: 240,
         display: "flex",
         flexDirection: "column",
         maxHeight: "100%",
+        position: "relative",
       }}
     >
-      {/* Column Header */}
+      {/* The Vertical Timeline Line - On the RIGHT */}
       <div
         style={{
-          padding: "8px 12px",
-          borderRadius: "4px 4px 0 0",
+          position: "absolute",
+          right: 0, // Aligned with the flat edge |
+          top: 18,
+          bottom: 0,
+          width: 2,
           backgroundColor: color,
+          opacity: 0.3,
+          zIndex: 1,
+        }}
+      />
+
+      {/* The Arrow Header - <____| Shape */}
+      <div
+        style={{
+          height: 36,
+          backgroundColor: color,
+          marginBottom: 12,
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          fontSize: 13,
-          fontWeight: 600,
+          padding: "0 12px 0 24px", // Left padding for arrow tip
           color: "#fff",
+          fontSize: 12,
+          fontWeight: 700,
           textTransform: "uppercase",
           letterSpacing: "0.5px",
-          marginBottom: 8,
+          position: "relative",
+          // The <____| shape: Point on left, Flat on right
+          clipPath: "polygon(12px 0, 100% 0, 100% 100%, 12px 100%, 0 50%)",
         }}
       >
         <span>{title}</span>
         <span
           style={{
             backgroundColor: "rgba(255,255,255,0.25)",
-            padding: "2px 8px",
+            padding: "1px 8px",
             borderRadius: 10,
-            fontSize: 12,
+            fontSize: 11,
+            minWidth: 24,
+            textAlign: "center",
           }}
         >
           {count}
@@ -164,7 +183,8 @@ const DeadlineColumn: React.FC<{
         style={{
           flex: 1,
           overflowY: "auto",
-          paddingRight: 4,
+          paddingRight: 12, // Padding for the line on the right
+          paddingLeft: 8,
         }}
       >
         <Space direction="vertical" size={8} style={{ width: "100%" }}>
@@ -177,9 +197,11 @@ const DeadlineColumn: React.FC<{
               style={{
                 cursor: "pointer",
                 borderRadius: 4,
-                boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+                border: "1px solid #f0f0f0",
+                background: "#fff",
               }}
-              styles={{ body: { padding: 12 } }}
+              styles={{ body: { padding: "10px 12px" } }}
             >
               {/* Ticket Title */}
               <div
@@ -322,49 +344,49 @@ export const DeadlineView: React.FC<DeadlineViewProps> = ({
       key: "overdue",
       title: "Overdue",
       tickets: categorized.overdue,
-      color: "#c9372c",
+      color: "#de350b", // Jira Red
       count: categorized.overdue.length,
     },
     {
       key: "dueToday",
       title: "Due Today",
       tickets: categorized.dueToday,
-      color: "#d97706",
+      color: "#0052cc", // Jira Blue
       count: categorized.dueToday.length,
     },
     {
       key: "dueThisWeek",
       title: "Due This Week",
       tickets: categorized.dueThisWeek,
-      color: "#0891b2",
+      color: "#2684ff", // Lighter Blue
       count: categorized.dueThisWeek.length,
     },
     {
       key: "dueNextWeek",
       title: "Due Next Week",
       tickets: categorized.dueNextWeek,
-      color: "#0284c7",
+      color: "#4c9aff", // Even Lighter Blue
       count: categorized.dueNextWeek.length,
     },
     {
       key: "noDeadline",
       title: "No Deadline",
       tickets: categorized.noDeadline,
-      color: "#6b7280",
+      color: "#5e6c84", // Slate Gray
       count: categorized.noDeadline.length,
     },
     {
       key: "dueOverTwoWeeks",
       title: "Due Over Two Weeks",
       tickets: categorized.dueOverTwoWeeks,
-      color: "#3b82f6",
+      color: "#42526e", // Darker Gray
       count: categorized.dueOverTwoWeeks.length,
     },
     {
       key: "completed",
       title: "Completed",
       tickets: categorized.completed,
-      color: "#16a34a",
+      color: "#00875a", // Jira Green
       count: categorized.completed.length,
     },
   ];
@@ -377,7 +399,7 @@ export const DeadlineView: React.FC<DeadlineViewProps> = ({
         overflowX: "auto",
         overflowY: "hidden",
         padding: "16px 20px",
-        gap: 0,
+        gap: 4,
       }}
     >
       {columns.map((column) => (

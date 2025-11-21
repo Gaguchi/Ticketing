@@ -209,6 +209,8 @@ class TicketPosition(models.Model):
         from asgiref.sync import async_to_sync
         import time
         
+        print(f"🔄 TicketPosition.move_ticket: Moving {ticket.id} to col {target_column_id} pos {target_order}")
+        
         # Get or create position for this ticket
         position, created = cls.objects.get_or_create(
             ticket=ticket,
@@ -239,6 +241,7 @@ class TicketPosition(models.Model):
                     
                     if old_column_id != target_column_id:
                         # CROSS-COLUMN MOVE
+                        print(f"🔄 Cross-column move: {old_column_id} -> {target_column_id}")
                         affected_columns.add(old_column_id)
                         affected_columns.add(target_column_id)
                         
@@ -248,23 +251,39 @@ class TicketPosition(models.Model):
                             order__gt=old_order
                         ).update(order=models.F('order') - 1)
                         
+                        # Sync Ticket model
+                        Ticket.objects.filter(
+                            column_id=old_column_id,
+                            column_order__gt=old_order
+                        ).update(column_order=models.F('column_order') - 1)
+                        
                         # Shift up tickets in new column
                         cls.objects.filter(
                             column_id=target_column_id,
                             order__gte=target_order
                         ).exclude(ticket=ticket).update(order=models.F('order') + 1)
                         
+                        # Sync Ticket model
+                        Ticket.objects.filter(
+                            column_id=target_column_id,
+                            column_order__gte=target_order
+                        ).exclude(id=ticket.id).update(column_order=models.F('column_order') + 1)
+                        
                         # Update this ticket's position
                         position.column_id = target_column_id
                         position.order = target_order
                         position.save(update_fields=['column_id', 'order'])
                         
-                        # Also update the ticket's column reference
+                        # Also update the ticket's column reference and order
                         ticket.column_id = target_column_id
-                        ticket.save(update_fields=['column'])
+                        ticket.column_order = target_order
+                        # Suppress signal to avoid double-update (we send column_refresh later)
+                        ticket._suppress_signals = True
+                        ticket.save(update_fields=['column', 'column_order'])
                         
                     else:
                         # SAME-COLUMN MOVE
+                        print(f"🔄 Same-column move in {old_column_id}: {old_order} -> {target_order}")
                         affected_columns.add(old_column_id)
                         
                         if target_order < old_order:
@@ -274,6 +293,14 @@ class TicketPosition(models.Model):
                                 order__gte=target_order,
                                 order__lt=old_order
                             ).exclude(ticket=ticket).update(order=models.F('order') + 1)
+                            
+                            # Sync Ticket model for other tickets
+                            Ticket.objects.filter(
+                                column_id=old_column_id,
+                                column_order__gte=target_order,
+                                column_order__lt=old_order
+                            ).exclude(id=ticket.id).update(column_order=models.F('column_order') + 1)
+                            
                         elif target_order > old_order:
                             # Moving down
                             cls.objects.filter(
@@ -281,12 +308,26 @@ class TicketPosition(models.Model):
                                 order__gt=old_order,
                                 order__lte=target_order
                             ).exclude(ticket=ticket).update(order=models.F('order') - 1)
+                            
+                            # Sync Ticket model for other tickets
+                            Ticket.objects.filter(
+                                column_id=old_column_id,
+                                column_order__gt=old_order,
+                                column_order__lte=target_order
+                            ).exclude(id=ticket.id).update(column_order=models.F('column_order') - 1)
                         
                         # Update this ticket's position
                         position.order = target_order
                         position.save(update_fields=['order'])
+                        
+                        # Sync Ticket model
+                        ticket.column_order = target_order
+                        # Suppress signal to avoid double-update (we send column_refresh later)
+                        ticket._suppress_signals = True
+                        ticket.save(update_fields=['column_order'])
                     
                     # Success - break retry loop
+                    print("✅ Move transaction completed successfully")
                     break
                     
             except OperationalError as e:
@@ -540,7 +581,7 @@ class Ticket(models.Model):
         if reason:
             self.archived_reason = reason
         elif auto:
-            self.archived_reason = 'Auto-archived after 3 days in Done'
+            self.archived_reason = 'Auto-archived after 1 day in Done'
         else:
             self.archived_reason = 'Archived manually'
         self.save(update_fields=['is_archived', 'archived_at', 'archived_by', 'archived_reason'])

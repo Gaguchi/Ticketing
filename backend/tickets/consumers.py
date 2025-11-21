@@ -134,39 +134,44 @@ class TicketConsumer(AsyncWebsocketConsumer):
     """
     
     async def connect(self):
-        # Check if user is authenticated
-        if isinstance(self.scope['user'], AnonymousUser):
-            await self.close(code=4001)
-            return
-        
-        self.user = self.scope['user']
-        self.project_id = self.scope['url_route']['kwargs'].get('project_id')
-        
-        if not self.project_id:
-            await self.close(code=4002)  # No project specified
-            return
-        
-        # Verify user has access to this project
-        has_access = await self.user_has_project_access(self.user.id, self.project_id)
-        if not has_access:
-            await self.close(code=4003)  # No access to project
-            return
-        
-        # Join project-specific group
-        self.project_group_name = f'project_{self.project_id}_tickets'
-        await self.channel_layer.group_add(
-            self.project_group_name,
-            self.channel_name
-        )
-        
-        await self.accept()
-        
-        # Send welcome message
-        await self.send(text_data=json.dumps({
-            'type': 'connection_established',
-            'message': f'Connected to project {self.project_id} ticket stream',
-            'project_id': self.project_id,
-        }))
+        try:
+            # Check if user is authenticated
+            if isinstance(self.scope['user'], AnonymousUser):
+                await self.close(code=4001)
+                return
+            
+            self.user = self.scope['user']
+            self.project_id = self.scope['url_route']['kwargs'].get('project_id')
+            
+            if not self.project_id:
+                await self.close(code=4002)  # No project specified
+                return
+            
+            # Verify user has access to this project
+            has_access = await self.user_has_project_access(self.user.id, self.project_id)
+            if not has_access:
+                print(f"❌ TicketConsumer: User {self.user.username} denied access to project {self.project_id}")
+                await self.close(code=4003)  # No access to project
+                return
+            
+            # Join project-specific group
+            self.project_group_name = f'project_{self.project_id}_tickets'
+            await self.channel_layer.group_add(
+                self.project_group_name,
+                self.channel_name
+            )
+            
+            await self.accept()
+            
+            # Send welcome message
+            await self.send(text_data=json.dumps({
+                'type': 'connection_established',
+                'message': f'Connected to project {self.project_id} ticket stream',
+                'project_id': self.project_id,
+            }))
+        except Exception as e:
+            print(f"❌ TicketConsumer Error: {e}")
+            await self.close(code=1011)
     
     async def disconnect(self, close_code):
         # Leave project group
@@ -234,6 +239,10 @@ class TicketConsumer(AsyncWebsocketConsumer):
         """
         Check if user has access to project
         """
+        # Allow superusers to access any project
+        if self.user.is_superuser:
+            return True
+
         from tickets.models import Project
         try:
             project = Project.objects.get(id=project_id)
@@ -253,37 +262,64 @@ class PresenceConsumer(AsyncWebsocketConsumer):
     """
     
     async def connect(self):
-        # Check if user is authenticated
-        if isinstance(self.scope['user'], AnonymousUser):
-            await self.close(code=4001)
-            return
-        
-        self.user = self.scope['user']
-        self.project_id = self.scope['url_route']['kwargs'].get('project_id')
-        
-        if not self.project_id:
-            await self.close(code=4002)
-            return
-        
-        # Join presence group for project
-        self.presence_group_name = f'project_{self.project_id}_presence'
-        await self.channel_layer.group_add(
-            self.presence_group_name,
-            self.channel_name
-        )
-        
-        await self.accept()
-        
-        # Broadcast user joined
-        await self.channel_layer.group_send(
-            self.presence_group_name,
-            {
-                'type': 'user_status',
-                'action': 'joined',
-                'user_id': self.user.id,
-                'username': self.user.username,
-            }
-        )
+        try:
+            # Check if user is authenticated
+            if isinstance(self.scope['user'], AnonymousUser):
+                await self.close(code=4001)
+                return
+            
+            self.user = self.scope['user']
+            self.project_id = self.scope['url_route']['kwargs'].get('project_id')
+            
+            if not self.project_id:
+                await self.close(code=4002)
+                return
+            
+            # Verify user has access to this project
+            has_access = await self.user_has_project_access(self.user.id, self.project_id)
+            if not has_access:
+                print(f"❌ PresenceConsumer: User {self.user.username} denied access to project {self.project_id}")
+                await self.close(code=4003)
+                return
+            
+            # Join presence group for project
+            self.presence_group_name = f'project_{self.project_id}_presence'
+            await self.channel_layer.group_add(
+                self.presence_group_name,
+                self.channel_name
+            )
+            
+            await self.accept()
+            
+            # Broadcast user joined
+            await self.channel_layer.group_send(
+                self.presence_group_name,
+                {
+                    'type': 'user_status',
+                    'action': 'joined',
+                    'user_id': self.user.id,
+                    'username': self.user.username,
+                }
+            )
+        except Exception as e:
+            print(f"❌ PresenceConsumer Error: {e}")
+            await self.close(code=1011)
+
+    @database_sync_to_async
+    def user_has_project_access(self, user_id, project_id):
+        """
+        Check if user has access to project
+        """
+        # Allow superusers
+        if self.user.is_superuser:
+            return True
+            
+        from tickets.models import Project
+        try:
+            project = Project.objects.get(id=project_id)
+            return project.members.filter(id=user_id).exists()
+        except Project.DoesNotExist:
+            return False
     
     async def disconnect(self, close_code):
         # Broadcast user left

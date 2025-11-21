@@ -204,6 +204,7 @@ export interface Ticket {
   column_name: string;
   column_order: number; // Position within column (legacy field, kept for backward compatibility)
   assignees: User[];
+  assignee_ids?: number[]; // Added to support list view response
   reporter: User;
   parent: number | null;
   subtasks: Ticket[];

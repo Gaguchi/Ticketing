@@ -138,6 +138,16 @@ export const QuickTicketCreator: React.FC<QuickTicketCreatorProps> = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [onClose]);
 
+  // Auto-focus textarea when ready (on mount or after creation)
+  useEffect(() => {
+    if (!isCreating) {
+      const timer = setTimeout(() => {
+        textareaRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isCreating]);
+
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
 
@@ -185,11 +195,8 @@ export const QuickTicketCreator: React.FC<QuickTicketCreatorProps> = ({
 
       onSuccess?.(newTicket);
 
-      // Close the quick creator after successful creation
-      onClose?.();
-
-      // Focus back on input (if still open)
-      textareaRef.current?.focus();
+      // Keep the quick creator open for multiple ticket creation
+      // onClose?.();
     } catch (error: any) {
       console.error("Failed to create ticket:", error);
       message.error(error.message || "Failed to create ticket");

@@ -111,6 +111,10 @@ def ticket_saved(sender, instance, created, **kwargs):
     Broadcast ticket creation/update to all users in the project.
     Sends complete ticket data to avoid API fetch.
     """
+    # Check if signals should be suppressed (e.g. during bulk updates)
+    if getattr(instance, '_suppress_signals', False):
+        return
+
     action = 'created' if created else 'updated'
     
     # Get ticket key using the model's property (uses project_number, not id)

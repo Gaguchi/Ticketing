@@ -30,7 +30,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { getPriorityIcon } from "../components/PriorityIcons";
 import { TicketModal } from "../components/TicketModal";
 import { CreateTicketModal } from "../components/CreateTicketModal";
-import { useProject } from "../contexts/AppContext";
+import { useProject, useAuth } from "../contexts/AppContext";
 import type { Ticket } from "../types/api";
 import type { TableColumnsType } from "antd";
 import { ticketService } from "../services";
@@ -236,7 +236,9 @@ const Dashboard: React.FC = () => {
       id: "myTickets",
       title: "Assigned to Me",
       filter: (ticket) =>
-        ticket.assignees?.some((user) => user.id === 1) || false,
+        ticket.assignees?.some((user) => user.id === -1) ||
+        ticket.assignee_ids?.includes(-1) ||
+        false,
       color: "#1890ff",
     },
     {
@@ -290,6 +292,27 @@ const Dashboard: React.FC = () => {
 
   // Load tickets on mount and when project changes
   const { selectedProject } = useProject();
+  const { user } = useAuth();
+
+  // Update "Assigned to Me" filter when user is loaded
+  useEffect(() => {
+    if (user) {
+      setFilterBoxes((prevBoxes) =>
+        prevBoxes.map((box) => {
+          if (box.id === "myTickets") {
+            return {
+              ...box,
+              filter: (ticket) =>
+                ticket.assignees?.some((assignee) => assignee.id === user.id) ||
+                ticket.assignee_ids?.includes(user.id) ||
+                false,
+            };
+          }
+          return box;
+        })
+      );
+    }
+  }, [user?.id]);
 
   useEffect(() => {
     if (selectedProject) {
@@ -314,15 +337,15 @@ const Dashboard: React.FC = () => {
         // Check if we have an optimistic ticket for this
         const optimisticId = Array.from(
           optimisticTicketsRef.current.entries()
-        ).find(([_, realId]) => realId === data.ticket_id)?.[0];
+        ).find(([_, realId]) => realId === data.id)?.[0];
 
         if (optimisticId) {
           // Replace optimistic ticket with real one
           console.log(
-            `🔄 Replacing optimistic ticket ${optimisticId} with real ticket ${data.ticket_id}`
+            `🔄 Replacing optimistic ticket ${optimisticId} with real ticket ${data.id}`
           );
           try {
-            const newTicket = await ticketService.getTicket(data.ticket_id);
+            const newTicket = await ticketService.getTicket(data.id);
             setTickets((prev) =>
               prev.map((t) => (t.id === optimisticId ? newTicket : t))
             );
@@ -332,9 +355,9 @@ const Dashboard: React.FC = () => {
           }
         } else {
           // This is from another user/session, add it normally
-          console.log(`➕ Adding new ticket from WebSocket: ${data.ticket_id}`);
+          console.log(`➕ Adding new ticket from WebSocket: ${data.id}`);
           try {
-            const newTicket = await ticketService.getTicket(data.ticket_id);
+            const newTicket = await ticketService.getTicket(data.id);
             // Check if ticket already exists (edge case)
             setTickets((prev) => {
               if (prev.some((t) => t.id === newTicket.id)) {
@@ -346,7 +369,7 @@ const Dashboard: React.FC = () => {
               return [newTicket, ...prev];
             });
             // message.success(
-            //   `New ticket created: ${data.ticket_key || `#${data.ticket_id}`}`
+            //   `New ticket created: ${data.ticket_key || `#${data.id}`}`
             // );
           } catch (error) {
             console.error("Failed to fetch new ticket:", error);
@@ -355,19 +378,17 @@ const Dashboard: React.FC = () => {
       } else if (type === "ticket_updated") {
         // Update existing ticket in list
         try {
-          const updatedTicket = await ticketService.getTicket(data.ticket_id);
+          const updatedTicket = await ticketService.getTicket(data.id);
           setTickets((prev) =>
-            prev.map((t) => (t.id === data.ticket_id ? updatedTicket : t))
+            prev.map((t) => (t.id === data.id ? updatedTicket : t))
           );
         } catch (error) {
           console.error("Failed to fetch updated ticket:", error);
         }
       } else if (type === "ticket_deleted") {
         // Remove ticket from list
-        setTickets((prev) => prev.filter((t) => t.id !== data.ticket_id));
-        message.info(
-          `Ticket ${data.ticket_key || `#${data.ticket_id}`} was deleted`
-        );
+        setTickets((prev) => prev.filter((t) => t.id !== data.id));
+        message.info(`Ticket ${data.ticket_key || `#${data.id}`} was deleted`);
       }
     };
 
@@ -393,7 +414,6 @@ const Dashboard: React.FC = () => {
 
     // Add optimistic ticket immediately for instant feedback
     setTickets((prev) => [optimisticTicket, ...prev]);
-    setIsCreateModalOpen(false);
 
     // Success message will come from WebSocket when real ticket arrives
     console.log(

@@ -1099,7 +1099,7 @@ class TicketViewSet(viewsets.ModelViewSet):
     def reorder_tickets(self, request):
         """
         Reorder tickets within a column or across columns.
-        Uses backend positioning logic for consistency.
+        Uses direct updates for performance (bypassing move_to_position logic).
         Body: {
             "updates": [
                 {"ticket_id": 1, "column_id": 2, "order": 0},
@@ -1120,6 +1120,7 @@ class TicketViewSet(viewsets.ModelViewSet):
             from django.db import transaction
             from channels.layers import get_channel_layer
             from asgiref.sync import async_to_sync
+            from .models import TicketPosition
             
             updated_tickets = []
             affected_columns = set()
@@ -1134,22 +1135,42 @@ class TicketViewSet(viewsets.ModelViewSet):
                     if ticket_id is None or order is None:
                         continue
                     
-                    ticket = Ticket.objects.get(id=ticket_id)
-                    if project_id is None:
-                        project_id = ticket.project_id
-                    
-                    # Use the model's positioning method
                     if column_id is not None:
-                        # Add both old and new columns to affected set
-                        affected_columns.add(ticket.column_id)
                         affected_columns.add(column_id)
-                        ticket.move_to_position(column_id, order, broadcast=False)
-                    else:
-                        # Just reorder within current column
-                        affected_columns.add(ticket.column_id)
-                        ticket.move_to_position(ticket.column_id, order, broadcast=False)
                     
-                    updated_tickets.append(ticket.id)
+                    # We need to get the project_id from at least one ticket
+                    if project_id is None:
+                        try:
+                            ticket = Ticket.objects.get(id=ticket_id)
+                            project_id = ticket.project_id
+                            # Also add current column just in case
+                            affected_columns.add(ticket.column_id)
+                        except Ticket.DoesNotExist:
+                            continue
+
+                    # Direct update for performance
+                    # 1. Update TicketPosition
+                    if column_id is not None:
+                        TicketPosition.objects.update_or_create(
+                            ticket_id=ticket_id,
+                            defaults={'column_id': column_id, 'order': order}
+                        )
+                        # 2. Update Ticket (sync)
+                        Ticket.objects.filter(id=ticket_id).update(
+                            column_id=column_id, 
+                            column_order=order
+                        )
+                    else:
+                        # Same column reorder
+                        TicketPosition.objects.update_or_create(
+                            ticket_id=ticket_id,
+                            defaults={'order': order}
+                        )
+                        Ticket.objects.filter(id=ticket_id).update(
+                            column_order=order
+                        )
+                    
+                    updated_tickets.append(ticket_id)
             
             # Broadcast once after all updates are committed
             if project_id and affected_columns:
@@ -1166,11 +1187,6 @@ class TicketViewSet(viewsets.ModelViewSet):
                 'status': 'tickets reordered',
                 'updated': updated_tickets
             })
-        except Ticket.DoesNotExist:
-            return Response(
-                {'error': 'Ticket not found'},
-                status=status.HTTP_404_NOT_FOUND
-            )
         except Exception as e:
             return Response(
                 {'error': str(e)},

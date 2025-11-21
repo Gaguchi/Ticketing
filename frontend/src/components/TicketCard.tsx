@@ -1,7 +1,7 @@
 import React, { memo } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Avatar, Row, Col, Space } from "antd";
+import { Avatar, Space } from "antd";
 import { EyeOutlined, MessageOutlined, UserOutlined } from "@ant-design/icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -119,15 +119,16 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
         >
           {ticket.name}
         </div>
-        <Row
-          justify="space-between"
-          align="middle"
+        <div
           style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
             color: "#5e6c84",
             fontSize: "12px",
           }}
         >
-          <Col>
+          <div>
             <Space align="center" size={8}>
               {/* Issue Type and ID */}
               <Space size={4} align="center">
@@ -156,8 +157,8 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
                 </Space>
               )}
             </Space>
-          </Col>
-          <Col>
+          </div>
+          <div>
             <Space align="center" size={6}>
               {getPriorityIcon(ticket.priority_id ?? 3)}
               {ticket.assignees && ticket.assignees.length > 0 && (
@@ -183,8 +184,8 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
                 </Avatar.Group>
               )}
             </Space>
-          </Col>
-        </Row>
+          </div>
+        </div>
       </div>
     </div>
   );

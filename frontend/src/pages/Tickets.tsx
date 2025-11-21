@@ -15,6 +15,7 @@ import {
   ClockCircleOutlined,
   InboxOutlined,
   RollbackOutlined,
+  CalendarOutlined,
 } from "@ant-design/icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -25,6 +26,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { KanbanBoard } from "../components/KanbanBoard";
 import { DeadlineView } from "../components/DeadlineView";
+import { CalendarView } from "../components/CalendarView";
 import { getPriorityIcon } from "../components/PriorityIcons";
 import { TicketModal } from "../components/TicketModal";
 import { CreateTicketModal } from "../components/CreateTicketModal";
@@ -65,8 +67,18 @@ const formatTicketId = (ticket: Ticket) => {
 
 const Tickets: React.FC = () => {
   const [viewMode, setViewMode] = useState<
-    "list" | "kanban" | "deadline" | "archive"
-  >("kanban");
+    "list" | "kanban" | "deadline" | "archive" | "calendar"
+  >(() => {
+    const savedMode = localStorage.getItem("ticketsViewMode");
+    return (
+      (savedMode as "list" | "kanban" | "deadline" | "archive" | "calendar") ||
+      "kanban"
+    );
+  });
+
+  useEffect(() => {
+    localStorage.setItem("ticketsViewMode", viewMode);
+  }, [viewMode]);
   const [searchText, setSearchText] = useState("");
   const [filterStatus, setFilterStatus] = useState<string | undefined>(
     undefined
@@ -82,11 +94,12 @@ const Tickets: React.FC = () => {
   const [archivedTickets, setArchivedTickets] = useState<Ticket[]>([]);
   const [archiveLoading, setArchiveLoading] = useState(false);
 
-  const RECENT_UPDATE_WINDOW_MS = 2500;
+  const RECENT_UPDATE_WINDOW_MS = 5000; // Increased from 2500ms to handle slow backend
 
   // Track ticket IDs we've received via WebSocket to prevent duplicates
   const receivedTicketIdsRef = useRef<Set<number>>(new Set());
   const recentTicketUpdatesRef = useRef<Map<number, number>>(new Map());
+  const lastMoveTimeRef = useRef<number>(0);
 
   // Track drag state to prevent WebSocket updates during drag operations
   const isDraggingRef = useRef(false);
@@ -291,6 +304,12 @@ const Tickets: React.FC = () => {
         return;
       }
 
+      // Skip refresh if we just moved a ticket (we already have the latest state)
+      if (Date.now() - lastMoveTimeRef.current < 5000) {
+        console.log("⏳ Skipping column refresh (handled optimistically)");
+        return;
+      }
+
       console.log(`🔄 [Tickets] Column refresh for columns:`, columnIds);
 
       // Refetch tickets for the entire project to get updated positions
@@ -393,20 +412,36 @@ const Tickets: React.FC = () => {
     const previousColumnId = ticket.column;
     const previousColumnName = ticket.column_name;
 
-    // OPTIMISTIC UPDATE: Update UI immediately
+    // OPTIMISTIC UPDATE: Update UI immediately with full reordering logic
     console.log("⚡ Optimistic update: Updating UI immediately");
-    setTickets((prevTickets) =>
-      prevTickets.map((t) =>
-        t.id === ticketId
-          ? {
-              ...t,
-              column: newColumnId,
-              column_name: column.name,
-              column_order: order, // Update order for proper sorting
-            }
-          : t
-      )
-    );
+    setTickets((prevTickets) => {
+      return prevTickets.map((t) => {
+        // 1. The moved ticket
+        if (t.id === ticketId) {
+          return {
+            ...t,
+            column: newColumnId,
+            column_name: column.name,
+            column_order: order,
+          };
+        }
+
+        // 2. Tickets in the OLD column: Shift down those that were below the moved ticket
+        if (
+          t.column === previousColumnId &&
+          t.column_order > (ticket.column_order || 0)
+        ) {
+          return { ...t, column_order: t.column_order - 1 };
+        }
+
+        // 3. Tickets in the NEW column: Shift up those that are at or below the insertion point
+        if (t.column === newColumnId && t.column_order >= order) {
+          return { ...t, column_order: t.column_order + 1 };
+        }
+
+        return t;
+      });
+    });
 
     // Send PATCH request in the background (non-blocking)
     console.log("🚀 Queuing PATCH request:", {
@@ -417,6 +452,7 @@ const Tickets: React.FC = () => {
     });
 
     recentTicketUpdatesRef.current.set(ticketId, Date.now());
+    lastMoveTimeRef.current = Date.now();
 
     try {
       const response = await ticketService.updateTicket(ticketId, {
@@ -454,6 +490,8 @@ const Tickets: React.FC = () => {
       message.error("Failed to update ticket - changes reverted");
     } finally {
       recentTicketUpdatesRef.current.set(ticketId, Date.now());
+      // Extend the window to cover the WebSocket message arrival
+      lastMoveTimeRef.current = Date.now();
     }
   };
 
@@ -462,12 +500,35 @@ const Tickets: React.FC = () => {
   ) => {
     console.log("📋 handleTicketReorder called:", updates);
 
+    // OPTIMISTIC UPDATE: Update UI immediately
+    setTickets((prevTickets) => {
+      const updatesMap = new Map(
+        updates.map((u) => [
+          u.ticket_id,
+          { column: u.column_id, order: u.order },
+        ])
+      );
+
+      return prevTickets.map((t) => {
+        const update = updatesMap.get(t.id);
+        if (update) {
+          return {
+            ...t,
+            column: update.column,
+            column_order: update.order,
+          };
+        }
+        return t;
+      });
+    });
+
     try {
       await ticketService.reorderTickets(updates);
       console.log("✅ Tickets reordered successfully");
     } catch (error: any) {
       console.error("❌ Failed to reorder tickets:", error);
       message.error("Failed to save ticket order");
+      // TODO: Rollback logic could be added here if needed
     }
   };
 
@@ -580,23 +641,29 @@ const Tickets: React.FC = () => {
 
   const normalizedSearch = searchText.trim().toLowerCase();
 
-  const matchesSearch = (ticket: Ticket) => {
-    if (!normalizedSearch) return true;
-    return (
-      ticket.name.toLowerCase().includes(normalizedSearch) ||
-      ticket.ticket_key?.toLowerCase().includes(normalizedSearch) ||
-      ticket.tags_detail?.some((tag) =>
-        tag.name.toLowerCase().includes(normalizedSearch)
-      )
-    );
-  };
+  const filteredTickets = useMemo(() => {
+    return tickets
+      .filter((ticket) => !ticket.is_archived)
+      .filter((ticket) => {
+        // Search filter
+        if (normalizedSearch) {
+          const matchesSearch =
+            ticket.name.toLowerCase().includes(normalizedSearch) ||
+            ticket.ticket_key?.toLowerCase().includes(normalizedSearch) ||
+            ticket.tags_detail?.some((tag) =>
+              tag.name.toLowerCase().includes(normalizedSearch)
+            );
+          if (!matchesSearch) return false;
+        }
 
-  const matchesStatus = (ticket: Ticket) =>
-    !filterStatus || ticket.column_name === filterStatus;
+        // Status filter
+        if (filterStatus) {
+          if (ticket.column_name !== filterStatus) return false;
+        }
 
-  const filteredTickets = tickets
-    .filter((ticket) => !ticket.is_archived)
-    .filter((ticket) => matchesSearch(ticket) && matchesStatus(ticket));
+        return true;
+      });
+  }, [tickets, normalizedSearch, filterStatus]);
 
   const loadArchivedTickets = useCallback(async () => {
     if (!selectedProject) {
@@ -618,9 +685,27 @@ const Tickets: React.FC = () => {
     }
   }, [selectedProject]);
 
-  const filteredArchivedTickets = archivedTickets.filter(
-    (ticket) => matchesSearch(ticket) && matchesStatus(ticket)
-  );
+  const filteredArchivedTickets = useMemo(() => {
+    return archivedTickets.filter((ticket) => {
+      // Search filter
+      if (normalizedSearch) {
+        const matchesSearch =
+          ticket.name.toLowerCase().includes(normalizedSearch) ||
+          ticket.ticket_key?.toLowerCase().includes(normalizedSearch) ||
+          ticket.tags_detail?.some((tag) =>
+            tag.name.toLowerCase().includes(normalizedSearch)
+          );
+        if (!matchesSearch) return false;
+      }
+
+      // Status filter
+      if (filterStatus) {
+        if (ticket.column_name !== filterStatus) return false;
+      }
+
+      return true;
+    });
+  }, [archivedTickets, normalizedSearch, filterStatus]);
 
   useEffect(() => {
     if (viewMode === "archive") {
@@ -812,7 +897,9 @@ const Tickets: React.FC = () => {
           <Segmented
             value={viewMode}
             onChange={(value) =>
-              setViewMode(value as "list" | "kanban" | "deadline" | "archive")
+              setViewMode(
+                value as "list" | "kanban" | "deadline" | "archive" | "calendar"
+              )
             }
             options={[
               { label: "List", value: "list", icon: <UnorderedListOutlined /> },
@@ -821,6 +908,11 @@ const Tickets: React.FC = () => {
                 label: "Deadline",
                 value: "deadline",
                 icon: <ClockCircleOutlined />,
+              },
+              {
+                label: "Calendar",
+                value: "calendar",
+                icon: <CalendarOutlined />,
               },
               {
                 label: "Archive",
@@ -890,6 +982,12 @@ const Tickets: React.FC = () => {
             columns={kanbanColumns}
             onTicketClick={handleTicketClick}
           />
+        ) : viewMode === "calendar" ? (
+          <CalendarView
+            tickets={filteredTickets}
+            columns={kanbanColumns}
+            onTicketClick={handleTicketClick}
+          />
         ) : (
           <Table
             columns={archiveColumns}
@@ -932,7 +1030,6 @@ const Tickets: React.FC = () => {
           // Add the ticket immediately for instant feedback
           // The WebSocket duplicate check will prevent double-adding
           setTickets((prev) => [newTicket, ...prev]);
-          setIsCreateModalOpen(false);
 
           console.log(
             `✅ Ticket ${newTicket.id} added to UI, WebSocket will be ignored`
