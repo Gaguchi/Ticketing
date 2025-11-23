@@ -39,7 +39,7 @@ const { Text } = Typography;
 
 const Chat: React.FC = () => {
   const { selectedProject } = useProject();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
   const [activeRoom, setActiveRoom] = useState<ChatRoom | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -370,6 +370,10 @@ const Chat: React.FC = () => {
 
     const onClose = (event: CloseEvent) => {
       console.log("🔌 [Chat] WebSocket disconnected:", event);
+      if (event.code === 4001 || event.code === 4003) {
+        console.log("🔒 [Chat] Auth failure, logging out...");
+        logout();
+      }
     };
 
     // Small delay to ensure previous WebSocket is fully closed
@@ -522,7 +526,7 @@ const Chat: React.FC = () => {
     try {
       // Check if direct chat already exists
       const existingChat = directChats.find((room) =>
-        room.participants.some((p) => p.user.id === member.id)
+        room.participants?.some((p) => p.user.id === member.id)
       );
 
       if (existingChat) {
@@ -719,7 +723,7 @@ const Chat: React.FC = () => {
                 )}
                 renderItem={(member) => {
                   const existingChat = directChats.find((room) =>
-                    room.participants.some((p) => p.user.id === member.id)
+                    room.participants?.some((p) => p.user.id === member.id)
                   );
                   const isActive = activeRoom?.id === existingChat?.id;
                   const unreadCount = existingChat?.unread_count || 0;
@@ -930,7 +934,7 @@ const Chat: React.FC = () => {
                   <br />
                   <Text style={{ fontSize: 12, color: "#8c8c8c" }}>
                     {activeRoom.type === "group"
-                      ? `${activeRoom.participants.length} members`
+                      ? `${activeRoom.participants?.length || 0} members`
                       : "Direct message"}
                   </Text>
                 </div>

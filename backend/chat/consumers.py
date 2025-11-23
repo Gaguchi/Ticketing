@@ -17,13 +17,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
         
         # Check if user is authenticated
         if not self.user.is_authenticated:
-            await self.close()
+            await self.close(code=4001)
             return
         
         # Check if user is participant
         is_participant = await self.check_participant()
         if not is_participant:
-            await self.close()
+            await self.close(code=4003)
             return
         
         # Join room group

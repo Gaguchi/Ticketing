@@ -56,7 +56,7 @@ const WebSocketContext = createContext<WebSocketContextType | undefined>(
 export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [isNotificationConnected, setIsNotificationConnected] = useState(false);
   const [isTicketConnected, setIsTicketConnected] = useState(false);
   const [isPresenceConnected, setIsPresenceConnected] = useState(false);
@@ -253,13 +253,17 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
       (event) => {
         console.log("🔌 [WebSocketContext] Notification disconnected:", event);
         setIsNotificationConnected(false);
+        if (event.code === 4001 || event.code === 4003) {
+          console.log("🔒 [WebSocketContext] Auth failure, logging out...");
+          logout();
+        }
       }
     );
 
     if (ws) {
       setIsNotificationConnected(true);
     }
-  }, [user, addNotification, markAsRead]);
+  }, [user, addNotification, markAsRead, logout]);
 
   const connectTickets = useCallback(
     (projectId: number) => {
@@ -322,6 +326,10 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
         (event) => {
           console.log("🔌 [WebSocketContext] Ticket disconnected:", event);
           setIsTicketConnected(false);
+          if (event.code === 4001 || event.code === 4003) {
+            console.log("🔒 [WebSocketContext] Auth failure, logging out...");
+            logout();
+          }
         }
       );
 
@@ -329,7 +337,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
         setIsTicketConnected(true);
       }
     },
-    [user, disconnectTickets, disconnectPresence]
+    [user, disconnectTickets, disconnectPresence, logout]
   );
 
   const connectPresence = useCallback(
@@ -356,6 +364,10 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
         (event) => {
           console.log("🔌 [WebSocketContext] Presence disconnected:", event);
           setIsPresenceConnected(false);
+          if (event.code === 4001 || event.code === 4003) {
+            console.log("🔒 [WebSocketContext] Auth failure, logging out...");
+            logout();
+          }
         }
       );
 
@@ -363,7 +375,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
         setIsPresenceConnected(true);
       }
     },
-    [user]
+    [user, logout]
   );
 
   // Send functions

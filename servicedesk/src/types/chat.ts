@@ -47,7 +47,7 @@ export interface ChatRoom {
   name: string;
   type: 'direct' | 'group';
   project: number;
-  participants: ChatParticipant[];
+  participants?: ChatParticipant[];
   created_by: ChatUser | null;
   last_message: ChatMessage | null;
   unread_count: number;
