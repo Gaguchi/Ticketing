@@ -824,6 +824,7 @@ class Notification(models.Model):
         ('mention', 'Mentioned'),
         ('status_changed', 'Status Changed'),
         ('priority_changed', 'Priority Changed'),
+        ('chat_message', 'Chat Message'),
         ('general', 'General'),
     ]
     

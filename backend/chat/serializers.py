@@ -97,6 +97,10 @@ class ChatRoomSerializer(serializers.ModelSerializer):
     
     def get_unread_count(self, obj):
         """Get unread message count for current user."""
+        # Use annotated value if available (from ViewSet optimization)
+        if hasattr(obj, 'unread_count_annotated'):
+            return obj.unread_count_annotated
+
         request = self.context.get('request')
         if not request or not request.user:
             return 0

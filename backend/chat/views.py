@@ -2,7 +2,8 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from django.db.models import Q
+from django.db.models import Q, OuterRef, Subquery, Count, F, DateTimeField
+from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404
 from .models import ChatRoom, ChatMessage, ChatParticipant, MessageReaction
 from .serializers import (
@@ -27,6 +28,26 @@ class ChatRoomViewSet(viewsets.ModelViewSet):
         project_id = self.request.query_params.get('project')
         if project_id:
             queryset = queryset.filter(project_id=project_id)
+            
+        # Optimize unread count calculation
+        # 1. Get the user's last_read_at for each room
+        last_read_subquery = ChatParticipant.objects.filter(
+            room=OuterRef('pk'),
+            user=user
+        ).values('last_read_at')[:1]
+        
+        queryset = queryset.annotate(
+            user_last_read=Subquery(last_read_subquery)
+        )
+        
+        # 2. Count messages created after user_last_read
+        # If user_last_read is null, count all messages
+        queryset = queryset.annotate(
+            unread_count_annotated=Count(
+                'messages',
+                filter=Q(messages__created_at__gt=F('user_last_read')) | Q(user_last_read__isnull=True)
+            )
+        )
         
         return queryset.distinct().order_by('-updated_at')
     
