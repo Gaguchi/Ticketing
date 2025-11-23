@@ -105,6 +105,25 @@ class ApiService {
 
     return response.json();
   }
+
+  async postFormData<T>(url: string, formData: FormData): Promise<T> {
+    const token = localStorage.getItem('access_token');
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Request failed' }));
+      throw new Error(error.error || error.detail || 'Request failed');
+    }
+
+    return response.json();
+  }
 }
 
 export default new ApiService();

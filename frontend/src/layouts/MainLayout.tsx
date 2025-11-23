@@ -173,21 +173,29 @@ const MainLayout: React.FC = () => {
     };
   }, [selectedProject?.id]); // Only depend on project ID
 
-  // Listen for global notifications to update chat count
+  // Listen for global chat notifications to update chat count
   useEffect(() => {
-    if (notifications.length > 0 && selectedProject) {
-      const latest = notifications[0];
-      if (latest.type === "chat_message") {
-        chatService.getRooms(selectedProject.id).then((rooms) => {
-          const totalUnread = rooms.reduce(
-            (sum, room) => sum + room.unread_count,
-            0
-          );
-          setUnreadChatCount(totalUnread);
-        });
-      }
-    }
-  }, [notifications, selectedProject]);
+    if (!selectedProject) return;
+
+    const handleChatNotification = () => {
+      console.log(
+        "🔔 [MainLayout] Chat notification received, updating unread count"
+      );
+      chatService.getRooms(selectedProject.id).then((rooms) => {
+        const totalUnread = rooms.reduce(
+          (sum, room) => sum + room.unread_count,
+          0
+        );
+        setUnreadChatCount(totalUnread);
+      });
+    };
+
+    window.addEventListener("chatNotification", handleChatNotification);
+
+    return () => {
+      window.removeEventListener("chatNotification", handleChatNotification);
+    };
+  }, [selectedProject?.id]);
 
   const handleMenuClick: MenuProps["onClick"] = ({ key }) => {
     if (key === "logout") {

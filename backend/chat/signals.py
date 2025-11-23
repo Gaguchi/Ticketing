@@ -1,7 +1,6 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from .models import ChatMessage
-from tickets.models import Notification
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from django.utils import timezone
@@ -35,54 +34,36 @@ def chat_message_saved(sender, instance, created, **kwargs):
     link = f'/chat/{room.id}'
     timestamp = timezone.now()
     
-    # Prepare notifications for bulk creation
-    notifications = []
-    
-    for participant in participants:
-        n = Notification(
-            user=participant.user,
-            notification_type='chat_message',
-            title=title,
-            message=message_preview,
-            link=link,
-            data={
-                'room_id': room.id,
-                'message_id': instance.id,
-                'sender_id': sender_user.id,
-                'room_type': room.type,
-            }
-        )
-        notifications.append(n)
-    
-    # Bulk create in one query
-    # Django 4.0+ populates primary keys on bulk_create for PostgreSQL
-    Notification.objects.bulk_create(notifications)
-    
-    # Send WebSocket messages
-    # We avoid DB queries in this loop
+    # Send WebSocket messages ONLY (No DB Notification creation)
     channel_layer = get_channel_layer()
     if channel_layer:
-        for notification in notifications:
+        for participant in participants:
+            # Construct notification data without DB object
             notification_data = {
-                'id': notification.id,
+                'id': 0, # Placeholder ID since we don't save to DB
                 'type': 'chat_message',
-                'title': notification.title,
-                'message': notification.message,
-                'link': notification.link,
+                'title': title,
+                'message': message_preview,
+                'link': link,
                 'is_read': False,
-                'data': notification.data,
+                'data': {
+                    'room_id': room.id,
+                    'message_id': instance.id,
+                    'sender_id': sender_user.id,
+                    'room_type': room.type,
+                },
                 'created_at': timestamp.isoformat(),
                 'timestamp': timestamp.isoformat(),
             }
             
-            group_name = f'user_{notification.user.id}_notifications'
+            group_name = f'user_{participant.user.id}_notifications'
             try:
                 async_to_sync(channel_layer.group_send)(
                     group_name,
                     {
-                        'type': 'notification_message',
+                        'type': 'chat_notification', # Use distinct type
                         'data': notification_data
                     }
                 )
             except Exception as e:
-                print(f"❌ Error sending chat notification to user {notification.user.id}: {e}")
+                print(f"❌ Error sending chat notification to user {participant.user.id}: {e}")

@@ -13,8 +13,7 @@ import React, {
 } from "react";
 import { message as antMessage } from "antd";
 import { webSocketService } from "../services/websocket.service";
-import { notificationService } from "../services/notification.service";
-import { useAuth } from "./AppContext";
+import { useAuth } from "./AuthContext";
 import type { Notification } from "../types/notification";
 
 interface WebSocketContextType {
@@ -57,7 +56,7 @@ const WebSocketContext = createContext<WebSocketContextType | undefined>(
 export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const { user, isAuthenticated } = useAuth();
+  const { user } = useAuth();
   const [isNotificationConnected, setIsNotificationConnected] = useState(false);
   const [isTicketConnected, setIsTicketConnected] = useState(false);
   const [isPresenceConnected, setIsPresenceConnected] = useState(false);
@@ -71,12 +70,12 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Auto-connect to notifications when user logs in
   useEffect(() => {
-    if (isAuthenticated && user) {
+    if (user) {
       console.log(
         "🔌 [WebSocketContext] User authenticated, connecting to notifications..."
       );
       connectNotifications();
-      loadInitialNotifications();
+      // loadInitialNotifications(); // Skipped for now as we don't have notificationService
     } else {
       console.log(
         "🔌 [WebSocketContext] User not authenticated, disconnecting all..."
@@ -91,24 +90,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
       disconnectAll();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, user?.id]); // Only depend on user ID, not full object
-
-  /**
-   * Load initial notifications from API
-   */
-  const loadInitialNotifications = useCallback(async () => {
-    try {
-      const response = await notificationService.getNotifications({
-        limit: 20,
-      });
-      setNotifications(response.results);
-
-      const count = response.results.filter((n) => !n.is_read).length;
-      setUnreadCount(count);
-    } catch (error) {
-      console.error("Failed to load initial notifications:", error);
-    }
-  }, []);
+  }, [user?.id]); // Only depend on user ID, not full object
 
   /**
    * Add a new notification (from WebSocket)
@@ -166,7 +148,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Start heartbeat to keep connections alive
   useEffect(() => {
-    if (isAuthenticated) {
+    if (user) {
       heartbeatInterval.current = window.setInterval(() => {
         if (webSocketService.isConnected("ws/notifications/")) {
           webSocketService.ping("ws/notifications/");
@@ -199,7 +181,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
         }
       };
     }
-  }, [isAuthenticated]);
+  }, [user]);
 
   // Disconnect functions (defined first so connect functions can use them)
   const disconnectNotifications = useCallback(() => {
@@ -235,7 +217,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Connect functions
   const connectNotifications = useCallback(() => {
-    if (!isAuthenticated) {
+    if (!user) {
       console.warn(
         "⚠️ [WebSocketContext] Cannot connect notifications: not authenticated"
       );
@@ -277,11 +259,11 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
     if (ws) {
       setIsNotificationConnected(true);
     }
-  }, [isAuthenticated, addNotification, markAsRead]);
+  }, [user, addNotification, markAsRead]);
 
   const connectTickets = useCallback(
     (projectId: number) => {
-      if (!isAuthenticated) {
+      if (!user) {
         console.warn(
           "⚠️ [WebSocketContext] Cannot connect tickets: not authenticated"
         );
@@ -347,12 +329,12 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
         setIsTicketConnected(true);
       }
     },
-    [isAuthenticated, disconnectTickets, disconnectPresence]
+    [user, disconnectTickets, disconnectPresence]
   );
 
   const connectPresence = useCallback(
     (projectId: number) => {
-      if (!isAuthenticated) {
+      if (!user) {
         console.warn(
           "⚠️ [WebSocketContext] Cannot connect presence: not authenticated"
         );
@@ -381,7 +363,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
         setIsPresenceConnected(true);
       }
     },
-    [isAuthenticated]
+    [user]
   );
 
   // Send functions

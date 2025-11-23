@@ -105,6 +105,15 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             'data': event['data'],
         }))
     
+    async def chat_notification(self, event):
+        """
+        Receive chat notification from channel layer
+        """
+        await self.send(text_data=json.dumps({
+            'type': 'chat_notification',
+            'data': event['data'],
+        }))
+    
     @database_sync_to_async
     def mark_notification_read(self, notification_id):
         """

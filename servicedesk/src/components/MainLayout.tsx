@@ -1,13 +1,32 @@
-import React from "react";
-import { Outlet, useNavigate } from "react-router-dom";
-import { Dropdown, Avatar } from "antd";
-import { UserOutlined, LogoutOutlined, LockOutlined } from "@ant-design/icons";
+import React, { useState, useEffect } from "react";
+import { Outlet, useNavigate, useLocation } from "react-router-dom";
+import { Dropdown, Avatar, Badge } from "antd";
+import {
+  UserOutlined,
+  LogoutOutlined,
+  LockOutlined,
+  MessageOutlined,
+} from "@ant-design/icons";
 import { useAuth } from "../contexts/AuthContext";
 import type { MenuProps } from "antd";
 
 const MainLayout: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
+
+  useEffect(() => {
+    const handleUnreadUpdate = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      setUnreadChatCount(customEvent.detail.unreadCount);
+    };
+
+    window.addEventListener("chatUnreadUpdate", handleUnreadUpdate);
+    return () => {
+      window.removeEventListener("chatUnreadUpdate", handleUnreadUpdate);
+    };
+  }, []);
 
   const userMenuItems: MenuProps["items"] = [
     {
@@ -41,16 +60,46 @@ const MainLayout: React.FC = () => {
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
       {/* Navbar */}
       <header className="bg-white border-b border-slate-200 h-16 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-10 shadow-sm">
-        <div
-          className="flex items-center gap-3 cursor-pointer group"
-          onClick={() => navigate("/tickets")}
-        >
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-lg shadow-sm group-hover:bg-blue-700 transition-colors">
-            SD
+        <div className="flex items-center gap-8">
+          <div
+            className="flex items-center gap-3 cursor-pointer group"
+            onClick={() => navigate("/tickets")}
+          >
+            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-lg shadow-sm group-hover:bg-blue-700 transition-colors">
+              SD
+            </div>
+            <span className="text-lg font-bold text-slate-800 tracking-tight group-hover:text-blue-600 transition-colors">
+              ServiceDesk
+            </span>
           </div>
-          <span className="text-lg font-bold text-slate-800 tracking-tight group-hover:text-blue-600 transition-colors">
-            ServiceDesk
-          </span>
+
+          <nav className="hidden md:flex items-center gap-6">
+            <div
+              className={`cursor-pointer text-sm font-medium transition-colors ${
+                location.pathname === "/tickets"
+                  ? "text-blue-600"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+              onClick={() => navigate("/tickets")}
+            >
+              My Tickets
+            </div>
+            <div
+              className={`cursor-pointer text-sm font-medium transition-colors ${
+                location.pathname === "/chat"
+                  ? "text-blue-600"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+              onClick={() => navigate("/chat")}
+            >
+              <Badge count={unreadChatCount} size="small" offset={[10, 0]}>
+                <span className="flex items-center gap-2">
+                  <MessageOutlined />
+                  Messages
+                </span>
+              </Badge>
+            </div>
+          </nav>
         </div>
 
         <div className="flex items-center gap-4">
