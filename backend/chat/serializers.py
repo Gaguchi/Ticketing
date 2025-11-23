@@ -110,8 +110,8 @@ class ChatRoomSerializer(serializers.ModelSerializer):
             return 0
         
         if participant.last_read_at:
-            return obj.messages.filter(created_at__gt=participant.last_read_at).count()
-        return obj.messages.count()
+            return obj.messages.filter(created_at__gt=participant.last_read_at).exclude(user=request.user).count()
+        return obj.messages.exclude(user=request.user).count()
 
 
 class ChatRoomCreateSerializer(serializers.ModelSerializer):

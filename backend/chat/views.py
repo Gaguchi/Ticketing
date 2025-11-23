@@ -42,10 +42,14 @@ class ChatRoomViewSet(viewsets.ModelViewSet):
         
         # 2. Count messages created after user_last_read
         # If user_last_read is null, count all messages
+        # EXCLUDE messages sent by the current user
         queryset = queryset.annotate(
             unread_count_annotated=Count(
                 'messages',
-                filter=Q(messages__created_at__gt=F('user_last_read')) | Q(user_last_read__isnull=True)
+                filter=(
+                    (Q(messages__created_at__gt=F('user_last_read')) | Q(user_last_read__isnull=True)) & 
+                    ~Q(messages__user=user)
+                )
             )
         )
         

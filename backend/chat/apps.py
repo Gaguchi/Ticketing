@@ -6,3 +6,6 @@ class ChatConfig(AppConfig):
     name = 'chat'
     verbose_name = 'Chat System'
 
+    def ready(self):
+        import chat.signals
+

@@ -1,0 +1,88 @@
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from .models import ChatMessage
+from tickets.models import Notification
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
+from django.utils import timezone
+
+@receiver(post_save, sender=ChatMessage)
+def chat_message_saved(sender, instance, created, **kwargs):
+    """
+    Create notifications for chat messages.
+    Optimized for performance: Bulk creates notifications and avoids N+1 queries.
+    """
+    if not created:
+        return
+
+    room = instance.room
+    sender_user = instance.user
+    
+    # Get all participants except the sender, with user data pre-fetched
+    # select_related('user') prevents N+1 queries when accessing participant.user
+    participants = room.participants.select_related('user').exclude(user=sender_user)
+    
+    if not participants.exists():
+        return
+
+    # Prepare common data
+    if room.type == 'direct':
+        title = f'New message from {sender_user.username}'
+    else:
+        title = f'#{room.name}: {sender_user.username}'
+        
+    message_preview = instance.content[:100] if instance.content else 'Sent an attachment'
+    link = f'/chat/{room.id}'
+    timestamp = timezone.now()
+    
+    # Prepare notifications for bulk creation
+    notifications = []
+    
+    for participant in participants:
+        n = Notification(
+            user=participant.user,
+            notification_type='chat_message',
+            title=title,
+            message=message_preview,
+            link=link,
+            data={
+                'room_id': room.id,
+                'message_id': instance.id,
+                'sender_id': sender_user.id,
+                'room_type': room.type,
+            }
+        )
+        notifications.append(n)
+    
+    # Bulk create in one query
+    # Django 4.0+ populates primary keys on bulk_create for PostgreSQL
+    Notification.objects.bulk_create(notifications)
+    
+    # Send WebSocket messages
+    # We avoid DB queries in this loop
+    channel_layer = get_channel_layer()
+    if channel_layer:
+        for notification in notifications:
+            notification_data = {
+                'id': notification.id,
+                'type': 'chat_message',
+                'title': notification.title,
+                'message': notification.message,
+                'link': notification.link,
+                'is_read': False,
+                'data': notification.data,
+                'created_at': timestamp.isoformat(),
+                'timestamp': timestamp.isoformat(),
+            }
+            
+            group_name = f'user_{notification.user.id}_notifications'
+            try:
+                async_to_sync(channel_layer.group_send)(
+                    group_name,
+                    {
+                        'type': 'notification_message',
+                        'data': notification_data
+                    }
+                )
+            except Exception as e:
+                print(f"❌ Error sending chat notification to user {notification.user.id}: {e}")
