@@ -14,7 +14,7 @@ export interface NotificationUser {
 export interface Notification {
   id: number;
   user: NotificationUser;
-  type: 'ticket_assigned' | 'ticket_created' | 'ticket_updated' | 'comment_added' | 'mention' | 'status_changed' | 'priority_changed' | 'general';
+  type: 'ticket_assigned' | 'ticket_created' | 'ticket_updated' | 'comment_added' | 'mention' | 'status_changed' | 'priority_changed' | 'general' | 'chat_message';
   title: string;
   message: string;
   link?: string;

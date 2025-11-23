@@ -112,15 +112,9 @@ const MainLayout: React.FC = () => {
     selectedProject?.name,
   ]); // Use primitive values
 
-  // Load unread chat count - DEFERRED: Only load when user visits Chat page
-  // This saves an unnecessary API call on every page load
+  // Load unread chat count
   useEffect(() => {
     if (!selectedProject) return;
-
-    // Only fetch chat data if user is on the chat page
-    if (!location.pathname.includes("/chat")) {
-      return;
-    }
 
     const loadUnreadCount = async () => {
       try {
@@ -137,10 +131,10 @@ const MainLayout: React.FC = () => {
 
     loadUnreadCount();
 
-    // Refresh every 30 seconds only when on chat page
+    // Refresh every 30 seconds
     const interval = setInterval(loadUnreadCount, 30000);
     return () => clearInterval(interval);
-  }, [selectedProject?.id, location.pathname]); // Depend on pathname too
+  }, [selectedProject?.id]); // Run for any project change
 
   // WebSocket listener for real-time chat updates
   useEffect(() => {
@@ -178,6 +172,22 @@ const MainLayout: React.FC = () => {
       window.removeEventListener("chatUnreadUpdate", handleChatUpdate);
     };
   }, [selectedProject?.id]); // Only depend on project ID
+
+  // Listen for global notifications to update chat count
+  useEffect(() => {
+    if (notifications.length > 0 && selectedProject) {
+      const latest = notifications[0];
+      if (latest.type === "chat_message") {
+        chatService.getRooms(selectedProject.id).then((rooms) => {
+          const totalUnread = rooms.reduce(
+            (sum, room) => sum + room.unread_count,
+            0
+          );
+          setUnreadChatCount(totalUnread);
+        });
+      }
+    }
+  }, [notifications, selectedProject]);
 
   const handleMenuClick: MenuProps["onClick"] = ({ key }) => {
     if (key === "logout") {

@@ -119,11 +119,13 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
     if (!notification.is_read) {
       setUnreadCount((prev) => prev + 1);
 
-      // Show toast notification
-      antMessage.info({
-        content: notification.title,
-        duration: 4,
-      });
+      // Show toast notification (skip for chat messages as they have their own UI)
+      if (notification.type !== "chat_message") {
+        antMessage.info({
+          content: notification.title,
+          duration: 4,
+        });
+      }
     }
   }, []);
 
