@@ -297,16 +297,18 @@ ASGI_APPLICATION = 'config.asgi.application'
 
 # Channel Layers - Redis backend for production, In-Memory for development
 # Redis Configuration
+REDIS_URL = os.getenv('REDIS_URL')
 REDIS_HOST = os.getenv('REDIS_HOST', '127.0.0.1')
 REDIS_PORT = int(os.getenv('REDIS_PORT', 6379))
 
 CHANNEL_LAYERS = {
     'default': {
-        # Use Redis in production, in-memory for development
-        'BACKEND': 'channels_redis.core.RedisChannelLayer' if not DEBUG else 'channels.layers.InMemoryChannelLayer',
+        # Use Redis if REDIS_URL is set OR if not in DEBUG mode
+        # Fallback to In-Memory for local dev without Redis
+        'BACKEND': 'channels_redis.core.RedisChannelLayer' if (REDIS_URL or not DEBUG) else 'channels.layers.InMemoryChannelLayer',
         'CONFIG': {
-            "hosts": [(REDIS_HOST, REDIS_PORT)],
-        } if not DEBUG else {},
+            "hosts": [REDIS_URL] if REDIS_URL else [(REDIS_HOST, REDIS_PORT)],
+        } if (REDIS_URL or not DEBUG) else {},
     },
 }
 
