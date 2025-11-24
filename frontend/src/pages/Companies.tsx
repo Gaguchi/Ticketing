@@ -35,7 +35,6 @@ import {
   PhoneOutlined,
   PictureOutlined,
   ArrowLeftOutlined,
-  CalendarOutlined,
   TableOutlined,
   SettingOutlined,
   AppstoreOutlined,
@@ -48,7 +47,7 @@ import {
 import type { MenuProps } from "antd";
 import { API_ENDPOINTS } from "../config/api";
 import apiService from "../services/api.service";
-import { ticketService, columnService } from "../services";
+import { ticketService } from "../services";
 import { DeadlineView } from "../components/DeadlineView";
 import { KanbanBoard } from "../components/KanbanBoard";
 import type { TicketColumn } from "../types/api";
