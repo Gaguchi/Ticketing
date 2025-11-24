@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { Dropdown, Avatar, Badge } from "antd";
 import {
@@ -8,25 +8,14 @@ import {
   MessageOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "../contexts/AuthContext";
+import { useWebSocketContext } from "../contexts/WebSocketContext";
 import type { MenuProps } from "antd";
 
 const MainLayout: React.FC = () => {
   const { user, logout } = useAuth();
+  const { chatUnreadCount } = useWebSocketContext();
   const navigate = useNavigate();
   const location = useLocation();
-  const [unreadChatCount, setUnreadChatCount] = useState(0);
-
-  useEffect(() => {
-    const handleUnreadUpdate = (event: Event) => {
-      const customEvent = event as CustomEvent;
-      setUnreadChatCount(customEvent.detail.unreadCount);
-    };
-
-    window.addEventListener("chatUnreadUpdate", handleUnreadUpdate);
-    return () => {
-      window.removeEventListener("chatUnreadUpdate", handleUnreadUpdate);
-    };
-  }, []);
 
   const userMenuItems: MenuProps["items"] = [
     {
@@ -92,7 +81,7 @@ const MainLayout: React.FC = () => {
               }`}
               onClick={() => navigate("/chat")}
             >
-              <Badge count={unreadChatCount} size="small" offset={[10, 0]}>
+              <Badge count={chatUnreadCount} size="small" offset={[10, 0]}>
                 <span className="flex items-center gap-2">
                   <MessageOutlined />
                   Messages

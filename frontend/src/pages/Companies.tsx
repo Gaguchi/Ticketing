@@ -41,10 +41,17 @@ import {
   AppstoreOutlined,
   MinusCircleOutlined,
   UserAddOutlined,
+  ClockCircleOutlined,
+  InboxOutlined,
+  RollbackOutlined,
 } from "@ant-design/icons";
 import type { MenuProps } from "antd";
 import { API_ENDPOINTS } from "../config/api";
 import apiService from "../services/api.service";
+import { ticketService, columnService } from "../services";
+import { DeadlineView } from "../components/DeadlineView";
+import { KanbanBoard } from "../components/KanbanBoard";
+import type { TicketColumn } from "../types/api";
 import { debug, LogLevel, LogCategory } from "../utils/debug";
 import { useApp } from "../contexts/AppContext";
 
@@ -96,9 +103,12 @@ const Companies: React.FC = () => {
   // New state for detailed company view
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [companyTickets, setCompanyTickets] = useState<any[]>([]);
+  const [columns, setColumns] = useState<TicketColumn[]>([]);
+  const [archivedTickets, setArchivedTickets] = useState<any[]>([]);
   const [loadingTickets, setLoadingTickets] = useState(false);
+  const [loadingArchived, setLoadingArchived] = useState(false);
   const [ticketViewMode, setTicketViewMode] = useState<
-    "table" | "kanban" | "timeline"
+    "table" | "kanban" | "deadline" | "archive"
   >("table");
 
   // User management state
@@ -113,6 +123,28 @@ const Companies: React.FC = () => {
 
   // Prevent duplicate initialization in React Strict Mode
   const fetchInProgressRef = useRef(false);
+
+  const fetchArchivedTickets = async (companyId: number) => {
+    setLoadingArchived(true);
+    try {
+      const response = await ticketService.getArchivedTickets({
+        company: companyId,
+      });
+      const tickets = response.results || response;
+      setArchivedTickets(Array.isArray(tickets) ? tickets : []);
+    } catch (error: any) {
+      message.error(error.message || "Failed to load archived tickets");
+      setArchivedTickets([]);
+    } finally {
+      setLoadingArchived(false);
+    }
+  };
+
+  useEffect(() => {
+    if (ticketViewMode === "archive" && selectedCompany) {
+      fetchArchivedTickets(selectedCompany.id);
+    }
+  }, [ticketViewMode, selectedCompany]);
 
   const fetchCompanies = useCallback(async () => {
     // Prevent concurrent identical requests
@@ -192,6 +224,42 @@ const Companies: React.FC = () => {
       );
       const tickets = response.results || response;
       setCompanyTickets(Array.isArray(tickets) ? tickets : []);
+
+      // Fetch columns
+      let columnsUrl = API_ENDPOINTS.COLUMNS;
+      let projectId = selectedProject?.id;
+
+      // If no project selected, try to infer from tickets or fetch projects for this company
+      if (!projectId) {
+        if (
+          Array.isArray(tickets) &&
+          tickets.length > 0 &&
+          tickets[0].project
+        ) {
+          projectId = tickets[0].project;
+        } else {
+          // Try to fetch projects for this company to get the columns
+          try {
+            const projectsResponse = await apiService.get<any>(
+              `${API_ENDPOINTS.PROJECTS}?company=${company.id}`
+            );
+            const projects = projectsResponse.results || projectsResponse;
+            if (Array.isArray(projects) && projects.length > 0) {
+              projectId = projects[0].id;
+            }
+          } catch (e) {
+            console.error("Failed to fetch projects for company", e);
+          }
+        }
+      }
+
+      if (projectId) {
+        columnsUrl += `?project=${projectId}`;
+      }
+
+      const colResponse = await apiService.get<any>(columnsUrl);
+      const cols = colResponse.results || colResponse;
+      setColumns(Array.isArray(cols) ? cols : []);
     } catch (error: any) {
       message.error(error.message || "Failed to load company tickets");
       setCompanyTickets([]);
@@ -203,6 +271,8 @@ const Companies: React.FC = () => {
   const handleBackToList = () => {
     setSelectedCompany(null);
     setCompanyTickets([]);
+    setArchivedTickets([]);
+    setTicketViewMode("table");
   };
 
   const handleCreateCompany = () => {
@@ -670,11 +740,18 @@ const Companies: React.FC = () => {
                   Kanban
                 </Button>
                 <Button
-                  type={ticketViewMode === "timeline" ? "primary" : "default"}
-                  icon={<CalendarOutlined />}
-                  onClick={() => setTicketViewMode("timeline")}
+                  type={ticketViewMode === "deadline" ? "primary" : "default"}
+                  icon={<ClockCircleOutlined />}
+                  onClick={() => setTicketViewMode("deadline")}
                 >
-                  Timeline
+                  Deadlines
+                </Button>
+                <Button
+                  type={ticketViewMode === "archive" ? "primary" : "default"}
+                  icon={<InboxOutlined />}
+                  onClick={() => setTicketViewMode("archive")}
+                >
+                  Archive
                 </Button>
               </Space>
             }
@@ -684,73 +761,152 @@ const Companies: React.FC = () => {
                 <Spin size="large" />
               </div>
             ) : ticketViewMode === "table" ? (
-              companyTickets.length === 0 ? (
-                <Empty description="No tickets for this company yet" />
-              ) : (
-                <Table
-                  dataSource={companyTickets}
-                  rowKey="id"
-                  pagination={{ pageSize: 10 }}
-                  columns={[
-                    {
-                      title: "Ticket",
-                      dataIndex: "name",
-                      key: "name",
-                    },
-                    {
-                      title: "Type",
-                      dataIndex: "type",
-                      key: "type",
-                      render: (type: string) => <Tag>{type}</Tag>,
-                    },
-                    {
-                      title: "Status",
-                      dataIndex: "status",
-                      key: "status",
-                      render: (status: string) => (
-                        <Tag color="blue">{status}</Tag>
-                      ),
-                    },
-                    {
-                      title: "Priority",
-                      dataIndex: "priority",
-                      key: "priority",
-                      render: (priority: string) => (
-                        <Tag
-                          color={
-                            priority === "High"
-                              ? "red"
-                              : priority === "Medium"
-                              ? "blue"
-                              : "green"
-                          }
-                        >
-                          {priority}
-                        </Tag>
-                      ),
-                    },
-                    {
-                      title: "Assignees",
-                      dataIndex: "assignees",
-                      key: "assignees",
-                      render: (assignees: any[]) => (
-                        <Avatar.Group maxCount={3}>
-                          {assignees?.map((a: any) => (
-                            <Avatar key={a.id}>
-                              {a.first_name?.[0]}
-                              {a.last_name?.[0]}
-                            </Avatar>
-                          ))}
-                        </Avatar.Group>
-                      ),
-                    },
-                  ]}
-                />
-              )
+              <Table
+                dataSource={companyTickets}
+                rowKey="id"
+                pagination={{ pageSize: 10 }}
+                locale={{ emptyText: "No tickets for this company yet" }}
+                columns={[
+                  {
+                    title: "Ticket",
+                    dataIndex: "name",
+                    key: "name",
+                  },
+                  {
+                    title: "Type",
+                    dataIndex: "type",
+                    key: "type",
+                    render: (type: string) => <Tag>{type}</Tag>,
+                  },
+                  {
+                    title: "Status",
+                    dataIndex: "status",
+                    key: "status",
+                    render: (status: string) => (
+                      <Tag color="blue">{status}</Tag>
+                    ),
+                  },
+                  {
+                    title: "Priority",
+                    dataIndex: "priority",
+                    key: "priority",
+                    render: (priority: string) => (
+                      <Tag
+                        color={
+                          priority === "High"
+                            ? "red"
+                            : priority === "Medium"
+                            ? "blue"
+                            : "green"
+                        }
+                      >
+                        {priority}
+                      </Tag>
+                    ),
+                  },
+                  {
+                    title: "Assignees",
+                    dataIndex: "assignees",
+                    key: "assignees",
+                    render: (assignees: any[]) => (
+                      <Avatar.Group maxCount={3}>
+                        {assignees?.map((a: any) => (
+                          <Avatar key={a.id}>
+                            {a.first_name?.[0]}
+                            {a.last_name?.[0]}
+                          </Avatar>
+                        ))}
+                      </Avatar.Group>
+                    ),
+                  },
+                ]}
+              />
             ) : ticketViewMode === "kanban" ? (
-              <Empty description="Kanban view coming soon" />
+              <KanbanBoard
+                tickets={companyTickets}
+                columns={columns}
+                onTicketMove={async (ticketId, newColumnId, order) => {
+                  try {
+                    await ticketService.updateTicket(ticketId, {
+                      column: newColumnId,
+                      order,
+                    });
+                    message.success("Ticket moved");
+                  } catch (error) {
+                    message.error("Failed to move ticket");
+                  }
+                }}
+              />
+            ) : ticketViewMode === "deadline" ? (
+              <DeadlineView
+                tickets={companyTickets}
+                columns={[]} // We don't have columns here, but DeadlineView handles it
+              />
+            ) : // Archive View
+            loadingArchived ? (
+              <div style={{ textAlign: "center", padding: 48 }}>
+                <Spin size="large" />
+              </div>
             ) : (
-              <Empty description="Timeline view coming soon" />
+              <Table
+                dataSource={archivedTickets}
+                rowKey="id"
+                pagination={{ pageSize: 10 }}
+                locale={{ emptyText: "No archived tickets found" }}
+                columns={[
+                  {
+                    title: "Ticket",
+                    dataIndex: "name",
+                    key: "name",
+                  },
+                  {
+                    title: "Type",
+                    dataIndex: "type",
+                    key: "type",
+                    render: (type: string) => <Tag>{type}</Tag>,
+                  },
+                  {
+                    title: "Status",
+                    dataIndex: "status",
+                    key: "status",
+                    render: (status: string) => (
+                      <Tag color="default">{status}</Tag>
+                    ),
+                  },
+                  {
+                    title: "Archived At",
+                    dataIndex: "archived_at",
+                    key: "archived_at",
+                    render: (date: string) =>
+                      date ? new Date(date).toLocaleDateString() : "-",
+                  },
+                  {
+                    title: "Actions",
+                    key: "actions",
+                    render: (_: any, record: any) => (
+                      <Button
+                        size="small"
+                        icon={<RollbackOutlined />}
+                        onClick={async () => {
+                          try {
+                            await ticketService.restoreTicket(record.id);
+                            message.success("Ticket restored");
+                            // Refresh lists
+                            if (selectedCompany) {
+                              fetchArchivedTickets(selectedCompany.id);
+                              handleCompanyClick(selectedCompany);
+                            }
+                          } catch (error) {
+                            message.error("Failed to restore ticket");
+                          }
+                        }}
+                      >
+                        Restore
+                      </Button>
+                    ),
+                  },
+                ]}
+              />
             )}
           </Card>
         </div>

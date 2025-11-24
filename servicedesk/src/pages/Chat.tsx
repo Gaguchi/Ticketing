@@ -32,6 +32,7 @@ import { useProject } from "../contexts/ProjectContext";
 import { useAuth } from "../contexts/AuthContext";
 import { chatService } from "../services/chat.service";
 import { webSocketService } from "../services/websocket.service";
+import { useWebSocketContext } from "../contexts/WebSocketContext";
 import type { ChatRoom, ChatMessage, ChatWebSocketEvent } from "../types/chat";
 import type { User } from "../types";
 
@@ -40,6 +41,7 @@ const { Text } = Typography;
 const Chat: React.FC = () => {
   const { selectedProject } = useProject();
   const { user, logout } = useAuth();
+  const { fetchChatUnreadCount } = useWebSocketContext();
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
   const [activeRoom, setActiveRoom] = useState<ChatRoom | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -145,15 +147,8 @@ const Chat: React.FC = () => {
         });
 
         // Calculate and dispatch total unread count for MainLayout
-        const totalUnread = data.reduce(
-          (sum, room) => sum + room.unread_count,
-          0
-        );
-        window.dispatchEvent(
-          new CustomEvent("chatUnreadUpdate", {
-            detail: { unreadCount: totalUnread },
-          })
-        );
+        // We now use WebSocketContext for this, so we just trigger a fetch
+        fetchChatUnreadCount();
 
         // Only set active room if there isn't one already
         if (data.length > 0) {
@@ -232,16 +227,8 @@ const Chat: React.FC = () => {
             room.id === activeRoom.id ? { ...room, unread_count: 0 } : room
           );
 
-          // Calculate total unread and dispatch event for MainLayout
-          const totalUnread = updated.reduce(
-            (sum, room) => sum + room.unread_count,
-            0
-          );
-          window.dispatchEvent(
-            new CustomEvent("chatUnreadUpdate", {
-              detail: { unreadCount: totalUnread },
-            })
-          );
+          // Sync global unread count
+          fetchChatUnreadCount();
 
           return updated;
         });
@@ -290,16 +277,8 @@ const Chat: React.FC = () => {
                 : room
             );
 
-            // Calculate total unread and dispatch event for MainLayout
-            const totalUnread = updated.reduce(
-              (sum, room) => sum + room.unread_count,
-              0
-            );
-            window.dispatchEvent(
-              new CustomEvent("chatUnreadUpdate", {
-                detail: { unreadCount: totalUnread },
-              })
-            );
+            // Sync global unread count
+            fetchChatUnreadCount();
 
             return updated;
           });

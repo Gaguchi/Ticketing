@@ -13,6 +13,7 @@ import React, {
 } from "react";
 import { message as antMessage } from "antd";
 import { webSocketService } from "../services/websocket.service";
+import { chatService } from "../services/chat.service";
 import { useAuth } from "./AuthContext";
 import type { Notification } from "../types/notification";
 
@@ -41,12 +42,14 @@ interface WebSocketContextType {
   // Notification state
   notifications: Notification[];
   unreadCount: number;
+  chatUnreadCount: number;
 
   // Notification handlers
   addNotification: (notification: Notification) => void;
   markAsRead: (id: number) => void;
   markAllAsRead: () => void;
   removeNotification: (id: number) => void;
+  fetchChatUnreadCount: () => Promise<void>;
 }
 
 const WebSocketContext = createContext<WebSocketContextType | undefined>(
@@ -64,6 +67,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
   // Notification state
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [chatUnreadCount, setChatUnreadCount] = useState(0);
 
   const currentProjectId = useRef<number | null>(null);
   const heartbeatInterval = useRef<number | null>(null);
@@ -75,6 +79,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
         "🔌 [WebSocketContext] User authenticated, connecting to notifications..."
       );
       connectNotifications();
+      fetchChatUnreadCount();
       // loadInitialNotifications(); // Skipped for now as we don't have notificationService
     } else {
       console.log(
@@ -83,6 +88,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
       disconnectAll();
       setNotifications([]);
       setUnreadCount(0);
+      setChatUnreadCount(0);
     }
 
     // Cleanup on unmount
@@ -91,6 +97,22 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]); // Only depend on user ID, not full object
+
+  /**
+   * Fetch initial chat unread count
+   */
+  const fetchChatUnreadCount = useCallback(async () => {
+    try {
+      const rooms = await chatService.getRooms();
+      const totalUnread = rooms.reduce(
+        (sum, room) => sum + room.unread_count,
+        0
+      );
+      setChatUnreadCount(totalUnread);
+    } catch (error) {
+      console.error("Failed to fetch chat unread count:", error);
+    }
+  }, []);
 
   /**
    * Add a new notification (from WebSocket)
@@ -238,6 +260,12 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
           console.log(
             "📨 [WebSocketContext] Chat notification received, signaling update"
           );
+
+          // Increment unread count if it's a new message
+          // We could check if we're already in the room, but that state is in Chat.tsx
+          // So we'll just increment, and if Chat.tsx is open, it will mark as read and correct it
+          setChatUnreadCount((prev) => prev + 1);
+
           window.dispatchEvent(
             new CustomEvent("chatNotification", { detail: data.data })
           );
@@ -415,10 +443,12 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
     sendPresenceMessage,
     notifications,
     unreadCount,
+    chatUnreadCount,
     addNotification,
     markAsRead,
     markAllAsRead,
     removeNotification,
+    fetchChatUnreadCount,
   };
 
   return (
