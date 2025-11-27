@@ -2,11 +2,14 @@ from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
 from django.db import models
 from django.db.models import Q
+from django.utils import timezone
+from datetime import timedelta
 from django_filters.rest_framework import DjangoFilterBackend
 from .permissions import (
     IsSuperuserOrCompanyAdmin, IsCompanyAdmin, IsCompanyMember,
@@ -209,6 +212,7 @@ class CompanyViewSet(viewsets.ModelViewSet):
     """
     queryset = Company.objects.all()
     permission_classes = [IsAuthenticated, IsCompanyAdminOrReadOnly]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['name', 'description']
     ordering_fields = ['name', 'created_at', 'ticket_count']
@@ -1966,4 +1970,479 @@ class ProjectInvitationViewSet(viewsets.ModelViewSet):
             'success': True,
             'message': 'Invitation revoked'
         })
+
+
+# ==================== Dashboard Views ====================
+
+# Priority ID to name mapping (matches Ticket.PRIORITY_CHOICES)
+PRIORITY_NAMES = {1: 'Low', 2: 'Medium', 3: 'High', 4: 'Critical'}
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def dashboard_company_health(request):
+    """
+    Get company health data for dashboard.
+    Returns ticket counts by status for each company associated with the project.
+    
+    GET /api/tickets/dashboard/company-health/
+    Query params:
+        - project: Filter by project ID (required for project-based view)
+    """
+    user = request.user
+    project_id = request.query_params.get('project')
+    
+    # Get companies - if project specified, get all companies in that project
+    # Otherwise fall back to companies user has access to
+    if project_id:
+        # Get all companies associated with this project
+        companies = Company.objects.filter(projects__id=project_id).distinct()
+    else:
+        # Fallback: Get companies user has access to
+        companies = Company.objects.filter(
+            Q(admins=user) | Q(users=user)
+        ).distinct()
+    
+    company_data = []
+    for company in companies:
+        # Get tickets for this company
+        tickets_qs = Ticket.objects.filter(company=company)
+        if project_id:
+            tickets_qs = tickets_qs.filter(project_id=project_id)
+        
+        # Count by status (using column names as status)
+        tickets_by_status = {}
+        for ticket in tickets_qs.select_related('column'):
+            column_name = ticket.column.name if ticket.column else 'No Column'
+            tickets_by_status[column_name] = tickets_by_status.get(column_name, 0) + 1
+        
+        # Count priority levels (using priority_id field)
+        tickets_by_priority = {}
+        for ticket in tickets_qs:
+            priority_name = PRIORITY_NAMES.get(ticket.priority_id, 'Unknown')
+            tickets_by_priority[priority_name] = tickets_by_priority.get(priority_name, 0) + 1
+        
+        # Get overdue tickets (due_date in the past, not in Done column)
+        overdue_count = tickets_qs.filter(
+            due_date__lt=timezone.now().date()
+        ).exclude(
+            column__name__icontains='done'
+        ).exclude(
+            column__name__icontains='complete'
+        ).count()
+        
+        # Get unassigned tickets (no assignees)
+        unassigned_count = 0
+        for ticket in tickets_qs.prefetch_related('assignees'):
+            if not ticket.assignees.exists():
+                unassigned_count += 1
+        
+        company_data.append({
+            'id': company.id,
+            'name': company.name,
+            'logo_url': request.build_absolute_uri(company.logo.url) if company.logo else None,
+            'logo_thumbnail_url': request.build_absolute_uri(company.logo_thumbnail.url) if company.logo_thumbnail else None,
+            'total_tickets': tickets_qs.count(),
+            'tickets_by_status': tickets_by_status,
+            'tickets_by_priority': tickets_by_priority,
+            'overdue_count': overdue_count,
+            'unassigned_count': unassigned_count,
+        })
+    
+    return Response(company_data)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def dashboard_attention_needed(request):
+    """
+    Get tickets that need attention (overdue, unassigned critical, stale).
+    
+    GET /api/tickets/dashboard/attention-needed/
+    Query params:
+        - project: Filter by project ID (optional)
+        - limit: Max number of tickets (default 10)
+    """
+    user = request.user
+    project_id = request.query_params.get('project')
+    limit = int(request.query_params.get('limit', 10))
+    
+    # Base queryset - tickets user can access
+    # If project is specified and user is a project member, show ALL tickets in project
+    # Otherwise use the more restrictive filter
+    if project_id:
+        try:
+            project = Project.objects.get(id=project_id)
+            if project.members.filter(id=user.id).exists():
+                # User is project member - can see all project tickets
+                tickets_qs = Ticket.objects.filter(project_id=project_id)
+            else:
+                # User is not project member - only see their own/company tickets
+                tickets_qs = Ticket.objects.filter(
+                    Q(company__admins=user) | Q(company__users=user) | Q(reporter=user) | Q(assignees=user)
+                ).filter(project_id=project_id).distinct()
+        except Project.DoesNotExist:
+            tickets_qs = Ticket.objects.none()
+    else:
+        tickets_qs = Ticket.objects.filter(
+            Q(company__admins=user) | Q(company__users=user) | Q(reporter=user) | Q(assignees=user) | Q(project__members=user)
+        ).distinct()
+    
+    # Exclude completed tickets
+    tickets_qs = tickets_qs.exclude(
+        column__name__icontains='done'
+    ).exclude(
+        column__name__icontains='complete'
+    )
+    
+    # Overdue tickets
+    overdue = tickets_qs.filter(
+        due_date__lt=timezone.now().date()
+    ).select_related(
+        'company', 'column', 'project'
+    ).prefetch_related('assignees').order_by('due_date')[:limit]
+    
+    # Unassigned critical/high priority (priority_id 3=High, 4=Critical)
+    # We need to filter tickets with no assignees - need to annotate
+    unassigned_qs = tickets_qs.annotate(
+        assignee_count=models.Count('assignees')
+    ).filter(
+        assignee_count=0,
+        priority_id__in=[3, 4]  # High or Critical
+    ).select_related(
+        'company', 'column', 'project'
+    ).order_by('-created_at')[:limit]
+    
+    # Stale tickets (no updates in 7+ days)
+    stale_threshold = timezone.now() - timedelta(days=7)
+    stale = tickets_qs.filter(
+        updated_at__lt=stale_threshold
+    ).select_related(
+        'company', 'column', 'project'
+    ).prefetch_related('assignees').order_by('updated_at')[:limit]
+    
+    def serialize_ticket(ticket):
+        # Get first assignee if any
+        first_assignee = ticket.assignees.first() if hasattr(ticket, 'assignees') else None
+        return {
+            'id': ticket.id,
+            'title': ticket.name,  # Ticket model uses 'name' not 'title'
+            'key': ticket.ticket_key,
+            'status': ticket.column.name if ticket.column else None,
+            'priority': PRIORITY_NAMES.get(ticket.priority_id),
+            'assignee': {
+                'id': first_assignee.id,
+                'username': first_assignee.username,
+                'first_name': first_assignee.first_name,
+                'last_name': first_assignee.last_name,
+            } if first_assignee else None,
+            'company': {
+                'id': ticket.company.id,
+                'name': ticket.company.name,
+                'logo_url': request.build_absolute_uri(ticket.company.logo.url) if ticket.company and ticket.company.logo else None,
+            } if ticket.company else None,
+            'due_date': ticket.due_date.isoformat() if ticket.due_date else None,
+            'updated_at': ticket.updated_at.isoformat() if ticket.updated_at else None,
+            'created_at': ticket.created_at.isoformat() if ticket.created_at else None,
+        }
+
+    return Response({
+        'overdue': [serialize_ticket(t) for t in overdue],
+        'unassigned_critical': [serialize_ticket(t) for t in unassigned_qs],
+        'stale': [serialize_ticket(t) for t in stale],
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def dashboard_newest_tickets(request):
+    """
+    Get the newest tickets.
+    
+    GET /api/tickets/dashboard/newest/
+    Query params:
+        - project: Filter by project ID (optional)
+        - company: Filter by company ID (optional)
+        - limit: Max number of tickets (default 10)
+    """
+    user = request.user
+    project_id = request.query_params.get('project')
+    company_id = request.query_params.get('company')
+    limit = int(request.query_params.get('limit', 10))
+    
+    # Base queryset - tickets user can access
+    # If project is specified and user is a project member (or superuser), show ALL tickets in project
+    if project_id:
+        try:
+            project = Project.objects.get(id=project_id)
+            if user.is_superuser or project.members.filter(id=user.id).exists():
+                # User is superuser or project member - can see all project tickets
+                tickets_qs = Ticket.objects.filter(project_id=project_id)
+            else:
+                # User is not project member - only see their own/company tickets
+                tickets_qs = Ticket.objects.filter(
+                    Q(company__admins=user) | Q(company__users=user) | Q(reporter=user) | Q(assignees=user)
+                ).filter(project_id=project_id).distinct()
+        except Project.DoesNotExist:
+            tickets_qs = Ticket.objects.none()
+    else:
+        tickets_qs = Ticket.objects.filter(
+            Q(company__admins=user) | Q(company__users=user) | Q(reporter=user) | Q(assignees=user) | Q(project__members=user)
+        ).distinct()
+    
+    if company_id:
+        tickets_qs = tickets_qs.filter(company_id=company_id)
+    
+    newest = tickets_qs.select_related(
+        'reporter', 'company', 'column', 'project'
+    ).prefetch_related('assignees').order_by('-created_at')[:limit]
+    
+    data = []
+    for ticket in newest:
+        first_assignee = ticket.assignees.first()
+        data.append({
+            'id': ticket.id,
+            'title': ticket.name,  # Ticket model uses 'name' not 'title'
+            'key': ticket.ticket_key,
+            'status': ticket.column.name if ticket.column else None,
+            'priority': PRIORITY_NAMES.get(ticket.priority_id),
+            'type': ticket.type,
+            'assignee': {
+                'id': first_assignee.id,
+                'username': first_assignee.username,
+                'first_name': first_assignee.first_name,
+                'last_name': first_assignee.last_name,
+            } if first_assignee else None,
+            'reporter': {
+                'id': ticket.reporter.id,
+                'username': ticket.reporter.username,
+                'first_name': ticket.reporter.first_name,
+                'last_name': ticket.reporter.last_name,
+            } if ticket.reporter else None,
+            'company': {
+                'id': ticket.company.id,
+                'name': ticket.company.name,
+                'logo_url': request.build_absolute_uri(ticket.company.logo.url) if ticket.company and ticket.company.logo else None,
+            } if ticket.company else None,
+            'created_at': ticket.created_at.isoformat() if ticket.created_at else None,
+        })
+    
+    return Response(data)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def dashboard_live_activity(request):
+    """
+    Get recent activity (ticket history) for live feed.
+    
+    GET /api/tickets/dashboard/activity/
+    Query params:
+        - project: Filter by project ID (optional)
+        - company: Filter by company ID (optional)
+        - limit: Max number of activities (default 20)
+    """
+    user = request.user
+    project_id = request.query_params.get('project')
+    company_id = request.query_params.get('company')
+    limit = int(request.query_params.get('limit', 20))
+    
+    # Get tickets user can access
+    # If project is specified and user is a project member (or superuser), show ALL tickets in project
+    if project_id:
+        try:
+            project = Project.objects.get(id=project_id)
+            if user.is_superuser or project.members.filter(id=user.id).exists():
+                # User is superuser or project member - can see all project tickets
+                accessible_tickets = Ticket.objects.filter(project_id=project_id)
+            else:
+                # User is not project member - only see their own/company tickets
+                accessible_tickets = Ticket.objects.filter(
+                    Q(company__admins=user) | Q(company__users=user) | Q(reporter=user) | Q(assignees=user)
+                ).filter(project_id=project_id).distinct()
+        except Project.DoesNotExist:
+            accessible_tickets = Ticket.objects.none()
+    else:
+        accessible_tickets = Ticket.objects.filter(
+            Q(company__admins=user) | Q(company__users=user) | Q(reporter=user) | Q(assignees=user) | Q(project__members=user)
+        ).distinct()
+    
+    if company_id:
+        accessible_tickets = accessible_tickets.filter(company_id=company_id)
+    
+    # Get history for these tickets
+    history = TicketHistory.objects.filter(
+        ticket__in=accessible_tickets
+    ).select_related(
+        'ticket', 'ticket__company', 'ticket__project', 'user'
+    ).order_by('-created_at')[:limit]
+    
+    data = []
+    for entry in history:
+        data.append({
+            'id': entry.id,
+            'ticket': {
+                'id': entry.ticket.id,
+                'key': entry.ticket.ticket_key,
+                'title': entry.ticket.name,  # Ticket model uses 'name' not 'title'
+                'company': {
+                    'id': entry.ticket.company.id,
+                    'name': entry.ticket.company.name,
+                } if entry.ticket.company else None,
+            },
+            'field': entry.field,  # TicketHistory uses 'field' not 'field_name'
+            'old_value': entry.old_value,
+            'new_value': entry.new_value,
+            'changed_by': {
+                'id': entry.user.id,
+                'username': entry.user.username,
+                'first_name': entry.user.first_name,
+                'last_name': entry.user.last_name,
+            } if entry.user else None,
+            'changed_at': entry.created_at.isoformat() if entry.created_at else None,  # TicketHistory uses 'created_at'
+        })
+    
+    return Response(data)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def dashboard_agent_workload(request):
+    """
+    Get workload distribution across team members (IT staff only).
+    
+    GET /api/tickets/dashboard/workload/
+    Query params:
+        - project: Filter by project ID (optional)
+        - company: Filter by company ID (optional)
+        
+    Note: Company users (client employees) are excluded from workload.
+    Only IT staff (project members who are not company.users) are shown.
+    """
+    user = request.user
+    project_id = request.query_params.get('project')
+    company_id = request.query_params.get('company')
+    
+    # Get project members
+    if project_id:
+        try:
+            project = Project.objects.get(id=project_id)
+        except Project.DoesNotExist:
+            return Response({'error': 'Project not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Get project members but exclude company users (client employees)
+        # Company users are those who are in any company's "users" M2M field
+        # Company relationship: Project.companies -> Company.users
+        # related_name: User.member_companies points to companies where user is a client
+        project_companies = project.companies.all()
+        company_user_ids = User.objects.filter(
+            member_companies__in=project_companies
+        ).values_list('id', flat=True)
+        
+        members = project.members.exclude(id__in=company_user_ids)
+    else:
+        # Get all users from projects the user is part of
+        user_projects = Project.objects.filter(members=user)
+        members = User.objects.filter(project_memberships__in=user_projects).distinct()
+    
+    workload_data = []
+    for member in members:
+        # Get tickets assigned to this member (through ManyToMany)
+        tickets_qs = Ticket.objects.filter(assignees=member)
+        if project_id:
+            tickets_qs = tickets_qs.filter(project_id=project_id)
+        if company_id:
+            tickets_qs = tickets_qs.filter(company_id=company_id)
+        
+        # Exclude completed
+        active_tickets = tickets_qs.exclude(
+            column__name__icontains='done'
+        ).exclude(
+            column__name__icontains='complete'
+        )
+        
+        # Count by column
+        by_status = {}
+        for ticket in active_tickets.select_related('column'):
+            col_name = ticket.column.name if ticket.column else 'No Column'
+            by_status[col_name] = by_status.get(col_name, 0) + 1
+        
+        # Get overdue count
+        overdue = active_tickets.filter(due_date__lt=timezone.now().date()).count()
+        
+        workload_data.append({
+            'user': {
+                'id': member.id,
+                'username': member.username,
+                'first_name': member.first_name,
+                'last_name': member.last_name,
+            },
+            'total_active': active_tickets.count(),
+            'by_status': by_status,
+            'overdue': overdue,
+        })
+    
+    # Sort by total active tickets descending
+    workload_data.sort(key=lambda x: x['total_active'], reverse=True)
+    
+    return Response(workload_data)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def dashboard_kanban_summary(request):
+    """
+    Get Kanban board summary (ticket counts per column).
+    
+    GET /api/tickets/dashboard/kanban-summary/
+    Query params:
+        - project: Filter by project ID (required)
+        - company: Filter by company ID (optional)
+    """
+    user = request.user
+    project_id = request.query_params.get('project')
+    company_id = request.query_params.get('company')
+    
+    if not project_id:
+        return Response({'error': 'project parameter is required'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        project = Project.objects.get(id=project_id)
+    except Project.DoesNotExist:
+        return Response({'error': 'Project not found'}, status=status.HTTP_404_NOT_FOUND)
+    
+    # Get columns for this project
+    columns = Column.objects.filter(project=project).order_by('order')
+    
+    # Get tickets - superuser or project member can see all
+    if user.is_superuser or project.members.filter(id=user.id).exists():
+        tickets_qs = Ticket.objects.filter(project=project)
+    else:
+        tickets_qs = Ticket.objects.filter(project=project).filter(
+            Q(company__admins=user) | Q(company__users=user) | Q(reporter=user) | Q(assignees=user)
+        ).distinct()
+    
+    if company_id:
+        tickets_qs = tickets_qs.filter(company_id=company_id)
+    
+    column_data = []
+    for column in columns:
+        column_tickets = tickets_qs.filter(column=column)
+        column_data.append({
+            'id': column.id,
+            'name': column.name,
+            'color': column.color,
+            'position': column.order,
+            'ticket_count': column_tickets.count(),
+        })
+    
+    return Response({
+        'project': {
+            'id': project.id,
+            'name': project.name,
+            'key': project.key,
+        },
+        'columns': column_data,
+        'total_tickets': tickets_qs.count(),
+    })
 

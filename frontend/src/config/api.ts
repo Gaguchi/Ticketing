@@ -89,6 +89,14 @@ export const API_ENDPOINTS = {
   USER_TOGGLE_ACTIVE: (id: number) => `${API_BASE_URL}/api/tickets/users/${id}/toggle_active/`,
   USER_ROLES: (id: number) => `${API_BASE_URL}/api/tickets/users/${id}/roles/`,
   
+  // Dashboard
+  DASHBOARD_COMPANY_HEALTH: `${API_BASE_URL}/api/tickets/dashboard/company-health/`,
+  DASHBOARD_ATTENTION_NEEDED: `${API_BASE_URL}/api/tickets/dashboard/attention-needed/`,
+  DASHBOARD_NEWEST: `${API_BASE_URL}/api/tickets/dashboard/newest/`,
+  DASHBOARD_ACTIVITY: `${API_BASE_URL}/api/tickets/dashboard/activity/`,
+  DASHBOARD_WORKLOAD: `${API_BASE_URL}/api/tickets/dashboard/workload/`,
+  DASHBOARD_KANBAN_SUMMARY: `${API_BASE_URL}/api/tickets/dashboard/kanban-summary/`,
+  
   // API Documentation
   API_DOCS: `${API_BASE_URL}/api/docs/`,
   API_SCHEMA: `${API_BASE_URL}/api/schema/`,

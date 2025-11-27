@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 import secrets
+import os
 from datetime import timedelta
 from django.utils import timezone
 
@@ -59,7 +60,18 @@ class Company(models.Model):
     """
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
-    logo = models.ImageField(upload_to='company_logos/', blank=True, null=True, help_text='Company logo image')
+    logo = models.FileField(
+        upload_to='company_logos/', 
+        blank=True, 
+        null=True, 
+        help_text='Company logo (max 5MB, JPG/PNG/GIF/WebP/SVG)'
+    )
+    logo_thumbnail = models.ImageField(
+        upload_to='company_logos/thumbs/', 
+        blank=True, 
+        null=True,
+        help_text='Auto-generated thumbnail (not generated for SVG)'
+    )
     primary_contact_email = models.EmailField(blank=True, null=True, help_text='Primary contact email for this company')
     phone = models.CharField(max_length=50, blank=True, null=True, help_text='Company phone number')
     
@@ -88,6 +100,38 @@ class Company(models.Model):
 
     def __str__(self):
         return self.name
+    
+    def save(self, *args, **kwargs):
+        """Auto-generate thumbnail when logo is uploaded"""
+        # Check if logo has changed
+        if self.pk:
+            try:
+                old_instance = Company.objects.get(pk=self.pk)
+                logo_changed = old_instance.logo != self.logo
+            except Company.DoesNotExist:
+                logo_changed = True
+        else:
+            logo_changed = bool(self.logo)
+        
+        # Generate thumbnail if logo changed (skip for SVG files)
+        if logo_changed and self.logo:
+            # Check if it's an SVG file - skip thumbnail generation
+            logo_name = self.logo.name.lower() if self.logo.name else ''
+            if not logo_name.endswith('.svg'):
+                try:
+                    from tickets.utils.image_processing import create_thumbnail
+                    thumb_content = create_thumbnail(self.logo, size=(64, 64))
+                    thumb_name = f"thumb_{os.path.basename(self.logo.name)}"
+                    # Don't trigger another save
+                    self.logo_thumbnail.save(thumb_name, thumb_content, save=False)
+                except Exception:
+                    # If thumbnail generation fails, continue without it
+                    pass
+        elif logo_changed and not self.logo:
+            # Logo was removed, remove thumbnail too
+            self.logo_thumbnail = None
+        
+        super().save(*args, **kwargs)
     
     @property
     def ticket_count(self):
@@ -638,13 +682,29 @@ class Comment(models.Model):
 class Attachment(models.Model):
     """Attachment model for tickets"""
     ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name='attachments')
-    file = models.FileField(upload_to='attachments/%Y/%m/%d/')
+    file = models.FileField(
+        upload_to='attachments/%Y/%m/%d/',
+        help_text='Max 10MB. Allowed: images, PDF, Office docs, text, archives.'
+    )
     filename = models.CharField(max_length=255)
+    file_size = models.PositiveIntegerField(null=True, blank=True, help_text='File size in bytes')
+    content_type = models.CharField(max_length=100, blank=True, help_text='MIME type')
     uploaded_by = models.ForeignKey(User, on_delete=models.CASCADE)
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.filename} on {self.ticket.name}"
+    
+    def save(self, *args, **kwargs):
+        """Auto-populate file metadata on save"""
+        if self.file:
+            if not self.filename:
+                self.filename = os.path.basename(self.file.name)
+            if not self.file_size:
+                self.file_size = self.file.size
+            if not self.content_type:
+                self.content_type = getattr(self.file, 'content_type', '')
+        super().save(*args, **kwargs)
 
 
 class TicketTag(models.Model):

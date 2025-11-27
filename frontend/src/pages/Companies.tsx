@@ -61,6 +61,8 @@ interface Company {
   name: string;
   description: string;
   logo?: string;
+  logo_url?: string;
+  logo_thumbnail_url?: string;
   primary_contact_email?: string;
   phone?: string;
   ticket_count: number;
@@ -966,11 +968,19 @@ const Companies: React.FC = () => {
                   ]}
                 >
                   <div style={{ textAlign: "center", marginBottom: 16 }}>
-                    <Avatar
-                      size={64}
-                      style={{ background: "#2C3E50" }}
-                      icon={<ShopOutlined />}
-                    />
+                    {company.logo_url || company.logo_thumbnail_url ? (
+                      <Avatar
+                        size={64}
+                        src={company.logo_thumbnail_url || company.logo_url}
+                        style={{ objectFit: "contain" }}
+                      />
+                    ) : (
+                      <Avatar
+                        size={64}
+                        style={{ background: "#2C3E50" }}
+                        icon={<ShopOutlined />}
+                      />
+                    )}
                   </div>
                   <div style={{ textAlign: "center", marginBottom: 12 }}>
                     <Title level={5} style={{ marginBottom: 4 }}>

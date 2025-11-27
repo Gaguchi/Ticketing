@@ -73,18 +73,55 @@ class CompanySerializer(serializers.ModelSerializer):
     admin_count = serializers.SerializerMethodField()
     user_count = serializers.SerializerMethodField()
     project_count = serializers.SerializerMethodField()
+    logo_url = serializers.SerializerMethodField()
+    logo_thumbnail_url = serializers.SerializerMethodField()
     
     class Meta:
         model = Company
         fields = [
-            'id', 'name', 'description', 'logo', 
+            'id', 'name', 'description', 'logo', 'logo_url', 'logo_thumbnail', 'logo_thumbnail_url',
             'primary_contact_email', 'phone',
             'admins', 'admin_ids', 'admin_count',
             'users', 'user_ids', 'user_count',
             'ticket_count', 'project_count', 'project_ids',
             'created_at', 'updated_at'
         ]
-        read_only_fields = ['created_at', 'updated_at']
+        read_only_fields = ['created_at', 'updated_at', 'logo_thumbnail']
+    
+    def validate_logo(self, value):
+        """Validate logo file type and size"""
+        if value:
+            # Check file size (max 5MB)
+            max_size = 5 * 1024 * 1024
+            if value.size > max_size:
+                raise serializers.ValidationError("Logo file size must be less than 5MB")
+            
+            # Check file extension
+            allowed_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg']
+            file_ext = value.name.lower().split('.')[-1] if '.' in value.name else ''
+            if f'.{file_ext}' not in allowed_extensions:
+                raise serializers.ValidationError(
+                    f"Invalid file type. Allowed: {', '.join(allowed_extensions)}"
+                )
+        return value
+    
+    def get_logo_url(self, obj):
+        """Return absolute URL for logo"""
+        if obj.logo:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.logo.url)
+            return obj.logo.url
+        return None
+    
+    def get_logo_thumbnail_url(self, obj):
+        """Return absolute URL for logo thumbnail"""
+        if obj.logo_thumbnail:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.logo_thumbnail.url)
+            return obj.logo_thumbnail.url
+        return None
     
     def get_ticket_count(self, obj):
         if hasattr(obj, 'annotated_ticket_count'):
@@ -168,15 +205,35 @@ class CompanyListSerializer(serializers.ModelSerializer):
     user_count = serializers.SerializerMethodField()
     project_count = serializers.SerializerMethodField()
     admin_names = serializers.SerializerMethodField()
+    logo_url = serializers.SerializerMethodField()
+    logo_thumbnail_url = serializers.SerializerMethodField()
     
     class Meta:
         model = Company
         fields = [
-            'id', 'name', 'description', 'logo',
+            'id', 'name', 'description', 'logo', 'logo_url', 'logo_thumbnail_url',
             'primary_contact_email', 'phone',
             'ticket_count', 'admin_count', 'user_count', 'project_count',
             'admin_names', 'created_at'
         ]
+    
+    def get_logo_url(self, obj):
+        """Return absolute URL for logo"""
+        if obj.logo:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.logo.url)
+            return obj.logo.url
+        return None
+    
+    def get_logo_thumbnail_url(self, obj):
+        """Return absolute URL for logo thumbnail"""
+        if obj.logo_thumbnail:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.logo_thumbnail.url)
+            return obj.logo_thumbnail.url
+        return None
     
     def get_ticket_count(self, obj):
         if hasattr(obj, 'annotated_ticket_count'):
@@ -344,6 +401,7 @@ class TicketSerializer(serializers.ModelSerializer):
     ticket_key = serializers.CharField(read_only=True)
     column_name = serializers.CharField(source='column.name', read_only=True)
     company_name = serializers.CharField(source='company.name', read_only=True)
+    company_logo_url = serializers.SerializerMethodField()
     comments_count = serializers.IntegerField(read_only=True)
     subtasks = serializers.SerializerMethodField()
     tags_detail = serializers.SerializerMethodField()
@@ -367,7 +425,7 @@ class TicketSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'name', 'description', 'type', 'status',
             'priority_id', 'urgency', 'importance',
-            'company', 'company_name',
+            'company', 'company_name', 'company_logo_url',
             'project', 'project_key', 'project_number', 'ticket_key',
             'column', 'column_name', 'column_order',
             'assignees', 'assignee_ids', 'reporter',
@@ -376,6 +434,15 @@ class TicketSerializer(serializers.ModelSerializer):
             'is_archived', 'archived_at', 'archived_by', 'archived_reason', 'done_at',
             'created_at', 'updated_at'
         ]
+    
+    def get_company_logo_url(self, obj):
+        """Return absolute URL for company logo"""
+        if obj.company and obj.company.logo:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.company.logo.url)
+            return obj.company.logo.url
+        return None
     
     def get_column_order(self, obj):
         """Get order from TicketPosition if available, else fallback to Ticket.column_order"""
@@ -402,6 +469,7 @@ class TicketListSerializer(serializers.ModelSerializer):
     ticket_key = serializers.CharField(read_only=True)
     column_name = serializers.CharField(source='column.name', read_only=True)
     company_name = serializers.CharField(source='company.name', read_only=True)
+    company_logo_url = serializers.SerializerMethodField()
     comments_count = serializers.IntegerField(read_only=True)
     tag_names = serializers.SerializerMethodField()
     column_order = serializers.SerializerMethodField()
@@ -411,7 +479,7 @@ class TicketListSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'name', 'type', 'status', 'priority_id',
             'urgency', 'importance',
-            'company', 'company_name',
+            'company', 'company_name', 'company_logo_url',
             'project', 'project_key', 'project_number', 'ticket_key',
             'column', 'column_name', 'column_order',
             'assignee_ids', 'following', 'comments_count', 'tag_names',
@@ -419,6 +487,15 @@ class TicketListSerializer(serializers.ModelSerializer):
             'is_archived', 'archived_at', 'archived_reason', 'done_at',
             'created_at', 'updated_at'
         ]
+    
+    def get_company_logo_url(self, obj):
+        """Return absolute URL for company logo"""
+        if obj.company and obj.company.logo:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.company.logo.url)
+            return obj.company.logo.url
+        return None
     
     def get_column_order(self, obj):
         """Get order from TicketPosition if available, else fallback to Ticket.column_order"""

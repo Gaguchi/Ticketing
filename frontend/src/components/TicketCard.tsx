@@ -130,15 +130,26 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
         >
           <div>
             <Space align="center" size={8}>
-              {/* Issue Type and ID */}
+              {/* Issue Type/Company Logo and ID */}
               <Space size={4} align="center">
-                <FontAwesomeIcon
-                  icon={getTypeIcon(ticket.type).icon}
-                  style={{
-                    fontSize: "14px",
-                    color: getTypeIcon(ticket.type).color,
-                  }}
-                />
+                {ticket.company_logo_url ? (
+                  <Avatar
+                    src={ticket.company_logo_url}
+                    size={16}
+                    style={{
+                      objectFit: "contain",
+                      flexShrink: 0,
+                    }}
+                  />
+                ) : (
+                  <FontAwesomeIcon
+                    icon={getTypeIcon(ticket.type).icon}
+                    style={{
+                      fontSize: "14px",
+                      color: getTypeIcon(ticket.type).color,
+                    }}
+                  />
+                )}
                 <span
                   style={{
                     fontSize: "12px",

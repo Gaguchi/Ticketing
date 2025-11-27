@@ -1,67 +1,155 @@
 # Ticketing System AI Instructions
 
-You are working on a multi-tenant ticketing system with a Django backend and two React frontends (Main App & Service Desk).
+Multi-tenant Jira-style ticketing system: Django REST backend + two React frontends (Main App & Service Desk).
 
-## 🏗 Architecture Overview
+## Architecture Overview
 
-- **Backend**: Django 5.1+, DRF, PostgreSQL, Channels (WebSockets).
-  - **Core Apps**: `tickets` (main logic), `chat` (websockets), `config` (settings).
-  - **Auth**: Simple JWT + Custom `X-Super-Secret-Key` for dev.
-- **Frontend**: React 19, TypeScript, Vite, Ant Design 5.
-  - **State**: React Context (`CompanyProvider`), `useState`.
-  - **Routing**: React Router 7.
-- **Service Desk**: React 19, TypeScript, Vite, Tailwind CSS + Ant Design.
-  - **Port**: 3001 (distinct from main frontend on 5173).
+```
+backend/                    # Django 5.1+, DRF, PostgreSQL, Channels
+├── config/                 # Django settings, ASGI/WSGI
+├── tickets/                # Core app: models, views, serializers
+│   ├── models.py          # UserRole, Company, Project, Ticket, Tag, etc.
+│   ├── views.py           # DRF ViewSets for all endpoints
+│   └── serializers.py     # API serialization
+├── chat/                   # WebSockets via Django Channels
+│   └── consumers.py       # Real-time chat WebSocket handlers
 
-## 🚀 Critical Workflows
+frontend/                   # Main admin app (port 5173)
+├── src/contexts/AppContext.tsx  # Central state: auth + project selection
+├── src/services/api.service.ts  # HTTP client with token refresh
+├── src/config/api.ts            # All API endpoint definitions
+└── src/components/              # Ant Design-based UI
 
-### Startup
+servicedesk/                # Client portal (port 3001)
+└── src/                    # Tailwind CSS + Ant Design (different styling)
+```
 
-- **Run All Services**: `.\start.ps1` (Windows PowerShell).
-- **Backend Only**: `cd backend; python manage.py runserver`.
-- **Frontend Only**: `cd frontend; npm run dev`.
-- **Service Desk Only**: `cd servicedesk; npm run dev`.
+## Critical Startup Commands
 
-### Database Management
+```powershell
+# Run ALL services (recommended for dev)
+.\start.ps1
 
-- **Reset DB (Dev)**: `cd backend; .\reset_db.ps1 -CreateSuperuser` (PowerShell) or `./reset_db.sh --create-superuser` (Bash).
-  - **Warning**: This wipes all data!
-- **Migrations**: `python manage.py makemigrations` -> `python manage.py migrate`.
+# Individual services
+cd backend; python manage.py runserver      # Backend: localhost:8000
+cd frontend; npm run dev                     # Main app: localhost:5173
+cd servicedesk; npm run dev                  # Service desk: localhost:3001
 
-### Authentication
+# Database reset (DESTROYS ALL DATA)
+cd backend; .\reset_db.ps1 -CreateSuperuser  # Windows
+cd backend; ./reset_db.sh --create-superuser # Linux/Mac
+```
 
-- **Dev Bypass**: Use header `X-Super-Secret-Key: dev-super-secret-key-12345` to bypass JWT.
-- **Production**: JWT Bearer tokens (`/api/tickets/auth/login/`).
+## Authentication
 
-## 🧩 Code Conventions
+- **Dev bypass**: Header `X-Super-Secret-Key: dev-super-secret-key-12345` skips JWT
+- **Production**: POST `/api/tickets/auth/login/` → returns `{access, refresh}` tokens
+- **Token refresh**: Handled automatically by `api.service.ts` via `tokenInterceptor`
 
-### Backend (Django)
+## Key Data Model Concepts
 
-- **Models**: Located in `backend/tickets/models.py`. Use `UserRole` for project-level permissions.
-- **Views**: DRF ViewSets in `backend/tickets/views.py`.
-- **URLs**: `backend/tickets/urls.py` and `backend/config/urls.py`.
-- **WebSockets**: `backend/chat/consumers.py` for real-time features.
+**Roles are PROJECT-SCOPED, not global:**
 
-### Frontend (React)
+```python
+# backend/tickets/models.py
+UserRole(user, project, role='superadmin'|'admin'|'user'|'manager')
+```
 
-- **UI Library**: Ant Design (`antd`) is the primary UI kit.
-- **Icons**: `@ant-design/icons` or FontAwesome.
-- **API Calls**: Use `fetch` or `axios` with base URL from `VITE_API_BASE_URL`.
-- **Components**: Functional components with TypeScript interfaces.
-- **Drag & Drop**: `@dnd-kit` for Kanban boards.
+- `superadmin`: Full project control (auto-assigned on project creation)
+- `admin`: Manage tickets, assign work
+- `user`: Create/edit own tickets
+- `manager`: Read-only with reports access
 
-### Service Desk
+**Company ≠ User role:**
 
-- **Styling**: Uses **Tailwind CSS** (`class` attributes) mixed with Ant Design.
+- `Company.admins` = IT staff managing client's tickets
+- `Company.users` = Client employees viewing their tickets
+- Tickets can be `company=null` (general) or linked to specific company
 
-## 📂 Documentation
+**Ticket positioning** uses `TicketPosition` model for Kanban drag-drop (reduces lock contention).
 
-- **Architecture**: `docs/SYSTEM_ARCHITECTURE.md` (Read this for data model details).
-- **API**: `docs/api/API_REFERENCE.md`.
-- **Deployment**: `docs/deployment/`.
+## Frontend Patterns
 
-## ⚠️ Important Notes
+**State Management**: `AppContext` combines auth + project selection
 
-- **User Roles**: Roles are **per-project** (`UserRole` model), not global.
-- **Companies**: Clients are `Company` entities; users can belong to companies.
-- **Tickets**: Can be project-general OR company-specific.
+```tsx
+// Usage pattern
+const { user, selectedProject, isAuthenticated } = useApp();
+```
+
+**API Calls**: Always use `apiService` from `services/api.service.ts`
+
+```tsx
+import apiService from "../services/api.service";
+import { API_ENDPOINTS } from "../config/api";
+
+const data = await apiService.get(API_ENDPOINTS.TICKETS);
+await apiService.post(API_ENDPOINTS.TICKETS, ticketData);
+```
+
+**UI Components**: Ant Design 5 with project-specific patterns
+
+- Modals: Use `Modal.confirm()` for destructive actions
+- Forms: `Form.useForm()` with `Form.Item` validation
+- Tables: Ant Design `Table` with pagination from API
+- Kanban: `@dnd-kit` for drag-drop
+
+**Service Desk difference**: Uses Tailwind CSS classes instead of Ant Design styling
+
+## Backend Patterns
+
+**ViewSets**: Located in `backend/tickets/views.py`
+
+```python
+# Custom actions use @action decorator
+@action(detail=True, methods=['post'])
+def archive(self, request, pk=None):
+    ...
+```
+
+**Filtering**: Uses `django-filter` with DRF
+
+```python
+# GET /api/tickets/tickets/?status=in_progress&priority_id=4&company=1
+```
+
+**WebSockets**: Via Django Channels in `backend/chat/consumers.py`
+
+- Chat rooms: `ws://localhost:8000/ws/chat/{room_id}/`
+- Ticket updates: Broadcast via channel layer `group_send()`
+
+## Common Tasks
+
+**Add new API endpoint:**
+
+1. Add model/fields to `backend/tickets/models.py`
+2. Create/update serializer in `backend/tickets/serializers.py`
+3. Add ViewSet/action in `backend/tickets/views.py`
+4. Register URL in `backend/tickets/urls.py`
+5. Add endpoint constant to `frontend/src/config/api.ts`
+
+**Add frontend page:**
+
+1. Create page in `frontend/src/pages/`
+2. Add route in `frontend/src/App.tsx`
+3. Use `useApp()` for auth/project context
+4. Use `apiService` for API calls
+
+## Important Files Reference
+
+| Purpose            | File                                   |
+| ------------------ | -------------------------------------- |
+| Data models        | `backend/tickets/models.py`            |
+| API views          | `backend/tickets/views.py`             |
+| API endpoints (FE) | `frontend/src/config/api.ts`           |
+| HTTP client        | `frontend/src/services/api.service.ts` |
+| App state          | `frontend/src/contexts/AppContext.tsx` |
+| Architecture docs  | `docs/SYSTEM_ARCHITECTURE.md`          |
+
+## ⚠️ Gotchas
+
+- User roles are **per-project** via `UserRole` model, not Django's built-in groups
+- `Company.admins` vs `UserRole.role='admin'` are different concepts
+- Ticket `column_order` is auto-managed; use `TicketPosition.move_ticket()` for reordering
+- Frontend uses Vite proxy in dev; check `vite.config.ts` for API routing
+- Service Desk runs on port 3001, uses different styling (Tailwind)

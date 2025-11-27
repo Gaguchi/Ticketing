@@ -76,6 +76,10 @@ export interface Company {
   id: number;
   name: string;
   description?: string;
+  logo?: string;
+  logo_url?: string;
+  logo_thumbnail?: string;
+  logo_thumbnail_url?: string;
   ticket_count?: number;
   admin_count?: number;
   user_count?: number;
@@ -196,6 +200,8 @@ export interface Ticket {
   
   // Relationships
   company: number | null;
+  company_name?: string;
+  company_logo_url?: string;
   project: number;
   project_key: string;
   project_number: number;
