@@ -37,7 +37,7 @@ const hoverStyles = `
 
 const Dashboard: React.FC = () => {
   const { selectedProject } = useProject();
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
 
   // Data states
   const [companyHealth, setCompanyHealth] = useState<CompanyHealth[]>([]);

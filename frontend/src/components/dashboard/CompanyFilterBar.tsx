@@ -23,7 +23,7 @@ const CompanyFilterBar: React.FC<Props> = ({
   selectedCompanyId,
   totalTickets,
   onSelect,
-  loading = false,
+  loading: _loading = false,
 }) => {
   const isAllSelected = selectedCompanyId === null;
 

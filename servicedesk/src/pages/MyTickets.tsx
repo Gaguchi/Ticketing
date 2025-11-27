@@ -393,9 +393,12 @@ const MyTickets: React.FC = () => {
 
       {/* Create Ticket Modal */}
       <CreateTicketModal
-        open={isCreateModalOpen}
+        isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        onSuccess={fetchTickets}
+        onSubmit={async (_data) => {
+          // The modal handles its own submission
+          await fetchTickets();
+        }}
       />
 
       {/* Ticket Detail Modal */}
