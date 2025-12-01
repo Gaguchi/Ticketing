@@ -12,7 +12,7 @@ interface LogoProps {
  * Used across the application for branding consistency
  */
 export const Logo: React.FC<LogoProps> = ({
-  size = 32,
+  size = 20,
   showText = false,
   textColor = "#262626",
 }) => {
