@@ -46,11 +46,10 @@ const Settings: React.FC = () => {
   const handleTriggerArchive = async () => {
     setArchiving(true);
     try {
-      const response = await apiService.post<{ archived_count: number; message: string }>(
+      const data = await apiService.post<{ archived_count: number; message: string }>(
         API_ENDPOINTS.TICKET_TRIGGER_ARCHIVE,
         {}
       );
-      const data = response.data;
       setLastArchiveResult({
         count: data.archived_count,
         timestamp: new Date(),
