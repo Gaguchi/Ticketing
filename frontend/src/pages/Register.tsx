@@ -5,6 +5,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../contexts/AppContext";
 import { authService } from "../services/auth.service";
 import { Turnstile } from "../components/Turnstile";
+import { LogoIcon } from "../components/Logo";
 import "./Login.css";
 
 const { Title, Text } = Typography;
@@ -137,7 +138,7 @@ const Register: React.FC = () => {
           <Card className="login-card">
             <div className="login-header">
               <div className="logo-section">
-                <div className="logo-icon">T</div>
+                <LogoIcon size={48} />
                 <Title level={2} className="app-title">
                   Create Account
                 </Title>

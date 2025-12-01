@@ -29,6 +29,7 @@ import { useProject } from "../contexts/AppContext";
 import { useWebSocketContext } from "../contexts/WebSocketContext";
 import { CreateProjectModal } from "../components/CreateProjectModal";
 import { NotificationBell } from "../components/NotificationBell";
+import { Logo, LogoIcon } from "../components/Logo";
 import { chatService } from "../services/chat.service";
 import type { MenuProps } from "antd";
 import "./MainLayout.css";
@@ -278,44 +279,9 @@ const MainLayout: React.FC = () => {
           }}
         >
           {collapsed ? (
-            <div
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 2,
-                background: "#1890ff",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "white",
-                fontSize: "14px",
-                fontWeight: 600,
-              }}
-            >
-              TS
-            </div>
+            <LogoIcon size={32} />
           ) : (
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 2,
-                  background: "#1890ff",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "white",
-                  fontSize: "14px",
-                  fontWeight: 600,
-                }}
-              >
-                TS
-              </div>
-              <Text strong style={{ fontSize: 14 }}>
-                TicketSystem
-              </Text>
-            </div>
+            <Logo size={32} showText />
           )}
         </div>
 

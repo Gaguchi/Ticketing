@@ -18,6 +18,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AppContext";
 import { projectService } from "../services/project.service";
+import { LogoIcon } from "../components/Logo";
 import "./ProjectSetup.css";
 
 const { Title, Text, Paragraph } = Typography;
@@ -108,7 +109,7 @@ const ProjectSetup: React.FC = () => {
           <Card className="setup-card">
             <div className="setup-header">
               <div className="logo-section">
-                <div className="logo-icon">T</div>
+                <LogoIcon size={48} />
                 <Title level={2} className="app-title">
                   Create Your Project
                 </Title>

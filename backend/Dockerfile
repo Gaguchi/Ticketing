@@ -22,8 +22,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy project
 COPY . .
 
-# Make entrypoint executable
-RUN chmod +x entrypoint.sh
+# Make entrypoint executable (celery scripts are optional for main backend)
+RUN chmod +x entrypoint.sh && \
+    (chmod +x celery-worker.sh celery-beat.sh 2>/dev/null || true)
 
 # Create static files directory
 RUN mkdir -p /app/staticfiles

@@ -1,0 +1,106 @@
+# Docker Compose for local development with Celery
+# 
+# Usage:
+#   docker-compose -f docker-compose.celery.yml up
+#
+# This file is for reference/local development.
+# For Dokploy, you'll need to set up Celery as a separate service.
+
+version: '3.8'
+
+services:
+  # Main Django/Daphne application
+  backend:
+    build: .
+    command: ./entrypoint.sh
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=True
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=ticketing
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - .:/app
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+
+  # Celery Worker - processes background tasks
+  celery-worker:
+    build: .
+    command: bash -c "chmod +x celery-worker.sh && ./celery-worker.sh"
+    environment:
+      - DEBUG=True
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=ticketing
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - TICKET_ARCHIVE_AFTER_HOURS=24
+    depends_on:
+      - db
+      - redis
+      - backend
+    volumes:
+      - .:/app
+
+  # Celery Beat - schedules periodic tasks
+  celery-beat:
+    build: .
+    command: bash -c "chmod +x celery-beat.sh && ./celery-beat.sh"
+    environment:
+      - DEBUG=True
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=ticketing
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - db
+      - redis
+      - backend
+    volumes:
+      - .:/app
+
+  # PostgreSQL database
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=ticketing
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  # Redis for Celery broker and Channel Layers
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  postgres_data:
+  redis_data:
+  static_volume:
+  media_volume:
