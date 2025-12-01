@@ -28,6 +28,7 @@ export const API_ENDPOINTS = {
   TICKET_FOLLOW: (id: number) => `${API_BASE_URL}/api/tickets/tickets/${id}/toggle_follow/`,
   TICKET_ARCHIVE: (id: number) => `${API_BASE_URL}/api/tickets/tickets/${id}/archive/`,
   TICKET_RESTORE: (id: number) => `${API_BASE_URL}/api/tickets/tickets/${id}/restore/`,
+  TICKET_TRIGGER_ARCHIVE: `${API_BASE_URL}/api/tickets/tickets/trigger-archive/`,
   TICKET_REORDER: `${API_BASE_URL}/api/tickets/tickets/reorder_tickets/`,
   
   // Columns

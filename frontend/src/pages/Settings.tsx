@@ -10,6 +10,7 @@ import {
   Button,
   message,
   Tabs,
+  Alert,
 } from "antd";
 import {
   BgColorsOutlined,
@@ -17,7 +18,11 @@ import {
   GlobalOutlined,
   SafetyOutlined,
   UserOutlined,
+  SettingOutlined,
+  InboxOutlined,
 } from "@ant-design/icons";
+import apiService from "../services/api.service";
+import { API_ENDPOINTS } from "../config/api";
 
 const { Title, Text } = Typography;
 
@@ -32,6 +37,33 @@ const Settings: React.FC = () => {
     push: true,
     updates: false,
   });
+  const [archiving, setArchiving] = useState(false);
+  const [lastArchiveResult, setLastArchiveResult] = useState<{
+    count: number;
+    timestamp: Date;
+  } | null>(null);
+
+  const handleTriggerArchive = async () => {
+    setArchiving(true);
+    try {
+      const response = await apiService.post(API_ENDPOINTS.TICKET_TRIGGER_ARCHIVE, {});
+      const data = response.data;
+      setLastArchiveResult({
+        count: data.archived_count,
+        timestamp: new Date(),
+      });
+      if (data.archived_count > 0) {
+        message.success(`Successfully archived ${data.archived_count} ticket(s)`);
+      } else {
+        message.info("No tickets were eligible for archiving");
+      }
+    } catch (error) {
+      message.error("Failed to trigger archive process");
+      console.error("Archive error:", error);
+    } finally {
+      setArchiving(false);
+    }
+  };
 
   const handleSave = () => {
     // In a real app, this would save to backend/localStorage
@@ -502,6 +534,80 @@ const Settings: React.FC = () => {
                 Delete Account
               </Button>
             </Space>
+          </div>
+        </Space>
+      ),
+    },
+    {
+      key: "system",
+      label: (
+        <span>
+          <SettingOutlined />
+          System
+        </span>
+      ),
+      children: (
+        <Space direction="vertical" size="large" style={{ width: "100%" }}>
+          <div>
+            <Text
+              strong
+              style={{ fontSize: 15, display: "block", marginBottom: 8 }}
+            >
+              <InboxOutlined style={{ marginRight: 8 }} />
+              Ticket Archiving
+            </Text>
+            <Text
+              type="secondary"
+              style={{ fontSize: 13, display: "block", marginBottom: 16 }}
+            >
+              Tickets in the "Done" column for more than 24 hours are
+              automatically archived. You can manually trigger this process
+              below.
+            </Text>
+
+            {lastArchiveResult && (
+              <Alert
+                type={lastArchiveResult.count > 0 ? "success" : "info"}
+                message={
+                  lastArchiveResult.count > 0
+                    ? `${lastArchiveResult.count} ticket(s) were archived`
+                    : "No tickets needed archiving"
+                }
+                description={`Last run: ${lastArchiveResult.timestamp.toLocaleString()}`}
+                style={{ marginBottom: 16 }}
+                showIcon
+              />
+            )}
+
+            <Button
+              type="primary"
+              icon={<InboxOutlined />}
+              onClick={handleTriggerArchive}
+              loading={archiving}
+            >
+              {archiving ? "Archiving..." : "Archive Completed Tickets"}
+            </Button>
+          </div>
+
+          <Divider />
+
+          <div>
+            <Text
+              strong
+              style={{ fontSize: 15, display: "block", marginBottom: 8 }}
+            >
+              Background Tasks
+            </Text>
+            <Text
+              type="secondary"
+              style={{ fontSize: 13, display: "block", marginBottom: 8 }}
+            >
+              The system automatically runs the following background tasks:
+            </Text>
+            <ul style={{ margin: 0, paddingLeft: 20, color: "#666" }}>
+              <li>Auto-archive completed tickets (runs hourly)</li>
+              <li>Clean up expired sessions</li>
+            </ul>
           </div>
         </Space>
       ),

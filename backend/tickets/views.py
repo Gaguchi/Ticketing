@@ -1249,6 +1249,25 @@ class TicketViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(ticket)
         return Response(serializer.data)
 
+    @action(detail=False, methods=['post'], url_path='trigger-archive')
+    def trigger_archive(self, request):
+        """
+        Manually trigger auto-archive for completed tickets.
+        Archives tickets that have been in Done column for longer than the threshold.
+        Optionally filter by project_id.
+        """
+        project_id = request.data.get('project_id')
+        try:
+            project_id_int = int(project_id) if project_id else None
+        except (TypeError, ValueError):
+            project_id_int = None
+
+        archived_count = auto_archive_completed_tickets(project_id_int)
+        return Response({
+            'archived_count': archived_count,
+            'message': f'Successfully archived {archived_count} ticket(s).'
+        })
+
 
 class ColumnViewSet(viewsets.ModelViewSet):
     """
