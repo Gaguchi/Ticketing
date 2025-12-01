@@ -1,10 +1,11 @@
 # Celery Worker & Beat Service for Ticketing System
 #
 # This Dockerfile creates a container that runs both Celery worker and beat scheduler.
-# It uses the same codebase as the backend but runs Celery instead of Daphne.
+# It clones the backend code from the same repo during build.
 #
-# IMPORTANT: In Dokploy, set the Build Path to "/" (root) NOT "/celery"
-# and set the Dockerfile Path to "celery/Dockerfile"
+# Dokploy Settings:
+#   - Build Path: /celery
+#   - Dockerfile Path: Dockerfile
 
 FROM python:3.11-slim
 
@@ -12,33 +13,37 @@ FROM python:3.11-slim
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# Install system dependencies
+# Install system dependencies including git
 RUN apt-get update && apt-get install -y \
     postgresql-client \
     build-essential \
     libpq-dev \
     netcat-openbsd \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
 # Set work directory
 WORKDIR /app
 
-# Copy and install Python dependencies from backend
-COPY backend/requirements.txt .
+# Copy requirements (synced copy from backend/requirements.txt)
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the backend code
-COPY backend/ .
+# Clone the backend code from the repo
+# ARG allows passing the branch at build time
+ARG GIT_BRANCH=main
+RUN git clone --depth 1 --branch ${GIT_BRANCH} https://github.com/Gaguchi/Ticketing.git /tmp/repo && \
+    cp -r /tmp/repo/backend/* /app/ && \
+    rm -rf /tmp/repo
 
-# Create entrypoint script for combined worker + beat
-COPY celery/celery-entrypoint.sh /app/celery-entrypoint.sh
+# Copy entrypoint script (this is in the celery/ context)
+COPY celery-entrypoint.sh /app/celery-entrypoint.sh
 RUN chmod +x /app/celery-entrypoint.sh
 
 # Expose no ports - Celery doesn't need external access
-# It communicates via Redis
 
 # Health check - verify celery is running
-HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD celery -A config inspect ping || exit 1
 
 # Run the combined entrypoint

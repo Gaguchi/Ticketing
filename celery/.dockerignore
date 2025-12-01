@@ -34,17 +34,10 @@ celerybeat.pid
 htmlcov/
 .pytest_cache/
 
-# Static/Media (not needed for celery)
-staticfiles/
-media/
-
 # Git
 .git/
 .gitignore
 
-# Docker
-.dockerignore
-
-# Documentation
-*.md
-!README.md
+# Keep requirements.txt and celery-entrypoint.sh
+!requirements.txt
+!celery-entrypoint.sh

@@ -20,8 +20,8 @@ This directory contains the Dockerfile for running Celery worker and beat schedu
 - **Source**: GitHub
 - **Repository**: `Gaguchi/Ticketing`
 - **Branch**: `main`
-- **Build Path**: `/` (root of repo - IMPORTANT!)
-- **Dockerfile Path**: `celery/Dockerfile`
+- **Build Path**: `/celery`
+- **Dockerfile Path**: `Dockerfile`
 
 ### 3. Set Environment Variables
 
