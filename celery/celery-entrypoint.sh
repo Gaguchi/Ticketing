@@ -56,6 +56,10 @@ echo "✅ Redis is up!"
 echo "Running migrations..."
 python manage.py migrate --noinput || echo "Migration skipped"
 
+# Backfill done_at for tickets already in Done columns (one-time fix for existing data)
+echo "Backfilling done_at for existing Done tickets..."
+python manage.py backfill_done_at || echo "Backfill skipped or failed"
+
 # Start Celery beat in background
 echo "Starting Celery beat scheduler..."
 celery -A config beat --loglevel=debug --scheduler django_celery_beat.schedulers:DatabaseScheduler &

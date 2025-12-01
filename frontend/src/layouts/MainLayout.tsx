@@ -303,9 +303,9 @@ const MainLayout: React.FC = () => {
           }}
         >
           {collapsed ? (
-            <LogoIcon size={32} />
+            <LogoIcon size={20} />
           ) : (
-            <Logo size={32} showText />
+            <Logo size={20} showText />
           )}
         </div>
 
