@@ -1,4 +1,5 @@
 import React from "react";
+import logoImage from "../assets/logo.png";
 
 interface LogoProps {
   size?: number;
@@ -7,7 +8,7 @@ interface LogoProps {
 }
 
 /**
- * ServiceDesk-style blue logo component
+ * iTech logo component
  * Used across the application for branding consistency
  */
 export const Logo: React.FC<LogoProps> = ({
@@ -15,30 +16,17 @@ export const Logo: React.FC<LogoProps> = ({
   showText = false,
   textColor = "#262626",
 }) => {
-  const iconSize = size;
-  const fontSize = size * 0.4;
-  const borderRadius = size * 0.125;
-
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-      <div
+      <img
+        src={logoImage}
+        alt="iTech Logo"
         style={{
-          width: iconSize,
-          height: iconSize,
-          borderRadius: borderRadius,
-          background: "linear-gradient(135deg, #1890ff 0%, #096dd9 100%)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: "white",
-          fontSize: `${fontSize}px`,
-          fontWeight: 700,
-          letterSpacing: "-0.5px",
-          boxShadow: "0 2px 8px rgba(24, 144, 255, 0.35)",
+          height: size,
+          width: "auto",
+          objectFit: "contain",
         }}
-      >
-        SD
-      </div>
+      />
       {showText && (
         <span
           style={{
@@ -47,7 +35,7 @@ export const Logo: React.FC<LogoProps> = ({
             color: textColor,
           }}
         >
-          ServiceDesk
+          iTech
         </span>
       )}
     </div>
@@ -58,28 +46,16 @@ export const Logo: React.FC<LogoProps> = ({
  * Logo icon only (for collapsed sidebar, favicons, etc.)
  */
 export const LogoIcon: React.FC<{ size?: number }> = ({ size = 32 }) => {
-  const borderRadius = size * 0.125;
-  const fontSize = size * 0.4;
-
   return (
-    <div
+    <img
+      src={logoImage}
+      alt="iTech Logo"
       style={{
-        width: size,
         height: size,
-        borderRadius: borderRadius,
-        background: "linear-gradient(135deg, #1890ff 0%, #096dd9 100%)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        color: "white",
-        fontSize: `${fontSize}px`,
-        fontWeight: 700,
-        letterSpacing: "-0.5px",
-        boxShadow: "0 2px 8px rgba(24, 144, 255, 0.35)",
+        width: "auto",
+        objectFit: "contain",
       }}
-    >
-      SD
-    </div>
+    />
   );
 };
 

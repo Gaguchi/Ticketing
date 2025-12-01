@@ -340,8 +340,10 @@ FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173')
 # ============================================
 
 # Celery broker URL - uses Redis
-CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', f'redis://{REDIS_HOST}:{REDIS_PORT}/0')
-CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', f'redis://{REDIS_HOST}:{REDIS_PORT}/0')
+# REDIS_URL takes precedence (may include auth), then CELERY_BROKER_URL, then constructed from host:port
+_default_redis_url = REDIS_URL or f'redis://{REDIS_HOST}:{REDIS_PORT}/0'
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', _default_redis_url)
+CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', _default_redis_url)
 
 # Celery settings
 CELERY_ACCEPT_CONTENT = ['json']
