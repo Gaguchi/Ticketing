@@ -36,8 +36,9 @@ RUN git clone --depth 1 --branch ${GIT_BRANCH} https://github.com/Gaguchi/Ticket
     cp -r /tmp/repo/backend/* /app/ && \
     rm -rf /tmp/repo
 
-# Copy entrypoint script (this is in the celery/ context)
+# Copy entrypoint script and manual archive utility (these are in the celery/ context)
 COPY celery-entrypoint.sh /app/celery-entrypoint.sh
+COPY manual_archive.py /app/manual_archive.py
 RUN chmod +x /app/celery-entrypoint.sh
 
 # Expose no ports - Celery doesn't need external access

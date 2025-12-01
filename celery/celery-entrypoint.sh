@@ -60,6 +60,10 @@ python manage.py migrate --noinput || echo "Migration skipped"
 echo "Backfilling done_at for existing Done tickets..."
 python manage.py backfill_done_at || echo "Backfill skipped or failed"
 
+# Purge any stale messages from the queue to prevent duplicate task execution
+echo "Purging stale Celery messages..."
+celery -A config purge -f || echo "Purge skipped (queue may be empty)"
+
 # Start Celery beat in background
 echo "Starting Celery beat scheduler..."
 celery -A config beat --loglevel=debug --scheduler django_celery_beat.schedulers:DatabaseScheduler &
