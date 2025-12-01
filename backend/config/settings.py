@@ -302,6 +302,16 @@ REDIS_URL = os.getenv('REDIS_URL')
 REDIS_HOST = os.getenv('REDIS_HOST', '127.0.0.1')
 REDIS_PORT = int(os.getenv('REDIS_PORT', 6379))
 
+# Debug: Log Redis configuration at startup (mask password in URL)
+def _mask_redis_url(url):
+    if not url:
+        return None
+    import re
+    return re.sub(r':([^@:]+)@', ':***@', url)
+
+print(f"[Settings] REDIS_URL set: {bool(REDIS_URL)} (masked: {_mask_redis_url(REDIS_URL)})")
+print(f"[Settings] REDIS_HOST: {REDIS_HOST}, REDIS_PORT: {REDIS_PORT}")
+
 CHANNEL_LAYERS = {
     'default': {
         # Use Redis if REDIS_URL is set OR if not in DEBUG mode
@@ -344,6 +354,9 @@ FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173')
 _default_redis_url = REDIS_URL or f'redis://{REDIS_HOST}:{REDIS_PORT}/0'
 CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', _default_redis_url)
 CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', _default_redis_url)
+
+# Debug: Log Celery broker configuration
+print(f"[Settings] CELERY_BROKER_URL (masked): {_mask_redis_url(CELERY_BROKER_URL)}")
 
 # Celery settings
 CELERY_ACCEPT_CONTENT = ['json']
