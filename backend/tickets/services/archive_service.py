@@ -5,7 +5,7 @@ from django.utils import timezone
 
 from ..models import Ticket
 
-AUTO_ARCHIVE_AGE_DAYS = 3
+AUTO_ARCHIVE_AGE_DAYS = 1
 
 
 def auto_archive_completed_tickets(project_id: Optional[int] = None) -> int:

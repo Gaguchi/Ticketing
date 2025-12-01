@@ -3,17 +3,8 @@
  * Displays notification bell icon with badge count and dropdown list
  */
 
-import React, { useState, useEffect } from "react";
-import {
-  Badge,
-  Dropdown,
-  List,
-  Empty,
-  Button,
-  Typography,
-  Space,
-  Spin,
-} from "antd";
+import React, { useState } from "react";
+import { Badge, Dropdown, List, Empty, Button, Typography, Space } from "antd";
 import { BellOutlined, CheckOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { notificationService } from "../services/notification.service";
@@ -48,53 +39,20 @@ interface NotificationBellProps {
 }
 
 export const NotificationBell: React.FC<NotificationBellProps> = ({
-  notifications: propNotifications,
-  unreadCount: propUnreadCount,
+  notifications: propNotifications = [],
+  unreadCount: propUnreadCount = 0,
   onNotificationRead,
   onAllNotificationsRead,
 }) => {
   const navigate = useNavigate();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState<number>(0);
-  const [loading, setLoading] = useState(false);
   const [dropdownVisible, setDropdownVisible] = useState(false);
 
   /**
-   * Load notifications from API on component mount
+   * Use notifications and count from props (provided by WebSocketContext)
+   * No need for local state or API calls - context handles everything
    */
-  useEffect(() => {
-    loadNotifications();
-  }, []);
-
-  /**
-   * Use prop notifications if provided (from WebSocket), otherwise use local state
-   */
-  const displayNotifications = propNotifications || notifications;
-  const displayUnreadCount =
-    propUnreadCount !== undefined ? propUnreadCount : unreadCount;
-
-  /**
-   * Load notifications from API
-   */
-  const loadNotifications = async () => {
-    try {
-      setLoading(true);
-      const response = await notificationService.getNotifications({
-        limit: 20,
-      });
-      setNotifications(response.results);
-
-      // Update unread count if not using prop
-      if (propUnreadCount === undefined) {
-        const count = response.results.filter((n) => !n.is_read).length;
-        setUnreadCount(count);
-      }
-    } catch (error) {
-      console.error("Failed to load notifications:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const displayNotifications = propNotifications;
+  const displayUnreadCount = propUnreadCount;
 
   /**
    * Handle notification click - navigate to link and mark as read
@@ -105,15 +63,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
       try {
         await notificationService.markAsRead(notification.id);
 
-        // Update local state
-        setNotifications((prev) =>
-          prev.map((n) =>
-            n.id === notification.id ? { ...n, is_read: true } : n
-          )
-        );
-        setUnreadCount((prev) => Math.max(0, prev - 1));
-
-        // Call callback if provided
+        // Call callback to update context state
         if (onNotificationRead) {
           onNotificationRead(notification.id);
         }
@@ -136,11 +86,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
     try {
       await notificationService.markAllAsRead();
 
-      // Update local state
-      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
-      setUnreadCount(0);
-
-      // Call callback if provided
+      // Call callback to update context state
       if (onAllNotificationsRead) {
         onAllNotificationsRead();
       }
@@ -157,17 +103,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
 
     try {
       await notificationService.deleteNotification(notificationId);
-
-      // Update local state
-      setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
-
-      // Update unread count if the deleted notification was unread
-      const deletedNotification = notifications.find(
-        (n) => n.id === notificationId
-      );
-      if (deletedNotification && !deletedNotification.is_read) {
-        setUnreadCount((prev) => Math.max(0, prev - 1));
-      }
+      // Context will handle state update via WebSocket
     } catch (error) {
       console.error("Failed to delete notification:", error);
     }
@@ -240,11 +176,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
 
       {/* Notification List */}
       <div style={{ flex: 1, overflow: "auto" }}>
-        {loading ? (
-          <div style={{ padding: 40, textAlign: "center" }}>
-            <Spin />
-          </div>
-        ) : displayNotifications.length === 0 ? (
+        {displayNotifications.length === 0 ? (
           <Empty
             image={Empty.PRESENTED_IMAGE_SIMPLE}
             description="No notifications"

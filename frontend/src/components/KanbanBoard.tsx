@@ -12,7 +12,6 @@ import {
   useSensors,
   useSensor,
   MeasuringStrategy,
-  useDndMonitor,
 } from "@dnd-kit/core";
 import type {
   DragStartEvent,
@@ -33,8 +32,13 @@ interface KanbanBoardProps {
   tickets: Ticket[];
   columns: TicketColumn[];
   onTicketClick?: (ticket: Ticket) => void;
-  onTicketMove?: (ticketId: number, newColumnId: number) => void;
+  onTicketMove?: (ticketId: number, newColumnId: number, order: number) => void;
+  onTicketReorder?: (
+    updates: Array<{ ticket_id: number; column_id: number; order: number }>
+  ) => void;
   onTicketCreated?: (ticket: Ticket) => void;
+  onDragStart?: () => void;
+  onDragEnd?: () => void;
 }
 
 export const KanbanBoard: React.FC<KanbanBoardProps> = ({
@@ -42,7 +46,10 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   columns,
   onTicketClick,
   onTicketMove,
+  onTicketReorder,
   onTicketCreated,
+  onDragStart,
+  onDragEnd,
 }) => {
   const [data, setData] = useState<Ticket[] | null>(null);
   const [items, setItems] = useState<KanbanItems>({});
@@ -55,6 +62,11 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
   useEffect(() => {
     if (!tickets) {
+      return;
+    }
+
+    // Optimization: Don't sync while dragging to prevent UI jumps
+    if (activeId) {
       return;
     }
 
@@ -100,6 +112,52 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         }
       });
 
+      // Sort tickets within each column by column_order
+      Object.keys(nextItems).forEach((columnKey) => {
+        // Optimization: If the set of tickets in this column hasn't changed,
+        // preserve the local order (items) instead of re-sorting by column_order.
+        // This prevents UI jumps and infinite loops when optimistic updates
+        // haven't fully propagated to all tickets' column_order fields.
+        const currentIds = nextItems[columnKey];
+        const prevIds = prevItems[columnKey] || [];
+
+        const isSameSet =
+          currentIds.length === prevIds.length &&
+          currentIds.every((id) => prevIds.includes(id));
+
+        if (isSameSet) {
+          // Keep the local order
+          nextItems[columnKey] = prevIds;
+          return;
+        }
+
+        // If set changed, we MUST update.
+        // Sort by column_order (ascending)
+        const sortedTicketIds = [...currentIds].sort((a, b) => {
+          const ticketA = tickets.find((t) => `ticket-${t.id}` === a);
+          const ticketB = tickets.find((t) => `ticket-${t.id}` === b);
+
+          if (!ticketA || !ticketB) return 0;
+
+          // Sort by column_order (ascending)
+          return (ticketA.column_order || 0) - (ticketB.column_order || 0);
+        });
+
+        // Optimization: Check if the new sorted order is actually different from what we have
+        // This prevents unnecessary re-renders when the optimistic update matches the dnd-kit state
+        const prevColumnItems = prevItems[columnKey] || [];
+        const isOrderChanged =
+          prevColumnItems.length !== sortedTicketIds.length ||
+          !prevColumnItems.every((id, index) => id === sortedTicketIds[index]);
+
+        if (isOrderChanged) {
+          nextItems[columnKey] = sortedTicketIds;
+          changed = true;
+        } else {
+          nextItems[columnKey] = prevColumnItems;
+        }
+      });
+
       // Remove columns that no longer exist
       Object.keys(prevItems).forEach((columnKey) => {
         if (!nextItems[columnKey]) {
@@ -116,7 +174,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         columnKeys.some((key, index) => prevContainers[index] !== key);
       return hasChanged ? columnKeys : prevContainers;
     });
-  }, [tickets, columns]);
+  }, [tickets, columns, activeId]);
 
   const ticketMap = React.useMemo<Record<string, Ticket>>(() => {
     if (!data) {
@@ -260,6 +318,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     setActiveContainer(container || null);
 
     console.log("🟢 handleDragStart - Original container:", container);
+
+    // Notify parent that drag started
+    onDragStart?.();
   }
 
   function handleDragOver({ active, over }: DragOverEvent) {
@@ -328,14 +389,14 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       const activeIndex = items[finalContainer].indexOf(active.id as string);
       const overIndex = items[finalContainer].indexOf(over.id as string);
 
+      // Calculate new items list locally to get correct positions immediately
+      let newItems = items[finalContainer];
+
       if (activeIndex !== overIndex) {
+        newItems = arrayMove(items[finalContainer], activeIndex, overIndex);
         setItems((items) => ({
           ...items,
-          [finalContainer]: arrayMove(
-            items[finalContainer],
-            activeIndex,
-            overIndex
-          ),
+          [finalContainer]: newItems,
         }));
       }
 
@@ -346,19 +407,49 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           finalContainer.toString().replace("column-", "")
         );
 
+        // Calculate the exact drop position in the new column
+        const dropPosition = newItems.indexOf(active.id as string);
+
+        const allTicketsInColumn = newItems.map((id) => {
+          const t = tickets.find((ticket) => `ticket-${ticket.id}` === id);
+          return t ? `${t.ticket_key}(${t.column_order})` : id;
+        });
+
         console.log("✅ Calling onTicketMove (moved between columns):", {
           ticketId,
           newColumnId,
+          dropPosition,
           fromColumn: originalContainer,
           toColumn: finalContainer,
+          finalColumnItems: allTicketsInColumn,
+          totalInColumn: newItems.length,
         });
 
-        onTicketMove(ticketId, newColumnId);
+        onTicketMove(ticketId, newColumnId, dropPosition);
+      } else if (originalContainer === finalContainer && onTicketReorder) {
+        // Reordered within the same column - send the new order to backend
+        const columnId = parseInt(
+          finalContainer.toString().replace("column-", "")
+        );
+        const ticketIds = newItems;
+
+        const updates = ticketIds.map((ticketId, index) => ({
+          ticket_id: parseInt(ticketId.toString().replace("ticket-", "")),
+          column_id: columnId,
+          order: index,
+        }));
+
+        console.log("📋 Calling onTicketReorder (reordered within column):", {
+          columnId,
+          updates,
+        });
+
+        onTicketReorder(updates);
       } else {
         console.log("⚠️ NOT calling onTicketMove:", {
           reason:
             originalContainer === finalContainer
-              ? "Same container - reordering within column"
+              ? "Same container - reordering within column (but no callback)"
               : !onTicketMove
               ? "No callback provided"
               : "Unknown",
@@ -371,6 +462,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
     setActiveId(null);
     setActiveContainer(null);
+
+    // Notify parent that drag ended
+    onDragEnd?.();
   }
 
   const handleDragCancel = () => {
@@ -380,45 +474,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     setActiveId(null);
     setActiveContainer(null);
     setClonedItems(null);
-  };
 
-  // Monitor component to log all drag events
-  const DragMonitor = () => {
-    useDndMonitor({
-      onDragStart(event) {
-        console.log("🟢 DND Monitor - onDragStart:", {
-          activeId: event.active.id,
-          activeData: event.active.data.current,
-        });
-      },
-      onDragMove(event) {
-        console.log("🔵 DND Monitor - onDragMove:", {
-          activeId: event.active.id,
-          delta: event.delta,
-        });
-      },
-      onDragOver(event) {
-        console.log("🟡 DND Monitor - onDragOver:", {
-          activeId: event.active.id,
-          overId: event.over?.id,
-          overData: event.over?.data.current,
-        });
-      },
-      onDragEnd(event) {
-        console.log("🔴 DND Monitor - onDragEnd:", {
-          activeId: event.active.id,
-          overId: event.over?.id,
-          activeData: event.active.data.current,
-          overData: event.over?.data.current,
-        });
-      },
-      onDragCancel(event) {
-        console.log("⚪ DND Monitor - onDragCancel:", {
-          activeId: event.active.id,
-        });
-      },
-    });
-    return null;
+    // Notify parent that drag ended (canceled)
+    onDragEnd?.();
   };
 
   useEffect(() => {
@@ -442,7 +500,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
-        <DragMonitor />
         <div className="kanban-container">
           <SortableContext
             items={containers}

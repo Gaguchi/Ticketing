@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from .models import (
     Ticket, Project, Column, Comment, Attachment,
     Tag, Contact, TagContact, UserTag, TicketTag, IssueLink, Company, UserRole, TicketSubtask,
-    Notification, ProjectInvitation
+    Notification, ProjectInvitation, TicketPosition, TicketHistory
 )
 
 
@@ -69,21 +69,79 @@ class CompanySerializer(serializers.ModelSerializer):
         required=False,
         help_text='List of project IDs to associate with this company'
     )
-    ticket_count = serializers.IntegerField(read_only=True)
-    admin_count = serializers.IntegerField(read_only=True)
-    user_count = serializers.IntegerField(read_only=True)
+    ticket_count = serializers.SerializerMethodField()
+    admin_count = serializers.SerializerMethodField()
+    user_count = serializers.SerializerMethodField()
+    project_count = serializers.SerializerMethodField()
+    logo_url = serializers.SerializerMethodField()
+    logo_thumbnail_url = serializers.SerializerMethodField()
     
     class Meta:
         model = Company
         fields = [
-            'id', 'name', 'description', 'logo', 
+            'id', 'name', 'description', 'logo', 'logo_url', 'logo_thumbnail', 'logo_thumbnail_url',
             'primary_contact_email', 'phone',
             'admins', 'admin_ids', 'admin_count',
             'users', 'user_ids', 'user_count',
             'ticket_count', 'project_count', 'project_ids',
             'created_at', 'updated_at'
         ]
-        read_only_fields = ['created_at', 'updated_at']
+        read_only_fields = ['created_at', 'updated_at', 'logo_thumbnail']
+    
+    def validate_logo(self, value):
+        """Validate logo file type and size"""
+        if value:
+            # Check file size (max 5MB)
+            max_size = 5 * 1024 * 1024
+            if value.size > max_size:
+                raise serializers.ValidationError("Logo file size must be less than 5MB")
+            
+            # Check file extension
+            allowed_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg']
+            file_ext = value.name.lower().split('.')[-1] if '.' in value.name else ''
+            if f'.{file_ext}' not in allowed_extensions:
+                raise serializers.ValidationError(
+                    f"Invalid file type. Allowed: {', '.join(allowed_extensions)}"
+                )
+        return value
+    
+    def get_logo_url(self, obj):
+        """Return absolute URL for logo"""
+        if obj.logo:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.logo.url)
+            return obj.logo.url
+        return None
+    
+    def get_logo_thumbnail_url(self, obj):
+        """Return absolute URL for logo thumbnail"""
+        if obj.logo_thumbnail:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.logo_thumbnail.url)
+            return obj.logo_thumbnail.url
+        return None
+    
+    def get_ticket_count(self, obj):
+        if hasattr(obj, 'annotated_ticket_count'):
+            return obj.annotated_ticket_count
+        return obj.ticket_count
+
+    def get_admin_count(self, obj):
+        if hasattr(obj, 'annotated_admin_count'):
+            return obj.annotated_admin_count
+        return obj.admin_count
+
+    def get_user_count(self, obj):
+        if hasattr(obj, 'annotated_user_count'):
+            return obj.annotated_user_count
+        return obj.user_count
+
+    def get_project_count(self, obj):
+        if hasattr(obj, 'annotated_project_count'):
+            return obj.annotated_project_count
+        return obj.project_count
     
     def create(self, validated_data):
         admin_ids = validated_data.pop('admin_ids', [])
@@ -142,20 +200,60 @@ class CompanySerializer(serializers.ModelSerializer):
 
 class CompanyListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for listing companies"""
-    ticket_count = serializers.IntegerField(read_only=True)
-    admin_count = serializers.IntegerField(read_only=True)
-    user_count = serializers.IntegerField(read_only=True)
-    project_count = serializers.IntegerField(read_only=True)
+    ticket_count = serializers.SerializerMethodField()
+    admin_count = serializers.SerializerMethodField()
+    user_count = serializers.SerializerMethodField()
+    project_count = serializers.SerializerMethodField()
     admin_names = serializers.SerializerMethodField()
+    logo_url = serializers.SerializerMethodField()
+    logo_thumbnail_url = serializers.SerializerMethodField()
     
     class Meta:
         model = Company
         fields = [
-            'id', 'name', 'description', 'logo',
+            'id', 'name', 'description', 'logo', 'logo_url', 'logo_thumbnail_url',
             'primary_contact_email', 'phone',
             'ticket_count', 'admin_count', 'user_count', 'project_count',
             'admin_names', 'created_at'
         ]
+    
+    def get_logo_url(self, obj):
+        """Return absolute URL for logo"""
+        if obj.logo:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.logo.url)
+            return obj.logo.url
+        return None
+    
+    def get_logo_thumbnail_url(self, obj):
+        """Return absolute URL for logo thumbnail"""
+        if obj.logo_thumbnail:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.logo_thumbnail.url)
+            return obj.logo_thumbnail.url
+        return None
+    
+    def get_ticket_count(self, obj):
+        if hasattr(obj, 'annotated_ticket_count'):
+            return obj.annotated_ticket_count
+        return obj.ticket_count
+
+    def get_admin_count(self, obj):
+        if hasattr(obj, 'annotated_admin_count'):
+            return obj.annotated_admin_count
+        return obj.admin_count
+
+    def get_user_count(self, obj):
+        if hasattr(obj, 'annotated_user_count'):
+            return obj.annotated_user_count
+        return obj.user_count
+
+    def get_project_count(self, obj):
+        if hasattr(obj, 'annotated_project_count'):
+            return obj.annotated_project_count
+        return obj.project_count
     
     def get_admin_names(self, obj):
         return [f"{admin.first_name} {admin.last_name}".strip() or admin.username 
@@ -166,7 +264,7 @@ class ProjectSerializer(serializers.ModelSerializer):
     """Serializer for Project model"""
     tickets_count = serializers.SerializerMethodField()
     columns_count = serializers.SerializerMethodField()
-    members = UserSerializer(many=True, read_only=True)
+    members = UserSimpleSerializer(many=True, read_only=True)
     member_usernames = serializers.ListField(
         child=serializers.CharField(),
         write_only=True,
@@ -189,9 +287,13 @@ class ProjectSerializer(serializers.ModelSerializer):
                   'companies', 'company_ids', 'tickets_count', 'columns_count', 'created_at', 'updated_at']
     
     def get_tickets_count(self, obj):
+        if hasattr(obj, 'tickets_count_annotated'):
+            return obj.tickets_count_annotated
         return obj.tickets.count()
     
     def get_columns_count(self, obj):
+        if hasattr(obj, 'columns_count_annotated'):
+            return obj.columns_count_annotated
         return obj.columns.count()
     
     def create(self, validated_data):
@@ -246,6 +348,26 @@ class ColumnSerializer(serializers.ModelSerializer):
         return obj.tickets.count()
 
 
+class TicketPositionSerializer(serializers.ModelSerializer):
+    """
+    Lightweight serializer for ticket positions.
+    Returns minimal data for fast position updates.
+    """
+    ticket_key = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = TicketPosition
+        fields = ['ticket_id', 'ticket_key', 'column_id', 'order', 'updated_at']
+        read_only_fields = ['ticket_id', 'updated_at']
+    
+    def get_ticket_key(self, obj):
+        """Include ticket key for easier debugging"""
+        try:
+            return obj.ticket.ticket_key
+        except:
+            return f"#{obj.ticket_id}"
+
+
 class CommentSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     
@@ -279,19 +401,33 @@ class TicketSerializer(serializers.ModelSerializer):
     ticket_key = serializers.CharField(read_only=True)
     column_name = serializers.CharField(source='column.name', read_only=True)
     company_name = serializers.CharField(source='company.name', read_only=True)
+    company_logo_url = serializers.SerializerMethodField()
     comments_count = serializers.IntegerField(read_only=True)
     subtasks = serializers.SerializerMethodField()
     tags_detail = serializers.SerializerMethodField()
     archived_by = UserSerializer(read_only=True)
+    column_order = serializers.SerializerMethodField()
+    
+    # Make project and column optional for servicedesk users (will be set in perform_create)
+    project = serializers.PrimaryKeyRelatedField(
+        queryset=Project.objects.all(),
+        required=False,
+        allow_null=True
+    )
+    column = serializers.PrimaryKeyRelatedField(
+        queryset=Column.objects.all(),
+        required=False,
+        allow_null=True
+    )
     
     class Meta:
         model = Ticket
         fields = [
             'id', 'name', 'description', 'type', 'status',
             'priority_id', 'urgency', 'importance',
-            'company', 'company_name',
+            'company', 'company_name', 'company_logo_url',
             'project', 'project_key', 'project_number', 'ticket_key',
-            'column', 'column_name',
+            'column', 'column_name', 'column_order',
             'assignees', 'assignee_ids', 'reporter',
             'parent', 'subtasks', 'following', 'tags', 'tags_detail',
             'due_date', 'start_date', 'comments_count',
@@ -299,6 +435,21 @@ class TicketSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at'
         ]
     
+    def get_company_logo_url(self, obj):
+        """Return absolute URL for company logo"""
+        if obj.company and obj.company.logo:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.company.logo.url)
+            return obj.company.logo.url
+        return None
+    
+    def get_column_order(self, obj):
+        """Get order from TicketPosition if available, else fallback to Ticket.column_order"""
+        if hasattr(obj, 'position'):
+            return obj.position.order
+        return obj.column_order
+
     def get_subtasks(self, obj):
         if obj.subtasks.exists():
             return TicketSerializer(obj.subtasks.all(), many=True).data
@@ -318,29 +469,47 @@ class TicketListSerializer(serializers.ModelSerializer):
     ticket_key = serializers.CharField(read_only=True)
     column_name = serializers.CharField(source='column.name', read_only=True)
     company_name = serializers.CharField(source='company.name', read_only=True)
+    company_logo_url = serializers.SerializerMethodField()
     comments_count = serializers.IntegerField(read_only=True)
     tag_names = serializers.SerializerMethodField()
+    column_order = serializers.SerializerMethodField()
     
     class Meta:
         model = Ticket
         fields = [
             'id', 'name', 'type', 'status', 'priority_id',
             'urgency', 'importance',
-            'company', 'company_name',
+            'company', 'company_name', 'company_logo_url',
             'project', 'project_key', 'project_number', 'ticket_key',
-            'column', 'column_name',
+            'column', 'column_name', 'column_order',
             'assignee_ids', 'following', 'comments_count', 'tag_names',
             'due_date', 'start_date',
             'is_archived', 'archived_at', 'archived_reason', 'done_at',
             'created_at', 'updated_at'
         ]
     
+    def get_company_logo_url(self, obj):
+        """Return absolute URL for company logo"""
+        if obj.company and obj.company.logo:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.company.logo.url)
+            return obj.company.logo.url
+        return None
+    
+    def get_column_order(self, obj):
+        """Get order from TicketPosition if available, else fallback to Ticket.column_order"""
+        if hasattr(obj, 'position'):
+            return obj.position.order
+        return obj.column_order
+
     def get_assignee_ids(self, obj):
-        return list(obj.assignees.values_list('id', flat=True))
+        # Use the prefetched data to avoid additional queries
+        return [assignee.id for assignee in obj.assignees.all()]
     
     def get_tag_names(self, obj):
-        """Get list of tag names for quick display"""
-        return list(obj.tags.values_list('name', flat=True))
+        """Get list of tag names for quick display using prefetched data"""
+        return [tag.name for tag in obj.tags.all()]
 
 
 class ContactSerializer(serializers.ModelSerializer):
@@ -755,4 +924,12 @@ class InviteUserSerializer(serializers.Serializer):
 class AcceptInvitationSerializer(serializers.Serializer):
     """Serializer for accepting invitations"""
     token = serializers.CharField(required=True, max_length=64)
+
+
+class TicketHistorySerializer(serializers.ModelSerializer):
+    user = UserSimpleSerializer(read_only=True)
+    
+    class Meta:
+        model = TicketHistory
+        fields = ['id', 'ticket', 'user', 'field', 'old_value', 'new_value', 'created_at']
 

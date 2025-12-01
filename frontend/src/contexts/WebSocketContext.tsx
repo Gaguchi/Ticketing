@@ -119,11 +119,13 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
     if (!notification.is_read) {
       setUnreadCount((prev) => prev + 1);
 
-      // Show toast notification
-      antMessage.info({
-        content: notification.title,
-        duration: 4,
-      });
+      // Show toast notification (skip for chat messages as they have their own UI)
+      if (notification.type !== "chat_message") {
+        antMessage.info({
+          content: notification.title,
+          duration: 4,
+        });
+      }
     }
   }, []);
 
@@ -249,6 +251,14 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
         if (data.type === "notification" && data.data) {
           // New notification received - notification is in data.data
           addNotification(data.data);
+        } else if (data.type === "chat_notification" && data.data) {
+          // Chat notification received - don't add to list, just signal update
+          console.log(
+            "📨 [WebSocketContext] Chat notification received, signaling update"
+          );
+          window.dispatchEvent(
+            new CustomEvent("chatNotification", { detail: data.data })
+          );
         } else if (data.type === "notification_read" && data.notification_id) {
           // Notification marked as read
           markAsRead(data.notification_id);
@@ -289,7 +299,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
       const ws = webSocketService.connect(
         `ws/projects/${projectId}/tickets/`,
         (data) => {
-          console.log("📨 [WebSocketContext] Ticket update:", data);
+          // console.log("📨 [WebSocketContext] Ticket update:", data);
 
           // Dispatch custom events for ticket changes
           if (
@@ -297,12 +307,26 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
             data.type === "ticket_updated" ||
             data.type === "ticket_deleted"
           ) {
-            console.log(`🎫 [WebSocketContext] Dispatching ${data.type} event`);
+            // console.log(`🎫 [WebSocketContext] Dispatching ${data.type} event`);
             window.dispatchEvent(
               new CustomEvent("ticketUpdate", {
                 detail: {
                   type: data.type,
                   data: data.data,
+                  projectId: projectId,
+                },
+              })
+            );
+          } else if (data.type === "column_refresh") {
+            // Bulk position update - tells clients to refetch columns
+            // console.log(
+            //   `🔄 [WebSocketContext] Dispatching column_refresh for columns:`,
+            //   data.column_ids
+            // );
+            window.dispatchEvent(
+              new CustomEvent("columnRefresh", {
+                detail: {
+                  columnIds: data.column_ids,
                   projectId: projectId,
                 },
               })

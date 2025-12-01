@@ -24,9 +24,11 @@ export const API_ENDPOINTS = {
   TICKETS: `${API_BASE_URL}/api/tickets/tickets/`,
   TICKETS_ARCHIVED: `${API_BASE_URL}/api/tickets/tickets/archived/`,
   TICKET_DETAIL: (id: number) => `${API_BASE_URL}/api/tickets/tickets/${id}/`,
+  TICKET_HISTORY: (id: number) => `${API_BASE_URL}/api/tickets/tickets/${id}/history/`,
   TICKET_FOLLOW: (id: number) => `${API_BASE_URL}/api/tickets/tickets/${id}/toggle_follow/`,
   TICKET_ARCHIVE: (id: number) => `${API_BASE_URL}/api/tickets/tickets/${id}/archive/`,
   TICKET_RESTORE: (id: number) => `${API_BASE_URL}/api/tickets/tickets/${id}/restore/`,
+  TICKET_REORDER: `${API_BASE_URL}/api/tickets/tickets/reorder_tickets/`,
   
   // Columns
   COLUMNS: `${API_BASE_URL}/api/tickets/columns/`,
@@ -75,6 +77,7 @@ export const API_ENDPOINTS = {
   COMPANY_REMOVE_ADMIN: (id: number) => `${API_BASE_URL}/api/tickets/companies/${id}/remove_admin/`,
   COMPANY_ASSIGN_USER: (id: number) => `${API_BASE_URL}/api/tickets/companies/${id}/assign_user/`,
   COMPANY_REMOVE_USER: (id: number) => `${API_BASE_URL}/api/tickets/companies/${id}/remove_user/`,
+  COMPANY_CREATE_USER: (id: number) => `${API_BASE_URL}/api/tickets/companies/${id}/create_user/`,
   COMPANY_TICKETS: (id: number) => `${API_BASE_URL}/api/tickets/companies/${id}/tickets/`,
   
   // User Management
@@ -85,6 +88,14 @@ export const API_ENDPOINTS = {
   USER_SET_PASSWORD: (id: number) => `${API_BASE_URL}/api/tickets/users/${id}/set_password/`,
   USER_TOGGLE_ACTIVE: (id: number) => `${API_BASE_URL}/api/tickets/users/${id}/toggle_active/`,
   USER_ROLES: (id: number) => `${API_BASE_URL}/api/tickets/users/${id}/roles/`,
+  
+  // Dashboard
+  DASHBOARD_COMPANY_HEALTH: `${API_BASE_URL}/api/tickets/dashboard/company-health/`,
+  DASHBOARD_ATTENTION_NEEDED: `${API_BASE_URL}/api/tickets/dashboard/attention-needed/`,
+  DASHBOARD_NEWEST: `${API_BASE_URL}/api/tickets/dashboard/newest/`,
+  DASHBOARD_ACTIVITY: `${API_BASE_URL}/api/tickets/dashboard/activity/`,
+  DASHBOARD_WORKLOAD: `${API_BASE_URL}/api/tickets/dashboard/workload/`,
+  DASHBOARD_KANBAN_SUMMARY: `${API_BASE_URL}/api/tickets/dashboard/kanban-summary/`,
   
   // API Documentation
   API_DOCS: `${API_BASE_URL}/api/docs/`,

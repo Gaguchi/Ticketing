@@ -1,0 +1,469 @@
+/**
+ * WebSocket Context
+ * Provides global WebSocket state and connections to the app
+ */
+
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+} from "react";
+import { message as antMessage } from "antd";
+import { webSocketService } from "../services/websocket.service";
+import { chatService } from "../services/chat.service";
+import { useAuth } from "./AuthContext";
+import type { Notification } from "../types/notification";
+
+interface WebSocketContextType {
+  // Connection states
+  isNotificationConnected: boolean;
+  isTicketConnected: boolean;
+  isPresenceConnected: boolean;
+
+  // Connection functions
+  connectNotifications: () => void;
+  connectTickets: (projectId: number) => void;
+  connectPresence: (projectId: number) => void;
+
+  // Disconnect functions
+  disconnectNotifications: () => void;
+  disconnectTickets: () => void;
+  disconnectPresence: () => void;
+  disconnectAll: () => void;
+
+  // Send functions
+  sendNotificationMessage: (data: any) => boolean;
+  sendTicketMessage: (data: any) => boolean;
+  sendPresenceMessage: (data: any) => boolean;
+
+  // Notification state
+  notifications: Notification[];
+  unreadCount: number;
+  chatUnreadCount: number;
+
+  // Notification handlers
+  addNotification: (notification: Notification) => void;
+  markAsRead: (id: number) => void;
+  markAllAsRead: () => void;
+  removeNotification: (id: number) => void;
+  fetchChatUnreadCount: () => Promise<void>;
+}
+
+const WebSocketContext = createContext<WebSocketContextType | undefined>(
+  undefined
+);
+
+export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const { user, logout } = useAuth();
+  const [isNotificationConnected, setIsNotificationConnected] = useState(false);
+  const [isTicketConnected, setIsTicketConnected] = useState(false);
+  const [isPresenceConnected, setIsPresenceConnected] = useState(false);
+
+  // Notification state
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [chatUnreadCount, setChatUnreadCount] = useState(0);
+
+  const currentProjectId = useRef<number | null>(null);
+  const heartbeatInterval = useRef<number | null>(null);
+
+  // Auto-connect to notifications when user logs in
+  useEffect(() => {
+    if (user) {
+      console.log(
+        "🔌 [WebSocketContext] User authenticated, connecting to notifications..."
+      );
+      connectNotifications();
+      fetchChatUnreadCount();
+      // loadInitialNotifications(); // Skipped for now as we don't have notificationService
+    } else {
+      console.log(
+        "🔌 [WebSocketContext] User not authenticated, disconnecting all..."
+      );
+      disconnectAll();
+      setNotifications([]);
+      setUnreadCount(0);
+      setChatUnreadCount(0);
+    }
+
+    // Cleanup on unmount
+    return () => {
+      disconnectAll();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]); // Only depend on user ID, not full object
+
+  /**
+   * Fetch initial chat unread count
+   */
+  const fetchChatUnreadCount = useCallback(async () => {
+    try {
+      const rooms = await chatService.getRooms();
+      const totalUnread = rooms.reduce(
+        (sum, room) => sum + room.unread_count,
+        0
+      );
+      setChatUnreadCount(totalUnread);
+    } catch (error) {
+      console.error("Failed to fetch chat unread count:", error);
+    }
+  }, []);
+
+  /**
+   * Add a new notification (from WebSocket)
+   */
+  const addNotification = useCallback((notification: Notification) => {
+    setNotifications((prev) => [notification, ...prev]);
+
+    if (!notification.is_read) {
+      setUnreadCount((prev) => prev + 1);
+
+      // Show toast notification (skip for chat messages as they have their own UI)
+      if (notification.type !== "chat_message") {
+        antMessage.info({
+          content: notification.title,
+          duration: 4,
+        });
+      }
+    }
+  }, []);
+
+  /**
+   * Mark a notification as read
+   */
+  const markAsRead = useCallback((id: number) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
+    );
+    setUnreadCount((prev) => Math.max(0, prev - 1));
+  }, []);
+
+  /**
+   * Mark all notifications as read
+   */
+  const markAllAsRead = useCallback(() => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    setUnreadCount(0);
+  }, []);
+
+  /**
+   * Remove a notification
+   */
+  const removeNotification = useCallback((id: number) => {
+    setNotifications((prev) => {
+      const notification = prev.find((n) => n.id === id);
+      const newNotifications = prev.filter((n) => n.id !== id);
+
+      // Update unread count if the removed notification was unread
+      if (notification && !notification.is_read) {
+        setUnreadCount((prevCount) => Math.max(0, prevCount - 1));
+      }
+
+      return newNotifications;
+    });
+  }, []);
+
+  // Start heartbeat to keep connections alive
+  useEffect(() => {
+    if (user) {
+      heartbeatInterval.current = window.setInterval(() => {
+        if (webSocketService.isConnected("ws/notifications/")) {
+          webSocketService.ping("ws/notifications/");
+        }
+        if (
+          currentProjectId.current &&
+          webSocketService.isConnected(
+            `ws/projects/${currentProjectId.current}/tickets/`
+          )
+        ) {
+          webSocketService.ping(
+            `ws/projects/${currentProjectId.current}/tickets/`
+          );
+        }
+        if (
+          currentProjectId.current &&
+          webSocketService.isConnected(
+            `ws/projects/${currentProjectId.current}/presence/`
+          )
+        ) {
+          webSocketService.ping(
+            `ws/projects/${currentProjectId.current}/presence/`
+          );
+        }
+      }, 30000); // Ping every 30 seconds
+
+      return () => {
+        if (heartbeatInterval.current) {
+          window.clearInterval(heartbeatInterval.current);
+        }
+      };
+    }
+  }, [user]);
+
+  // Disconnect functions (defined first so connect functions can use them)
+  const disconnectNotifications = useCallback(() => {
+    webSocketService.disconnect("ws/notifications/");
+    setIsNotificationConnected(false);
+  }, []);
+
+  const disconnectTickets = useCallback(() => {
+    if (currentProjectId.current) {
+      webSocketService.disconnect(
+        `ws/projects/${currentProjectId.current}/tickets/`
+      );
+      setIsTicketConnected(false);
+    }
+  }, []);
+
+  const disconnectPresence = useCallback(() => {
+    if (currentProjectId.current) {
+      webSocketService.disconnect(
+        `ws/projects/${currentProjectId.current}/presence/`
+      );
+      setIsPresenceConnected(false);
+    }
+  }, []);
+
+  const disconnectAll = useCallback(() => {
+    webSocketService.disconnectAll();
+    setIsNotificationConnected(false);
+    setIsTicketConnected(false);
+    setIsPresenceConnected(false);
+    currentProjectId.current = null;
+  }, []);
+
+  // Connect functions
+  const connectNotifications = useCallback(() => {
+    if (!user) {
+      console.warn(
+        "⚠️ [WebSocketContext] Cannot connect notifications: not authenticated"
+      );
+      return;
+    }
+
+    const ws = webSocketService.connect(
+      "ws/notifications/",
+      (data) => {
+        console.log("📨 [WebSocketContext] Notification:", data);
+
+        // Handle different notification events
+        if (data.type === "notification" && data.data) {
+          // New notification received - notification is in data.data
+          addNotification(data.data);
+        } else if (data.type === "chat_notification" && data.data) {
+          // Chat notification received - don't add to list, just signal update
+          console.log(
+            "📨 [WebSocketContext] Chat notification received, signaling update"
+          );
+
+          // Increment unread count if it's a new message
+          // We could check if we're already in the room, but that state is in Chat.tsx
+          // So we'll just increment, and if Chat.tsx is open, it will mark as read and correct it
+          setChatUnreadCount((prev) => prev + 1);
+
+          window.dispatchEvent(
+            new CustomEvent("chatNotification", { detail: data.data })
+          );
+        } else if (data.type === "notification_read" && data.notification_id) {
+          // Notification marked as read
+          markAsRead(data.notification_id);
+        }
+      },
+      (error) => {
+        console.error("❌ [WebSocketContext] Notification error:", error);
+        setIsNotificationConnected(false);
+      },
+      (event) => {
+        console.log("🔌 [WebSocketContext] Notification disconnected:", event);
+        setIsNotificationConnected(false);
+        if (event.code === 4001 || event.code === 4003) {
+          console.log("🔒 [WebSocketContext] Auth failure, logging out...");
+          logout();
+        }
+      }
+    );
+
+    if (ws) {
+      setIsNotificationConnected(true);
+    }
+  }, [user, addNotification, markAsRead, logout]);
+
+  const connectTickets = useCallback(
+    (projectId: number) => {
+      if (!user) {
+        console.warn(
+          "⚠️ [WebSocketContext] Cannot connect tickets: not authenticated"
+        );
+        return;
+      }
+
+      // Disconnect from previous project if exists
+      if (currentProjectId.current && currentProjectId.current !== projectId) {
+        disconnectTickets();
+        disconnectPresence();
+      }
+
+      currentProjectId.current = projectId;
+
+      const ws = webSocketService.connect(
+        `ws/projects/${projectId}/tickets/`,
+        (data) => {
+          // console.log("📨 [WebSocketContext] Ticket update:", data);
+
+          // Dispatch custom events for ticket changes
+          if (
+            data.type === "ticket_created" ||
+            data.type === "ticket_updated" ||
+            data.type === "ticket_deleted"
+          ) {
+            // console.log(`🎫 [WebSocketContext] Dispatching ${data.type} event`);
+            window.dispatchEvent(
+              new CustomEvent("ticketUpdate", {
+                detail: {
+                  type: data.type,
+                  data: data.data,
+                  projectId: projectId,
+                },
+              })
+            );
+          } else if (data.type === "column_refresh") {
+            // Bulk position update - tells clients to refetch columns
+            // console.log(
+            //   `🔄 [WebSocketContext] Dispatching column_refresh for columns:`,
+            //   data.column_ids
+            // );
+            window.dispatchEvent(
+              new CustomEvent("columnRefresh", {
+                detail: {
+                  columnIds: data.column_ids,
+                  projectId: projectId,
+                },
+              })
+            );
+          }
+        },
+        (error) => {
+          console.error("❌ [WebSocketContext] Ticket error:", error);
+          setIsTicketConnected(false);
+        },
+        (event) => {
+          console.log("🔌 [WebSocketContext] Ticket disconnected:", event);
+          setIsTicketConnected(false);
+          if (event.code === 4001 || event.code === 4003) {
+            console.log("🔒 [WebSocketContext] Auth failure, logging out...");
+            logout();
+          }
+        }
+      );
+
+      if (ws) {
+        setIsTicketConnected(true);
+      }
+    },
+    [user, disconnectTickets, disconnectPresence, logout]
+  );
+
+  const connectPresence = useCallback(
+    (projectId: number) => {
+      if (!user) {
+        console.warn(
+          "⚠️ [WebSocketContext] Cannot connect presence: not authenticated"
+        );
+        return;
+      }
+
+      currentProjectId.current = projectId;
+
+      const ws = webSocketService.connect(
+        `ws/projects/${projectId}/presence/`,
+        (data) => {
+          console.log("📨 [WebSocketContext] Presence update:", data);
+          // Presence updates will be handled by custom hooks
+        },
+        (error) => {
+          console.error("❌ [WebSocketContext] Presence error:", error);
+          setIsPresenceConnected(false);
+        },
+        (event) => {
+          console.log("🔌 [WebSocketContext] Presence disconnected:", event);
+          setIsPresenceConnected(false);
+          if (event.code === 4001 || event.code === 4003) {
+            console.log("🔒 [WebSocketContext] Auth failure, logging out...");
+            logout();
+          }
+        }
+      );
+
+      if (ws) {
+        setIsPresenceConnected(true);
+      }
+    },
+    [user, logout]
+  );
+
+  // Send functions
+  const sendNotificationMessage = useCallback((data: any): boolean => {
+    return webSocketService.send("ws/notifications/", data);
+  }, []);
+
+  const sendTicketMessage = useCallback((data: any): boolean => {
+    if (!currentProjectId.current) return false;
+    return webSocketService.send(
+      `ws/projects/${currentProjectId.current}/tickets/`,
+      data
+    );
+  }, []);
+
+  const sendPresenceMessage = useCallback((data: any): boolean => {
+    if (!currentProjectId.current) return false;
+    return webSocketService.send(
+      `ws/projects/${currentProjectId.current}/presence/`,
+      data
+    );
+  }, []);
+
+  const value: WebSocketContextType = {
+    isNotificationConnected,
+    isTicketConnected,
+    isPresenceConnected,
+    connectNotifications,
+    connectTickets,
+    connectPresence,
+    disconnectNotifications,
+    disconnectTickets,
+    disconnectPresence,
+    disconnectAll,
+    sendNotificationMessage,
+    sendTicketMessage,
+    sendPresenceMessage,
+    notifications,
+    unreadCount,
+    chatUnreadCount,
+    addNotification,
+    markAsRead,
+    markAllAsRead,
+    removeNotification,
+    fetchChatUnreadCount,
+  };
+
+  return (
+    <WebSocketContext.Provider value={value}>
+      {children}
+    </WebSocketContext.Provider>
+  );
+};
+
+export const useWebSocketContext = (): WebSocketContextType => {
+  const context = useContext(WebSocketContext);
+  if (context === undefined) {
+    throw new Error(
+      "useWebSocketContext must be used within a WebSocketProvider"
+    );
+  }
+  return context;
+};

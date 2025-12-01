@@ -76,6 +76,10 @@ export interface Company {
   id: number;
   name: string;
   description?: string;
+  logo?: string;
+  logo_url?: string;
+  logo_thumbnail?: string;
+  logo_thumbnail_url?: string;
   ticket_count?: number;
   admin_count?: number;
   user_count?: number;
@@ -196,13 +200,17 @@ export interface Ticket {
   
   // Relationships
   company: number | null;
+  company_name?: string;
+  company_logo_url?: string;
   project: number;
   project_key: string;
   project_number: number;
   ticket_key: string;
   column: number;
   column_name: string;
+  column_order: number; // Position within column (legacy field, kept for backward compatibility)
   assignees: User[];
+  assignee_ids?: number[]; // Added to support list view response
   reporter: User;
   parent: number | null;
   subtasks: Ticket[];
@@ -223,6 +231,29 @@ export interface Ticket {
   updated_at: string;
 }
 
+export interface TicketHistoryItem {
+  id: number;
+  ticket: number;
+  user: User;
+  field: string;
+  old_value: string | null;
+  new_value: string | null;
+  created_at: string;
+  type: 'history';
+}
+
+export interface TicketCommentItem {
+  id: number;
+  ticket: number;
+  user: User;
+  content: string;
+  created_at: string;
+  updated_at?: string;
+  type: 'comment';
+}
+
+export type TicketActivityItem = TicketHistoryItem | TicketCommentItem;
+
 export interface CreateTicketData {
   name: string;
   description?: string;
@@ -237,8 +268,8 @@ export interface CreateTicketData {
   parent?: number;
   tags?: number[];
   tag_names?: string[];
-  due_date?: string;
-  start_date?: string;
+  due_date?: string | null;
+  start_date?: string | null;
 }
 
 export interface UpdateTicketData {
@@ -250,13 +281,14 @@ export interface UpdateTicketData {
   urgency?: TicketUrgency;
   importance?: TicketImportance;
   column?: number;
+  order?: number; // Position within column (for reordering)
   company?: number;
   assignee_ids?: number[];
   parent?: number;
   tags?: number[];
   tag_names?: string[];
-  due_date?: string;
-  start_date?: string;
+  due_date?: string | null;
+  start_date?: string | null;
 }
 
 export interface TicketFilterParams extends PaginationParams {

@@ -155,6 +155,8 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
+    'PAGE_SIZE_QUERY_PARAM': 'page_size',
+    'MAX_PAGE_SIZE': 1000,
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
@@ -186,11 +188,12 @@ SIMPLE_JWT = {
 # CORS settings
 cors_origins_env = os.getenv(
     'CORS_ALLOWED_ORIGINS',
-    'http://localhost:5173,http://localhost:3000,http://31.146.76.40:5173,http://31.146.76.40:8000'
+    'http://localhost:5173,http://localhost:3000,http://localhost:3001,http://localhost:3002,http://31.146.76.40:5173,http://31.146.76.40:8000'
 )
 CORS_ALLOWED_ORIGINS = [origin.strip() for origin in cors_origins_env.split(',') if origin.strip()]
 
 CORS_ALLOW_CREDENTIALS = True
+CORS_PREFLIGHT_MAX_AGE = 86400  # 24 hours
 
 # Additional CORS settings for better compatibility
 CORS_ALLOW_METHODS = [
@@ -295,16 +298,18 @@ ASGI_APPLICATION = 'config.asgi.application'
 
 # Channel Layers - Redis backend for production, In-Memory for development
 # Redis Configuration
+REDIS_URL = os.getenv('REDIS_URL')
 REDIS_HOST = os.getenv('REDIS_HOST', '127.0.0.1')
 REDIS_PORT = int(os.getenv('REDIS_PORT', 6379))
 
 CHANNEL_LAYERS = {
     'default': {
-        # Use Redis in production, in-memory for development
-        'BACKEND': 'channels_redis.core.RedisChannelLayer' if not DEBUG else 'channels.layers.InMemoryChannelLayer',
+        # Use Redis if REDIS_URL is set OR if not in DEBUG mode
+        # Fallback to In-Memory for local dev without Redis
+        'BACKEND': 'channels_redis.core.RedisChannelLayer' if (REDIS_URL or not DEBUG) else 'channels.layers.InMemoryChannelLayer',
         'CONFIG': {
-            "hosts": [(REDIS_HOST, REDIS_PORT)],
-        } if not DEBUG else {},
+            "hosts": [REDIS_URL] if REDIS_URL else [(REDIS_HOST, REDIS_PORT)],
+        } if (REDIS_URL or not DEBUG) else {},
     },
 }
 

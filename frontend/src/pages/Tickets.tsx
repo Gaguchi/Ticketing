@@ -15,6 +15,7 @@ import {
   ClockCircleOutlined,
   InboxOutlined,
   RollbackOutlined,
+  CalendarOutlined,
 } from "@ant-design/icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -25,6 +26,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { KanbanBoard } from "../components/KanbanBoard";
 import { DeadlineView } from "../components/DeadlineView";
+import { CalendarView } from "../components/CalendarView";
 import { getPriorityIcon } from "../components/PriorityIcons";
 import { TicketModal } from "../components/TicketModal";
 import { CreateTicketModal } from "../components/CreateTicketModal";
@@ -65,8 +67,18 @@ const formatTicketId = (ticket: Ticket) => {
 
 const Tickets: React.FC = () => {
   const [viewMode, setViewMode] = useState<
-    "list" | "kanban" | "deadline" | "archive"
-  >("kanban");
+    "list" | "kanban" | "deadline" | "archive" | "calendar"
+  >(() => {
+    const savedMode = localStorage.getItem("ticketsViewMode");
+    return (
+      (savedMode as "list" | "kanban" | "deadline" | "archive" | "calendar") ||
+      "kanban"
+    );
+  });
+
+  useEffect(() => {
+    localStorage.setItem("ticketsViewMode", viewMode);
+  }, [viewMode]);
   const [searchText, setSearchText] = useState("");
   const [filterStatus, setFilterStatus] = useState<string | undefined>(
     undefined
@@ -82,11 +94,16 @@ const Tickets: React.FC = () => {
   const [archivedTickets, setArchivedTickets] = useState<Ticket[]>([]);
   const [archiveLoading, setArchiveLoading] = useState(false);
 
-  const RECENT_UPDATE_WINDOW_MS = 2500;
+  const RECENT_UPDATE_WINDOW_MS = 5000; // Increased from 2500ms to handle slow backend
 
   // Track ticket IDs we've received via WebSocket to prevent duplicates
   const receivedTicketIdsRef = useRef<Set<number>>(new Set());
   const recentTicketUpdatesRef = useRef<Map<number, number>>(new Map());
+  const lastMoveTimeRef = useRef<number>(0);
+
+  // Track drag state to prevent WebSocket updates during drag operations
+  const isDraggingRef = useRef(false);
+  const pendingUpdatesRef = useRef<any[]>([]);
 
   // Prevent duplicate initialization
   const fetchInProgressRef = useRef(false);
@@ -122,10 +139,15 @@ const Tickets: React.FC = () => {
           selectedProject
         );
 
-        // Fetch columns for the project
-        const projectColumns = await projectService.getProjectColumns(
-          selectedProject.id
-        );
+        // Fetch columns and tickets in parallel for better performance
+        const [projectColumns, ticketsResponse] = await Promise.all([
+          projectService.getProjectColumns(selectedProject.id),
+          ticketService.getTickets({
+            project: selectedProject.id,
+            page_size: 1000,
+          }),
+        ]);
+
         debug.log(
           LogCategory.TICKET,
           LogLevel.INFO,
@@ -140,16 +162,11 @@ const Tickets: React.FC = () => {
         }
 
         setKanbanColumns(projectColumns);
-
-        // Fetch tickets for the project
-        const response = await ticketService.getTickets({
-          project: selectedProject.id,
-        });
-        setTickets(response.results);
+        setTickets(ticketsResponse.results);
 
         // Track all existing ticket IDs
         receivedTicketIdsRef.current = new Set(
-          response.results.map((t) => t.id)
+          ticketsResponse.results.map((t) => t.id)
         );
       } catch (error: any) {
         console.error("Failed to fetch data:", error);
@@ -192,10 +209,15 @@ const Tickets: React.FC = () => {
         // Mark as received
         receivedTicketIdsRef.current.add(data.ticket_id);
 
-        // Fetch and add the new ticket
-        console.log(`➕ Adding new ticket from WebSocket: ${data.ticket_id}`);
+        // Use the complete data from WebSocket instead of fetching
+        console.log(`➕ Adding new ticket from WebSocket: ${data.id}`);
         try {
-          const newTicket = await ticketService.getTicket(data.ticket_id);
+          // Convert WebSocket data to ticket format
+          const newTicket = {
+            ...data,
+            ticket_key: data.ticket_key || `${selectedProject.key}-${data.id}`,
+          };
+
           setTickets((prev) => {
             // Double-check it doesn't exist
             if (prev.some((t) => t.id === newTicket.id)) {
@@ -204,44 +226,63 @@ const Tickets: React.FC = () => {
             }
             return [newTicket, ...prev];
           });
-          message.success(
-            `New ticket created: ${data.key || `#${data.ticket_id}`}`
-          );
+          // message.success(
+          //   `New ticket created: ${data.ticket_key || `#${data.id}`}`
+          // );
         } catch (error) {
-          console.error("Failed to fetch new ticket:", error);
+          console.error("Failed to add new ticket:", error);
           // Remove from set so it can retry
-          receivedTicketIdsRef.current.delete(data.ticket_id);
+          receivedTicketIdsRef.current.delete(data.id);
         }
       } else if (type === "ticket_updated") {
-        const lastUpdatedAt = recentTicketUpdatesRef.current.get(
-          data.ticket_id
-        );
+        const lastUpdatedAt = recentTicketUpdatesRef.current.get(data.id);
         if (lastUpdatedAt) {
           if (Date.now() - lastUpdatedAt < RECENT_UPDATE_WINDOW_MS) {
             debug.log(
               LogCategory.TICKET,
               LogLevel.INFO,
-              `Skipping ticket ${data.ticket_id} refresh (handled optimistically)`
+              `Skipping ticket ${data.id} refresh (handled optimistically)`
             );
             return;
           }
-          recentTicketUpdatesRef.current.delete(data.ticket_id);
+          recentTicketUpdatesRef.current.delete(data.id);
         }
-        // Update existing ticket in list
-        try {
-          const updatedTicket = await ticketService.getTicket(data.ticket_id);
-          setTickets((prev) =>
-            prev.map((t) => (t.id === data.ticket_id ? updatedTicket : t))
-          );
-        } catch (error) {
-          console.error("Failed to fetch updated ticket:", error);
+
+        // Queue updates during drag operations to prevent position corruption
+        if (isDraggingRef.current) {
+          console.log(`⏸️ Queuing WebSocket update during drag: ${data.id}`);
+          pendingUpdatesRef.current.push({ type, data });
+          return;
         }
+
+        // Use complete data from WebSocket instead of fetching
+        console.log(`🔄 Updating ticket from WebSocket: ${data.id}`);
+        const updatedTicket = {
+          ...data,
+          ticket_key: data.ticket_key || `${selectedProject.key}-${data.id}`,
+        };
+
+        setTickets((prev) => {
+          const oldTicket = prev.find((t) => t.id === data.id);
+          if (oldTicket) {
+            console.log(
+              `📊 Position update for ticket ${data.ticket_key || data.id}:`,
+              {
+                oldColumn: oldTicket.column,
+                newColumn: data.column,
+                oldOrder: oldTicket.column_order,
+                newOrder: data.column_order,
+                columnChanged: oldTicket.column !== data.column,
+                orderChanged: oldTicket.column_order !== data.column_order,
+              }
+            );
+          }
+          return prev.map((t) => (t.id === data.id ? updatedTicket : t));
+        });
       } else if (type === "ticket_deleted") {
         // Remove ticket from list
-        setTickets((prev) => prev.filter((t) => t.id !== data.ticket_id));
-        message.info(
-          `Ticket ${data.ticket_key || `#${data.ticket_id}`} was deleted`
-        );
+        setTickets((prev) => prev.filter((t) => t.id !== data.id));
+        message.info(`Ticket ${data.ticket_key || `#${data.id}`} was deleted`);
       }
     };
 
@@ -249,6 +290,47 @@ const Tickets: React.FC = () => {
 
     return () => {
       window.removeEventListener("ticketUpdate", handleTicketUpdate);
+    };
+  }, [selectedProject?.id]);
+
+  // Listen for column refresh events (bulk position updates)
+  useEffect(() => {
+    const handleColumnRefresh = async (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { columnIds, projectId } = customEvent.detail;
+
+      // Only update if it's for the current project
+      if (!selectedProject || projectId !== selectedProject.id) {
+        return;
+      }
+
+      // Skip refresh if we just moved a ticket (we already have the latest state)
+      if (Date.now() - lastMoveTimeRef.current < 5000) {
+        console.log("⏳ Skipping column refresh (handled optimistically)");
+        return;
+      }
+
+      console.log(`🔄 [Tickets] Column refresh for columns:`, columnIds);
+
+      // Refetch tickets for the entire project to get updated positions
+      try {
+        const ticketsResponse = await ticketService.getTickets({
+          project: selectedProject.id,
+          page_size: 1000,
+        });
+        setTickets(ticketsResponse.results);
+        console.log(
+          `✅ [Tickets] Refreshed ${ticketsResponse.results.length} tickets`
+        );
+      } catch (error: any) {
+        console.error("Failed to refresh tickets:", error);
+      }
+    };
+
+    window.addEventListener("columnRefresh", handleColumnRefresh);
+
+    return () => {
+      window.removeEventListener("columnRefresh", handleColumnRefresh);
     };
   }, [selectedProject?.id]);
 
@@ -263,9 +345,52 @@ const Tickets: React.FC = () => {
     }
   }, []);
 
+  // Handle drag start - pause WebSocket updates
+  const handleDragStart = useCallback(() => {
+    console.log("🚫 Drag started - pausing WebSocket updates");
+    isDraggingRef.current = true;
+    pendingUpdatesRef.current = [];
+  }, []);
+
+  // Handle drag end - resume WebSocket updates and apply pending changes
+  const handleDragEnd = useCallback(() => {
+    console.log("✅ Drag ended - resuming WebSocket updates");
+    isDraggingRef.current = false;
+
+    // Apply pending updates
+    if (pendingUpdatesRef.current.length > 0) {
+      console.log(
+        `📦 Applying ${pendingUpdatesRef.current.length} queued updates`
+      );
+
+      pendingUpdatesRef.current.forEach(({ type, data }) => {
+        if (type === "ticket_updated") {
+          const updatedTicket = {
+            ...data,
+            ticket_key: data.ticket_key || `${selectedProject?.key}-${data.id}`,
+          };
+
+          setTickets((prev) => {
+            return prev.map((t) => (t.id === data.id ? updatedTicket : t));
+          });
+        }
+      });
+
+      pendingUpdatesRef.current = [];
+    }
+  }, [selectedProject?.key]);
+
   // Handle ticket move between columns in Kanban with optimistic updates
-  const handleTicketMove = async (ticketId: number, newColumnId: number) => {
-    console.log("🎯 handleTicketMove called:", { ticketId, newColumnId });
+  const handleTicketMove = async (
+    ticketId: number,
+    newColumnId: number,
+    order: number
+  ) => {
+    console.log("🎯 handleTicketMove called:", {
+      ticketId,
+      newColumnId,
+      order,
+    });
 
     const ticket = tickets.find((t) => t.id === ticketId);
     const column = kanbanColumns.find((c) => c.id === newColumnId);
@@ -287,34 +412,63 @@ const Tickets: React.FC = () => {
     const previousColumnId = ticket.column;
     const previousColumnName = ticket.column_name;
 
-    // OPTIMISTIC UPDATE: Update UI immediately
+    // OPTIMISTIC UPDATE: Update UI immediately with full reordering logic
     console.log("⚡ Optimistic update: Updating UI immediately");
-    setTickets((prevTickets) =>
-      prevTickets.map((t) =>
-        t.id === ticketId
-          ? {
-              ...t,
-              column: newColumnId,
-              column_name: column.name,
-            }
-          : t
-      )
-    );
+    setTickets((prevTickets) => {
+      return prevTickets.map((t) => {
+        // 1. The moved ticket
+        if (t.id === ticketId) {
+          return {
+            ...t,
+            column: newColumnId,
+            column_name: column.name,
+            column_order: order,
+          };
+        }
+
+        // 2. Tickets in the OLD column: Shift down those that were below the moved ticket
+        if (
+          t.column === previousColumnId &&
+          t.column_order > (ticket.column_order || 0)
+        ) {
+          return { ...t, column_order: t.column_order - 1 };
+        }
+
+        // 3. Tickets in the NEW column: Shift up those that are at or below the insertion point
+        if (t.column === newColumnId && t.column_order >= order) {
+          return { ...t, column_order: t.column_order + 1 };
+        }
+
+        return t;
+      });
+    });
 
     // Send PATCH request in the background (non-blocking)
     console.log("🚀 Queuing PATCH request:", {
       url: `/api/tickets/tickets/${ticketId}/`,
-      payload: { column: newColumnId },
+      payload: { column: newColumnId, order: order },
+      previousColumn: previousColumnId,
+      previousOrder: ticket.column_order,
     });
 
     recentTicketUpdatesRef.current.set(ticketId, Date.now());
+    lastMoveTimeRef.current = Date.now();
 
     try {
       const response = await ticketService.updateTicket(ticketId, {
         column: newColumnId,
+        order: order,
       });
 
-      console.log("✅ PATCH response received:", response);
+      console.log("✅ PATCH response received:", {
+        ticketId,
+        returnedColumn: response.column,
+        returnedOrder: response.column_order,
+        expectedColumn: newColumnId,
+        expectedOrder: order,
+        match:
+          response.column === newColumnId && response.column_order === order,
+      });
     } catch (error: any) {
       // ROLLBACK: Revert optimistic update on error
       console.error("❌ Failed to update ticket, rolling back:", error);
@@ -336,6 +490,45 @@ const Tickets: React.FC = () => {
       message.error("Failed to update ticket - changes reverted");
     } finally {
       recentTicketUpdatesRef.current.set(ticketId, Date.now());
+      // Extend the window to cover the WebSocket message arrival
+      lastMoveTimeRef.current = Date.now();
+    }
+  };
+
+  const handleTicketReorder = async (
+    updates: Array<{ ticket_id: number; column_id: number; order: number }>
+  ) => {
+    console.log("📋 handleTicketReorder called:", updates);
+
+    // OPTIMISTIC UPDATE: Update UI immediately
+    setTickets((prevTickets) => {
+      const updatesMap = new Map(
+        updates.map((u) => [
+          u.ticket_id,
+          { column: u.column_id, order: u.order },
+        ])
+      );
+
+      return prevTickets.map((t) => {
+        const update = updatesMap.get(t.id);
+        if (update) {
+          return {
+            ...t,
+            column: update.column,
+            column_order: update.order,
+          };
+        }
+        return t;
+      });
+    });
+
+    try {
+      await ticketService.reorderTickets(updates);
+      console.log("✅ Tickets reordered successfully");
+    } catch (error: any) {
+      console.error("❌ Failed to reorder tickets:", error);
+      message.error("Failed to save ticket order");
+      // TODO: Rollback logic could be added here if needed
     }
   };
 
@@ -448,23 +641,29 @@ const Tickets: React.FC = () => {
 
   const normalizedSearch = searchText.trim().toLowerCase();
 
-  const matchesSearch = (ticket: Ticket) => {
-    if (!normalizedSearch) return true;
-    return (
-      ticket.name.toLowerCase().includes(normalizedSearch) ||
-      ticket.ticket_key?.toLowerCase().includes(normalizedSearch) ||
-      ticket.tags_detail?.some((tag) =>
-        tag.name.toLowerCase().includes(normalizedSearch)
-      )
-    );
-  };
+  const filteredTickets = useMemo(() => {
+    return tickets
+      .filter((ticket) => !ticket.is_archived)
+      .filter((ticket) => {
+        // Search filter
+        if (normalizedSearch) {
+          const matchesSearch =
+            ticket.name.toLowerCase().includes(normalizedSearch) ||
+            ticket.ticket_key?.toLowerCase().includes(normalizedSearch) ||
+            ticket.tags_detail?.some((tag) =>
+              tag.name.toLowerCase().includes(normalizedSearch)
+            );
+          if (!matchesSearch) return false;
+        }
 
-  const matchesStatus = (ticket: Ticket) =>
-    !filterStatus || ticket.column_name === filterStatus;
+        // Status filter
+        if (filterStatus) {
+          if (ticket.column_name !== filterStatus) return false;
+        }
 
-  const filteredTickets = tickets
-    .filter((ticket) => !ticket.is_archived)
-    .filter((ticket) => matchesSearch(ticket) && matchesStatus(ticket));
+        return true;
+      });
+  }, [tickets, normalizedSearch, filterStatus]);
 
   const loadArchivedTickets = useCallback(async () => {
     if (!selectedProject) {
@@ -486,9 +685,27 @@ const Tickets: React.FC = () => {
     }
   }, [selectedProject]);
 
-  const filteredArchivedTickets = archivedTickets.filter(
-    (ticket) => matchesSearch(ticket) && matchesStatus(ticket)
-  );
+  const filteredArchivedTickets = useMemo(() => {
+    return archivedTickets.filter((ticket) => {
+      // Search filter
+      if (normalizedSearch) {
+        const matchesSearch =
+          ticket.name.toLowerCase().includes(normalizedSearch) ||
+          ticket.ticket_key?.toLowerCase().includes(normalizedSearch) ||
+          ticket.tags_detail?.some((tag) =>
+            tag.name.toLowerCase().includes(normalizedSearch)
+          );
+        if (!matchesSearch) return false;
+      }
+
+      // Status filter
+      if (filterStatus) {
+        if (ticket.column_name !== filterStatus) return false;
+      }
+
+      return true;
+    });
+  }, [archivedTickets, normalizedSearch, filterStatus]);
 
   useEffect(() => {
     if (viewMode === "archive") {
@@ -680,7 +897,9 @@ const Tickets: React.FC = () => {
           <Segmented
             value={viewMode}
             onChange={(value) =>
-              setViewMode(value as "list" | "kanban" | "deadline" | "archive")
+              setViewMode(
+                value as "list" | "kanban" | "deadline" | "archive" | "calendar"
+              )
             }
             options={[
               { label: "List", value: "list", icon: <UnorderedListOutlined /> },
@@ -689,6 +908,11 @@ const Tickets: React.FC = () => {
                 label: "Deadline",
                 value: "deadline",
                 icon: <ClockCircleOutlined />,
+              },
+              {
+                label: "Calendar",
+                value: "calendar",
+                icon: <CalendarOutlined />,
               },
               {
                 label: "Archive",
@@ -744,6 +968,9 @@ const Tickets: React.FC = () => {
             columns={kanbanColumns}
             onTicketClick={handleTicketClick}
             onTicketMove={handleTicketMove}
+            onTicketReorder={handleTicketReorder}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
             onTicketCreated={(ticket) => {
               receivedTicketIdsRef.current.add(ticket.id);
               setTickets((prev) => [ticket, ...prev]);
@@ -751,6 +978,12 @@ const Tickets: React.FC = () => {
           />
         ) : viewMode === "deadline" ? (
           <DeadlineView
+            tickets={filteredTickets}
+            columns={kanbanColumns}
+            onTicketClick={handleTicketClick}
+          />
+        ) : viewMode === "calendar" ? (
+          <CalendarView
             tickets={filteredTickets}
             columns={kanbanColumns}
             onTicketClick={handleTicketClick}
@@ -797,7 +1030,6 @@ const Tickets: React.FC = () => {
           // Add the ticket immediately for instant feedback
           // The WebSocket duplicate check will prevent double-adding
           setTickets((prev) => [newTicket, ...prev]);
-          setIsCreateModalOpen(false);
 
           console.log(
             `✅ Ticket ${newTicket.id} added to UI, WebSocket will be ignored`

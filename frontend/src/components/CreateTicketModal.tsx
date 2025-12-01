@@ -174,7 +174,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
 
     // Fetch open tickets for parent selection
     ticketService
-      .getTickets({ project: watchedProject })
+      .getTickets({ project: watchedProject, page_size: 1000 })
       .then((response) => {
         const allTickets = response.results || [];
         const projectTickets = allTickets.filter(
@@ -312,7 +312,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
         JSON.stringify(newTicket, null, 2)
       );
       console.groupEnd();
-      message.success("Ticket created successfully!");
+      // message.success("Ticket created successfully!");
 
       onSuccess?.(newTicket);
 

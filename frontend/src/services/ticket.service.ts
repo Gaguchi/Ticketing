@@ -7,6 +7,7 @@ import { apiService } from './api.service';
 import { API_ENDPOINTS } from '../config/api';
 import type {
   Ticket,
+  TicketActivityItem,
   CreateTicketData,
   UpdateTicketData,
   TicketFilterParams,
@@ -45,6 +46,13 @@ class TicketService {
    */
   async getTicket(id: number): Promise<Ticket> {
     return apiService.get<Ticket>(API_ENDPOINTS.TICKET_DETAIL(id));
+  }
+
+  /**
+   * Get ticket history
+   */
+  async getTicketHistory(id: number): Promise<TicketActivityItem[]> {
+    return apiService.get<TicketActivityItem[]>(API_ENDPOINTS.TICKET_HISTORY(id));
   }
 
   /**
@@ -93,6 +101,13 @@ class TicketService {
 
   async restoreTicket(id: number): Promise<Ticket> {
     return apiService.post<Ticket>(API_ENDPOINTS.TICKET_RESTORE(id), {});
+  }
+
+  /**
+   * Reorder tickets within or across columns
+   */
+  async reorderTickets(updates: Array<{ticket_id: number, column_id: number, order: number}>): Promise<{status: string, updated: number[]}> {
+    return apiService.post<{status: string, updated: number[]}>(API_ENDPOINTS.TICKET_REORDER, { updates });
   }
 
   private buildTicketQuery(params?: TicketFilterParams): string {

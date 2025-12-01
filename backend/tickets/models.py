@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 import secrets
+import os
 from datetime import timedelta
 from django.utils import timezone
 
@@ -59,7 +60,18 @@ class Company(models.Model):
     """
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
-    logo = models.ImageField(upload_to='company_logos/', blank=True, null=True, help_text='Company logo image')
+    logo = models.FileField(
+        upload_to='company_logos/', 
+        blank=True, 
+        null=True, 
+        help_text='Company logo (max 5MB, JPG/PNG/GIF/WebP/SVG)'
+    )
+    logo_thumbnail = models.ImageField(
+        upload_to='company_logos/thumbs/', 
+        blank=True, 
+        null=True,
+        help_text='Auto-generated thumbnail (not generated for SVG)'
+    )
     primary_contact_email = models.EmailField(blank=True, null=True, help_text='Primary contact email for this company')
     phone = models.CharField(max_length=50, blank=True, null=True, help_text='Company phone number')
     
@@ -88,6 +100,38 @@ class Company(models.Model):
 
     def __str__(self):
         return self.name
+    
+    def save(self, *args, **kwargs):
+        """Auto-generate thumbnail when logo is uploaded"""
+        # Check if logo has changed
+        if self.pk:
+            try:
+                old_instance = Company.objects.get(pk=self.pk)
+                logo_changed = old_instance.logo != self.logo
+            except Company.DoesNotExist:
+                logo_changed = True
+        else:
+            logo_changed = bool(self.logo)
+        
+        # Generate thumbnail if logo changed (skip for SVG files)
+        if logo_changed and self.logo:
+            # Check if it's an SVG file - skip thumbnail generation
+            logo_name = self.logo.name.lower() if self.logo.name else ''
+            if not logo_name.endswith('.svg'):
+                try:
+                    from tickets.utils.image_processing import create_thumbnail
+                    thumb_content = create_thumbnail(self.logo, size=(64, 64))
+                    thumb_name = f"thumb_{os.path.basename(self.logo.name)}"
+                    # Don't trigger another save
+                    self.logo_thumbnail.save(thumb_name, thumb_content, save=False)
+                except Exception:
+                    # If thumbnail generation fails, continue without it
+                    pass
+        elif logo_changed and not self.logo:
+            # Logo was removed, remove thumbnail too
+            self.logo_thumbnail = None
+        
+        super().save(*args, **kwargs)
     
     @property
     def ticket_count(self):
@@ -150,6 +194,208 @@ class Column(models.Model):
 
     def __str__(self):
         return f"{self.project.key}: {self.name}"
+
+
+class TicketPosition(models.Model):
+    """
+    Lightweight model storing only ticket position data.
+    Separating positions from tickets reduces lock contention and data transfer.
+    """
+    ticket = models.OneToOneField(
+        'Ticket',
+        on_delete=models.CASCADE,
+        primary_key=True,
+        related_name='position'
+    )
+    column = models.ForeignKey(
+        Column,
+        on_delete=models.CASCADE,
+        related_name='ticket_positions'
+    )
+    order = models.IntegerField(
+        default=0,
+        help_text='Position within column (0-based)'
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['column', 'order']
+        indexes = [
+            models.Index(fields=['column', 'order']),
+            models.Index(fields=['updated_at']),
+        ]
+        verbose_name = 'Ticket Position'
+        verbose_name_plural = 'Ticket Positions'
+    
+    def __str__(self):
+        return f"Ticket #{self.ticket_id} in {self.column.name} at position {self.order}"
+    
+    @classmethod
+    def move_ticket(cls, ticket, target_column_id, target_order, max_retries=3, broadcast=True):
+        """
+        Move ticket to a specific position in a column with deadlock prevention.
+        
+        Args:
+            ticket: Ticket instance to move
+            target_column_id: ID of target column
+            target_order: Target position (0-based)
+            max_retries: Number of retry attempts for deadlock
+            broadcast: Whether to broadcast WebSocket update (default: True)
+            
+        Returns:
+            TicketPosition instance
+            
+        This replaces the Ticket.move_to_position() method with a much faster
+        implementation that only locks/updates position records.
+        """
+        from django.db import transaction, OperationalError
+        from channels.layers import get_channel_layer
+        from asgiref.sync import async_to_sync
+        import time
+        
+        print(f"🔄 TicketPosition.move_ticket: Moving {ticket.id} to col {target_column_id} pos {target_order}")
+        
+        # Get or create position for this ticket
+        position, created = cls.objects.get_or_create(
+            ticket=ticket,
+            defaults={'column_id': target_column_id, 'order': 0}
+        )
+        
+        old_column_id = position.column_id
+        old_order = position.order
+        affected_columns = set()
+        
+        # Retry loop for deadlock handling
+        for attempt in range(max_retries):
+            try:
+                with transaction.atomic():
+                    # DEADLOCK PREVENTION: Lock columns in consistent order
+                    columns_to_lock = sorted(set([c for c in [old_column_id, target_column_id] if c]))
+                    
+                    # Lock only position records (much lighter than full Ticket records)
+                    for column_id in columns_to_lock:
+                        list(cls.objects.select_for_update().filter(
+                            column_id=column_id
+                        ).order_by('ticket_id'))
+                    
+                    # Refresh position in case it changed
+                    position.refresh_from_db()
+                    old_column_id = position.column_id
+                    old_order = position.order
+                    
+                    if old_column_id != target_column_id:
+                        # CROSS-COLUMN MOVE
+                        print(f"🔄 Cross-column move: {old_column_id} -> {target_column_id}")
+                        affected_columns.add(old_column_id)
+                        affected_columns.add(target_column_id)
+                        
+                        # Shift down tickets in old column
+                        cls.objects.filter(
+                            column_id=old_column_id,
+                            order__gt=old_order
+                        ).update(order=models.F('order') - 1)
+                        
+                        # Sync Ticket model
+                        Ticket.objects.filter(
+                            column_id=old_column_id,
+                            column_order__gt=old_order
+                        ).update(column_order=models.F('column_order') - 1)
+                        
+                        # Shift up tickets in new column
+                        cls.objects.filter(
+                            column_id=target_column_id,
+                            order__gte=target_order
+                        ).exclude(ticket=ticket).update(order=models.F('order') + 1)
+                        
+                        # Sync Ticket model
+                        Ticket.objects.filter(
+                            column_id=target_column_id,
+                            column_order__gte=target_order
+                        ).exclude(id=ticket.id).update(column_order=models.F('column_order') + 1)
+                        
+                        # Update this ticket's position
+                        position.column_id = target_column_id
+                        position.order = target_order
+                        position.save(update_fields=['column_id', 'order'])
+                        
+                        # Also update the ticket's column reference and order
+                        ticket.column_id = target_column_id
+                        ticket.column_order = target_order
+                        # Suppress signal to avoid double-update (we send column_refresh later)
+                        ticket._suppress_signals = True
+                        ticket.save(update_fields=['column', 'column_order'])
+                        
+                    else:
+                        # SAME-COLUMN MOVE
+                        print(f"🔄 Same-column move in {old_column_id}: {old_order} -> {target_order}")
+                        affected_columns.add(old_column_id)
+                        
+                        if target_order < old_order:
+                            # Moving up
+                            cls.objects.filter(
+                                column_id=old_column_id,
+                                order__gte=target_order,
+                                order__lt=old_order
+                            ).exclude(ticket=ticket).update(order=models.F('order') + 1)
+                            
+                            # Sync Ticket model for other tickets
+                            Ticket.objects.filter(
+                                column_id=old_column_id,
+                                column_order__gte=target_order,
+                                column_order__lt=old_order
+                            ).exclude(id=ticket.id).update(column_order=models.F('column_order') + 1)
+                            
+                        elif target_order > old_order:
+                            # Moving down
+                            cls.objects.filter(
+                                column_id=old_column_id,
+                                order__gt=old_order,
+                                order__lte=target_order
+                            ).exclude(ticket=ticket).update(order=models.F('order') - 1)
+                            
+                            # Sync Ticket model for other tickets
+                            Ticket.objects.filter(
+                                column_id=old_column_id,
+                                column_order__gt=old_order,
+                                column_order__lte=target_order
+                            ).exclude(id=ticket.id).update(column_order=models.F('column_order') - 1)
+                        
+                        # Update this ticket's position
+                        position.order = target_order
+                        position.save(update_fields=['order'])
+                        
+                        # Sync Ticket model
+                        ticket.column_order = target_order
+                        # Suppress signal to avoid double-update (we send column_refresh later)
+                        ticket._suppress_signals = True
+                        ticket.save(update_fields=['column_order'])
+                    
+                    # Success - break retry loop
+                    print("✅ Move transaction completed successfully")
+                    break
+                    
+            except OperationalError as e:
+                if 'deadlock detected' in str(e).lower():
+                    if attempt < max_retries - 1:
+                        # Exponential backoff
+                        sleep_time = 0.05 * (2 ** attempt)
+                        time.sleep(sleep_time)
+                        continue
+                    raise
+                raise
+        
+        # Broadcast position updates via WebSocket (outside transaction)
+        if broadcast and affected_columns:
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                f'project_{ticket.project_id}_tickets',
+                {
+                    'type': 'column_refresh',
+                    'column_ids': list(affected_columns),
+                }
+            )
+        
+        return position
 
 
 class Ticket(models.Model):
@@ -218,6 +464,7 @@ class Ticket(models.Model):
         help_text='Optional: Client company this ticket is specific to. Leave blank for general project tickets.'
     )
     column = models.ForeignKey(Column, on_delete=models.CASCADE, related_name='tickets')
+    column_order = models.IntegerField(default=0, help_text='Order of ticket within its column for kanban board')
     assignees = models.ManyToManyField(User, related_name='assigned_tickets', blank=True)
     reporter = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='reported_tickets')
     parent = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='subtasks')
@@ -246,7 +493,7 @@ class Ticket(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['-created_at']
+        ordering = ['column', 'column_order', '-created_at']
         unique_together = [['project', 'project_number']]
 
     def __str__(self):
@@ -270,17 +517,42 @@ class Ticket(models.Model):
                 self.project_number = 1
 
         previous_column_id = None
+        column_changed = False
+        
         if self.pk:
             try:
                 previous = Ticket.objects.get(pk=self.pk)
                 previous_column_id = previous.column_id
+                column_changed = previous_column_id != self.column_id
             except Ticket.DoesNotExist:
                 previous_column_id = None
+                column_changed = True
+        else:
+            # New ticket
+            column_changed = True
+
+        # Auto-assign column_order when:
+        # 1. New ticket is created
+        # 2. Ticket is moved to a different column
+        # 3. column_order is not set
+        if self.column_id and (column_changed or self.column_order is None):
+            # Only auto-assign if column_order wasn't explicitly set
+            update_fields = kwargs.get('update_fields')
+            if update_fields is None or 'column_order' not in update_fields:
+                # Get the highest column_order in the target column
+                max_order = Ticket.objects.filter(
+                    column_id=self.column_id
+                ).exclude(
+                    pk=self.pk  # Exclude self if updating
+                ).aggregate(
+                    models.Max('column_order')
+                )['column_order__max']
+                
+                self.column_order = (max_order or -1) + 1
 
         # Update done_at when entering/leaving Done column
         if self.column_id:
             is_done_column = self._is_done_column()
-            column_changed = previous_column_id != self.column_id if previous_column_id is not None else True
 
             if is_done_column and (column_changed or not self.done_at):
                 self.done_at = timezone.now()
@@ -291,10 +563,20 @@ class Ticket(models.Model):
         
         super().save(*args, **kwargs)
 
-    @property
-    def comments_count(self):
-        return self.comments.count()
-    
+    def __getattribute__(self, name):
+        """
+        Custom attribute access to provide fallback for comments_count.
+        If comments_count is accessed but not annotated, compute it.
+        """
+        if name == 'comments_count':
+            try:
+                # Try to get the annotated value first
+                return super().__getattribute__(name)
+            except AttributeError:
+                # Fallback: count comments if not annotated
+                return self.comments.count()
+        return super().__getattribute__(name)
+
     @property
     def ticket_key(self):
         """Return formatted ticket key like TICK-1, PROJ-5"""
@@ -311,6 +593,28 @@ class Ticket(models.Model):
         if not column or not column.name:
             return False
         return column.name.strip().lower() in self.DONE_COLUMN_NAMES
+    
+    def move_to_position(self, target_column_id, target_order, max_retries=3, broadcast=True):
+        """
+        Move ticket to a specific position in a column.
+        
+        UPDATED: Now delegates to TicketPosition.move_ticket() for better performance.
+        This lightweight approach locks only position records, not full ticket data.
+        
+        Args:
+            target_column_id: The column to move to
+            target_order: The position in the column (0-indexed)
+            max_retries: Number of retry attempts on deadlock (default: 3)
+            broadcast: Whether to broadcast WebSocket update (default: True)
+        
+        Returns:
+            TicketPosition instance
+        """
+        print(f"🎯 move_to_position called for {self.ticket_key}:")
+        print(f"   Delegating to TicketPosition.move_ticket() (lightweight)")
+        
+        # Delegate to the new lightweight TicketPosition.move_ticket method
+        return TicketPosition.move_ticket(self, target_column_id, target_order, max_retries, broadcast)
 
     def archive(self, archived_by=None, reason=None, auto=False):
         if self.is_archived:
@@ -321,10 +625,21 @@ class Ticket(models.Model):
         if reason:
             self.archived_reason = reason
         elif auto:
-            self.archived_reason = 'Auto-archived after 3 days in Done'
+            self.archived_reason = 'Auto-archived after 1 day in Done'
         else:
             self.archived_reason = 'Archived manually'
         self.save(update_fields=['is_archived', 'archived_at', 'archived_by', 'archived_reason'])
+        
+        # Record history
+        from django.apps import apps
+        TicketHistory = apps.get_model('tickets', 'TicketHistory')
+        TicketHistory.objects.create(
+            ticket=self,
+            user=archived_by,
+            field='archived',
+            old_value='Active',
+            new_value=f'Archived ({self.archived_reason})'
+        )
         return True
 
     def restore(self, restored_by=None):
@@ -335,6 +650,17 @@ class Ticket(models.Model):
         self.archived_by = None
         self.archived_reason = None
         self.save(update_fields=['is_archived', 'archived_at', 'archived_by', 'archived_reason'])
+        
+        # Record history
+        from django.apps import apps
+        TicketHistory = apps.get_model('tickets', 'TicketHistory')
+        TicketHistory.objects.create(
+            ticket=self,
+            user=restored_by,
+            field='archived',
+            old_value='Archived',
+            new_value='Restored'
+        )
         return True
 
 
@@ -356,13 +682,29 @@ class Comment(models.Model):
 class Attachment(models.Model):
     """Attachment model for tickets"""
     ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name='attachments')
-    file = models.FileField(upload_to='attachments/%Y/%m/%d/')
+    file = models.FileField(
+        upload_to='attachments/%Y/%m/%d/',
+        help_text='Max 10MB. Allowed: images, PDF, Office docs, text, archives.'
+    )
     filename = models.CharField(max_length=255)
+    file_size = models.PositiveIntegerField(null=True, blank=True, help_text='File size in bytes')
+    content_type = models.CharField(max_length=100, blank=True, help_text='MIME type')
     uploaded_by = models.ForeignKey(User, on_delete=models.CASCADE)
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.filename} on {self.ticket.name}"
+    
+    def save(self, *args, **kwargs):
+        """Auto-populate file metadata on save"""
+        if self.file:
+            if not self.filename:
+                self.filename = os.path.basename(self.file.name)
+            if not self.file_size:
+                self.file_size = self.file.size
+            if not self.content_type:
+                self.content_type = getattr(self.file, 'content_type', '')
+        super().save(*args, **kwargs)
 
 
 class TicketTag(models.Model):
@@ -542,6 +884,7 @@ class Notification(models.Model):
         ('mention', 'Mentioned'),
         ('status_changed', 'Status Changed'),
         ('priority_changed', 'Priority Changed'),
+        ('chat_message', 'Chat Message'),
         ('general', 'General'),
     ]
     
@@ -698,4 +1041,23 @@ class ProjectInvitation(models.Model):
         self.save(update_fields=['status', 'accepted_at', 'accepted_by', 'updated_at'])
         
         return True
+
+
+class TicketHistory(models.Model):
+    """
+    History of changes to a ticket.
+    Tracks changes to fields like status, priority, assignment, etc.
+    """
+    ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name='history')
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='ticket_history')
+    field = models.CharField(max_length=50)
+    old_value = models.TextField(null=True, blank=True)
+    new_value = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.ticket.id} - {self.field} changed by {self.user.username if self.user else 'System'}"
 

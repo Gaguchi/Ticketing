@@ -135,7 +135,7 @@ const MainLayout: React.FC = () => {
     // Refresh every 30 seconds
     const interval = setInterval(loadUnreadCount, 30000);
     return () => clearInterval(interval);
-  }, [selectedProject?.id]); // Only depend on project ID
+  }, [selectedProject?.id]); // Run for any project change
 
   // WebSocket listener for real-time chat updates
   useEffect(() => {
@@ -173,6 +173,30 @@ const MainLayout: React.FC = () => {
       window.removeEventListener("chatUnreadUpdate", handleChatUpdate);
     };
   }, [selectedProject?.id]); // Only depend on project ID
+
+  // Listen for global chat notifications to update chat count
+  useEffect(() => {
+    if (!selectedProject) return;
+
+    const handleChatNotification = () => {
+      console.log(
+        "🔔 [MainLayout] Chat notification received, updating unread count"
+      );
+      chatService.getRooms(selectedProject.id).then((rooms) => {
+        const totalUnread = rooms.reduce(
+          (sum, room) => sum + room.unread_count,
+          0
+        );
+        setUnreadChatCount(totalUnread);
+      });
+    };
+
+    window.addEventListener("chatNotification", handleChatNotification);
+
+    return () => {
+      window.removeEventListener("chatNotification", handleChatNotification);
+    };
+  }, [selectedProject?.id]);
 
   const handleMenuClick: MenuProps["onClick"] = ({ key }) => {
     if (key === "logout") {

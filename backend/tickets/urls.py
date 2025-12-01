@@ -6,7 +6,10 @@ from .views import (
     TagViewSet, ContactViewSet, TagContactViewSet, UserTagViewSet, TicketTagViewSet,
     IssueLinkViewSet, CompanyViewSet, UserManagementViewSet, TicketSubtaskViewSet,
     NotificationViewSet, ProjectInvitationViewSet,
-    register_user, login_user, get_current_user
+    register_user, login_user, get_current_user,
+    # Dashboard views
+    dashboard_company_health, dashboard_attention_needed, dashboard_newest_tickets,
+    dashboard_live_activity, dashboard_agent_workload, dashboard_kanban_summary
 )
 
 router = DefaultRouter()
@@ -33,6 +36,14 @@ urlpatterns = [
     path('auth/login/', login_user, name='login'),
     path('auth/me/', get_current_user, name='current-user'),
     path('auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    
+    # Dashboard endpoints
+    path('dashboard/company-health/', dashboard_company_health, name='dashboard-company-health'),
+    path('dashboard/attention-needed/', dashboard_attention_needed, name='dashboard-attention-needed'),
+    path('dashboard/newest/', dashboard_newest_tickets, name='dashboard-newest'),
+    path('dashboard/activity/', dashboard_live_activity, name='dashboard-activity'),
+    path('dashboard/workload/', dashboard_agent_workload, name='dashboard-workload'),
+    path('dashboard/kanban-summary/', dashboard_kanban_summary, name='dashboard-kanban-summary'),
     
     # Nested ticket comments route
     path('tickets/<int:ticket_id>/comments/', CommentViewSet.as_view({

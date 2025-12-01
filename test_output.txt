@@ -1,0 +1,18 @@
+Traceback (most recent call last):
+  File "E:\Work\WebDev\Ticketing\test_redis_messaging.py", line 105, in <module>
+    token, project_id = setup_test_data()
+                        ^^^^^^^^^^^^^^^^^
+  File "E:\Work\WebDev\Ticketing\test_redis_messaging.py", line 21, in setup_test_data
+    print("\n1\ufe0f\u20e3  Setting up test data...")
+  File "C:\Users\Boris\AppData\Roaming\Python\Python311\site-packages\colorama\ansitowin32.py", line 47, in write
+    self.__convertor.write(text)
+  File "C:\Users\Boris\AppData\Roaming\Python\Python311\site-packages\colorama\ansitowin32.py", line 177, in write
+    self.write_and_convert(text)
+  File "C:\Users\Boris\AppData\Roaming\Python\Python311\site-packages\colorama\ansitowin32.py", line 205, in write_and_convert
+    self.write_plain_text(text, cursor, len(text))
+  File "C:\Users\Boris\AppData\Roaming\Python\Python311\site-packages\colorama\ansitowin32.py", line 210, in write_plain_text
+    self.wrapped.write(text[start:end])
+  File "C:\Python311\Lib\encodings\cp1251.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode characters in position 3-4: character maps to <undefined>
