@@ -45,7 +45,7 @@ export const Logo: React.FC<LogoProps> = ({
 /**
  * Logo icon only (for collapsed sidebar, favicons, etc.)
  */
-export const LogoIcon: React.FC<{ size?: number }> = ({ size = 32 }) => {
+export const LogoIcon: React.FC<{ size?: number }> = ({ size = 20 }) => {
   return (
     <img
       src={logoImage}
