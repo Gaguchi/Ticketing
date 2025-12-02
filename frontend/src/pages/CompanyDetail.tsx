@@ -674,26 +674,28 @@ const CompanyDetail: React.FC = () => {
           }}
         >
           <div style={{ display: "flex", alignItems: "flex-start", gap: 16 }}>
-            {company.logo_url || company.logo_thumbnail_url ? (
-              <Avatar
-                size={64}
-                src={company.logo_url || company.logo_thumbnail_url}
-                style={{ objectFit: "contain" }}
-                onError={() => {
-                  console.error(
-                    "🖼️ [CompanyDetail] Logo failed to load:",
-                    company.logo_url || company.logo_thumbnail_url
-                  );
-                  return true; // Show fallback
-                }}
-              />
-            ) : (
-              <Avatar
-                size={64}
-                style={{ background: "#2C3E50" }}
-                icon={<ShopOutlined />}
-              />
-            )}
+            <div style={{ padding: 5, flexShrink: 0 }}>
+              {company.logo_url || company.logo_thumbnail_url ? (
+                <Avatar
+                  size={64}
+                  src={company.logo_url || company.logo_thumbnail_url}
+                  style={{ objectFit: "contain" }}
+                  onError={() => {
+                    console.error(
+                      "🖼️ [CompanyDetail] Logo failed to load:",
+                      company.logo_url || company.logo_thumbnail_url
+                    );
+                    return true; // Show fallback
+                  }}
+                />
+              ) : (
+                <Avatar
+                  size={64}
+                  style={{ background: "#2C3E50" }}
+                  icon={<ShopOutlined />}
+                />
+              )}
+            </div>
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <Title level={3} style={{ margin: 0 }}>
