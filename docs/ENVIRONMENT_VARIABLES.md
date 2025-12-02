@@ -63,6 +63,20 @@ python -c "from django.core.management.utils import get_random_secret_key; print
 | `ACCESS_TOKEN_LIFETIME_MINUTES` | No       | `60`    | How long access tokens are valid (minutes) | `60`    |
 | `REFRESH_TOKEN_LIFETIME_DAYS`   | No       | `7`     | How long refresh tokens are valid (days)   | `7`     |
 
+### Reverse Proxy Configuration
+
+| Variable                | Required | Default | Description                                        | Example |
+| ----------------------- | -------- | ------- | -------------------------------------------------- | ------- |
+| `USE_X_FORWARDED_HOST`  | No       | `False` | Trust X-Forwarded-Host header for URL generation   | `True`  |
+| `TRUST_PROXY_HEADERS`   | No       | `False` | Trust X-Forwarded-Proto header for HTTPS detection | `True`  |
+| `ALLOW_TRAEFIK_DOMAINS` | No       | `False` | Allow \*.traefik.me domains in ALLOWED_HOSTS       | `True`  |
+
+**When to enable these settings:**
+
+- **USE_X_FORWARDED_HOST**: Set to `True` when behind a reverse proxy (Traefik, nginx) that sets the X-Forwarded-Host header. This ensures correct URL generation for media files (like company logos).
+- **TRUST_PROXY_HEADERS**: Set to `True` when using HTTPS termination at the proxy level. Django will then trust the X-Forwarded-Proto header to determine if the request is secure.
+- **ALLOW_TRAEFIK_DOMAINS**: Set to `True` when deploying with Dokploy/Traefik to allow wildcard traefik.me domains.
+
 ### Development/Testing Only
 
 | Variable           | Required | Default | Description                                             | Example |

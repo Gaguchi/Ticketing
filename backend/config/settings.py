@@ -30,6 +30,13 @@ ALLOWED_HOSTS = [host.strip() for host in allowed_hosts_env.split(',') if host.s
 if os.getenv('ALLOW_TRAEFIK_DOMAINS', 'False') == 'True':
     ALLOWED_HOSTS.append('.traefik.me')  # Allows *.traefik.me subdomains
 
+# Trust X-Forwarded-Host header from reverse proxy (Traefik, nginx, etc.)
+# This ensures correct URL generation when behind a proxy
+USE_X_FORWARDED_HOST = os.getenv('USE_X_FORWARDED_HOST', 'False') == 'True'
+
+# Trust X-Forwarded-Proto header for HTTPS detection behind proxy
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https') if os.getenv('TRUST_PROXY_HEADERS', 'False') == 'True' else None
+
 # Application definition
 INSTALLED_APPS = [
     # Django channels must be before Django apps
