@@ -358,18 +358,23 @@ const Companies: React.FC = () => {
       }
 
       // Handle logo upload
-      console.log('📸 [Companies] Logo upload check:', {
+      console.log("📸 [Companies] Logo upload check:", {
         fileListLength: fileList.length,
         hasFile: fileList.length > 0,
         firstFile: fileList[0],
         hasOriginFileObj: fileList.length > 0 && !!fileList[0]?.originFileObj,
       });
-      
+
       if (fileList.length > 0 && fileList[0].originFileObj) {
-        console.log('📸 [Companies] Uploading logo:', fileList[0].originFileObj.name);
+        console.log(
+          "📸 [Companies] Uploading logo:",
+          fileList[0].originFileObj.name
+        );
         formData.append("logo", fileList[0].originFileObj);
       } else if (fileList.length > 0) {
-        console.log('📸 [Companies] File in list but no originFileObj - existing logo, not re-uploading');
+        console.log(
+          "📸 [Companies] File in list but no originFileObj - existing logo, not re-uploading"
+        );
       }
 
       // Handle admin assignments (only for create)
