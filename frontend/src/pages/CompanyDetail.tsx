@@ -494,11 +494,24 @@ const CompanyDetail: React.FC = () => {
       );
       formData.append("phone", values.phone || "");
 
+      // Debug logging for logo upload
+      console.log("📸 [CompanyDetail] Logo upload check:", {
+        fileListLength: fileList.length,
+        hasFile: fileList.length > 0,
+        firstFile: fileList[0],
+        hasOriginFileObj: fileList.length > 0 && !!fileList[0]?.originFileObj,
+      });
+
       if (fileList.length > 0 && fileList[0].originFileObj) {
+        console.log(
+          "📸 [CompanyDetail] Uploading logo:",
+          fileList[0].originFileObj.name
+        );
         formData.append("logo", fileList[0].originFileObj);
       }
 
-      await apiService.patch(
+      // Use patchFormData for file uploads, not patch (which sends JSON)
+      await apiService.patchFormData(
         API_ENDPOINTS.COMPANY_DETAIL(company.id),
         formData
       );
