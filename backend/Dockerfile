@@ -26,8 +26,8 @@ COPY . .
 RUN chmod +x entrypoint.sh && \
     (chmod +x celery-worker.sh celery-beat.sh 2>/dev/null || true)
 
-# Create static files directory
-RUN mkdir -p /app/staticfiles
+# Create static and media directories
+RUN mkdir -p /app/staticfiles /app/media
 
 # Expose port for Daphne (ASGI server for WebSockets)
 EXPOSE 8000
