@@ -77,7 +77,7 @@ urlpatterns = [
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
 ]
 
-# Serve media files (in development and production)
-# In production, consider using a proper file server (nginx) or cloud storage (S3)
-# For now, we serve media files directly from Django for simplicity
-urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Serve media files in development using Django's static helper
+# In production, MediaFilesMiddleware handles this (similar to WhiteNoise for static files)
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

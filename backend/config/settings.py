@@ -64,6 +64,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    'config.media_middleware.MediaFilesMiddleware',  # Serve media files in production
     'corsheaders.middleware.CorsMiddleware',
     'config.middleware.SecurityHeadersMiddleware',  # Custom security headers
     'config.logging_middleware.APILoggingMiddleware',  # API request/response logging
@@ -199,8 +200,19 @@ cors_origins_env = os.getenv(
 )
 CORS_ALLOWED_ORIGINS = [origin.strip() for origin in cors_origins_env.split(',') if origin.strip()]
 
+# Allow all traefik.me subdomains for CORS (Dokploy deployments)
+ALLOW_TRAEFIK_DOMAINS = os.getenv('ALLOW_TRAEFIK_DOMAINS', 'False') == 'True'
+if ALLOW_TRAEFIK_DOMAINS:
+    CORS_ALLOWED_ORIGIN_REGEXES = [
+        r"^https?://.*\.traefik\.me$",
+        r"^https?://.*\.traefik\.me:\d+$",
+    ]
+
 CORS_ALLOW_CREDENTIALS = True
 CORS_PREFLIGHT_MAX_AGE = 86400  # 24 hours
+
+# Apply CORS to all paths including media files
+CORS_URLS_REGEX = r'^.*$'
 
 # Additional CORS settings for better compatibility
 CORS_ALLOW_METHODS = [
