@@ -62,3 +62,8 @@ code {
 .ant-pagination-item-active:hover a {
   color: #ffffff !important;
 }
+
+/* Company logo avatar styling */
+.company-logo-avatar img {
+  object-fit: contain !important;
+}
