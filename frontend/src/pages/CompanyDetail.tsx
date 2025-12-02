@@ -205,6 +205,12 @@ const CompanyDetail: React.FC = () => {
       const data = await apiService.get<Company>(
         API_ENDPOINTS.COMPANY_DETAIL(companyId)
       );
+      console.log('🏢 [CompanyDetail] Company data loaded:', {
+        id: data.id,
+        name: data.name,
+        logo_url: data.logo_url,
+        logo_thumbnail_url: data.logo_thumbnail_url,
+      });
       setCompany(data);
     } catch (error: any) {
       message.error(error.message || "Failed to load company");
@@ -660,6 +666,10 @@ const CompanyDetail: React.FC = () => {
                 size={64}
                 src={company.logo_thumbnail_url || company.logo_url}
                 style={{ objectFit: "contain" }}
+                onError={() => {
+                  console.error('🖼️ [CompanyDetail] Logo failed to load:', company.logo_thumbnail_url || company.logo_url);
+                  return true; // Show fallback
+                }}
               />
             ) : (
               <Avatar
