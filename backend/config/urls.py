@@ -26,6 +26,7 @@ def api_root(request):
 def health_check(request):
     """Health check endpoint"""
     import os
+    from pathlib import Path
     from django.conf import settings
     from django.db import connection
     
@@ -44,6 +45,15 @@ def health_check(request):
         db_status = 'error'
         db_error = str(e)
     
+    # Check media directory
+    media_root = Path(settings.MEDIA_ROOT)
+    media_files = []
+    try:
+        if media_root.exists():
+            media_files = [str(f.relative_to(media_root)) for f in media_root.rglob('*') if f.is_file()][:50]
+    except Exception as e:
+        media_files = [f"Error: {e}"]
+    
     return JsonResponse({
         'status': 'healthy' if db_status == 'connected' else 'degraded',
         'service': 'backend',
@@ -52,6 +62,13 @@ def health_check(request):
             'host': settings.DATABASES['default']['HOST'],
             'name': settings.DATABASES['default']['NAME'],
             'error': db_error,
+        },
+        'media': {
+            'root': str(media_root),
+            'exists': media_root.exists(),
+            'is_dir': media_root.is_dir() if media_root.exists() else False,
+            'files_count': len(media_files),
+            'files': media_files,
         },
         'config': {
             'USE_HTTPS_env': use_https_env,
