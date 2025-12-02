@@ -47,6 +47,11 @@ export interface Ticket {
   comment_count?: number; // Deprecated
   tag_names?: string[];
   is_archived?: boolean;
+  is_final_column?: boolean;
+  // Resolution fields
+  resolution_rating?: number | null;
+  resolution_feedback?: string;
+  resolved_at?: string | null;
 }
 
 export interface Comment {

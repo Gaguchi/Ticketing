@@ -23,6 +23,7 @@ export const API_ENDPOINTS = {
   ARCHIVED_TICKETS: getEndpoint('/tickets/archived/'),
   COLUMNS: getEndpoint('/columns/'),
   TICKET_DETAIL: (id: number) => getEndpoint(`/tickets/${id}/`),
+  TICKET_REVIEW: (id: number) => getEndpoint(`/tickets/${id}/review/`),
   
   // Comments
   TICKET_COMMENTS: (ticketId: number) => getEndpoint(`/tickets/${ticketId}/comments/`),

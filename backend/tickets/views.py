@@ -252,7 +252,12 @@ class CompanyViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'])
     def assign_admin(self, request, pk=None):
-        """Assign an IT admin to this company"""
+        """
+        Assign an IT admin to this company.
+        Also assigns admin role to all projects this company is associated with.
+        
+        Body: { "user_id": int }
+        """
         company = self.get_object()
         user_id = request.data.get('user_id')
         
@@ -265,9 +270,21 @@ class CompanyViewSet(viewsets.ModelViewSet):
         try:
             user = User.objects.get(id=user_id)
             company.admins.add(user)
+            
+            # Also assign admin role to all projects this company is associated with
+            for project in company.projects.all():
+                UserRole.objects.update_or_create(
+                    user=user,
+                    project=project,
+                    defaults={
+                        'role': 'admin',
+                        'assigned_by': request.user
+                    }
+                )
+            
             return Response({
                 'message': f'{user.username} assigned as admin to {company.name}',
-                'company': CompanySerializer(company).data
+                'company': CompanySerializer(company, context={'request': request}).data
             })
         except User.DoesNotExist:
             return Response(
@@ -277,7 +294,12 @@ class CompanyViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'])
     def remove_admin(self, request, pk=None):
-        """Remove an IT admin from this company"""
+        """
+        Remove an IT admin from this company.
+        Note: Does NOT remove project roles - admin may work with other companies.
+        
+        Body: { "user_id": int }
+        """
         company = self.get_object()
         user_id = request.data.get('user_id')
         
@@ -290,9 +312,42 @@ class CompanyViewSet(viewsets.ModelViewSet):
         try:
             user = User.objects.get(id=user_id)
             company.admins.remove(user)
+            
+            # Check if user is still admin of any other company in each project
+            # If not, downgrade their role to 'user' (don't remove completely)
+            for project in company.projects.all():
+                # Check if user administers any other company in this project
+                other_companies_as_admin = Company.objects.filter(
+                    projects=project,
+                    admins=user
+                ).exclude(id=company.id).exists()
+                
+                if not other_companies_as_admin:
+                    # User is no longer admin of any company in this project
+                    # Check if they are a company user
+                    is_company_user = Company.objects.filter(
+                        projects=project,
+                        users=user
+                    ).exists()
+                    
+                    if is_company_user:
+                        # Downgrade to user role
+                        UserRole.objects.filter(
+                            user=user,
+                            project=project,
+                            role='admin'
+                        ).update(role='user')
+                    else:
+                        # Not associated with any company in project, remove role
+                        UserRole.objects.filter(
+                            user=user,
+                            project=project,
+                            role='admin'
+                        ).delete()
+            
             return Response({
                 'message': f'{user.username} removed from {company.name} admins',
-                'company': CompanySerializer(company).data
+                'company': CompanySerializer(company, context={'request': request}).data
             })
         except User.DoesNotExist:
             return Response(
@@ -302,7 +357,12 @@ class CompanyViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'])
     def assign_user(self, request, pk=None):
-        """Assign a company user to this company"""
+        """
+        Assign an existing user to this company as a company user.
+        Also assigns user role to all projects this company is associated with.
+        
+        Body: { "user_id": int }
+        """
         company = self.get_object()
         user_id = request.data.get('user_id')
         
@@ -315,9 +375,21 @@ class CompanyViewSet(viewsets.ModelViewSet):
         try:
             user = User.objects.get(id=user_id)
             company.users.add(user)
+            
+            # Also assign user role to all projects this company is associated with
+            for project in company.projects.all():
+                UserRole.objects.get_or_create(
+                    user=user,
+                    project=project,
+                    defaults={
+                        'role': 'user',
+                        'assigned_by': request.user
+                    }
+                )
+            
             return Response({
                 'message': f'{user.username} assigned to {company.name}',
-                'company': CompanySerializer(company).data
+                'company': CompanySerializer(company, context={'request': request}).data
             })
         except User.DoesNotExist:
             return Response(
@@ -327,7 +399,12 @@ class CompanyViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'])
     def remove_user(self, request, pk=None):
-        """Remove a company user from this company"""
+        """
+        Remove a company user from this company.
+        Cleans up project roles if user is not associated with any other company.
+        
+        Body: { "user_id": int }
+        """
         company = self.get_object()
         user_id = request.data.get('user_id')
         
@@ -340,9 +417,28 @@ class CompanyViewSet(viewsets.ModelViewSet):
         try:
             user = User.objects.get(id=user_id)
             company.users.remove(user)
+            
+            # Check if user is still associated with any company in each project
+            for project in company.projects.all():
+                # Check if user is still a member of any company in this project
+                still_in_company = Company.objects.filter(
+                    projects=project
+                ).filter(
+                    Q(users=user) | Q(admins=user)
+                ).exclude(id=company.id).exists()
+                
+                if not still_in_company:
+                    # User is no longer associated with any company in this project
+                    # Remove their user role (but not admin/superadmin roles)
+                    UserRole.objects.filter(
+                        user=user,
+                        project=project,
+                        role='user'
+                    ).delete()
+            
             return Response({
                 'message': f'{user.username} removed from {company.name}',
-                'company': CompanySerializer(company).data
+                'company': CompanySerializer(company, context={'request': request}).data
             })
         except User.DoesNotExist:
             return Response(
@@ -357,6 +453,122 @@ class CompanyViewSet(viewsets.ModelViewSet):
         tickets = company.tickets.all()
         serializer = TicketListSerializer(tickets, many=True)
         return Response(serializer.data)
+    
+    @action(detail=True, methods=['get'])
+    def stats(self, request, pk=None):
+        """
+        Get quick stats for a company (for dashboard cards).
+        
+        GET /api/tickets/companies/{id}/stats/
+        Query params:
+            - project: Filter stats by project ID (optional)
+        
+        Returns:
+        {
+            "open_tickets": 12,
+            "urgent_tickets": 3,
+            "overdue_tickets": 2,
+            "resolved_this_month": 45,
+            "total_tickets": 57,
+            "user_count": 5,
+            "admin_count": 2,
+            "health_status": "critical",  // critical | attention | healthy | inactive
+            "last_activity": "2025-12-02T14:30:00Z"
+        }
+        """
+        company = self.get_object()
+        project_id = request.query_params.get('project')
+        
+        # Base queryset for this company's tickets
+        tickets_qs = Ticket.objects.filter(company=company, is_archived=False)
+        if project_id:
+            tickets_qs = tickets_qs.filter(project_id=project_id)
+        
+        # Open tickets (not in Done/Complete columns)
+        open_tickets = tickets_qs.exclude(
+            column__name__icontains='done'
+        ).exclude(
+            column__name__icontains='complete'
+        ).count()
+        
+        # Urgent tickets (priority 4 or 5 - High/Critical)
+        urgent_tickets = tickets_qs.filter(
+            priority_id__gte=4
+        ).exclude(
+            column__name__icontains='done'
+        ).exclude(
+            column__name__icontains='complete'
+        ).count()
+        
+        # Overdue tickets
+        overdue_tickets = tickets_qs.filter(
+            due_date__lt=timezone.now().date()
+        ).exclude(
+            column__name__icontains='done'
+        ).exclude(
+            column__name__icontains='complete'
+        ).count()
+        
+        # Resolved this month
+        from datetime import datetime
+        first_of_month = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        resolved_this_month = tickets_qs.filter(
+            column__name__icontains='done',
+            updated_at__gte=first_of_month
+        ).count() + tickets_qs.filter(
+            column__name__icontains='complete',
+            updated_at__gte=first_of_month
+        ).count()
+        
+        # Total tickets (including archived for context)
+        total_tickets = Ticket.objects.filter(company=company).count()
+        if project_id:
+            total_tickets = Ticket.objects.filter(company=company, project_id=project_id).count()
+        
+        # User and admin counts
+        user_count = company.users.count()
+        admin_count = company.admins.count()
+        
+        # Last activity (most recent ticket update)
+        last_ticket = tickets_qs.order_by('-updated_at').first()
+        last_activity = last_ticket.updated_at if last_ticket else None
+        
+        # Calculate health status
+        # Critical: Any P1/Critical ticket OR >3 overdue
+        # Attention: 1-3 overdue OR urgent unassigned
+        # Healthy: No issues
+        # Inactive: No tickets in 30+ days
+        
+        critical_tickets = tickets_qs.filter(
+            priority_id=5  # Critical priority
+        ).exclude(
+            column__name__icontains='done'
+        ).exclude(
+            column__name__icontains='complete'
+        ).count()
+        
+        if critical_tickets > 0 or overdue_tickets > 3:
+            health_status = 'critical'
+        elif overdue_tickets > 0 or urgent_tickets > 0:
+            health_status = 'attention'
+        elif last_activity and (timezone.now() - last_activity).days > 30:
+            health_status = 'inactive'
+        elif open_tickets == 0 and not last_activity:
+            health_status = 'inactive'
+        else:
+            health_status = 'healthy'
+        
+        return Response({
+            'open_tickets': open_tickets,
+            'urgent_tickets': urgent_tickets,
+            'overdue_tickets': overdue_tickets,
+            'resolved_this_month': resolved_this_month,
+            'total_tickets': total_tickets,
+            'user_count': user_count,
+            'admin_count': admin_count,
+            'health_status': health_status,
+            'last_activity': last_activity.isoformat() if last_activity else None,
+        })
     
     @action(detail=True, methods=['post'])
     def create_user(self, request, pk=None):
@@ -1267,6 +1479,65 @@ class TicketViewSet(viewsets.ModelViewSet):
             'archived_count': archived_count,
             'message': f'Successfully archived {archived_count} ticket(s).'
         })
+
+    @action(detail=True, methods=['post'])
+    def review(self, request, pk=None):
+        """
+        Submit a customer review for a completed ticket.
+        This action is typically called from the ServiceDesk when a ticket is in 'Done' status.
+        
+        Request body:
+            - rating (int, required): Customer satisfaction rating from 1 to 5
+            - feedback (str, optional): Customer feedback text
+        
+        After submission:
+            - Updates resolution_rating, resolution_feedback, resolved_at
+        """
+        ticket = self.get_object()
+        
+        # Validate rating
+        rating = request.data.get('rating')
+        if rating is None:
+            return Response(
+                {'error': 'Rating is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            rating = int(rating)
+            if rating < 1 or rating > 5:
+                raise ValueError()
+        except (TypeError, ValueError):
+            return Response(
+                {'error': 'Rating must be an integer between 1 and 5'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check if ticket is in the last column of the project
+        if not ticket.column:
+            return Response(
+                {'error': 'Ticket must be in a column to submit a review'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        max_order = Column.objects.filter(project=ticket.project).aggregate(
+            models.Max('order')
+        )['order__max']
+        
+        if ticket.column.order != max_order:
+            return Response(
+                {'error': 'Ticket must be in the final column to submit a review'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Update ticket with review data
+        ticket.resolution_rating = rating
+        ticket.resolution_feedback = request.data.get('feedback', '')
+        ticket.resolved_at = timezone.now()
+        ticket.save()
+        
+        serializer = self.get_serializer(ticket)
+        return Response(serializer.data)
 
 
 class ColumnViewSet(viewsets.ModelViewSet):

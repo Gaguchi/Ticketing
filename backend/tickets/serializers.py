@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
+from django.db import models
 from .models import (
     Ticket, Project, Column, Comment, Attachment,
     Tag, Contact, TagContact, UserTag, TicketTag, IssueLink, Company, UserRole, TicketSubtask,
@@ -407,6 +408,7 @@ class TicketSerializer(serializers.ModelSerializer):
     tags_detail = serializers.SerializerMethodField()
     archived_by = UserSerializer(read_only=True)
     column_order = serializers.SerializerMethodField()
+    is_final_column = serializers.SerializerMethodField()
     
     # Make project and column optional for servicedesk users (will be set in perform_create)
     project = serializers.PrimaryKeyRelatedField(
@@ -427,11 +429,12 @@ class TicketSerializer(serializers.ModelSerializer):
             'priority_id', 'urgency', 'importance',
             'company', 'company_name', 'company_logo_url',
             'project', 'project_key', 'project_number', 'ticket_key',
-            'column', 'column_name', 'column_order',
+            'column', 'column_name', 'column_order', 'is_final_column',
             'assignees', 'assignee_ids', 'reporter',
             'parent', 'subtasks', 'following', 'tags', 'tags_detail',
             'due_date', 'start_date', 'comments_count',
             'is_archived', 'archived_at', 'archived_by', 'archived_reason', 'done_at',
+            'resolution_rating', 'resolution_feedback', 'resolved_at',
             'created_at', 'updated_at'
         ]
     
@@ -449,6 +452,15 @@ class TicketSerializer(serializers.ModelSerializer):
         if hasattr(obj, 'position'):
             return obj.position.order
         return obj.column_order
+    
+    def get_is_final_column(self, obj):
+        """Check if ticket is in the last column of the project"""
+        if not obj.column or not obj.project:
+            return False
+        max_order = Column.objects.filter(project=obj.project).aggregate(
+            models.Max('order')
+        )['order__max']
+        return obj.column.order == max_order
 
     def get_subtasks(self, obj):
         if obj.subtasks.exists():
@@ -473,6 +485,7 @@ class TicketListSerializer(serializers.ModelSerializer):
     comments_count = serializers.IntegerField(read_only=True)
     tag_names = serializers.SerializerMethodField()
     column_order = serializers.SerializerMethodField()
+    is_final_column = serializers.SerializerMethodField()
     
     class Meta:
         model = Ticket
@@ -481,10 +494,11 @@ class TicketListSerializer(serializers.ModelSerializer):
             'urgency', 'importance',
             'company', 'company_name', 'company_logo_url',
             'project', 'project_key', 'project_number', 'ticket_key',
-            'column', 'column_name', 'column_order',
+            'column', 'column_name', 'column_order', 'is_final_column',
             'assignee_ids', 'following', 'comments_count', 'tag_names',
             'due_date', 'start_date',
             'is_archived', 'archived_at', 'archived_reason', 'done_at',
+            'resolution_rating', 'resolution_feedback', 'resolved_at',
             'created_at', 'updated_at'
         ]
     
@@ -502,6 +516,15 @@ class TicketListSerializer(serializers.ModelSerializer):
         if hasattr(obj, 'position'):
             return obj.position.order
         return obj.column_order
+    
+    def get_is_final_column(self, obj):
+        """Check if ticket is in the last column of the project"""
+        if not obj.column or not obj.project:
+            return False
+        max_order = Column.objects.filter(project=obj.project).aggregate(
+            models.Max('order')
+        )['order__max']
+        return obj.column.order == max_order
 
     def get_assignee_ids(self, obj):
         # Use the prefetched data to avoid additional queries

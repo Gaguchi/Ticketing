@@ -118,15 +118,11 @@ export default function Dashboard() {
     } else if (filter === "all") {
       baseTickets = tickets;
     } else if (filter === "open") {
-      baseTickets = tickets.filter((t) => {
-        const status = (t.column_name || t.status || "").toLowerCase();
-        return !["resolved", "done", "closed"].includes(status);
-      });
+      // Open = not resolved (no resolved_at)
+      baseTickets = tickets.filter((t) => !t.resolved_at);
     } else if (filter === "resolved") {
-      baseTickets = tickets.filter((t) => {
-        const status = (t.column_name || t.status || "").toLowerCase();
-        return ["resolved", "done", "closed"].includes(status);
-      });
+      // Resolved = has resolved_at timestamp
+      baseTickets = tickets.filter((t) => !!t.resolved_at);
     }
 
     // Apply search filter
@@ -146,15 +142,8 @@ export default function Dashboard() {
   const filteredTickets = getFilteredTickets();
 
   // Count tickets for filter badges
-  const openCount = tickets.filter((t) => {
-    const status = (t.column_name || t.status || "").toLowerCase();
-    return !["resolved", "done", "closed"].includes(status);
-  }).length;
-
-  const resolvedCount = tickets.filter((t) => {
-    const status = (t.column_name || t.status || "").toLowerCase();
-    return ["resolved", "done", "closed"].includes(status);
-  }).length;
+  const openCount = tickets.filter((t) => !t.resolved_at).length;
+  const resolvedCount = tickets.filter((t) => !!t.resolved_at).length;
 
   return (
     <PageContainer>

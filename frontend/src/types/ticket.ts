@@ -60,6 +60,13 @@ export interface Ticket {
   dueDate?: string; // Alias for backward compatibility
   start_date?: string;
   startDate?: string; // Alias for backward compatibility
+  
+  // Resolution fields
+  resolution_rating?: number | null;
+  resolution_feedback?: string;
+  resolved_at?: string | null;
+  is_final_column?: boolean;
+  
   created_at: string;
   createdAt?: string; // Alias for backward compatibility
   updated_at: string;

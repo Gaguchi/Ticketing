@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.core.validators import MinValueValidator, MaxValueValidator
 import secrets
 import os
 from datetime import timedelta
@@ -487,6 +488,23 @@ class Ticket(models.Model):
     )
     archived_reason = models.CharField(max_length=255, null=True, blank=True)
     done_at = models.DateTimeField(null=True, blank=True, help_text='Timestamp for when the ticket entered the Done column')
+    
+    # Resolution/Review fields
+    resolution_rating = models.IntegerField(
+        null=True, 
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        help_text='Customer satisfaction rating (1-5 stars)'
+    )
+    resolution_feedback = models.TextField(
+        blank=True,
+        help_text='Customer feedback on resolution'
+    )
+    resolved_at = models.DateTimeField(
+        null=True, 
+        blank=True, 
+        help_text='Timestamp when customer submitted review'
+    )
 
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)

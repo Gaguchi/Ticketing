@@ -12,6 +12,7 @@ import Dashboard from "./pages/Dashboard";
 import Tickets from "./pages/Tickets";
 import Chat from "./pages/Chat";
 import Companies from "./pages/Companies";
+import CompanyDetail from "./pages/CompanyDetail";
 import Users from "./pages/Users";
 import Settings from "./pages/Settings";
 import AcceptInvitationPage from "./pages/AcceptInvitationPage";
@@ -56,6 +57,7 @@ function App() {
                   <Route path="tickets" element={<Tickets />} />
                   <Route path="chat" element={<Chat />} />
                   <Route path="companies" element={<Companies />} />
+                  <Route path="companies/:id" element={<CompanyDetail />} />
                   <Route path="users" element={<Users />} />
                   <Route path="settings" element={<Settings />} />
                 </Route>

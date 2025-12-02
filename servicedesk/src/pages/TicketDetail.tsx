@@ -1,14 +1,14 @@
 import { useState, useEffect, useRef, FormEvent } from "react";
 import { useParams, Link } from "react-router-dom";
 import { PageContainer } from "../components/layout";
-import { Card, Button, Spinner, Avatar } from "../components/ui";
+import { Card, Button, Spinner, Avatar, StarRating } from "../components/ui";
 import { ProgressChain } from "../components/tickets";
 import { Ticket, Comment, User } from "../types";
 import { useAuth } from "../contexts/AuthContext";
 import apiService from "../services/api.service";
 import { API_ENDPOINTS } from "../config/api";
 
-// Map column names to status keys
+// Map column names to status keys for progress chain
 function getStatusKey(columnName: string): string {
   const statusMap: Record<string, string> = {
     open: "open",
@@ -17,9 +17,10 @@ function getStatusKey(columnName: string): string {
     in_progress: "in_progress",
     waiting: "waiting",
     "on hold": "waiting",
-    resolved: "resolved",
-    done: "resolved",
-    closed: "resolved",
+    review: "waiting",
+    done: "done",
+    completed: "done",
+    closed: "done",
   };
   return statusMap[columnName.toLowerCase()] || "open";
 }
@@ -51,6 +52,12 @@ export default function TicketDetail() {
   const [error, setError] = useState("");
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
+
+  // Review state
+  const [rating, setRating] = useState(0);
+  const [feedback, setFeedback] = useState("");
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewError, setReviewError] = useState("");
 
   useEffect(() => {
     if (id) {
@@ -111,6 +118,35 @@ export default function TicketDetail() {
     }
   };
 
+  const handleSubmitReview = async () => {
+    if (rating === 0) {
+      setReviewError("Please select a rating");
+      return;
+    }
+
+    setSubmittingReview(true);
+    setReviewError("");
+
+    try {
+      const updatedTicket = await apiService.post<Ticket>(
+        API_ENDPOINTS.TICKET_REVIEW(Number(id)),
+        {
+          rating,
+          feedback: feedback.trim(),
+        }
+      );
+      setTicket(updatedTicket);
+      setRating(0);
+      setFeedback("");
+    } catch (err) {
+      setReviewError(
+        err instanceof Error ? err.message : "Failed to submit review"
+      );
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
+
   if (loading) {
     return (
       <PageContainer>
@@ -153,7 +189,8 @@ export default function TicketDetail() {
   }
 
   const statusKey = getStatusKey(ticket.column_name || ticket.status);
-  const isResolved = statusKey === "resolved";
+  const isResolved = !!ticket.resolved_at;
+  const canReview = ticket.is_final_column && !isResolved;
 
   return (
     <PageContainer maxWidth="lg">
@@ -190,16 +227,25 @@ export default function TicketDetail() {
               <span>{ticket.type}</span>
             </>
           )}
-          {isResolved && (
+          {isResolved ? (
             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 ml-2">
               ✓ Resolved
             </span>
-          )}
+          ) : canReview ? (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700 ml-2">
+              ⭐ Awaiting Review
+            </span>
+          ) : null}
         </div>
         <h1 className="text-2xl font-semibold text-gray-900 mb-4">
           {ticket.name}
         </h1>
-        <ProgressChain currentStatus={statusKey} />
+        <ProgressChain
+          currentStatus={statusKey}
+          showLabels
+          isResolved={isResolved}
+          isFinalColumn={ticket.is_final_column || false}
+        />
       </div>
 
       {/* Ticket Info Card */}
@@ -245,6 +291,111 @@ export default function TicketDetail() {
           <p className="text-gray-900 whitespace-pre-wrap">
             {ticket.description}
           </p>
+        </Card>
+      )}
+
+      {/* Review Form - Show when ticket is in final column and not yet resolved */}
+      {canReview && (
+        <Card className="mb-6 border-2 border-amber-200 bg-amber-50">
+          <div className="text-center">
+            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-amber-100 flex items-center justify-center">
+              <svg
+                className="w-6 h-6 text-amber-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+                />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Rate Your Experience
+            </h3>
+            <p className="text-gray-600 mb-4">
+              Your ticket has been completed. Please rate your experience to
+              close the ticket.
+            </p>
+
+            <div className="flex justify-center mb-4">
+              <StarRating value={rating} onChange={setRating} size="lg" />
+            </div>
+
+            {rating > 0 && (
+              <p className="text-sm text-gray-500 mb-4">
+                {rating === 1 && "Very Dissatisfied"}
+                {rating === 2 && "Dissatisfied"}
+                {rating === 3 && "Neutral"}
+                {rating === 4 && "Satisfied"}
+                {rating === 5 && "Very Satisfied"}
+              </p>
+            )}
+
+            <div className="mb-4">
+              <textarea
+                value={feedback}
+                onChange={(e) => setFeedback(e.target.value)}
+                placeholder="Share your feedback (optional)..."
+                rows={3}
+                className="w-full rounded-md border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400"
+              />
+            </div>
+
+            {reviewError && (
+              <p className="text-sm text-red-600 mb-4">{reviewError}</p>
+            )}
+
+            <Button
+              onClick={handleSubmitReview}
+              loading={submittingReview}
+              disabled={rating === 0}
+            >
+              Submit Review & Close Ticket
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {/* Show rating if ticket is resolved */}
+      {isResolved && ticket.resolution_rating && (
+        <Card className="mb-6 bg-green-50 border border-green-200">
+          <div className="text-center">
+            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-green-100 flex items-center justify-center">
+              <svg
+                className="w-6 h-6 text-green-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Ticket Resolved
+            </h3>
+            <div className="flex justify-center mb-2">
+              <StarRating value={ticket.resolution_rating} readonly size="lg" />
+            </div>
+            {ticket.resolution_feedback && (
+              <p className="text-gray-600 italic mt-2">
+                "{ticket.resolution_feedback}"
+              </p>
+            )}
+            {ticket.resolved_at && (
+              <p className="text-sm text-gray-500 mt-2">
+                Resolved on {formatDate(ticket.resolved_at)}
+              </p>
+            )}
+          </div>
         </Card>
       )}
 

@@ -1,8 +1,13 @@
 import React, { memo } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Avatar, Space } from "antd";
-import { EyeOutlined, MessageOutlined, UserOutlined } from "@ant-design/icons";
+import { Avatar, Space, Tag } from "antd";
+import {
+  CheckCircleOutlined,
+  EyeOutlined,
+  MessageOutlined,
+  UserOutlined,
+} from "@ant-design/icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCheckSquare,
@@ -55,6 +60,8 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
   dragOverlay,
   onClick,
 }) => {
+  const isResolved = !!ticket.resolved_at;
+
   const {
     setNodeRef,
     listeners,
@@ -77,7 +84,6 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
     boxShadow: dragOverlay
       ? "0 4px 8px rgba(9,30,66,0.25)"
       : "0 1px 2px rgba(9,30,66,0.2)",
-    border: "none",
     cursor: dragOverlay ? "grabbing" : "pointer",
     touchAction: "manipulation",
     padding: "8px 10px",
@@ -108,6 +114,18 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
       }}
     >
       <div>
+        {/* Resolved indicator */}
+        {isResolved && (
+          <div style={{ marginBottom: "6px" }}>
+            <Tag
+              icon={<CheckCircleOutlined />}
+              color="success"
+              style={{ margin: 0, fontSize: "11px" }}
+            >
+              Resolved
+            </Tag>
+          </div>
+        )}
         <div
           style={{
             fontSize: "14px",

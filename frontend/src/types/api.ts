@@ -227,6 +227,13 @@ export interface Ticket {
   archived_by?: User | null;
   archived_reason?: string | null;
   done_at?: string | null;
+  
+  // Resolution fields
+  resolution_rating?: number | null;
+  resolution_feedback?: string;
+  resolved_at?: string | null;
+  is_final_column?: boolean;
+  
   created_at: string;
   updated_at: string;
 }

@@ -1,4 +1,11 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Card,
   Table,
@@ -36,7 +43,6 @@ import {
   PictureOutlined,
   ArrowLeftOutlined,
   TableOutlined,
-  SettingOutlined,
   AppstoreOutlined,
   MinusCircleOutlined,
   UserAddOutlined,
@@ -50,6 +56,8 @@ import apiService from "../services/api.service";
 import { ticketService } from "../services";
 import { DeadlineView } from "../components/DeadlineView";
 import { KanbanBoard } from "../components/KanbanBoard";
+import { CompanyCard } from "../components/companies/CompanyCard";
+import { useCompaniesStats } from "../hooks/useCompanyStats";
 import type { TicketColumn } from "../types/api";
 import { debug, LogLevel, LogCategory } from "../utils/debug";
 import { useApp } from "../contexts/AppContext";
@@ -93,6 +101,7 @@ interface User {
 
 const Companies: React.FC = () => {
   const { selectedProject, projectLoading } = useApp();
+  const navigate = useNavigate();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -124,6 +133,19 @@ const Companies: React.FC = () => {
 
   // Prevent duplicate initialization in React Strict Mode
   const fetchInProgressRef = useRef(false);
+
+  // Fetch stats for all companies on the dashboard
+  const companyIds = useMemo(() => companies.map((c) => c.id), [companies]);
+  const { statsMap, loadingMap } = useCompaniesStats({
+    companyIds,
+    projectId: selectedProject?.id,
+    enabled: !loading && companies.length > 0 && !selectedCompany,
+  });
+
+  // Handler to navigate to company detail page
+  const handleNavigateToCompany = (company: Company) => {
+    navigate(`/companies/${company.id}`);
+  };
 
   const fetchArchivedTickets = async (companyId: number) => {
     setLoadingArchived(true);
@@ -944,81 +966,15 @@ const Companies: React.FC = () => {
           <Row gutter={[16, 16]}>
             {companies.map((company) => (
               <Col key={company.id} xs={24} sm={12} lg={8} xl={6}>
-                <Card
-                  hoverable
-                  style={{ height: "100%", cursor: "pointer" }}
-                  onClick={() => handleCompanyClick(company)}
-                  actions={[
-                    <EditOutlined
-                      key="edit"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEditCompany(company);
-                      }}
-                    />,
-                    <SettingOutlined key="settings" />,
-                    <div key="more" onClick={(e) => e.stopPropagation()}>
-                      <Dropdown
-                        menu={{ items: getActionMenu(company) }}
-                        trigger={["click"]}
-                      >
-                        <MoreOutlined />
-                      </Dropdown>
-                    </div>,
-                  ]}
-                >
-                  <div style={{ textAlign: "center", marginBottom: 16 }}>
-                    {company.logo_url || company.logo_thumbnail_url ? (
-                      <Avatar
-                        size={64}
-                        src={company.logo_thumbnail_url || company.logo_url}
-                        style={{ objectFit: "contain" }}
-                      />
-                    ) : (
-                      <Avatar
-                        size={64}
-                        style={{ background: "#2C3E50" }}
-                        icon={<ShopOutlined />}
-                      />
-                    )}
-                  </div>
-                  <div style={{ textAlign: "center", marginBottom: 12 }}>
-                    <Title level={5} style={{ marginBottom: 4 }}>
-                      {company.name}
-                    </Title>
-                    <Text type="secondary" style={{ fontSize: 12 }}>
-                      {company.description}
-                    </Text>
-                  </div>
-                  <Space
-                    direction="vertical"
-                    size={4}
-                    style={{ width: "100%" }}
-                  >
-                    <Space>
-                      <TeamOutlined style={{ color: "#9E9E9E" }} />
-                      <Text type="secondary" style={{ fontSize: 12 }}>
-                        {company.admin_count} admins, {company.user_count} users
-                      </Text>
-                    </Space>
-                    {company.project_count > 0 && (
-                      <Space>
-                        <ShopOutlined style={{ color: "#9E9E9E" }} />
-                        <Text type="secondary" style={{ fontSize: 12 }}>
-                          {company.project_count} projects
-                        </Text>
-                      </Space>
-                    )}
-                    {company.ticket_count > 0 && (
-                      <Space>
-                        <MailOutlined style={{ color: "#9E9E9E" }} />
-                        <Text type="secondary" style={{ fontSize: 12 }}>
-                          {company.ticket_count} tickets
-                        </Text>
-                      </Space>
-                    )}
-                  </Space>
-                </Card>
+                <CompanyCard
+                  company={company}
+                  stats={statsMap.get(company.id) ?? null}
+                  statsLoading={loadingMap.get(company.id) ?? false}
+                  onClick={() => handleNavigateToCompany(company)}
+                  onEdit={() => handleEditCompany(company)}
+                  onSettings={() => handleNavigateToCompany(company)}
+                  menuItems={getActionMenu(company)}
+                />
               </Col>
             ))}
           </Row>

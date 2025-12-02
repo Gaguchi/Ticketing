@@ -74,6 +74,7 @@ export const API_ENDPOINTS = {
   // Companies
   COMPANIES: `${API_BASE_URL}/api/tickets/companies/`,
   COMPANY_DETAIL: (id: number) => `${API_BASE_URL}/api/tickets/companies/${id}/`,
+  COMPANY_STATS: (id: number) => `${API_BASE_URL}/api/tickets/companies/${id}/stats/`,
   COMPANY_ASSIGN_ADMIN: (id: number) => `${API_BASE_URL}/api/tickets/companies/${id}/assign_admin/`,
   COMPANY_REMOVE_ADMIN: (id: number) => `${API_BASE_URL}/api/tickets/companies/${id}/remove_admin/`,
   COMPANY_ASSIGN_USER: (id: number) => `${API_BASE_URL}/api/tickets/companies/${id}/assign_user/`,

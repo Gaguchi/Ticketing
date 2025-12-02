@@ -16,9 +16,10 @@ function getStatusKey(columnName: string): string {
     in_progress: "in_progress",
     waiting: "waiting",
     "on hold": "waiting",
-    resolved: "resolved",
-    done: "resolved",
-    closed: "resolved",
+    review: "waiting",
+    done: "done",
+    completed: "done",
+    closed: "done",
   };
   return statusMap[columnName.toLowerCase()] || "open";
 }
@@ -42,15 +43,21 @@ function formatRelativeTime(dateString: string): string {
 
 export default function TicketCard({ ticket }: TicketCardProps) {
   const statusKey = getStatusKey(ticket.column_name || ticket.status);
-  const isResolved = statusKey === "resolved";
+  const isResolved = !!ticket.resolved_at;
+  const isFinalColumn = ticket.is_final_column || false;
+  const needsReview = isFinalColumn && !isResolved;
   const commentsCount = ticket.comments_count || ticket.comment_count || 0;
 
   return (
     <Link to={`/tickets/${ticket.id}`} className="block">
       <Card
         hoverable
-        className={`border-l-4 border-l-brand-400 ${
-          isResolved ? "bg-gray-50" : ""
+        className={`border-l-4 ${
+          isResolved
+            ? "border-l-green-500 bg-gray-50"
+            : needsReview
+            ? "border-l-amber-500"
+            : "border-l-brand-400"
         }`}
       >
         <div className="flex items-start justify-between">
@@ -66,11 +73,15 @@ export default function TicketCard({ ticket }: TicketCardProps) {
                   <span className="text-sm text-gray-500">{ticket.type}</span>
                 </>
               )}
-              {isResolved && (
+              {isResolved ? (
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
                   ✓ Resolved
                 </span>
-              )}
+              ) : needsReview ? (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+                  ⭐ Awaiting Review
+                </span>
+              ) : null}
             </div>
 
             {/* Title */}
@@ -83,7 +94,12 @@ export default function TicketCard({ ticket }: TicketCardProps) {
             </h3>
 
             {/* Progress Chain */}
-            <ProgressChain currentStatus={statusKey} className="mb-3" />
+            <ProgressChain
+              currentStatus={statusKey}
+              isResolved={isResolved}
+              isFinalColumn={isFinalColumn}
+              className="mb-3"
+            />
 
             {/* Footer */}
             <div className="flex items-center gap-4 text-sm text-gray-500">

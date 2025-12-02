@@ -770,6 +770,623 @@ Get attachments for a specific ticket.
 
 ---
 
+### Company Endpoints
+
+Companies represent client organizations that the IT business services. Each company can have multiple users (clients) and admins (IT staff assigned to manage their tickets).
+
+#### GET `/tickets/companies/`
+
+List all companies (filtered by permissions and project).
+
+**Query Parameters:**
+
+- `project` (int): Filter by project ID (required for project-specific views)
+- `search` (string): Search in name and description
+
+**Response 200 OK:**
+
+```json
+{
+  "count": 5,
+  "next": null,
+  "previous": null,
+  "results": [
+    {
+      "id": 5,
+      "name": "Nikora",
+      "description": "Nikora supermarket chain",
+      "logo_url": "http://localhost:8000/media/company_logos/nikora.png",
+      "logo_thumbnail_url": "http://localhost:8000/media/company_logos/thumbs/thumb_nikora.png",
+      "primary_contact_email": "support@nikora.com",
+      "phone": "555-1234",
+      "admin_count": 2,
+      "user_count": 5,
+      "ticket_count": 12,
+      "project_count": 1,
+      "admin_names": ["John Smith", "Jane Doe"],
+      "created_at": "2025-01-15T10:00:00Z",
+      "updated_at": "2025-01-20T14:30:00Z"
+    }
+  ]
+}
+```
+
+#### GET `/tickets/companies/{id}/`
+
+Get full company details with users and admins.
+
+**Response 200 OK:**
+
+```json
+{
+  "id": 5,
+  "name": "Nikora",
+  "description": "Nikora supermarket chain",
+  "logo": "http://localhost:8000/media/company_logos/nikora.png",
+  "logo_url": "http://localhost:8000/media/company_logos/nikora.png",
+  "logo_thumbnail": null,
+  "logo_thumbnail_url": null,
+  "primary_contact_email": "support@nikora.com",
+  "phone": "555-1234",
+  "admins": [
+    {
+      "id": 2,
+      "username": "john",
+      "email": "john@it.com",
+      "first_name": "John",
+      "last_name": "Smith"
+    }
+  ],
+  "admin_count": 1,
+  "users": [
+    {
+      "id": 9,
+      "username": "client1",
+      "email": "client@nikora.com",
+      "first_name": "Client",
+      "last_name": "User"
+    }
+  ],
+  "user_count": 1,
+  "ticket_count": 12,
+  "project_count": 1,
+  "created_at": "2025-01-15T10:00:00Z",
+  "updated_at": "2025-01-20T14:30:00Z"
+}
+```
+
+#### POST `/tickets/companies/`
+
+Create a new company (superadmin only).
+
+**Request (JSON or multipart/form-data for logo upload):**
+
+```json
+{
+  "name": "Acme Corp",
+  "description": "Acme Corporation",
+  "primary_contact_email": "support@acme.com",
+  "phone": "555-9999",
+  "admin_ids": [2, 3],
+  "user_ids": [10, 11],
+  "project_ids": [1]
+}
+```
+
+**Response 201 Created:** (returns full company object)
+
+#### PATCH `/tickets/companies/{id}/`
+
+Update company details. Supports both JSON and multipart/form-data.
+
+**Request (JSON):**
+
+```json
+{
+  "name": "Nikora Updated",
+  "primary_contact_email": "newsupport@nikora.com",
+  "phone": "555-4321"
+}
+```
+
+**Request (multipart/form-data for logo upload):**
+
+```
+name=Nikora Updated
+logo=<file>
+primary_contact_email=newsupport@nikora.com
+```
+
+**Response 200 OK:** (returns updated company object)
+
+#### DELETE `/tickets/companies/{id}/`
+
+Delete a company (superadmin only).
+
+**Response 204 No Content**
+
+#### GET `/tickets/companies/{id}/stats/`
+
+Get company health statistics for dashboard display.
+
+**Query Parameters:**
+
+- `project` (int): Filter stats by project ID (optional)
+
+**Response 200 OK:**
+
+```json
+{
+  "open_tickets": 12,
+  "urgent_tickets": 3,
+  "overdue_tickets": 2,
+  "resolved_this_month": 45,
+  "total_tickets": 57,
+  "user_count": 5,
+  "admin_count": 2,
+  "health_status": "critical",
+  "last_activity": "2025-12-02T14:30:00Z"
+}
+```
+
+**Health Status Values:**
+
+- `critical`: Any P1/Critical priority ticket OR >3 overdue tickets
+- `attention`: 1-3 overdue tickets OR any urgent unassigned tickets
+- `healthy`: No critical issues
+- `inactive`: No tickets in 30+ days
+
+#### POST `/tickets/companies/{id}/assign_admin/`
+
+Assign an IT admin to this company. **Also assigns admin role to all projects the company is associated with.**
+
+**Request:**
+
+```json
+{
+  "user_id": 5
+}
+```
+
+**Response 200 OK:**
+
+```json
+{
+  "message": "john assigned as admin to Nikora",
+  "company": { ... }
+}
+```
+
+**Side Effects:**
+
+- User is added to `company.admins` M2M relationship
+- UserRole created/updated with `role='admin'` for each project the company is in
+
+#### POST `/tickets/companies/{id}/remove_admin/`
+
+Remove an IT admin from this company.
+
+**Request:**
+
+```json
+{
+  "user_id": 5
+}
+```
+
+**Response 200 OK:**
+
+```json
+{
+  "message": "john removed from Nikora admins",
+  "company": { ... }
+}
+```
+
+**Side Effects:**
+
+- If user is no longer admin of any company in a project, their role is downgraded to 'user' (if they're a company user) or removed entirely
+
+#### POST `/tickets/companies/{id}/assign_user/`
+
+Assign an existing user to this company. **Also assigns user role to all projects the company is associated with.**
+
+**Request:**
+
+```json
+{
+  "user_id": 10
+}
+```
+
+**Response 200 OK:**
+
+```json
+{
+  "message": "client1 assigned to Nikora",
+  "company": { ... }
+}
+```
+
+#### POST `/tickets/companies/{id}/remove_user/`
+
+Remove a company user from this company.
+
+**Request:**
+
+```json
+{
+  "user_id": 10
+}
+```
+
+**Response 200 OK:**
+
+```json
+{
+  "message": "client1 removed from Nikora",
+  "company": { ... }
+}
+```
+
+**Side Effects:**
+
+- If user is no longer associated with any company in a project, their 'user' role is removed
+
+#### POST `/tickets/companies/{id}/create_user/`
+
+Create a new user account AND assign them to this company. Used for creating client/customer accounts.
+
+**Request:**
+
+```json
+{
+  "username": "newclient",
+  "email": "newclient@nikora.com",
+  "password": "SecurePass123!",
+  "first_name": "New",
+  "last_name": "Client"
+}
+```
+
+**Response 201 Created:**
+
+```json
+{
+  "message": "User newclient created and assigned to Nikora",
+  "user": {
+    "id": 15,
+    "username": "newclient",
+    "email": "newclient@nikora.com",
+    "first_name": "New",
+    "last_name": "Client"
+  }
+}
+```
+
+**Side Effects:**
+
+- Creates Django User account
+- Adds user to `company.users`
+- Creates UserRole with `role='user'` for each project the company is in
+
+#### GET `/tickets/companies/{id}/tickets/`
+
+Get all tickets for this company.
+
+**Response 200 OK:** (returns array of ticket objects)
+
+---
+
+### User Management Endpoints
+
+User management for superadmins and staff to manage users across the system.
+
+#### GET `/tickets/users/`
+
+List users. Visibility depends on permissions:
+
+- Superusers see all users
+- Staff see all users (read-only for non-superusers)
+- Regular users only see users from shared projects
+
+**Query Parameters:**
+
+- `search` (string): Search in username, email, first_name, last_name
+- `ordering` (string): Order by field (`username`, `email`, `date_joined`, `last_login`)
+
+**Response 200 OK:**
+
+```json
+{
+  "count": 10,
+  "results": [
+    {
+      "id": 5,
+      "username": "john",
+      "email": "john@example.com",
+      "first_name": "John",
+      "last_name": "Doe",
+      "is_active": true,
+      "is_staff": false,
+      "is_superuser": false,
+      "date_joined": "2025-01-10T10:00:00Z",
+      "last_login": "2025-12-01T08:30:00Z",
+      "project_roles": [
+        { "project_id": 1, "project_name": "IT-Tech", "role": "admin" }
+      ],
+      "administered_companies": [{ "id": 5, "name": "Nikora" }],
+      "member_companies": []
+    }
+  ]
+}
+```
+
+#### GET `/tickets/users/{id}/`
+
+Get detailed user information.
+
+**Response 200 OK:** (same as list item with full details)
+
+#### POST `/tickets/users/`
+
+Create a new user (superadmin/staff only).
+
+**Request:**
+
+```json
+{
+  "username": "newuser",
+  "email": "newuser@example.com",
+  "password": "SecurePass123!",
+  "first_name": "New",
+  "last_name": "User",
+  "is_active": true,
+  "is_staff": false
+}
+```
+
+**Response 201 Created:** (returns user object)
+
+#### PATCH `/tickets/users/{id}/`
+
+Update user details (superadmin/staff only).
+
+**Request:**
+
+```json
+{
+  "first_name": "Updated",
+  "last_name": "Name",
+  "email": "newemail@example.com"
+}
+```
+
+**Response 200 OK:** (returns updated user object)
+
+#### DELETE `/tickets/users/{id}/`
+
+Delete a user (superadmin only).
+
+**Response 204 No Content**
+
+#### POST `/tickets/users/{id}/assign_role/`
+
+Assign or update a project role for a user.
+
+**Request:**
+
+```json
+{
+  "project_id": 1,
+  "role": "admin"
+}
+```
+
+**Valid Roles:** `superadmin`, `admin`, `user`, `manager`
+
+**Response 200/201:**
+
+```json
+{
+  "message": "john assigned as admin in IT-Tech",
+  "user_role": {
+    "id": 10,
+    "user": 5,
+    "project": 1,
+    "role": "admin",
+    "assigned_at": "2025-12-02T10:00:00Z",
+    "assigned_by": 1
+  },
+  "created": true
+}
+```
+
+#### POST `/tickets/users/{id}/remove_role/`
+
+Remove a project role from a user.
+
+**Request:**
+
+```json
+{
+  "project_id": 1
+}
+```
+
+**Response 200 OK:**
+
+```json
+{
+  "message": "Role removed for john"
+}
+```
+
+#### POST `/tickets/users/{id}/set_password/`
+
+Set or reset password for a user (superadmin only).
+
+**Request:**
+
+```json
+{
+  "password": "NewSecurePass123!"
+}
+```
+
+**Response 200 OK:**
+
+```json
+{
+  "message": "Password updated for john"
+}
+```
+
+#### POST `/tickets/users/{id}/toggle_active/`
+
+Enable or disable a user account.
+
+**Response 200 OK:**
+
+```json
+{
+  "message": "User john is now inactive",
+  "is_active": false
+}
+```
+
+#### GET `/tickets/users/{id}/roles/`
+
+Get all project roles for a user.
+
+**Response 200 OK:**
+
+```json
+{
+  "roles": [
+    {
+      "id": 10,
+      "project_id": 1,
+      "project_name": "IT-Tech",
+      "project_key": "ITT",
+      "role": "admin",
+      "assigned_at": "2025-12-02T10:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
+### Dashboard Endpoints
+
+Dashboard endpoints for quick access to aggregated statistics.
+
+#### GET `/tickets/dashboard/company-health/`
+
+Get health status of all companies for the selected project.
+
+**Query Parameters:**
+
+- `project` (int): Project ID (required)
+
+**Response 200 OK:**
+
+```json
+{
+  "companies": [
+    {
+      "id": 5,
+      "name": "Nikora",
+      "health_status": "critical",
+      "open_tickets": 12,
+      "urgent_tickets": 3,
+      "overdue_tickets": 2
+    }
+  ]
+}
+```
+
+#### GET `/tickets/dashboard/attention-needed/`
+
+Get tickets that need immediate attention.
+
+**Query Parameters:**
+
+- `project` (int): Project ID (required)
+- `limit` (int): Maximum number of tickets (default: 10)
+
+**Response 200 OK:** (returns array of urgent/overdue tickets)
+
+#### GET `/tickets/dashboard/newest/`
+
+Get most recently created tickets.
+
+**Query Parameters:**
+
+- `project` (int): Project ID (required)
+- `limit` (int): Maximum number of tickets (default: 10)
+
+**Response 200 OK:** (returns array of newest tickets)
+
+#### GET `/tickets/dashboard/activity/`
+
+Get recent activity/changes across all tickets.
+
+**Query Parameters:**
+
+- `project` (int): Project ID (required)
+- `limit` (int): Maximum number of activities (default: 20)
+
+**Response 200 OK:** (returns array of recent activities)
+
+#### GET `/tickets/dashboard/workload/`
+
+Get agent workload distribution.
+
+**Query Parameters:**
+
+- `project` (int): Project ID (required)
+
+**Response 200 OK:**
+
+```json
+{
+  "agents": [
+    {
+      "id": 2,
+      "username": "john",
+      "assigned_count": 15,
+      "in_progress_count": 5,
+      "resolved_today": 3
+    }
+  ]
+}
+```
+
+#### GET `/tickets/dashboard/kanban-summary/`
+
+Get summary counts for kanban columns.
+
+**Query Parameters:**
+
+- `project` (int): Project ID (required)
+
+**Response 200 OK:**
+
+```json
+{
+  "columns": [
+    { "id": 1, "name": "To Do", "count": 8 },
+    { "id": 2, "name": "In Progress", "count": 5 },
+    { "id": 3, "name": "Review", "count": 3 },
+    { "id": 4, "name": "Done", "count": 45 }
+  ]
+}
+```
+
+---
+
 ## Error Responses
 
 All API endpoints return consistent error responses:

@@ -30,10 +30,23 @@ servicedesk/                # Client portal (port 3001)
 # Run ALL services (recommended for dev)
 .\start.ps1
 
+# Run ALL services + Celery (requires Redis on localhost:6379)
+.\start.ps1 -WithCelery
+
+# Run only Celery services (worker + beat)
+.\start.ps1 -CeleryOnly
+
 # Individual services
 cd backend; python manage.py runserver      # Backend: localhost:8000
 cd frontend; npm run dev                     # Main app: localhost:5173
 cd servicedesk; npm run dev                  # Service desk: localhost:3001
+
+# Celery (requires Redis)
+cd backend; celery -A config worker --loglevel=info --pool=solo  # Worker
+cd backend; celery -A config beat --loglevel=info                # Beat scheduler
+
+# Start Redis via Docker (if not installed locally)
+docker run -d -p 6379:6379 redis:alpine
 
 # Database reset (DESTROYS ALL DATA)
 cd backend; .\reset_db.ps1 -CreateSuperuser  # Windows
