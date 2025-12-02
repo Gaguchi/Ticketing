@@ -116,9 +116,12 @@ class Company(models.Model):
         
         # Generate thumbnail if logo changed (skip for SVG files)
         if logo_changed and self.logo:
-            # Check if it's an SVG file - skip thumbnail generation
+            # Check if it's an SVG file - skip thumbnail generation and clear old thumbnail
             logo_name = self.logo.name.lower() if self.logo.name else ''
-            if not logo_name.endswith('.svg'):
+            if logo_name.endswith('.svg'):
+                # SVGs don't need thumbnails - clear any existing thumbnail
+                self.logo_thumbnail = None
+            else:
                 try:
                     from tickets.utils.image_processing import create_thumbnail
                     thumb_content = create_thumbnail(self.logo, size=(64, 64))

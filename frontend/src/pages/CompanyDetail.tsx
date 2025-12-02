@@ -677,12 +677,12 @@ const CompanyDetail: React.FC = () => {
             {company.logo_url || company.logo_thumbnail_url ? (
               <Avatar
                 size={64}
-                src={company.logo_thumbnail_url || company.logo_url}
+                src={company.logo_url || company.logo_thumbnail_url}
                 style={{ objectFit: "contain" }}
                 onError={() => {
                   console.error(
                     "🖼️ [CompanyDetail] Logo failed to load:",
-                    company.logo_thumbnail_url || company.logo_url
+                    company.logo_url || company.logo_thumbnail_url
                   );
                   return true; // Show fallback
                 }}
