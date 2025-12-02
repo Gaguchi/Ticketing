@@ -169,21 +169,20 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ padding: 5, flexShrink: 0 }}>
-            {company.logo_url || company.logo_thumbnail_url ? (
-              <Avatar
-                size={48}
-                src={company.logo_thumbnail_url || company.logo_url}
-                style={{ objectFit: "contain" }}
-              />
-            ) : (
-              <Avatar
-                size={48}
-                style={{ background: "#2C3E50" }}
-                icon={<ShopOutlined />}
-              />
-            )}
-          </div>
+          {company.logo_url || company.logo_thumbnail_url ? (
+            <Avatar
+              size={48}
+              src={company.logo_thumbnail_url || company.logo_url}
+              style={{ padding: 5, flexShrink: 0 }}
+              imgStyle={{ objectFit: "contain" }}
+            />
+          ) : (
+            <Avatar
+              size={48}
+              style={{ background: "#2C3E50", flexShrink: 0 }}
+              icon={<ShopOutlined />}
+            />
+          )}
           <div style={{ minWidth: 0 }}>
             <Title
               level={5}
