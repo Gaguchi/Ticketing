@@ -118,7 +118,27 @@ class ChatRoomViewSet(viewsets.ModelViewSet):
 
 
 class ChatMessageViewSet(viewsets.ModelViewSet):
-    """ViewSet for chat messages."""
+    """
+    ViewSet for chat messages with cursor-based pagination.
+    
+    Industry-standard infinite scroll implementation:
+    - Initial load: Latest N messages
+    - Scroll up: Load older messages using 'before' cursor
+    - Real-time: New messages via WebSocket
+    
+    Query Parameters:
+        room (required): Room ID to fetch messages from
+        limit (optional): Number of messages to fetch (default: 50, max: 100)
+        before (optional): Message ID cursor - fetch messages older than this
+        after (optional): Message ID cursor - fetch messages newer than this (for sync)
+    
+    Response Format:
+        {
+            "messages": [...],
+            "has_more": true/false,
+            "cursor": <oldest_message_id or null>
+        }
+    """
     permission_classes = [IsAuthenticated]
     serializer_class = ChatMessageSerializer
     filter_backends = [filters.SearchFilter]
@@ -134,7 +154,92 @@ class ChatMessageViewSet(viewsets.ModelViewSet):
         if room_id:
             queryset = queryset.filter(room_id=room_id)
         
-        return queryset.distinct().order_by('created_at')
+        return queryset.select_related('user').prefetch_related('reactions', 'reactions__user').distinct()
+    
+    def list(self, request, *args, **kwargs):
+        """
+        List messages with cursor-based pagination.
+        
+        This implements the industry-standard pattern for chat:
+        1. Initial load: Get latest N messages (no cursor)
+        2. Load older: Use 'before' cursor from previous response
+        3. Sync newer: Use 'after' cursor (for reconnection sync)
+        """
+        room_id = request.query_params.get('room')
+        if not room_id:
+            return Response(
+                {'error': 'room parameter is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validate user is participant
+        if not ChatRoom.objects.filter(id=room_id, participants__user=request.user).exists():
+            return Response(
+                {'error': 'Not a participant of this room'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Parse pagination params
+        try:
+            limit = min(int(request.query_params.get('limit', 50)), 100)
+        except ValueError:
+            limit = 50
+        
+        before_cursor = request.query_params.get('before')
+        after_cursor = request.query_params.get('after')
+        
+        # Build queryset
+        queryset = ChatMessage.objects.filter(
+            room_id=room_id
+        ).select_related('user').prefetch_related('reactions', 'reactions__user')
+        
+        if before_cursor:
+            # Loading older messages (user scrolling up)
+            try:
+                before_id = int(before_cursor)
+                queryset = queryset.filter(id__lt=before_id)
+            except ValueError:
+                pass
+            # Order by newest first, then reverse for chronological
+            queryset = queryset.order_by('-id')[:limit + 1]
+            
+        elif after_cursor:
+            # Loading newer messages (reconnection sync)
+            try:
+                after_id = int(after_cursor)
+                queryset = queryset.filter(id__gt=after_id)
+            except ValueError:
+                pass
+            queryset = queryset.order_by('id')[:limit + 1]
+            
+        else:
+            # Initial load - get latest messages
+            queryset = queryset.order_by('-id')[:limit + 1]
+        
+        # Execute query
+        messages = list(queryset)
+        
+        # Check if there are more messages
+        has_more = len(messages) > limit
+        if has_more:
+            messages = messages[:limit]
+        
+        # Reverse to chronological order (oldest first) for display
+        # (except for 'after' cursor which is already chronological)
+        if not after_cursor:
+            messages.reverse()
+        
+        # Serialize
+        serializer = self.get_serializer(messages, many=True)
+        
+        # Get cursor for next page (oldest message ID in current batch)
+        cursor = messages[0].id if messages else None
+        
+        return Response({
+            'messages': serializer.data,
+            'has_more': has_more,
+            'cursor': cursor,
+        })
     
     def perform_create(self, serializer):
         """Set user to current user and broadcast via WebSocket."""

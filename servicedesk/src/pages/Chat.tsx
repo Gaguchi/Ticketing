@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   Input,
   Avatar,
@@ -48,6 +48,9 @@ const Chat: React.FC = () => {
   const [messageInput, setMessageInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [messagesLoading, setMessagesLoading] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const [hasMoreMessages, setHasMoreMessages] = useState(false);
+  const [messageCursor, setMessageCursor] = useState<number | null>(null);
   const [typingUsers, setTypingUsers] = useState<Set<number>>(new Set());
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -63,9 +66,11 @@ const Chat: React.FC = () => {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const loadMoreSentinelRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<number | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const isInitialLoadRef = useRef(true); // Track if this is the first load
+  const isNearBottomRef = useRef(true); // Track if user is near bottom for auto-scroll
 
   // Get project members
   const projectMembers: User[] = selectedProject?.members || [];
@@ -79,17 +84,87 @@ const Chat: React.FC = () => {
   const directChats = rooms.filter((r) => r.type === "direct");
   const groupChats = rooms.filter((r) => r.type === "group");
 
-  // Scroll to bottom of messages
-  const scrollToBottom = (instant = false) => {
-    if (messagesContainerRef.current) {
+  // Scroll to bottom of messages (only if near bottom or forced)
+  const scrollToBottom = useCallback((force = false) => {
+    if (!messagesContainerRef.current) return;
+
+    // Only auto-scroll if user is near bottom or forced
+    if (force || isNearBottomRef.current) {
       messagesContainerRef.current.scrollTop =
         messagesContainerRef.current.scrollHeight;
-    } else if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({
-        behavior: instant ? "instant" : "smooth",
-      });
     }
-  };
+  }, []);
+
+  // Track scroll position to determine if near bottom
+  const handleScroll = useCallback(() => {
+    if (!messagesContainerRef.current) return;
+
+    const { scrollTop, scrollHeight, clientHeight } =
+      messagesContainerRef.current;
+    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+
+    // Consider "near bottom" if within 150px
+    isNearBottomRef.current = distanceFromBottom < 150;
+  }, []);
+
+  // Load older messages when scrolling to top
+  const loadOlderMessages = useCallback(async () => {
+    if (!activeRoom || loadingOlder || !hasMoreMessages || !messageCursor)
+      return;
+
+    // Store current scroll position to restore after loading
+    const container = messagesContainerRef.current;
+    const previousScrollHeight = container?.scrollHeight || 0;
+
+    setLoadingOlder(true);
+
+    try {
+      const result = await chatService.getMessages(activeRoom.id, {
+        limit: 50,
+        before: messageCursor,
+      });
+
+      // Prepend older messages
+      setMessages((prev) => [...result.messages, ...prev]);
+      setHasMoreMessages(result.hasMore);
+      setMessageCursor(result.cursor);
+
+      // Restore scroll position after messages are rendered
+      requestAnimationFrame(() => {
+        if (container) {
+          const newScrollHeight = container.scrollHeight;
+          container.scrollTop = newScrollHeight - previousScrollHeight;
+        }
+      });
+    } catch (error) {
+      console.error("Failed to load older messages:", error);
+    } finally {
+      setLoadingOlder(false);
+    }
+  }, [activeRoom, loadingOlder, hasMoreMessages, messageCursor]);
+
+  // IntersectionObserver for infinite scroll (load older on scroll to top)
+  useEffect(() => {
+    const sentinel = loadMoreSentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMoreMessages && !loadingOlder) {
+          loadOlderMessages();
+        }
+      },
+      {
+        root: messagesContainerRef.current,
+        threshold: 0.1,
+        rootMargin: "100px 0px 0px 0px", // Trigger before reaching top
+      }
+    );
+
+    observer.observe(sentinel);
+
+    return () => observer.disconnect();
+  }, [hasMoreMessages, loadingOlder, loadOlderMessages]);
 
   // Load rooms on mount or when project changes
   useEffect(() => {
@@ -184,13 +259,26 @@ const Chat: React.FC = () => {
     const loadMessages = async () => {
       try {
         setMessagesLoading(true);
-        // Clear messages from previous room
+        // Clear state for new room
         setMessages([]);
+        setHasMoreMessages(false);
+        setMessageCursor(null);
+        isNearBottomRef.current = true; // Reset to auto-scroll for new room
 
-        const data = await chatService.getMessages(activeRoom.id);
-        setMessages(data);
-        // Use instant scroll on initial load for better UX
-        setTimeout(() => scrollToBottom(true), 50);
+        // Fetch latest messages with pagination
+        const result = await chatService.getMessages(activeRoom.id, {
+          limit: 50,
+        });
+        setMessages(result.messages);
+        setHasMoreMessages(result.hasMore);
+        setMessageCursor(result.cursor);
+
+        // Scroll to bottom after messages render
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            scrollToBottom(true);
+          });
+        });
 
         // Mark as read
         await chatService.markRoomAsRead(activeRoom.id);
@@ -215,7 +303,7 @@ const Chat: React.FC = () => {
     };
 
     loadMessages();
-  }, [activeRoom?.id]); // Only depend on ID, not full object
+  }, [activeRoom?.id, scrollToBottom, fetchChatUnreadCount]); // Only depend on ID, not full object
 
   // Connect to WebSocket when room is selected
   useEffect(() => {
@@ -229,10 +317,11 @@ const Chat: React.FC = () => {
     const onMessage = (event: ChatWebSocketEvent) => {
       switch (event.type) {
         case "message_new":
-          // Add message to list
+          // Add message to list (only if from another user, we add ours optimistically)
           if (event.message.user.id !== user?.id) {
             setMessages((prev) => [...prev, event.message]);
-            setTimeout(scrollToBottom, 100);
+            // Scroll to bottom if user is near bottom
+            requestAnimationFrame(() => scrollToBottom());
           }
 
           // Update room's last_message and reset unread_count (since we're viewing it)
@@ -888,292 +977,344 @@ const Chat: React.FC = () => {
             {/* Messages Area */}
             <div
               ref={messagesContainerRef}
+              onScroll={handleScroll}
               style={{
                 flex: 1,
                 overflowY: "auto",
                 padding: "24px",
                 backgroundColor: "#f9fafb",
+                display: "flex",
+                flexDirection: "column",
               }}
             >
               {messagesLoading ? (
-                <div style={{ textAlign: "center", padding: 40 }}>
+                <div
+                  style={{ textAlign: "center", padding: 40, margin: "auto" }}
+                >
                   <Spin />
                 </div>
               ) : (
-                <Space direction="vertical" size={16} style={{ width: "100%" }}>
-                  {messages.map((msg) => {
-                    const isMine = msg.user.id === user?.id;
-                    return (
-                      <div
-                        key={msg.id}
+                <>
+                  {/* Load more sentinel - triggers loading older messages */}
+                  <div ref={loadMoreSentinelRef} style={{ minHeight: 1 }} />
+
+                  {/* Loading older indicator */}
+                  {loadingOlder && (
+                    <div style={{ textAlign: "center", padding: "12px 0" }}>
+                      <Spin size="small" />
+                      <Text
                         style={{
-                          display: "flex",
-                          justifyContent: isMine ? "flex-end" : "flex-start",
+                          marginLeft: 8,
+                          color: "#8c8c8c",
+                          fontSize: 12,
                         }}
                       >
+                        Loading older messages...
+                      </Text>
+                    </div>
+                  )}
+
+                  {/* No more messages indicator */}
+                  {!hasMoreMessages && messages.length > 0 && (
+                    <div style={{ textAlign: "center", padding: "12px 0" }}>
+                      <Text style={{ color: "#8c8c8c", fontSize: 12 }}>
+                        Beginning of conversation
+                      </Text>
+                    </div>
+                  )}
+
+                  <Space
+                    direction="vertical"
+                    size={16}
+                    style={{ width: "100%", marginTop: "auto" }}
+                  >
+                    {messages.map((msg) => {
+                      const isMine = msg.user.id === user?.id;
+                      return (
                         <div
+                          key={msg.id}
                           style={{
                             display: "flex",
-                            gap: 8,
-                            maxWidth: "60%",
-                            flexDirection: isMine ? "row-reverse" : "row",
+                            justifyContent: isMine ? "flex-end" : "flex-start",
                           }}
                         >
-                          {!isMine && (
-                            <Avatar
-                              size={32}
-                              icon={<UserOutlined />}
-                              style={{
-                                backgroundColor: "#1890ff",
-                                flexShrink: 0,
-                              }}
-                            />
-                          )}
-                          <div>
-                            <div
-                              style={{
-                                padding:
-                                  msg.type !== "text" ? "4px" : "10px 14px",
-                                backgroundColor: isMine ? "#1890ff" : "#fff",
-                                borderRadius: isMine
-                                  ? "12px 12px 2px 12px"
-                                  : "12px 12px 12px 2px",
-                                border: isMine ? "none" : "1px solid #e8e8e8",
-                                boxShadow: isMine
-                                  ? "none"
-                                  : "0 1px 2px rgba(0,0,0,0.05)",
-                              }}
-                            >
-                              {msg.type === "text" && (
-                                <Text
-                                  style={{
-                                    color: isMine ? "#fff" : "#172b4d",
-                                    fontSize: 14,
-                                    lineHeight: "20px",
-                                    wordBreak: "break-word",
-                                  }}
-                                >
-                                  {msg.content}
-                                </Text>
-                              )}
-
-                              {msg.type === "image" && msg.attachment_url && (
-                                <div>
-                                  {msg.content && (
-                                    <Text
-                                      style={{
-                                        color: isMine ? "#fff" : "#172b4d",
-                                        fontSize: 14,
-                                        display: "block",
-                                        padding: "6px 10px",
-                                      }}
-                                    >
-                                      {msg.content}
-                                    </Text>
-                                  )}
-                                  <img
-                                    src={msg.attachment_url}
-                                    alt={msg.attachment_name}
+                          <div
+                            style={{
+                              display: "flex",
+                              gap: 8,
+                              maxWidth: "60%",
+                              flexDirection: isMine ? "row-reverse" : "row",
+                            }}
+                          >
+                            {!isMine && (
+                              <Avatar
+                                size={32}
+                                icon={<UserOutlined />}
+                                style={{
+                                  backgroundColor: "#1890ff",
+                                  flexShrink: 0,
+                                }}
+                              />
+                            )}
+                            <div>
+                              <div
+                                style={{
+                                  padding:
+                                    msg.type !== "text" ? "4px" : "10px 14px",
+                                  backgroundColor: isMine ? "#1890ff" : "#fff",
+                                  borderRadius: isMine
+                                    ? "12px 12px 2px 12px"
+                                    : "12px 12px 12px 2px",
+                                  border: isMine ? "none" : "1px solid #e8e8e8",
+                                  boxShadow: isMine
+                                    ? "none"
+                                    : "0 1px 2px rgba(0,0,0,0.05)",
+                                }}
+                              >
+                                {msg.type === "text" && (
+                                  <Text
                                     style={{
-                                      maxWidth: "100%",
-                                      width: 400,
-                                      borderRadius: 8,
-                                      cursor: "pointer",
+                                      color: isMine ? "#fff" : "#172b4d",
+                                      fontSize: 14,
+                                      lineHeight: "20px",
+                                      wordBreak: "break-word",
                                     }}
-                                    onClick={() =>
-                                      window.open(msg.attachment_url!, "_blank")
-                                    }
-                                  />
-                                </div>
-                              )}
+                                  >
+                                    {msg.content}
+                                  </Text>
+                                )}
 
-                              {msg.type === "file" && msg.attachment_url && (
-                                <div
-                                  style={{
-                                    padding: "10px 14px",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: 12,
-                                  }}
-                                >
-                                  <FileOutlined
-                                    style={{
-                                      fontSize: 24,
-                                      color: isMine ? "#fff" : "#1890ff",
-                                    }}
-                                  />
-                                  <div style={{ flex: 1 }}>
-                                    <Text
-                                      strong
-                                      style={{
-                                        color: isMine ? "#fff" : "#172b4d",
-                                        fontSize: 14,
-                                        display: "block",
-                                      }}
-                                    >
-                                      {msg.attachment_name}
-                                    </Text>
-                                    {msg.attachment_size && (
+                                {msg.type === "image" && msg.attachment_url && (
+                                  <div>
+                                    {msg.content && (
                                       <Text
                                         style={{
-                                          color: isMine
-                                            ? "rgba(255,255,255,0.8)"
-                                            : "#8c8c8c",
-                                          fontSize: 12,
+                                          color: isMine ? "#fff" : "#172b4d",
+                                          fontSize: 14,
+                                          display: "block",
+                                          padding: "6px 10px",
                                         }}
                                       >
-                                        {(msg.attachment_size / 1024).toFixed(
-                                          1
-                                        )}{" "}
-                                        KB
+                                        {msg.content}
                                       </Text>
                                     )}
+                                    <img
+                                      src={msg.attachment_url}
+                                      alt={msg.attachment_name}
+                                      style={{
+                                        maxWidth: "100%",
+                                        width: 400,
+                                        borderRadius: 8,
+                                        cursor: "pointer",
+                                      }}
+                                      onClick={() =>
+                                        window.open(
+                                          msg.attachment_url!,
+                                          "_blank"
+                                        )
+                                      }
+                                    />
                                   </div>
-                                  <Button
-                                    type="text"
-                                    size="small"
-                                    icon={<DownloadOutlined />}
-                                    onClick={() =>
-                                      window.open(msg.attachment_url!, "_blank")
-                                    }
+                                )}
+
+                                {msg.type === "file" && msg.attachment_url && (
+                                  <div
                                     style={{
-                                      color: isMine ? "#fff" : "#1890ff",
+                                      padding: "10px 14px",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: 12,
                                     }}
-                                  />
+                                  >
+                                    <FileOutlined
+                                      style={{
+                                        fontSize: 24,
+                                        color: isMine ? "#fff" : "#1890ff",
+                                      }}
+                                    />
+                                    <div style={{ flex: 1 }}>
+                                      <Text
+                                        strong
+                                        style={{
+                                          color: isMine ? "#fff" : "#172b4d",
+                                          fontSize: 14,
+                                          display: "block",
+                                        }}
+                                      >
+                                        {msg.attachment_name}
+                                      </Text>
+                                      {msg.attachment_size && (
+                                        <Text
+                                          style={{
+                                            color: isMine
+                                              ? "rgba(255,255,255,0.8)"
+                                              : "#8c8c8c",
+                                            fontSize: 12,
+                                          }}
+                                        >
+                                          {(msg.attachment_size / 1024).toFixed(
+                                            1
+                                          )}{" "}
+                                          KB
+                                        </Text>
+                                      )}
+                                    </div>
+                                    <Button
+                                      type="text"
+                                      size="small"
+                                      icon={<DownloadOutlined />}
+                                      onClick={() =>
+                                        window.open(
+                                          msg.attachment_url!,
+                                          "_blank"
+                                        )
+                                      }
+                                      style={{
+                                        color: isMine ? "#fff" : "#1890ff",
+                                      }}
+                                    />
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Reactions */}
+                              {msg.reactions && msg.reactions.length > 0 && (
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    flexWrap: "wrap",
+                                    gap: 4,
+                                    marginTop: 4,
+                                  }}
+                                >
+                                  {/* Group reactions by emoji */}
+                                  {Object.entries(
+                                    msg.reactions.reduce((acc, reaction) => {
+                                      if (!acc[reaction.emoji]) {
+                                        acc[reaction.emoji] = [];
+                                      }
+                                      acc[reaction.emoji].push(reaction);
+                                      return acc;
+                                    }, {} as Record<string, typeof msg.reactions>)
+                                  ).map(([emoji, reactions]) => {
+                                    const hasUserReacted = reactions.some(
+                                      (r) => r.user.id === user?.id
+                                    );
+                                    return (
+                                      <Badge
+                                        key={emoji}
+                                        count={reactions.length}
+                                        size="small"
+                                        style={{
+                                          backgroundColor: hasUserReacted
+                                            ? "#1890ff"
+                                            : "#f0f0f0",
+                                          color: hasUserReacted
+                                            ? "#fff"
+                                            : "#595959",
+                                        }}
+                                      >
+                                        <div
+                                          onClick={() => {
+                                            if (hasUserReacted) {
+                                              handleRemoveReaction(
+                                                msg.id,
+                                                emoji
+                                              );
+                                            } else {
+                                              handleEmojiClick(msg.id, {
+                                                emoji,
+                                              });
+                                            }
+                                          }}
+                                          style={{
+                                            padding: "2px 8px",
+                                            backgroundColor: hasUserReacted
+                                              ? "#e6f7ff"
+                                              : "#fafafa",
+                                            border: `1px solid ${
+                                              hasUserReacted
+                                                ? "#1890ff"
+                                                : "#d9d9d9"
+                                            }`,
+                                            borderRadius: 12,
+                                            cursor: "pointer",
+                                            fontSize: 14,
+                                            transition: "all 0.2s",
+                                          }}
+                                        >
+                                          {emoji}
+                                        </div>
+                                      </Badge>
+                                    );
+                                  })}
                                 </div>
                               )}
-                            </div>
 
-                            {/* Reactions */}
-                            {msg.reactions && msg.reactions.length > 0 && (
                               <div
                                 style={{
                                   display: "flex",
-                                  flexWrap: "wrap",
-                                  gap: 4,
+                                  alignItems: "center",
+                                  gap: 8,
                                   marginTop: 4,
                                 }}
                               >
-                                {/* Group reactions by emoji */}
-                                {Object.entries(
-                                  msg.reactions.reduce((acc, reaction) => {
-                                    if (!acc[reaction.emoji]) {
-                                      acc[reaction.emoji] = [];
-                                    }
-                                    acc[reaction.emoji].push(reaction);
-                                    return acc;
-                                  }, {} as Record<string, typeof msg.reactions>)
-                                ).map(([emoji, reactions]) => {
-                                  const hasUserReacted = reactions.some(
-                                    (r) => r.user.id === user?.id
-                                  );
-                                  return (
-                                    <Badge
-                                      key={emoji}
-                                      count={reactions.length}
-                                      size="small"
-                                      style={{
-                                        backgroundColor: hasUserReacted
-                                          ? "#1890ff"
-                                          : "#f0f0f0",
-                                        color: hasUserReacted
-                                          ? "#fff"
-                                          : "#595959",
-                                      }}
-                                    >
-                                      <div
-                                        onClick={() => {
-                                          if (hasUserReacted) {
-                                            handleRemoveReaction(msg.id, emoji);
-                                          } else {
-                                            handleEmojiClick(msg.id, { emoji });
-                                          }
-                                        }}
-                                        style={{
-                                          padding: "2px 8px",
-                                          backgroundColor: hasUserReacted
-                                            ? "#e6f7ff"
-                                            : "#fafafa",
-                                          border: `1px solid ${
-                                            hasUserReacted
-                                              ? "#1890ff"
-                                              : "#d9d9d9"
-                                          }`,
-                                          borderRadius: 12,
-                                          cursor: "pointer",
-                                          fontSize: 14,
-                                          transition: "all 0.2s",
-                                        }}
-                                      >
-                                        {emoji}
-                                      </div>
-                                    </Badge>
-                                  );
-                                })}
-                              </div>
-                            )}
-
-                            <div
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 8,
-                                marginTop: 4,
-                              }}
-                            >
-                              <Text
-                                style={{
-                                  fontSize: 11,
-                                  color: "#8c8c8c",
-                                  textAlign: isMine ? "right" : "left",
-                                }}
-                              >
-                                {formatTime(msg.created_at)}
-                                {msg.is_edited && " (edited)"}
-                              </Text>
-
-                              {/* Emoji Picker Button */}
-                              <Popover
-                                content={
-                                  <div style={{ width: 350 }}>
-                                    <EmojiPicker
-                                      onEmojiClick={(emojiData) =>
-                                        handleEmojiClick(msg.id, emojiData)
-                                      }
-                                      width="100%"
-                                      height={400}
-                                    />
-                                  </div>
-                                }
-                                trigger="click"
-                                open={emojiPickerVisible === msg.id}
-                                onOpenChange={(visible) =>
-                                  setEmojiPickerVisible(visible ? msg.id : null)
-                                }
-                              >
-                                <SmileOutlined
+                                <Text
                                   style={{
-                                    fontSize: 14,
+                                    fontSize: 11,
                                     color: "#8c8c8c",
-                                    cursor: "pointer",
-                                    transition: "color 0.2s",
+                                    textAlign: isMine ? "right" : "left",
                                   }}
-                                  onMouseEnter={(e) =>
-                                    (e.currentTarget.style.color = "#1890ff")
+                                >
+                                  {formatTime(msg.created_at)}
+                                  {msg.is_edited && " (edited)"}
+                                </Text>
+
+                                {/* Emoji Picker Button */}
+                                <Popover
+                                  content={
+                                    <div style={{ width: 350 }}>
+                                      <EmojiPicker
+                                        onEmojiClick={(emojiData) =>
+                                          handleEmojiClick(msg.id, emojiData)
+                                        }
+                                        width="100%"
+                                        height={400}
+                                      />
+                                    </div>
                                   }
-                                  onMouseLeave={(e) =>
-                                    (e.currentTarget.style.color = "#8c8c8c")
+                                  trigger="click"
+                                  open={emojiPickerVisible === msg.id}
+                                  onOpenChange={(visible) =>
+                                    setEmojiPickerVisible(
+                                      visible ? msg.id : null
+                                    )
                                   }
-                                />
-                              </Popover>
+                                >
+                                  <SmileOutlined
+                                    style={{
+                                      fontSize: 14,
+                                      color: "#8c8c8c",
+                                      cursor: "pointer",
+                                      transition: "color 0.2s",
+                                    }}
+                                    onMouseEnter={(e) =>
+                                      (e.currentTarget.style.color = "#1890ff")
+                                    }
+                                    onMouseLeave={(e) =>
+                                      (e.currentTarget.style.color = "#8c8c8c")
+                                    }
+                                  />
+                                </Popover>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                  <div ref={messagesEndRef} />
-                </Space>
+                      );
+                    })}
+                    <div ref={messagesEndRef} />
+                  </Space>
+                </>
               )}
             </div>
 
