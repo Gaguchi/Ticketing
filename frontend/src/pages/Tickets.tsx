@@ -193,12 +193,14 @@ const Tickets: React.FC = () => {
 
       if (type === "ticket_created") {
         // Check if we've already processed this ticket ID
-        if (receivedTicketIdsRef.current.has(data.ticket_id)) {
+        // Note: WebSocket may send `ticket_id` or `id`, onSuccess uses `id`
+        const ticketId = data.ticket_id || data.id;
+        if (receivedTicketIdsRef.current.has(ticketId)) {
           return;
         }
 
         // Mark as received
-        receivedTicketIdsRef.current.add(data.ticket_id);
+        receivedTicketIdsRef.current.add(ticketId);
         try {
           // Convert WebSocket data to ticket format
           const newTicket = {
@@ -219,7 +221,7 @@ const Tickets: React.FC = () => {
         } catch (error) {
           console.error("Failed to add new ticket:", error);
           // Remove from set so it can retry
-          receivedTicketIdsRef.current.delete(data.id);
+          receivedTicketIdsRef.current.delete(ticketId);
         }
       } else if (type === "ticket_updated") {
         const lastUpdatedAt = recentTicketUpdatesRef.current.get(data.id);
