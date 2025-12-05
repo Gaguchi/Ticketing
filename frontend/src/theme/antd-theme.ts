@@ -55,7 +55,7 @@ export const theme: ThemeConfig = {
     
     // ===== TYPOGRAPHY =====
     
-    fontFamily: "'Inter', 'BPG Arial', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    fontFamily: "'Inter', 'Noto Sans Georgian', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
     
     fontSize: 14,           // Body text
     fontSizeHeading1: 24,   // H1

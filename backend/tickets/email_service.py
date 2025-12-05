@@ -61,8 +61,9 @@ The Ticketing Team
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
     <style>
-        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }}
+        body {{ font-family: 'Noto Sans Georgian', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }}
         .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
         .header {{ background-color: #0052cc; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }}
         .content {{ background-color: #f4f5f7; padding: 30px; border-radius: 0 0 5px 5px; }}

@@ -195,18 +195,7 @@ const Tickets: React.FC = () => {
         // Check if we've already processed this ticket ID
         // Note: WebSocket may send `ticket_id` or `id`, onSuccess uses `id`
         const ticketId = data.ticket_id || data.id;
-        console.log(
-          `[Tickets] ticket_created event - ticketId: ${ticketId}, data.id: ${data.id}, data.ticket_id: ${data.ticket_id}`
-        );
-        console.log(
-          `[Tickets] receivedTicketIds has ${ticketId}:`,
-          receivedTicketIdsRef.current.has(ticketId)
-        );
-
         if (receivedTicketIdsRef.current.has(ticketId)) {
-          console.log(
-            `[Tickets] Skipping duplicate ticket_created for ${ticketId}`
-          );
           return;
         }
 
@@ -218,18 +207,10 @@ const Tickets: React.FC = () => {
             ...data,
             ticket_key: data.ticket_key || `${selectedProject.key}-${data.id}`,
           };
-          console.log(`[Tickets] Adding ticket from WebSocket:`, {
-            id: newTicket.id,
-            column: newTicket.column,
-            column_order: newTicket.column_order,
-          });
 
           setTickets((prev) => {
             // Double-check it doesn't exist
             if (prev.some((t) => t.id === newTicket.id)) {
-              console.log(
-                `[Tickets] Ticket ${newTicket.id} already exists in state, skipping`
-              );
               return prev;
             }
             return [newTicket, ...prev];
@@ -420,15 +401,11 @@ const Tickets: React.FC = () => {
     recentTicketUpdatesRef.current.set(ticketId, Date.now());
     lastMoveTimeRef.current = Date.now();
 
-    console.log(
-      `[Tickets] Sending PATCH for ticket ${ticketId}: column=${newColumnId}, order=${order}`
-    );
     try {
       await ticketService.updateTicket(ticketId, {
         column: newColumnId,
         order: order,
       });
-      console.log(`[Tickets] PATCH successful for ticket ${ticketId}`);
     } catch (error: any) {
       // ROLLBACK: Revert optimistic update on error
 
@@ -948,16 +925,10 @@ const Tickets: React.FC = () => {
           });
           // Mark this ticket ID as received (it will come via WebSocket soon)
           receivedTicketIdsRef.current.add(newTicket.id);
-          console.log(`[Tickets] Added ${newTicket.id} to receivedTicketIds`);
 
           // Add the ticket immediately for instant feedback
           // The WebSocket duplicate check will prevent double-adding
-          setTickets((prev) => {
-            console.log(
-              `[Tickets] Adding ticket ${newTicket.id} to state (optimistic)`
-            );
-            return [newTicket, ...prev];
-          });
+          setTickets((prev) => [newTicket, ...prev]);
         }}
       />
     </div>

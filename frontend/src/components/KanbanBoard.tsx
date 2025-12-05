@@ -170,12 +170,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       if (currentIndex === dropPosition) return;
     }
 
-    console.log(`[KanbanBoard] onTicketMove called:`, {
-      ticketId,
-      newColumnId,
-      dropPosition,
-      oldColumnId,
-    });
     onTicketMove(ticketId, newColumnId, dropPosition, oldColumnId);
   }
 
