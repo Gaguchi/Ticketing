@@ -260,10 +260,24 @@ class TicketPosition(models.Model):
         print(f"🔄 TicketPosition.move_ticket: Moving {ticket.id} to col {target_column_id} pos {target_order}")
         
         # Get or create position for this ticket
+        # IMPORTANT: Use ticket's ACTUAL column as default, not target column!
+        # This ensures cross-column moves are detected correctly on first move.
         position, created = cls.objects.get_or_create(
             ticket=ticket,
-            defaults={'column_id': target_column_id, 'order': 0}
+            defaults={'column_id': ticket.column_id, 'order': ticket.column_order or 0}
         )
+        
+        # Safety check: if position is out of sync with ticket, sync it now
+        # This can happen if:
+        # 1. Position was just created
+        # 2. Position was updated outside of move_ticket
+        # 3. Previous moves failed to sync
+        if position.column_id != ticket.column_id:
+            print(f"⚠️ Position sync issue detected: position.column_id={position.column_id}, ticket.column_id={ticket.column_id}")
+            print(f"⚠️ Syncing position to match ticket's actual column")
+            position.column_id = ticket.column_id
+            position.order = ticket.column_order or 0
+            position.save(update_fields=['column_id', 'order'])
         
         old_column_id = position.column_id
         old_order = position.order
@@ -282,8 +296,10 @@ class TicketPosition(models.Model):
                             column_id=column_id
                         ).order_by('ticket_id'))
                     
-                    # Refresh position in case it changed
+                    # Refresh position in case it changed during lock acquisition
                     position.refresh_from_db()
+                    
+                    # Re-check sync after refresh (should be synced now)
                     old_column_id = position.column_id
                     old_order = position.order
                     
@@ -389,15 +405,28 @@ class TicketPosition(models.Model):
                 raise
         
         # Broadcast position updates via WebSocket (outside transaction)
+        # Use Celery task if available, otherwise use threading to avoid blocking
         if broadcast and affected_columns:
-            channel_layer = get_channel_layer()
-            async_to_sync(channel_layer.group_send)(
-                f'project_{ticket.project_id}_tickets',
-                {
-                    'type': 'column_refresh',
-                    'column_ids': list(affected_columns),
-                }
-            )
+            try:
+                from tickets.tasks import broadcast_column_refresh
+                # Use Celery for truly async broadcast
+                broadcast_column_refresh.delay(ticket.project_id, list(affected_columns))
+            except Exception as e:
+                # Fallback to threading if Celery is not available
+                print(f"⚠️ Celery not available, using thread fallback: {e}")
+                import threading
+                
+                def _broadcast():
+                    channel_layer = get_channel_layer()
+                    async_to_sync(channel_layer.group_send)(
+                        f'project_{ticket.project_id}_tickets',
+                        {
+                            'type': 'column_refresh',
+                            'column_ids': list(affected_columns),
+                        }
+                    )
+                
+                threading.Thread(target=_broadcast, daemon=True).start()
         
         return position
 

@@ -148,3 +148,41 @@ def unarchive_ticket(ticket_id: int):
     except Exception as e:
         logger.error(f"Error unarchiving ticket {ticket_id}: {str(e)}")
         return {'success': False, 'message': str(e)}
+
+
+@shared_task(bind=True, max_retries=2, soft_time_limit=5)
+def broadcast_column_refresh(self, project_id, column_ids):
+    """
+    Broadcast column refresh via WebSocket.
+    
+    This task is used to broadcast position updates asynchronously,
+    avoiding blocking the HTTP response in ticket move operations.
+    
+    Args:
+        project_id: The project ID to broadcast to
+        column_ids: List of column IDs that were affected
+    """
+    from channels.layers import get_channel_layer
+    from asgiref.sync import async_to_sync
+    
+    try:
+        channel_layer = get_channel_layer()
+        if channel_layer is None:
+            logger.warning("No channel layer available for broadcast")
+            return {'success': False, 'message': 'No channel layer'}
+        
+        async_to_sync(channel_layer.group_send)(
+            f'project_{project_id}_tickets',
+            {
+                'type': 'column_refresh',
+                'column_ids': column_ids,
+            }
+        )
+        
+        logger.debug(f"Broadcasted column refresh for project {project_id}, columns {column_ids}")
+        return {'success': True, 'project_id': project_id, 'column_ids': column_ids}
+        
+    except Exception as e:
+        logger.error(f"Error broadcasting column refresh: {str(e)}")
+        # Retry on failure
+        raise self.retry(exc=e, countdown=1)

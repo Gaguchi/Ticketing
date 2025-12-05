@@ -168,9 +168,8 @@ REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     # Use Unicode-safe JSON rendering for Georgian and other non-ASCII characters
     'DEFAULT_RENDERER_CLASSES': [
-        'rest_framework.renderers.JSONRenderer',
+        'config.renderers.UnicodeJSONRenderer',
     ],
-    'UNICODE_JSON': True,  # Ensure non-ASCII chars are not escaped
 }
 
 # Simple JWT settings

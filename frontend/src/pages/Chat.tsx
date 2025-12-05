@@ -59,6 +59,7 @@ const Chat: React.FC = () => {
   const [creatingGroup, setCreatingGroup] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<number | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const isInitialLoadRef = useRef(true); // Track if this is the first load
@@ -76,8 +77,12 @@ const Chat: React.FC = () => {
   const groupChats = rooms.filter((r) => r.type === "group");
 
   // Scroll to bottom of messages
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  const scrollToBottom = (instant = false) => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    } else if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: instant ? "instant" : "smooth" });
+    }
   };
 
   // Load rooms on mount or when project changes
@@ -185,7 +190,8 @@ const Chat: React.FC = () => {
 
         const data = await chatService.getMessages(activeRoom.id);
         setMessages(data);
-        setTimeout(scrollToBottom, 100);
+        // Use instant scroll on initial load for better UX
+        setTimeout(() => scrollToBottom(true), 50);
 
         // Mark as read
         await chatService.markRoomAsRead(activeRoom.id);
@@ -895,6 +901,7 @@ const Chat: React.FC = () => {
 
             {/* Messages Area */}
             <div
+              ref={messagesContainerRef}
               style={{
                 flex: 1,
                 overflowY: "auto",
