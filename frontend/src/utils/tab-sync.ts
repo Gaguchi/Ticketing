@@ -13,7 +13,6 @@ class TabSync {
    */
   init() {
     window.addEventListener('storage', this.handleStorageEvent.bind(this));
-    console.log('📡 [TabSync] Multi-tab synchronization initialized');
   }
 
   /**
@@ -25,18 +24,15 @@ class TabSync {
 
     // Handle specific events
     if (event.key === 'access_token' && event.newValue) {
-      console.log('📡 [TabSync] Token refreshed in another tab');
       // Token was updated in another tab - current tab will use it automatically
     }
 
     if (event.key === 'access_token' && event.newValue === null) {
-      console.log('📡 [TabSync] Logout detected in another tab');
       // Token was removed (logout) in another tab
       window.location.href = '/login';
     }
 
     if (event.key === 'logout_event') {
-      console.log('📡 [TabSync] Explicit logout event from another tab');
       // Explicit logout signal
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
@@ -49,7 +45,6 @@ class TabSync {
    * Broadcast logout to all tabs
    */
   broadcastLogout() {
-    console.log('📡 [TabSync] Broadcasting logout to all tabs');
     // Set a temporary flag to signal other tabs
     localStorage.setItem('logout_event', Date.now().toString());
     // Remove it immediately (the storage event will still fire)
@@ -60,7 +55,6 @@ class TabSync {
    * Broadcast token refresh to all tabs
    */
   broadcastTokenRefresh(token: string) {
-    console.log('📡 [TabSync] Broadcasting token refresh to all tabs');
     // Updating localStorage will trigger storage event in other tabs
     localStorage.setItem('access_token', token);
   }
@@ -85,7 +79,6 @@ class TabSync {
   destroy() {
     window.removeEventListener('storage', this.handleStorageEvent.bind(this));
     this.listeners.clear();
-    console.log('📡 [TabSync] Multi-tab synchronization destroyed');
   }
 }
 

@@ -103,10 +103,6 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
       .getAllCompanies(activeProjectId)
       .then((companiesData) => {
         setCompanies(companiesData);
-        console.log(
-          `Fetched companies for project ${activeProjectId}:`,
-          companiesData.length
-        );
       })
       .catch((error) => {
         console.error("❌ Failed to load companies:", error);
@@ -134,39 +130,25 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
     setCurrentProjectId(watchedProject);
     const project = availableProjects.find((p) => p.id === watchedProject);
 
-    console.group("🔧 CreateTicketModal - Loading project data");
-    console.log("Loading data for project ID:", watchedProject);
-    console.log("Project key:", project?.key, "name:", project?.name);
-
     // Fetch project columns
     projectService
       .getProjectColumns(watchedProject)
       .then((columns) => {
-        console.log("Fetched columns:", columns.length);
         setProjectColumns(columns);
         if (columns.length > 0) {
           const targetColumn =
             columns.find((col: any) => col.id === columnId) || columns[0];
-          console.log(
-            "Selected column ID:",
-            targetColumn.id,
-            "Name:",
-            targetColumn.name
-          );
           setActualColumnId(targetColumn.id);
           form.setFieldValue("column", targetColumn.id);
         } else {
-          console.warn("⚠️ No columns found in project");
           setActualColumnId(null);
           message.warning(
             "This project has no columns. Please set up columns for this project first."
           );
         }
-        console.groupEnd();
       })
       .catch((error) => {
         console.error("❌ Failed to load project columns:", error);
-        console.groupEnd();
         message.error("Failed to load project columns");
         setProjectColumns([]);
         setActualColumnId(null);
@@ -181,7 +163,6 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
           (t: any) => t.status !== "done"
         );
         setOpenTickets(projectTickets);
-        console.log("Fetched open tickets:", projectTickets.length);
       })
       .catch((error) => {
         console.error("❌ Failed to load open tickets:", error);
@@ -196,7 +177,6 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
           ? response
           : response.results || [];
         setProjectTags(tags);
-        console.log("Fetched project tags:", tags.length);
       })
       .catch((error) => {
         console.error("❌ Failed to load project tags:", error);
@@ -212,32 +192,17 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
   ]);
 
   const handleSubmit = async (values: any) => {
-    console.group("🎫 CreateTicketModal - handleSubmit");
-    console.log("Form values:", JSON.stringify(values, null, 2));
-    console.log(
-      "Selected project ID:",
-      selectedProject?.id,
-      "key:",
-      selectedProject?.key
-    );
-    console.log("Actual column ID:", actualColumnId);
-    console.log("Passed column ID:", columnId);
-
     if (!selectedProject) {
-      console.error("❌ No selected project!");
       message.error("No project selected. Please select a project first.");
-      console.groupEnd();
       return;
     }
 
     if (!actualColumnId) {
-      console.error("❌ No actual column ID!");
       message.error({
         content:
           "This project has no columns. Please create a new project (the old one was created before columns were added automatically).",
         duration: 8,
       });
-      console.groupEnd();
       return;
     }
 
@@ -246,8 +211,6 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
       // Handle tags: create new tags if needed and get tag IDs
       let tagIds: number[] = [];
       if (values.tags && values.tags.length > 0) {
-        console.log("Processing tags:", values.tags);
-
         for (const tagName of values.tags) {
           // Check if tag exists in projectTags
           let existingTag = projectTags.find(
@@ -257,7 +220,6 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
           if (!existingTag) {
             // Create new tag
             try {
-              console.log(`Creating new tag: ${tagName}`);
               const newTag = await tagService.createTag({
                 name: tagName,
                 color: "#0052cc", // Default color
@@ -277,7 +239,6 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
             tagIds.push(existingTag.id);
           }
         }
-        console.log("Final tag IDs:", tagIds);
       }
 
       const ticketData: CreateTicketData = {
@@ -301,17 +262,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
           : undefined,
       };
 
-      console.log(
-        "📤 Ticket data to send:",
-        JSON.stringify(ticketData, null, 2)
-      );
-
       const newTicket = await ticketService.createTicket(ticketData);
-      console.log(
-        "✅ Ticket created successfully:",
-        JSON.stringify(newTicket, null, 2)
-      );
-      console.groupEnd();
       // message.success("Ticket created successfully!");
 
       onSuccess?.(newTicket);

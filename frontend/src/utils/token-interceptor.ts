@@ -65,9 +65,7 @@ class TokenInterceptor {
     this.isRefreshing = true;
 
     try {
-      console.log('🔄 [TokenInterceptor] Attempting to refresh token...');
       const newToken = await authService.refreshToken();
-      console.log('✅ [TokenInterceptor] Token refreshed successfully');
       
       // Process all queued requests
       this.processQueue(null, newToken);
@@ -83,7 +81,6 @@ class TokenInterceptor {
       this.isRefreshing = false;
 
       // Logout and redirect to login
-      console.log('🚪 [TokenInterceptor] Redirecting to login...');
       authService.logout();
       
       // Force immediate redirect

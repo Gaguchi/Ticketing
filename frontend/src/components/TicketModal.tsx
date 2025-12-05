@@ -159,7 +159,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
   const [saving, setSaving] = useState(false);
   const [currentProject, setCurrentProject] = useState<any>(null);
   const [availableProjects, setAvailableProjects] = useState<Project[]>([]);
-  const [actualColumnId, setActualColumnId] = useState<number | null>(null);
+  const [_actualColumnId, setActualColumnId] = useState<number | null>(null);
   const [projectTags, setProjectTags] = useState<any[]>([]);
   const [projectColumns, setProjectColumns] = useState<any[]>([]);
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
@@ -296,18 +296,11 @@ export const TicketModal: React.FC<TicketModalProps> = ({
   // Handle create mode initialization
   useEffect(() => {
     if (open && isCreateMode) {
-      console.group(
-        "🔧 TicketModal - Loading project and columns (CREATE mode)"
-      );
-      console.log("Modal opened with columnId:", columnId);
-
       const projectData = localStorage.getItem("currentProject");
-      console.log("Project data from localStorage:", projectData);
 
       if (projectData) {
         try {
           const project = JSON.parse(projectData);
-          console.log("Parsed project:", project);
           setCurrentProject(project);
 
           // Ensure project.id is a number
@@ -318,35 +311,23 @@ export const TicketModal: React.FC<TicketModalProps> = ({
           setSelectedProjectId(projectId);
 
           // Fetch project columns to get the actual column ID
-          console.log("Fetching columns for project ID:", projectId);
           projectService
             .getProjectColumns(projectId)
             .then((columns) => {
-              console.log("Fetched columns:", columns);
               setProjectColumns(columns);
               if (columns.length > 0) {
                 const targetColumn =
                   columns.find((col: any) => col.id === columnId) || columns[0];
-                console.log("Selected column:", targetColumn);
                 setActualColumnId(targetColumn.id);
                 setSelectedColumn(targetColumn.id);
-                console.groupEnd();
-              } else {
-                console.warn("⚠️ No columns found");
-                console.groupEnd();
               }
             })
             .catch((error) => {
               console.error("❌ Failed to load project columns:", error);
-              console.groupEnd();
             });
         } catch (error) {
           console.error("❌ Failed to parse project data:", error);
-          console.groupEnd();
         }
-      } else {
-        console.warn("⚠️ No project data in localStorage");
-        console.groupEnd();
       }
     }
   }, [open, isCreateMode, columnId]);
@@ -354,12 +335,8 @@ export const TicketModal: React.FC<TicketModalProps> = ({
   // Sync form state when ticket changes
   useEffect(() => {
     if (open && ticket) {
-      console.group("🎫 TicketModal - Syncing ticket data");
-      console.log("Ticket object:", ticket);
-
       // Only update if ticket ID changed or if it's the first load
       // This prevents overwriting user input if ticket updates in background
-      // Note: Ideally we should check if user has unsaved changes
 
       setTitle(ticket.name || "");
       setDescription(ticket.description || "");
@@ -373,8 +350,6 @@ export const TicketModal: React.FC<TicketModalProps> = ({
       setAssignees(ticket.assignees?.map((a: any) => a.id) || []);
       setDueDate(ticket.due_date ? dayjs(ticket.due_date) : null);
       setStartDate(ticket.start_date ? dayjs(ticket.start_date) : null);
-
-      console.groupEnd();
     }
   }, [open, ticket]); // Still depends on ticket, but separated from project data fetching
 
@@ -497,32 +472,18 @@ export const TicketModal: React.FC<TicketModalProps> = ({
   };
 
   const handleSave = async () => {
-    console.group("🎫 TicketModal - handleSave");
-    console.log("Mode:", isCreateMode ? "CREATE" : "EDIT");
-    console.log("Title:", title);
-    console.log("Current project:", currentProject);
-    console.log("Actual column ID:", actualColumnId);
-    console.log("Passed column ID:", columnId);
-    console.log("Ticket:", ticket);
-
     if (!title.trim()) {
-      console.error("❌ No title!");
       message.error("Please enter a ticket title");
-      console.groupEnd();
       return;
     }
 
     if (isCreateMode && !columnId) {
-      console.error("❌ No column ID in create mode!");
       message.error("Column ID is required for creating tickets");
-      console.groupEnd();
       return;
     }
 
     if (isCreateMode && !currentProject) {
-      console.error("❌ No current project in create mode!");
       message.error("No project selected. Please create a project first.");
-      console.groupEnd();
       return;
     }
 
@@ -547,24 +508,17 @@ export const TicketModal: React.FC<TicketModalProps> = ({
         tags: tags,
       };
 
-      console.log("📤 Ticket data to send:", ticketData);
-
       let savedTicket: Ticket;
       if (isCreateMode) {
         savedTicket = await ticketService.createTicket(ticketData);
-        console.log("✅ Ticket created successfully:", savedTicket);
         // message.success("Ticket created successfully!");
       } else if (ticket) {
         savedTicket = await ticketService.updateTicket(ticket.id, ticketData);
-        console.log("✅ Ticket updated successfully:", savedTicket);
         message.success("Ticket updated successfully!");
       } else {
-        console.error("❌ No ticket to update!");
-        console.groupEnd();
         return;
       }
 
-      console.groupEnd();
       onSuccess?.(savedTicket);
       onClose();
     } catch (error: any) {

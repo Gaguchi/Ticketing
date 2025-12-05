@@ -69,43 +69,44 @@ sequenceDiagram
     participant API
 
     User->>KanbanBoard: Drag ticket A → Column B
-    
+
     Note over KanbanBoard: handleDragStart()
     KanbanBoard->>KanbanBoard: setActiveId(ticketId)
     KanbanBoard->>KanbanBoard: setClonedItems(items)
     KanbanBoard->>KanbanBoard: setActiveContainer(column)
     KanbanBoard->>Tickets: onDragStart()
     Tickets->>Tickets: isDraggingRef = true
-    
+
     Note over KanbanBoard: handleDragOver()
     KanbanBoard->>KanbanBoard: moveBetweenContainers()
     KanbanBoard->>KanbanBoard: setItems() - OPTIMISTIC #1
-    
+
     Note over KanbanBoard: handleDragEnd()
     KanbanBoard->>KanbanBoard: Calculate position
     KanbanBoard->>KanbanBoard: setItems() - OPTIMISTIC #2
     KanbanBoard->>Tickets: onTicketMove(id, col, order)
-    
+
     Note over Tickets: handleTicketMove()
     Tickets->>Tickets: setTickets() - OPTIMISTIC #3
     Tickets->>Tickets: Shift old column
     Tickets->>Tickets: Shift new column
     Tickets->>API: PATCH /tickets/{id}/
-    
+
     API-->>Tickets: Response
     Tickets->>Tickets: recentUpdatesRef.set()
-    
+
     Note over KanbanBoard: useEffect sync (100+ lines)
     KanbanBoard->>KanbanBoard: Compare tickets prop
     KanbanBoard->>KanbanBoard: Reconcile items state
     KanbanBoard->>KanbanBoard: Handle edge cases
-    
+
     KanbanBoard->>Tickets: onDragEnd()
     Tickets->>Tickets: isDraggingRef = false
     Tickets->>Tickets: Apply pendingUpdates
 ```
 
 **Problems:**
+
 - 3 separate optimistic updates
 - Complex useEffect sync that can cause loops
 - isDraggingRef/pendingUpdatesRef add complexity
@@ -123,26 +124,27 @@ sequenceDiagram
     participant API
 
     User->>KanbanBoard: Drag ticket A → Column B
-    
+
     Note over KanbanBoard: handleDragStart()
     KanbanBoard->>KanbanBoard: setActiveId(ticketId)
-    
+
     Note over KanbanBoard: handleDragEnd()
     KanbanBoard->>KanbanBoard: Calculate targetColumn, targetIndex
     KanbanBoard->>Tickets: onTicketMove(id, col, index)
     KanbanBoard->>KanbanBoard: setActiveId(null)
-    
+
     Note over Tickets: handleTicketMove()
     Tickets->>Tickets: setTickets() - SINGLE optimistic update
     Tickets->>API: PATCH /tickets/{id}/
-    
+
     API-->>Tickets: Response
-    
+
     Note over KanbanBoard: No sync needed!
     Note over KanbanBoard: useMemo derives from tickets prop
 ```
 
 **Benefits:**
+
 - 1 optimistic update (in parent only)
 - No useEffect sync needed
 - No refs for drag state tracking
@@ -152,10 +154,10 @@ sequenceDiagram
 
 ## Files to Modify (In-Place Replacement)
 
-| File | Current Lines | Target Lines | Action |
-|------|---------------|--------------|--------|
-| `components/KanbanBoard.tsx` | 600 | ~200 | **REPLACE** |
-| `pages/Tickets.tsx` | 1044 | ~900 | **SIMPLIFY** |
+| File                         | Current Lines | Target Lines | Action       |
+| ---------------------------- | ------------- | ------------ | ------------ |
+| `components/KanbanBoard.tsx` | 600           | ~200         | **REPLACE**  |
+| `pages/Tickets.tsx`          | 1044          | ~900         | **SIMPLIFY** |
 
 No new files. No file bloat.
 
@@ -166,6 +168,7 @@ No new files. No file bloat.
 ### Step 1: Replace KanbanBoard.tsx
 
 **Current state variables to REMOVE:**
+
 ```typescript
 // DELETE these
 const [data, setData] = useState<Ticket[] | null>(null);
@@ -177,6 +180,7 @@ const recentlyMovedToNewContainer = useRef(false);
 ```
 
 **Keep only:**
+
 ```typescript
 // KEEP these (minimal drag UI state)
 const [activeId, setActiveId] = useState<string | null>(null);
@@ -185,14 +189,15 @@ const [activeId, setActiveId] = useState<string | null>(null);
 **DELETE the 100+ line useEffect sync logic** (lines 62-160 approximately)
 
 **REPLACE with simple useMemo derivation:**
+
 ```typescript
 const columnsWithTickets = useMemo(() => {
   const sorted = [...columns].sort((a, b) => a.order - b.order);
-  return sorted.map(column => ({
+  return sorted.map((column) => ({
     column,
     tickets: tickets
-      .filter(t => t.column === column.id)
-      .sort((a, b) => (a.column_order || 0) - (b.column_order || 0))
+      .filter((t) => t.column === column.id)
+      .sort((a, b) => (a.column_order || 0) - (b.column_order || 0)),
   }));
 }, [tickets, columns]);
 ```
@@ -202,6 +207,7 @@ const columnsWithTickets = useMemo(() => {
 ### Step 2: Simplify Props Interface
 
 **Current (complex):**
+
 ```typescript
 interface KanbanBoardProps {
   tickets: Ticket[];
@@ -216,12 +222,17 @@ interface KanbanBoardProps {
 ```
 
 **New (simple):**
+
 ```typescript
 interface KanbanBoardProps {
   tickets: Ticket[];
   columns: TicketColumn[];
   onTicketClick?: (ticket: Ticket) => void;
-  onTicketMove: (ticketId: number, targetColumnId: number, targetIndex: number) => void;
+  onTicketMove: (
+    ticketId: number,
+    targetColumnId: number,
+    targetIndex: number
+  ) => void;
   onTicketCreated?: (ticket: Ticket) => void;
 }
 ```
@@ -231,13 +242,15 @@ interface KanbanBoardProps {
 ### Step 3: Simplify Tickets.tsx
 
 **REMOVE these refs:**
+
 ```typescript
 // DELETE
 const isDraggingRef = useRef(false);
-const pendingUpdatesRef = useRef<Array<{type: string; data: any}>>([]);
+const pendingUpdatesRef = useRef<Array<{ type: string; data: any }>>([]);
 ```
 
 **REMOVE these handlers:**
+
 ```typescript
 // DELETE handleDragStart and handleDragEnd callbacks
 const handleDragStart = useCallback(() => {...}, []);
@@ -245,10 +258,12 @@ const handleDragEnd = useCallback(() => {...}, []);
 ```
 
 **MERGE handleTicketReorder into handleTicketMove:**
+
 - Single handler for all position changes
 - Simpler API call logic
 
 **SIMPLIFY WebSocket handling:**
+
 - Remove complex 5-second window logic
 - Simple dedup based on recent updates
 
@@ -257,6 +272,7 @@ const handleDragEnd = useCallback(() => {...}, []);
 ### Step 4: Update KanbanBoard Usage in Tickets.tsx
 
 **Current:**
+
 ```tsx
 <KanbanBoard
   tickets={filteredTickets}
@@ -271,6 +287,7 @@ const handleDragEnd = useCallback(() => {...}, []);
 ```
 
 **New:**
+
 ```tsx
 <KanbanBoard
   tickets={filteredTickets}
@@ -287,32 +304,32 @@ const handleDragEnd = useCallback(() => {...}, []);
 
 ### KanbanBoard.tsx
 
-| Section | Current Lines | New Lines | Savings |
-|---------|---------------|-----------|---------|
-| Imports | 30 | 20 | -10 |
-| Types | 15 | 10 | -5 |
-| State declarations | 15 | 3 | -12 |
-| useEffect sync | 100 | 0 | -100 |
-| moveBetweenContainers | 40 | 0 | -40 |
-| collisionDetectionStrategy | 50 | 0 | -50 |
-| handleDragStart | 15 | 5 | -10 |
-| handleDragOver | 25 | 0 | -25 |
-| handleDragEnd | 80 | 30 | -50 |
-| handleDragCancel | 10 | 3 | -7 |
-| Render | 120 | 80 | -40 |
-| **TOTAL** | **~600** | **~200** | **~400** |
+| Section                    | Current Lines | New Lines | Savings  |
+| -------------------------- | ------------- | --------- | -------- |
+| Imports                    | 30            | 20        | -10      |
+| Types                      | 15            | 10        | -5       |
+| State declarations         | 15            | 3         | -12      |
+| useEffect sync             | 100           | 0         | -100     |
+| moveBetweenContainers      | 40            | 0         | -40      |
+| collisionDetectionStrategy | 50            | 0         | -50      |
+| handleDragStart            | 15            | 5         | -10      |
+| handleDragOver             | 25            | 0         | -25      |
+| handleDragEnd              | 80            | 30        | -50      |
+| handleDragCancel           | 10            | 3         | -7       |
+| Render                     | 120           | 80        | -40      |
+| **TOTAL**                  | **~600**      | **~200**  | **~400** |
 
 ### Tickets.tsx
 
-| Section | Current Lines | New Lines | Savings |
-|---------|---------------|-----------|---------|
-| Drag refs | 10 | 0 | -10 |
-| handleTicketMove | 70 | 50 | -20 |
-| handleTicketReorder | 35 | 0 | -35 |
-| handleDragStart/End | 30 | 0 | -30 |
-| WebSocket handlers | 80 | 40 | -40 |
-| KanbanBoard props | 10 | 6 | -4 |
-| **TOTAL** | **~235** | **~96** | **~139** |
+| Section             | Current Lines | New Lines | Savings  |
+| ------------------- | ------------- | --------- | -------- |
+| Drag refs           | 10            | 0         | -10      |
+| handleTicketMove    | 70            | 50        | -20      |
+| handleTicketReorder | 35            | 0         | -35      |
+| handleDragStart/End | 30            | 0         | -30      |
+| WebSocket handlers  | 80            | 40        | -40      |
+| KanbanBoard props   | 10            | 6         | -4       |
+| **TOTAL**           | **~235**      | **~96**   | **~139** |
 
 ---
 
@@ -329,7 +346,7 @@ Since we're replacing in-place:
 ## Implementation Order
 
 1. Replace KanbanBoard.tsx (complete rewrite)
-2. Simplify Tickets.tsx handlers  
+2. Simplify Tickets.tsx handlers
 3. Test in browser
 4. Fix any issues
 
@@ -339,13 +356,13 @@ No mock data, no feature flags - early dev, test in production.
 
 ## Expected Metrics After Implementation
 
-| Metric | Before | After | Improvement |
-|--------|--------|-------|-------------|
-| KanbanBoard.tsx lines | 600 | 200 | -67% |
-| State variables | 6 | 1 | -83% |
-| useEffect hooks | 3 | 0 | -100% |
-| Callbacks from parent | 4 | 1 | -75% |
-| Sync edge cases | 7+ | 0 | -100% |
+| Metric                | Before | After | Improvement |
+| --------------------- | ------ | ----- | ----------- |
+| KanbanBoard.tsx lines | 600    | 200   | -67%        |
+| State variables       | 6      | 1     | -83%        |
+| useEffect hooks       | 3      | 0     | -100%       |
+| Callbacks from parent | 4      | 1     | -75%        |
+| Sync edge cases       | 7+     | 0     | -100%       |
 
 ---
 

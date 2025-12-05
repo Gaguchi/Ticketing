@@ -67,28 +67,13 @@ export const QuickTicketCreator: React.FC<QuickTicketCreatorProps> = ({
 
       try {
         const response = await userService.getUsers();
-        console.log("All users from API:", response.results);
-        console.log("Selected project ID:", selectedProject.id);
-        console.log(
-          "First user object keys:",
-          response.results[0] ? Object.keys(response.results[0]) : "No users"
-        );
 
         // Filter to only show users who are members of the current project
         // Note: API returns project_memberships as array of project IDs
         const projectUsers = response.results.filter((user) => {
-          const isMember = user.project_memberships?.includes(
-            selectedProject.id
-          );
-          console.log(
-            `User ${user.username}:`,
-            `project_memberships=${JSON.stringify(user.project_memberships)}`,
-            `isMember=${isMember}`
-          );
-          return isMember;
+          return user.project_memberships?.includes(selectedProject.id);
         });
 
-        console.log("Filtered project users:", projectUsers);
         setUsers(projectUsers);
       } catch (error) {
         console.error("Failed to fetch users:", error);

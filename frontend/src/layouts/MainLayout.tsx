@@ -72,10 +72,6 @@ const MainLayout: React.FC = () => {
   // Connect to WebSocket channels when project changes
   useEffect(() => {
     if (selectedProject?.id) {
-      console.log(
-        "🔌 [MainLayout] Connecting to WebSocket channels for project:",
-        selectedProject.id
-      );
       connectTickets(selectedProject.id);
       connectPresence(selectedProject.id);
     }
@@ -83,35 +79,12 @@ const MainLayout: React.FC = () => {
     // Cleanup: disconnect when project changes or component unmounts
     return () => {
       if (selectedProject?.id) {
-        console.log(
-          "🔌 [MainLayout] Disconnecting WebSocket channels for project:",
-          selectedProject.id
-        );
         disconnectTickets();
         disconnectPresence();
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedProject?.id]);
-
-  // Log the state for debugging
-  useEffect(() => {
-    console.log("🏗️ [MainLayout] Render state:");
-    console.log("  - authLoading:", authLoading);
-    console.log("  - projectLoading:", projectLoading);
-    console.log("  - user:", user ? user.username : "NULL");
-    console.log("  - availableProjects:", availableProjects.length);
-    console.log(
-      "  - selectedProject:",
-      selectedProject ? selectedProject.name : "NULL"
-    );
-  }, [
-    authLoading,
-    projectLoading,
-    user?.username,
-    availableProjects.length,
-    selectedProject?.name,
-  ]); // Use primitive values
 
   // Load unread chat count
   useEffect(() => {
@@ -179,9 +152,6 @@ const MainLayout: React.FC = () => {
     if (!selectedProject) return;
 
     const handleChatNotification = () => {
-      console.log(
-        "🔔 [MainLayout] Chat notification received, updating unread count"
-      );
       chatService.getRooms(selectedProject.id).then((rooms) => {
         const totalUnread = rooms.reduce(
           (sum, room) => sum + room.unread_count,
@@ -302,11 +272,7 @@ const MainLayout: React.FC = () => {
             background: "#ffffff",
           }}
         >
-          {collapsed ? (
-            <LogoIcon size={20} />
-          ) : (
-            <Logo size={20} showText />
-          )}
+          {collapsed ? <LogoIcon size={20} /> : <Logo size={20} showText />}
         </div>
 
         {/* Navigation Items */}

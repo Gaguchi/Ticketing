@@ -27,7 +27,6 @@ const Login: React.FC = () => {
 
   // Clear any invalid tokens when login page loads
   React.useEffect(() => {
-    console.log("🧹 [Login] Clearing any existing tokens");
     localStorage.removeItem("access_token");
     localStorage.removeItem("refresh_token");
   }, []);
@@ -54,29 +53,12 @@ const Login: React.FC = () => {
 
       const response = await authService.login(loginData);
 
-      console.log("✅ [Login] Login response:", response);
-      console.log("✅ [Login] User:", response.user.username);
-      console.log(
-        "✅ [Login] User projects:",
-        response.user.projects?.length || 0
-      );
-      console.log("✅ [Login] User has_projects:", response.user.has_projects);
-
       // Update auth context with initial login response
       login(response.tokens.access, response.user);
 
       // Immediately fetch fresh user data to get projects
       // The login response doesn't always include projects, but /auth/me/ does
-      console.log("✅ [Login] Fetching fresh user data with projects...");
       const freshUser = await authService.getCurrentUser();
-      console.log(
-        "✅ [Login] Fresh user projects:",
-        freshUser.projects?.length || 0
-      );
-      console.log(
-        "✅ [Login] Fresh user has_projects:",
-        freshUser.has_projects
-      );
 
       // Update auth context again with fresh data that includes projects
       login(response.tokens.access, freshUser);
@@ -88,10 +70,8 @@ const Login: React.FC = () => {
       // Navigate based on whether user has projects
       // Use the freshUser we just fetched instead of making another API call
       if (freshUser.has_projects) {
-        console.log("✅ [Login] User has projects, navigating to dashboard");
         navigate("/");
       } else {
-        console.log("✅ [Login] User has no projects, navigating to setup");
         navigate("/setup");
       }
     } catch (err: any) {

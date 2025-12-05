@@ -5,12 +5,16 @@
 
 import { API_HEADERS, API_CONFIG, API_BASE_URL } from '../config/api';
 import { tokenInterceptor } from '../utils/token-interceptor';
+import { perfLogger } from '../utils/perf-logger';
 
 export interface APIError {
   message: string;
   status?: number;
   details?: any;
 }
+
+// Threshold for slow request logging
+const SLOW_REQUEST_MS = 1000;
 
 class APIService {
   private isDevelopment = import.meta.env.DEV;
@@ -52,68 +56,44 @@ class APIService {
   }
 
   /**
-   * Log API request details (only in development)
+   * Log API request details (only slow requests in development)
    */
-  private logRequest(url: string, config: RequestInit) {
-    if (this.isDevelopment) {
-      console.group(`🌐 API Request: ${config.method || 'GET'} ${url}`);
-      console.log('URL:', url);
-      console.log('Method:', config.method || 'GET');
-      console.log('Headers:', config.headers);
-      if (config.body) {
-        // Handle different body types
-        if (config.body instanceof FormData) {
-          console.log('Body: FormData');
-          // Optionally log FormData entries (be careful with file sizes)
-          const entries: any = {};
-          (config.body as FormData).forEach((value, key) => {
-            if (value instanceof File) {
-              entries[key] = `File: ${value.name} (${value.size} bytes)`;
-            } else {
-              entries[key] = value;
-            }
-          });
-          console.log('FormData entries:', entries);
-        } else {
-          try {
-            console.log('Body:', JSON.parse(config.body as string));
-          } catch {
-            console.log('Body:', config.body);
-          }
-        }
-      }
-      console.log('Timestamp:', new Date().toISOString());
-      console.groupEnd();
+  private logRequest(url: string, config: RequestInit, duration: number) {
+    if (!this.isDevelopment) return;
+
+    // Only log slow requests
+    if (duration >= SLOW_REQUEST_MS) {
+      perfLogger.logRequest({
+        url,
+        method: config.method || 'GET',
+        duration,
+      });
     }
   }
 
   /**
-   * Log API response details (only in development)
+   * Log API response details (only slow or error responses in development)
    */
   private logResponse(url: string, response: Response, data: any, duration: number) {
-    if (this.isDevelopment) {
-      const emoji = response.ok ? '✅' : '❌';
-      console.group(`${emoji} API Response: ${response.status} ${url}`);
-      console.log('Status:', response.status, response.statusText);
-      console.log('Duration:', `${duration}ms`);
-      console.log('Headers:', Object.fromEntries(response.headers.entries()));
-      console.log('Data:', data);
-      console.log('Timestamp:', new Date().toISOString());
-      console.groupEnd();
+    if (!this.isDevelopment) return;
+
+    // Log slow requests or errors
+    if (duration >= SLOW_REQUEST_MS || !response.ok) {
+      perfLogger.logRequest({
+        url,
+        method: 'GET', // Will be overwritten by actual method
+        duration,
+        status: response.status,
+      });
     }
   }
 
   /**
-   * Log API error details (only in development)
+   * Log API error details
    */
   private logError(url: string, error: any, duration: number) {
-    if (this.isDevelopment) {
-      console.group(`🔴 API Error: ${url}`);
-      console.error('Error:', error);
-      console.log('Duration:', `${duration}ms`);
-      console.log('Timestamp:', new Date().toISOString());
-      console.groupEnd();
-    }
+    if (!this.isDevelopment) return;
+    console.error(`🔴 API Error: ${url} (${duration}ms)`, error);
   }
 
   /**
@@ -142,12 +122,12 @@ class APIService {
       credentials: API_CONFIG.withCredentials ? 'include' : 'same-origin',
     };
 
-    // Log the request
-    this.logRequest(fullUrl, config);
-
     try {
       const response = await fetch(fullUrl, config);
       const duration = Math.round(performance.now() - startTime);
+
+      // Log slow or failed requests
+      this.logRequest(fullUrl, config, duration);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -165,8 +145,6 @@ class APIService {
           !isRefreshEndpoint &&
           !isLoginEndpoint
         ) {
-          console.log(`🔒 [APIService] ${response.status} error detected, attempting token refresh...`);
-          
           // Use token interceptor to handle refresh and retry
           return await tokenInterceptor.handle401Error(
             () => this.request<T>(url, options),

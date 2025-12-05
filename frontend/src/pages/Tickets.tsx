@@ -191,22 +191,14 @@ const Tickets: React.FC = () => {
         return;
       }
 
-      console.log(`🎫 [Tickets] Received ${type} event:`, data);
-
       if (type === "ticket_created") {
         // Check if we've already processed this ticket ID
         if (receivedTicketIdsRef.current.has(data.ticket_id)) {
-          console.log(
-            `⏭️ Skipping duplicate ticket_created for ID ${data.ticket_id}`
-          );
           return;
         }
 
         // Mark as received
         receivedTicketIdsRef.current.add(data.ticket_id);
-
-        // Use the complete data from WebSocket instead of fetching
-        console.log(`➕ Adding new ticket from WebSocket: ${data.id}`);
         try {
           // Convert WebSocket data to ticket format
           const newTicket = {
@@ -217,7 +209,6 @@ const Tickets: React.FC = () => {
           setTickets((prev) => {
             // Double-check it doesn't exist
             if (prev.some((t) => t.id === newTicket.id)) {
-              console.log(`⚠️ Ticket ${newTicket.id} already exists, skipping`);
               return prev;
             }
             return [newTicket, ...prev];
@@ -245,29 +236,14 @@ const Tickets: React.FC = () => {
         }
 
         // Use complete data from WebSocket instead of fetching
-        console.log(`🔄 Updating ticket from WebSocket: ${data.id}`);
         const updatedTicket = {
           ...data,
           ticket_key: data.ticket_key || `${selectedProject.key}-${data.id}`,
         };
 
-        setTickets((prev) => {
-          const oldTicket = prev.find((t) => t.id === data.id);
-          if (oldTicket) {
-            console.log(
-              `📊 Position update for ticket ${data.ticket_key || data.id}:`,
-              {
-                oldColumn: oldTicket.column,
-                newColumn: data.column,
-                oldOrder: oldTicket.column_order,
-                newOrder: data.column_order,
-                columnChanged: oldTicket.column !== data.column,
-                orderChanged: oldTicket.column_order !== data.column_order,
-              }
-            );
-          }
-          return prev.map((t) => (t.id === data.id ? updatedTicket : t));
-        });
+        setTickets((prev) =>
+          prev.map((t) => (t.id === data.id ? updatedTicket : t))
+        );
       } else if (type === "ticket_deleted") {
         // Remove ticket from list
         setTickets((prev) => prev.filter((t) => t.id !== data.id));
@@ -286,7 +262,7 @@ const Tickets: React.FC = () => {
   useEffect(() => {
     const handleColumnRefresh = async (event: Event) => {
       const customEvent = event as CustomEvent;
-      const { columnIds, projectId } = customEvent.detail;
+      const { columnIds: _columnIds, projectId } = customEvent.detail;
 
       // Only update if it's for the current project
       if (!selectedProject || projectId !== selectedProject.id) {
@@ -296,19 +272,16 @@ const Tickets: React.FC = () => {
       // Skip refresh if we recently moved a ticket (we already have the latest state)
       // Extended to 10 seconds to account for slow API responses
       if (Date.now() - lastMoveTimeRef.current < 10000) {
-        console.log("⏳ Skipping column refresh (handled optimistically)");
         return;
       }
 
       // Also skip if any tickets have pending updates
-      const hasPendingUpdates = Array.from(recentTicketUpdatesRef.current.values())
-        .some(timestamp => Date.now() - timestamp < 10000);
+      const hasPendingUpdates = Array.from(
+        recentTicketUpdatesRef.current.values()
+      ).some((timestamp) => Date.now() - timestamp < 10000);
       if (hasPendingUpdates) {
-        console.log("⏳ Skipping column refresh (pending updates)");
         return;
       }
-
-      console.log(`🔄 [Tickets] Column refresh for columns:`, columnIds);
 
       // Refetch tickets for the entire project to get updated positions
       try {
@@ -317,9 +290,6 @@ const Tickets: React.FC = () => {
           page_size: 1000,
         });
         setTickets(ticketsResponse.results);
-        console.log(
-          `✅ [Tickets] Refreshed ${ticketsResponse.results.length} tickets`
-        );
       } catch (error: any) {
         console.error("Failed to refresh tickets:", error);
       }
@@ -350,26 +320,10 @@ const Tickets: React.FC = () => {
     order: number,
     oldColumnId: number
   ) => {
-    console.log("🎯 handleTicketMove called:", {
-      ticketId,
-      newColumnId,
-      order,
-      oldColumnId,
-      isSameColumn: oldColumnId === newColumnId,
-    });
-
     const ticket = tickets.find((t) => t.id === ticketId);
     const column = kanbanColumns.find((c) => c.id === newColumnId);
 
-    console.log("📋 Ticket info:", {
-      ticket: ticket
-        ? { id: ticket.id, name: ticket.name, currentColumn: ticket.column }
-        : "NOT FOUND",
-      targetColumn: column ? { id: column.id, name: column.name } : "NOT FOUND",
-    });
-
     if (!ticket || !column) {
-      console.error("❌ Ticket or column not found");
       message.error("Failed to update ticket");
       return;
     }
@@ -382,7 +336,6 @@ const Tickets: React.FC = () => {
     const isSameColumn = oldColumnId === newColumnId;
 
     // OPTIMISTIC UPDATE: Update UI immediately
-    console.log("⚡ Optimistic update: Updating UI immediately");
     setTickets((prevTickets) => {
       if (isSameColumn) {
         // Same column reorder - just update the moved ticket and shift others
@@ -440,35 +393,16 @@ const Tickets: React.FC = () => {
     });
 
     // Send PATCH request in the background (non-blocking)
-    console.log("🚀 Sending PATCH request:", {
-      url: `/api/tickets/tickets/${ticketId}/`,
-      payload: { column: newColumnId, order: order },
-      previousColumn: previousColumnId,
-      previousOrder: previousOrder,
-      isSameColumn,
-    });
-
     recentTicketUpdatesRef.current.set(ticketId, Date.now());
     lastMoveTimeRef.current = Date.now();
 
     try {
-      const response = await ticketService.updateTicket(ticketId, {
+      await ticketService.updateTicket(ticketId, {
         column: newColumnId,
         order: order,
       });
-
-      console.log("✅ PATCH response received:", {
-        ticketId,
-        returnedColumn: response.column,
-        returnedOrder: response.column_order,
-        expectedColumn: newColumnId,
-        expectedOrder: order,
-        match:
-          response.column === newColumnId && response.column_order === order,
-      });
     } catch (error: any) {
       // ROLLBACK: Revert optimistic update on error
-      console.error("❌ Failed to update ticket, rolling back:", error);
 
       if (previousColumnId !== undefined && previousColumnName !== undefined) {
         setTickets((prevTickets) =>
@@ -979,18 +913,12 @@ const Tickets: React.FC = () => {
         open={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onSuccess={(newTicket) => {
-          console.log(`✨ Ticket created:`, newTicket);
-
           // Mark this ticket ID as received (it will come via WebSocket soon)
           receivedTicketIdsRef.current.add(newTicket.id);
 
           // Add the ticket immediately for instant feedback
           // The WebSocket duplicate check will prevent double-adding
           setTickets((prev) => [newTicket, ...prev]);
-
-          console.log(
-            `✅ Ticket ${newTicket.id} added to UI, WebSocket will be ignored`
-          );
         }}
       />
     </div>

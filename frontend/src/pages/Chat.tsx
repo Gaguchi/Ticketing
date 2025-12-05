@@ -63,22 +63,6 @@ const Chat: React.FC = () => {
   const wsRef = useRef<WebSocket | null>(null);
   const isInitialLoadRef = useRef(true); // Track if this is the first load
 
-  // Render counter for debugging
-  const renderCount = useRef(0);
-  renderCount.current += 1;
-
-  // Log every render with details
-  console.log(`🔄 [Chat] Render #${renderCount.current}`, {
-    selectedProjectId: selectedProject?.id,
-    userId: user?.id,
-    activeRoomId: activeRoom?.id,
-    roomsCount: rooms.length,
-    messagesCount: messages.length,
-    loading,
-    messagesLoading,
-    typingUsersCount: typingUsers.size,
-  });
-
   // Get project members
   const projectMembers: ProjectMember[] = selectedProject?.members || [];
 
@@ -98,10 +82,6 @@ const Chat: React.FC = () => {
 
   // Load rooms on mount or when project changes
   useEffect(() => {
-    console.log(
-      "🔵 [Chat Effect] Load rooms triggered - selectedProject:",
-      selectedProject?.id
-    );
     if (!selectedProject) return;
 
     const loadRooms = async () => {
@@ -112,13 +92,11 @@ const Chat: React.FC = () => {
         }
 
         const data = await chatService.getRooms(selectedProject.id);
-        console.log("📥 [Chat] Loaded rooms:", data.length);
 
         // Only update rooms if data has changed (compare by IDs and unread counts)
         setRooms((prevRooms) => {
           // If room count changed, definitely update
           if (prevRooms.length !== data.length) {
-            console.log("📝 [Chat] Room count changed, updating");
             return data;
           }
 
@@ -134,12 +112,10 @@ const Chat: React.FC = () => {
           });
 
           if (hasChanges) {
-            console.log("📝 [Chat] Room data changed, updating");
             return data;
           }
 
           // No changes, keep same reference to prevent re-render
-          console.log("✓ [Chat] Rooms unchanged, keeping current reference");
           return prevRooms;
         });
 
@@ -159,7 +135,6 @@ const Chat: React.FC = () => {
           setActiveRoom((current) => {
             // If no active room, select first
             if (!current) {
-              console.log("🎯 [Chat] Setting initial active room:", data[0].id);
               return data[0];
             }
 
@@ -168,16 +143,11 @@ const Chat: React.FC = () => {
 
             // If current room doesn't exist anymore, select first
             if (!currentStillExists) {
-              console.log(
-                "⚠️ [Chat] Active room not found, selecting first:",
-                data[0].id
-              );
               return data[0];
             }
 
             // Otherwise, KEEP the current reference (don't replace with new object)
             // This prevents unnecessary re-renders when room data is the same
-            console.log("✓ [Chat] Keeping current active room:", current.id);
             return current; // Return same reference, not new object from data
           });
         }
@@ -198,7 +168,6 @@ const Chat: React.FC = () => {
     // Refresh rooms every 10 seconds to update unread counts
     const interval = setInterval(loadRooms, 10000);
     return () => {
-      console.log("🔴 [Chat Effect] Cleaning up rooms interval");
       clearInterval(interval);
       isInitialLoadRef.current = true; // Reset for next project
     };
@@ -206,10 +175,6 @@ const Chat: React.FC = () => {
 
   // Load messages when active room changes
   useEffect(() => {
-    console.log(
-      "🟢 [Chat Effect] Load messages triggered - activeRoom:",
-      activeRoom?.id
-    );
     if (!activeRoom) return;
 
     const loadMessages = async () => {
@@ -257,12 +222,6 @@ const Chat: React.FC = () => {
 
   // Connect to WebSocket when room is selected
   useEffect(() => {
-    console.log(
-      "🟡 [Chat Effect] WebSocket connection triggered - activeRoom:",
-      activeRoom?.id,
-      "user:",
-      user?.id
-    );
     if (!activeRoom || !user) return;
 
     // Clear typing users when switching rooms
@@ -271,8 +230,6 @@ const Chat: React.FC = () => {
     const wsUrl = `ws/chat/${activeRoom.id}/`;
 
     const onMessage = (event: ChatWebSocketEvent) => {
-      console.log("📨 [Chat] WebSocket event:", event);
-
       switch (event.type) {
         case "message_new":
           // Add message to list
@@ -367,8 +324,8 @@ const Chat: React.FC = () => {
       console.error("❌ [Chat] WebSocket error:", error);
     };
 
-    const onClose = (event: CloseEvent) => {
-      console.log("🔌 [Chat] WebSocket disconnected:", event);
+    const onClose = (_event: CloseEvent) => {
+      // Connection closed - reconnect will be handled by service
     };
 
     // Small delay to ensure previous WebSocket is fully closed

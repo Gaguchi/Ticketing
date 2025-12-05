@@ -72,15 +72,9 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
   // Auto-connect to notifications when user logs in
   useEffect(() => {
     if (isAuthenticated && user) {
-      console.log(
-        "🔌 [WebSocketContext] User authenticated, connecting to notifications..."
-      );
       connectNotifications();
       loadInitialNotifications();
     } else {
-      console.log(
-        "🔌 [WebSocketContext] User not authenticated, disconnecting all..."
-      );
       disconnectAll();
       setNotifications([]);
       setUnreadCount(0);
@@ -245,17 +239,12 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
     const ws = webSocketService.connect(
       "ws/notifications/",
       (data) => {
-        console.log("📨 [WebSocketContext] Notification:", data);
-
         // Handle different notification events
         if (data.type === "notification" && data.data) {
           // New notification received - notification is in data.data
           addNotification(data.data);
         } else if (data.type === "chat_notification" && data.data) {
           // Chat notification received - don't add to list, just signal update
-          console.log(
-            "📨 [WebSocketContext] Chat notification received, signaling update"
-          );
           window.dispatchEvent(
             new CustomEvent("chatNotification", { detail: data.data })
           );
@@ -268,8 +257,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
         console.error("❌ [WebSocketContext] Notification error:", error);
         setIsNotificationConnected(false);
       },
-      (event) => {
-        console.log("🔌 [WebSocketContext] Notification disconnected:", event);
+      (_event) => {
         setIsNotificationConnected(false);
       }
     );
@@ -337,8 +325,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
           console.error("❌ [WebSocketContext] Ticket error:", error);
           setIsTicketConnected(false);
         },
-        (event) => {
-          console.log("🔌 [WebSocketContext] Ticket disconnected:", event);
+        (_event) => {
           setIsTicketConnected(false);
         }
       );
@@ -363,16 +350,14 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
 
       const ws = webSocketService.connect(
         `ws/projects/${projectId}/presence/`,
-        (data) => {
-          console.log("📨 [WebSocketContext] Presence update:", data);
+        (_data) => {
           // Presence updates will be handled by custom hooks
         },
         (error) => {
           console.error("❌ [WebSocketContext] Presence error:", error);
           setIsPresenceConnected(false);
         },
-        (event) => {
-          console.log("🔌 [WebSocketContext] Presence disconnected:", event);
+        (_event) => {
           setIsPresenceConnected(false);
         }
       );

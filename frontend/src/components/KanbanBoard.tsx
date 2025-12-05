@@ -82,13 +82,10 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
   // Map for quick ticket lookup
   const ticketMap = useMemo(() => {
-    return tickets.reduce(
-      (acc, ticket) => {
-        acc[`ticket-${ticket.id}`] = ticket;
-        return acc;
-      },
-      {} as Record<string, Ticket>
-    );
+    return tickets.reduce((acc, ticket) => {
+      acc[`ticket-${ticket.id}`] = ticket;
+      return acc;
+    }, {} as Record<string, Ticket>);
   }, [tickets]);
 
   const sensors = useSensors(
@@ -173,14 +170,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       if (currentIndex === dropPosition) return;
     }
 
-    console.log("🎯 KanbanBoard onTicketMove:", {
-      ticketId,
-      newColumnId,
-      dropPosition,
-      oldColumnId,
-      movedBetweenColumns: sourceContainer !== destContainer,
-    });
-
     onTicketMove(ticketId, newColumnId, dropPosition, oldColumnId);
   }
 
@@ -251,7 +240,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             }}
             onClick={() => {
               // TODO: Implement add column functionality
-              console.log("Add new column");
             }}
           >
             <span
@@ -269,11 +257,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
         <DragOverlay>
           {activeTicket ? (
-            <TicketCard
-              id={activeId!}
-              ticket={activeTicket}
-              dragOverlay
-            />
+            <TicketCard id={activeId!} ticket={activeTicket} dragOverlay />
           ) : null}
         </DragOverlay>
       </DndContext>

@@ -74,7 +74,6 @@ const ProjectSetup: React.FC = () => {
 
       // TODO: Send invitation emails to collaborators
       if (values.collaborators && values.collaborators.length > 0) {
-        console.log("Sending invitations to:", values.collaborators);
         // This will be implemented when we add the invitation API
       }
 

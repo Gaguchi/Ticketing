@@ -32,7 +32,6 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
         lead_username: user?.username,
       };
 
-      console.log("Creating project:", projectData);
       const newProject = await projectService.createProject(projectData);
 
       message.success({

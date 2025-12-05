@@ -8,12 +8,12 @@ The Kanban system is **overengineered** with **multiple layers of complexity** t
 
 ## Tech Stack
 
-| Component | Technology | Role in Kanban |
-|-----------|------------|----------------|
-| Database | **PostgreSQL** | Stores tickets, positions, columns |
-| Message Broker | **Redis** | WebSocket channel layer, Celery broker |
-| Backend | Django + Channels | REST API + WebSocket connections |
-| Frontend | React + @dnd-kit | Drag-drop UI |
+| Component      | Technology        | Role in Kanban                         |
+| -------------- | ----------------- | -------------------------------------- |
+| Database       | **PostgreSQL**    | Stores tickets, positions, columns     |
+| Message Broker | **Redis**         | WebSocket channel layer, Celery broker |
+| Backend        | Django + Channels | REST API + WebSocket connections       |
+| Frontend       | React + @dnd-kit  | Drag-drop UI                           |
 
 ---
 
@@ -62,6 +62,7 @@ The Kanban system is **overengineered** with **multiple layers of complexity** t
 ### ⚠️ KEY PROBLEM: Dual Source of Truth
 
 The position data exists in **TWO places**:
+
 1. `Ticket.column` + `Ticket.column_order` (legacy)
 2. `TicketPosition.column` + `TicketPosition.order` (new)
 
@@ -83,50 +84,50 @@ sequenceDiagram
     participant WS as WebSocket
 
     User->>KanbanBoard: Drag ticket A → Column B
-    
+
     Note over KanbanBoard: handleDragStart()
     KanbanBoard->>KanbanBoard: setActiveId(ticketId)
     KanbanBoard->>KanbanBoard: setActiveContainer(originalColumn)
     KanbanBoard->>Tickets: onDragStart() callback
     Tickets->>Tickets: isDraggingRef = true
-    
+
     Note over KanbanBoard: handleDragOver()
     KanbanBoard->>KanbanBoard: moveBetweenContainers()
     KanbanBoard->>KanbanBoard: Update local items state
-    
+
     Note over KanbanBoard: handleDragEnd()
     KanbanBoard->>KanbanBoard: Calculate drop position
     KanbanBoard->>KanbanBoard: setItems() optimistic update
     KanbanBoard->>Tickets: onTicketMove(ticketId, newColumnId, order)
-    
+
     Note over Tickets: handleTicketMove()
     Tickets->>Tickets: OPTIMISTIC UPDATE setTickets()
     Tickets->>Tickets: Update moved ticket
     Tickets->>Tickets: Shift old column tickets down
     Tickets->>Tickets: Shift new column tickets up
-    
+
     Tickets->>API: PATCH /api/tickets/{id}/ {column, order}
-    
+
     Note over API: TicketViewSet.update()
     API->>Model: ticket.move_to_position(column, order)
-    
+
     Note over Model: TicketPosition.move_ticket()
     Model->>Model: Lock columns in order (deadlock prevention)
     Model->>Model: Shift tickets in old column
     Model->>Model: Shift tickets in new column
     Model->>Model: Update TicketPosition
     Model->>Model: Update Ticket (sync)
-    
+
     Model->>WS: group_send('column_refresh', column_ids)
-    
+
     API-->>Tickets: Response {updated ticket}
-    
+
     Note over Tickets: Response handling
     Tickets->>Tickets: Compare response vs expected
     Tickets->>Tickets: recentTicketUpdatesRef.set(id, now)
-    
+
     WS-->>Tickets: column_refresh event
-    
+
     Note over Tickets: handleColumnRefresh()
     alt Within 5s of last move
         Tickets->>Tickets: Skip refresh (handled optimistically)
@@ -135,7 +136,7 @@ sequenceDiagram
         API-->>Tickets: Full ticket list
         Tickets->>Tickets: setTickets(response.results)
     end
-    
+
     Tickets->>KanbanBoard: onDragEnd() callback
     Tickets->>Tickets: isDraggingRef = false
 ```
@@ -150,20 +151,20 @@ sequenceDiagram
     participant API as Backend API
 
     User->>KanbanBoard: Reorder within column
-    
+
     Note over KanbanBoard: handleDragEnd()
     KanbanBoard->>KanbanBoard: arrayMove() - reorder items
     KanbanBoard->>KanbanBoard: Build updates array [{ticket_id, column_id, order}, ...]
     KanbanBoard->>Tickets: onTicketReorder(updates)
-    
+
     Note over Tickets: handleTicketReorder()
     Tickets->>Tickets: OPTIMISTIC UPDATE for all tickets
     Tickets->>API: POST /api/tickets/reorder_tickets/ {updates}
-    
+
     Note over API: TicketViewSet.reorder_tickets()
     API->>API: Direct update (bypasses move_to_position)
     API->>API: Update TicketPosition and Ticket directly
-    
+
     API-->>Tickets: {status: 'tickets reordered', updated: [...]}
 ```
 
@@ -176,16 +177,16 @@ flowchart TB
         B -->|Optimization| C{Same set of tickets?}
         C -->|Yes| D[Keep local order]
         C -->|No| E[Sort by column_order]
-        
+
         F[Drag operations] -->|setItems| B
         G[WebSocket events] -->|setTickets| A
     end
-    
+
     subgraph Backend
         H[TicketPosition] -.->|Must sync| I[Ticket.column_order]
         I -.->|Must sync| H
     end
-    
+
     A -->|API Response| I
 ```
 
@@ -237,16 +238,16 @@ sequenceDiagram
 
     U1->>UI: Start drag (optimistic update)
     U1->>API: PATCH ticket position
-    
+
     Note over U2: Meanwhile...
     U2->>API: Creates new ticket in same column
     API->>WS: ticket_created event
     WS->>UI: New ticket arrives
-    
+
     Note over UI: CONFLICT!
     UI->>UI: New ticket inserted
     UI->>UI: Orders now wrong!
-    
+
     API-->>U1: Original move completes
     UI->>UI: Optimistic update already applied
     UI->>UI: State may be inconsistent
@@ -254,15 +255,15 @@ sequenceDiagram
 
 ### 3. Identified Failure Points
 
-| # | Issue | Location | Impact |
-|---|-------|----------|--------|
-| 1 | Dual source of truth | `Ticket.column_order` + `TicketPosition.order` | Data desync |
-| 2 | Complex sync useEffect | `KanbanBoard.tsx:62-160` | Infinite loops, UI jumps |
-| 3 | Multiple optimistic updates | Both `Tickets.tsx` AND `KanbanBoard.tsx` update state | Double updates |
-| 4 | WebSocket during drag | Events arrive while dragging | Position corruption |
-| 5 | 5-second refresh window | `Tickets.tsx:306-308` | Arbitrary, may miss updates |
-| 6 | No retry on failure | `handleTicketMove` | Silent failures |
-| 7 | Order calculation bugs | Position calculation in `handleDragEnd` | Wrong positions |
+| #   | Issue                       | Location                                              | Impact                      |
+| --- | --------------------------- | ----------------------------------------------------- | --------------------------- |
+| 1   | Dual source of truth        | `Ticket.column_order` + `TicketPosition.order`        | Data desync                 |
+| 2   | Complex sync useEffect      | `KanbanBoard.tsx:62-160`                              | Infinite loops, UI jumps    |
+| 3   | Multiple optimistic updates | Both `Tickets.tsx` AND `KanbanBoard.tsx` update state | Double updates              |
+| 4   | WebSocket during drag       | Events arrive while dragging                          | Position corruption         |
+| 5   | 5-second refresh window     | `Tickets.tsx:306-308`                                 | Arbitrary, may miss updates |
+| 6   | No retry on failure         | `handleTicketMove`                                    | Silent failures             |
+| 7   | Order calculation bugs      | Position calculation in `handleDragEnd`               | Wrong positions             |
 
 ---
 
@@ -300,13 +301,13 @@ sequenceDiagram
 
     TX1->>PG: BEGIN; SELECT ... FOR UPDATE (column 1 positions)
     TX2->>PG: BEGIN; SELECT ... FOR UPDATE (column 2 positions)
-    
+
     TX1->>PG: SELECT ... FOR UPDATE (column 2 positions)
     Note over TX1,PG: BLOCKED! TX2 holds lock
-    
+
     TX2->>PG: SELECT ... FOR UPDATE (column 1 positions)
     Note over TX2,PG: BLOCKED! TX1 holds lock
-    
+
     Note over PG: DEADLOCK DETECTED!
     PG-->>TX2: ERROR: deadlock detected
     TX2->>TX2: Rollback, retry with exponential backoff
@@ -326,6 +327,7 @@ for column_id in columns_to_lock:
 ```
 
 **Problems with current approach:**
+
 1. Locks entire columns, not just affected rows
 2. Multiple UPDATE statements per move (shift operations)
 3. `reorder_tickets` endpoint bypasses this logic entirely
@@ -333,17 +335,18 @@ for column_id in columns_to_lock:
 
 ### PostgreSQL Performance Bottlenecks
 
-| Operation | Current SQL | Problem |
-|-----------|-------------|---------|
-| Cross-column move | 4-6 UPDATE statements | Too many round trips |
-| Same-column shift | 2 UPDATE with `F('order') +/- 1` | Locks many rows |
-| Batch reorder | N individual `update_or_create` | No bulk optimization |
+| Operation         | Current SQL                      | Problem              |
+| ----------------- | -------------------------------- | -------------------- |
+| Cross-column move | 4-6 UPDATE statements            | Too many round trips |
+| Same-column shift | 2 UPDATE with `F('order') +/- 1` | Locks many rows      |
+| Batch reorder     | N individual `update_or_create`  | No bulk optimization |
 
 **Improved approach with single UPDATE:**
+
 ```sql
 -- Instead of shifting one by one, use a single UPDATE with CASE
-UPDATE tickets_ticket 
-SET column_order = CASE 
+UPDATE tickets_ticket
+SET column_order = CASE
     WHEN id = $moved_ticket_id THEN $new_order
     WHEN column_order >= $new_order AND column_order < $old_order THEN column_order + 1
     WHEN column_order <= $new_order AND column_order > $old_order THEN column_order - 1
@@ -380,18 +383,18 @@ flowchart LR
     subgraph Backend
         A[TicketPosition.move_ticket] -->|async_to_sync| B[channel_layer.group_send]
     end
-    
+
     subgraph Redis
         B --> C[(Redis PubSub)]
         C --> D[Channel: project_X_tickets]
     end
-    
+
     subgraph Frontend Clients
         D --> E[Client 1 WebSocket]
         D --> F[Client 2 WebSocket]
         D --> G[Client N WebSocket]
     end
-    
+
     E --> H[handleColumnRefresh]
     F --> I[handleColumnRefresh]
     G --> J[handleColumnRefresh]
@@ -410,17 +413,17 @@ sequenceDiagram
     Client->>API: PATCH /tickets/123/ (move to column B)
     API->>DB: UPDATE ticket position
     DB-->>API: Success
-    
+
     API->>Redis: group_send('column_refresh', columns=[A, B])
-    
+
     Note over API,Client: Race condition window!
-    
+
     par Response & WebSocket race
         API-->>Client: HTTP Response (new position)
         Redis-->>WS: column_refresh message
         WS-->>Client: WebSocket event
     end
-    
+
     Note over Client: Which arrives first?
     Note over Client: Optimistic update vs WS refresh?
 ```
@@ -430,12 +433,13 @@ sequenceDiagram
 ```typescript
 // Tickets.tsx - 5-second window to ignore WebSocket
 if (Date.now() - lastMoveTimeRef.current < 5000) {
-    console.log("⏳ Skipping column refresh (handled optimistically)");
-    return;
+  console.log("⏳ Skipping column refresh (handled optimistically)");
+  return;
 }
 ```
 
 **Problems:**
+
 1. Arbitrary 5-second window
 2. May miss legitimate updates from other users
 3. Doesn't account for network latency variation
@@ -443,12 +447,12 @@ if (Date.now() - lastMoveTimeRef.current < 5000) {
 
 ### Redis Pub/Sub Limitations
 
-| Issue | Impact | Solution |
-|-------|--------|----------|
-| No message ordering | Events may arrive out of order | Add sequence numbers |
-| Fire-and-forget | No delivery guarantee | Add acknowledgment |
-| No message history | Missed if disconnected | Store in Redis sorted set |
-| Single channel per project | All ticket events mixed | Use fine-grained channels |
+| Issue                      | Impact                         | Solution                  |
+| -------------------------- | ------------------------------ | ------------------------- |
+| No message ordering        | Events may arrive out of order | Add sequence numbers      |
+| Fire-and-forget            | No delivery guarantee          | Add acknowledgment        |
+| No message history         | Missed if disconnected         | Store in Redis sorted set |
+| Single channel per project | All ticket events mixed        | Use fine-grained channels |
 
 ### Proposed Redis Improvements
 
@@ -458,7 +462,7 @@ import time
 
 async def broadcast_position_update(project_id, ticket_id, new_column, new_order):
     sequence = int(time.time() * 1000)  # Millisecond timestamp as sequence
-    
+
     await channel_layer.group_send(
         f'project_{project_id}_tickets',
         {
@@ -476,12 +480,12 @@ async def broadcast_position_update(project_id, ticket_id, new_column, new_order
 const lastSequenceRef = useRef<number>(0);
 
 const handlePositionUpdate = (event: PositionUpdateEvent) => {
-    if (event.sequence <= lastSequenceRef.current) {
-        console.log('⏭️ Ignoring out-of-order message');
-        return;
-    }
-    lastSequenceRef.current = event.sequence;
-    // Apply update...
+  if (event.sequence <= lastSequenceRef.current) {
+    console.log("⏭️ Ignoring out-of-order message");
+    return;
+  }
+  lastSequenceRef.current = event.sequence;
+  // Apply update...
 };
 ```
 
@@ -492,6 +496,7 @@ const handlePositionUpdate = (event: PositionUpdateEvent) => {
 ### Root Cause 1: Over-Abstraction
 
 The system tries to be too smart:
+
 - Optimistic updates in parent (Tickets.tsx)
 - Optimistic updates in child (KanbanBoard.tsx)
 - Complex reconciliation logic
@@ -514,6 +519,7 @@ class TicketPosition:
 ### Root Cause 3: Non-Atomic Updates
 
 The frontend updates state in multiple steps:
+
 1. KanbanBoard updates `items` (visual)
 2. Parent callback updates `tickets` (data)
 3. API returns, may trigger another update
@@ -523,11 +529,14 @@ The frontend updates state in multiple steps:
 
 ```typescript
 // KanbanBoard.tsx:237-290
-const collisionDetectionStrategy = useCallback((args: any) => {
+const collisionDetectionStrategy = useCallback(
+  (args: any) => {
     // 50+ lines of complex collision logic
     // Multiple fallback strategies
     // Edge cases galore
-}, [activeId, items]);
+  },
+  [activeId, items]
+);
 ```
 
 ---
@@ -545,7 +554,7 @@ flowchart TB
         B -->|"onMoveComplete(ticketId, newColumn, newIndex)"| A
         A -->|API call| C[Backend]
         C -->|Response| A
-        
+
         style A fill:#90EE90
         style B fill:#ADD8E6
     end
@@ -554,27 +563,34 @@ flowchart TB
 **Key Changes**:
 
 1. **Remove KanbanBoard internal items state**
+
    - Derive column groupings directly from tickets prop
    - No sync logic needed
 
 2. **Single callback for all moves**
+
    ```typescript
    interface KanbanBoardProps {
      tickets: Ticket[];
      columns: Column[];
-     onMoveComplete: (ticketId: number, newColumnId: number, newIndex: number) => Promise<void>;
+     onMoveComplete: (
+       ticketId: number,
+       newColumnId: number,
+       newIndex: number
+     ) => Promise<void>;
    }
    ```
 
 3. **Simplified DragEnd handler**
+
    ```typescript
    function handleDragEnd({ active, over }: DragEndEvent) {
      if (!over) return;
-     
+
      const ticketId = extractTicketId(active.id);
      const newColumnId = extractColumnId(findContainer(over.id));
      const newIndex = calculateDropIndex(over);
-     
+
      // Single callback - parent handles everything
      onMoveComplete(ticketId, newColumnId, newIndex);
    }
@@ -605,6 +621,7 @@ function calculateRank(before: string | null, after: string | null): string {
 ```
 
 **Benefits**:
+
 - No need to shift other tickets on move
 - Single row update
 - No locking required
@@ -615,27 +632,32 @@ function calculateRank(before: string | null, after: string | null): string {
 If full rewrite isn't feasible:
 
 1. **Remove dual optimistic updates**
+
    ```typescript
    // KanbanBoard.tsx - REMOVE all setItems calls during drag
    // Let parent handle ALL state updates
    ```
 
 2. **Add debounced sync**
+
    ```typescript
    // Replace 5-second window with smart debounce
-   const debouncedSync = useDebouncedCallback(
-     () => refetchTickets(),
-     1000,
-     { leading: false, trailing: true }
-   );
+   const debouncedSync = useDebouncedCallback(() => refetchTickets(), 1000, {
+     leading: false,
+     trailing: true,
+   });
    ```
 
 3. **Add retry logic**
+
    ```typescript
    const moveWithRetry = async (ticketId, columnId, order, retries = 3) => {
      for (let i = 0; i < retries; i++) {
        try {
-         await ticketService.updateTicket(ticketId, { column: columnId, order });
+         await ticketService.updateTicket(ticketId, {
+           column: columnId,
+           order,
+         });
          return;
        } catch (e) {
          if (i === retries - 1) throw e;
@@ -654,31 +676,33 @@ If full rewrite isn't feasible:
 ### Solution D: PostgreSQL Optimizations
 
 1. **Use bulk UPDATE with CASE statements**
+
    ```python
    from django.db import connection
-   
+
    def bulk_reorder_tickets(ticket_orders: list[tuple[int, int]]):
        """
        ticket_orders: [(ticket_id, new_order), ...]
        """
        if not ticket_orders:
            return
-       
+
        case_sql = " ".join([
-           f"WHEN id = {tid} THEN {order}" 
+           f"WHEN id = {tid} THEN {order}"
            for tid, order in ticket_orders
        ])
        ids = ",".join(str(tid) for tid, _ in ticket_orders)
-       
+
        with connection.cursor() as cursor:
            cursor.execute(f"""
-               UPDATE tickets_ticket 
+               UPDATE tickets_ticket
                SET column_order = CASE {case_sql} END
                WHERE id IN ({ids})
            """)
    ```
 
 2. **Add PostgreSQL partial index for ordering**
+
    ```python
    class Meta:
        indexes = [
@@ -690,6 +714,7 @@ If full rewrite isn't feasible:
    ```
 
 3. **Use `select_for_update(skip_locked=True)` for non-blocking moves**
+
    ```python
    # Skip already-locked tickets instead of waiting
    tickets = Ticket.objects.select_for_update(skip_locked=True).filter(...)
@@ -699,7 +724,7 @@ If full rewrite isn't feasible:
    ```python
    class Ticket(models.Model):
        version = models.PositiveIntegerField(default=0)
-       
+
        def save(self, *args, **kwargs):
            self.version += 1
            super().save(*args, **kwargs)
@@ -708,17 +733,18 @@ If full rewrite isn't feasible:
 ### Solution E: Redis WebSocket Improvements
 
 1. **Add message sequencing to prevent race conditions**
+
    ```python
    import redis
    from django.conf import settings
-   
+
    redis_client = redis.from_url(settings.REDIS_URL)
-   
+
    def get_next_sequence(project_id: int) -> int:
        """Atomic sequence number from Redis"""
        key = f"project:{project_id}:seq"
        return redis_client.incr(key)
-   
+
    async def broadcast_position_update(project_id, ticket_id, column_id, order):
        sequence = get_next_sequence(project_id)
        await channel_layer.group_send(
@@ -734,6 +760,7 @@ If full rewrite isn't feasible:
    ```
 
 2. **Store recent positions in Redis for fast sync**
+
    ```python
    def cache_ticket_positions(project_id: int, positions: list):
        """Cache positions in Redis sorted set for fast retrieval"""
@@ -746,7 +773,7 @@ If full rewrite isn't feasible:
            pipe.zadd(key, {pos['ticket_id']: score})
        pipe.expire(key, 300)  # 5 min TTL
        pipe.execute()
-   
+
    def get_cached_positions(project_id: int) -> list:
        """Get positions from Redis cache"""
        key = f"project:{project_id}:positions"
@@ -754,12 +781,13 @@ If full rewrite isn't feasible:
    ```
 
 3. **Use Redis Streams for reliable message delivery** (Advanced)
+
    ```python
    # Instead of Pub/Sub, use Redis Streams for guaranteed delivery
    def publish_position_update(project_id, data):
        stream_key = f"stream:project:{project_id}:positions"
        redis_client.xadd(stream_key, data, maxlen=1000)  # Keep last 1000
-   
+
    # Consumer can read from last known position
    def consume_updates(project_id, last_id='0'):
        stream_key = f"stream:project:{project_id}:positions"
@@ -831,25 +859,25 @@ If full rewrite isn't feasible:
 
 ### Frontend
 
-| File | Lines | Complexity Issue |
-|------|-------|------------------|
-| `KanbanBoard.tsx` | 600 | Complex useEffect (100+ lines), collision detection |
-| `Tickets.tsx` | 1044 | Multiple update handlers, WebSocket logic |
+| File              | Lines | Complexity Issue                                    |
+| ----------------- | ----- | --------------------------------------------------- |
+| `KanbanBoard.tsx` | 600   | Complex useEffect (100+ lines), collision detection |
+| `Tickets.tsx`     | 1044  | Multiple update handlers, WebSocket logic           |
 
 ### Backend
 
-| File | Lines | Complexity Issue |
-|------|-------|------------------|
-| `models.py` TicketPosition.move_ticket | 180 | Dual model sync, deadlock prevention |
-| `views.py` reorder_tickets | 100 | Bypasses move_ticket logic |
+| File                                   | Lines | Complexity Issue                     |
+| -------------------------------------- | ----- | ------------------------------------ |
+| `models.py` TicketPosition.move_ticket | 180   | Dual model sync, deadlock prevention |
+| `views.py` reorder_tickets             | 100   | Bypasses move_ticket logic           |
 
 ### Database/Infrastructure
 
-| Component | Issue |
-|-----------|-------|
-| PostgreSQL | Multiple UPDATE per move, row-level locks on heavy Ticket table |
-| Redis (Channels) | No message ordering, fire-and-forget Pub/Sub |
-| Redis (Celery) | Separate from Channels, no position caching |
+| Component        | Issue                                                           |
+| ---------------- | --------------------------------------------------------------- |
+| PostgreSQL       | Multiple UPDATE per move, row-level locks on heavy Ticket table |
+| Redis (Channels) | No message ordering, fire-and-forget Pub/Sub                    |
+| Redis (Celery)   | Separate from Channels, no position caching                     |
 
 ---
 
@@ -858,22 +886,26 @@ If full rewrite isn't feasible:
 The Kanban system fails because it's trying to be too clever:
 
 **Frontend Issues:**
+
 - Multiple state layers that must stay in sync
 - Optimistic updates at multiple levels
 - Complex reconciliation logic
 - Race conditions between REST and WebSocket
 
 **Backend Issues:**
+
 - Dual models (`Ticket` + `TicketPosition`) that must stay in sync
 - Multiple UPDATE statements per move operation
 - Deadlock-prone locking strategy
 
 **PostgreSQL Issues:**
+
 - Heavy row locks on 30+ column Ticket table
 - No optimistic locking (version field)
 - Missing partial indexes for position queries
 
 **Redis/WebSocket Issues:**
+
 - No message sequencing (out-of-order delivery possible)
 - Arbitrary 5-second window instead of proper deduplication
 - No position caching for fast reconnection sync

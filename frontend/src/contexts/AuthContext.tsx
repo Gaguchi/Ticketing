@@ -49,15 +49,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
       const accessToken = authService.getAccessToken();
       if (!accessToken) {
-        console.log("⏰ [AuthContext] No token to schedule refresh for");
         return;
       }
 
       // Check if token is already expired
       if (isTokenExpired(accessToken)) {
-        console.log(
-          "⏰ [AuthContext] Token already expired, skipping schedule"
-        );
         return;
       }
 
@@ -65,16 +61,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       const refreshIn = getRefreshTime(accessToken, 10);
 
       if (refreshIn <= 0) {
-        console.log("⏰ [AuthContext] Token should be refreshed now");
         refreshTokenProactively();
         return;
       }
-
-      console.log(
-        `⏰ [AuthContext] Scheduling token refresh in ${Math.round(
-          refreshIn / 1000 / 60
-        )} minutes`
-      );
 
       refreshTimeoutRef.current = setTimeout(() => {
         refreshTokenProactively();
@@ -83,9 +72,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
     const refreshTokenProactively = async () => {
       try {
-        console.log("🔄 [AuthContext] Proactively refreshing token...");
         const newToken = await authService.refreshToken();
-        console.log("✅ [AuthContext] Token refreshed proactively");
 
         setToken(newToken);
 
@@ -116,32 +103,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     // Prevent duplicate initialization in React Strict Mode
     if (initRef.current) {
-      console.log("🔐 [AuthContext] Already initialized, skipping");
       return;
     }
     initRef.current = true;
 
     // Check for stored auth on mount and fetch fresh user data
     const initAuth = async () => {
-      console.log("🔐 [AuthContext] Initializing auth...");
       const storedToken = authService.getAccessToken();
       const storedUser = authService.getUser();
 
-      console.log(
-        "🔐 [AuthContext] Stored token:",
-        storedToken ? "EXISTS" : "NONE"
-      );
-      console.log(
-        "🔐 [AuthContext] Stored user:",
-        storedUser ? storedUser.username : "NONE"
-      );
-
       if (storedToken && storedUser) {
-        console.log("🔐 [AuthContext] Setting initial user from localStorage");
-        console.log(
-          "🔐 [AuthContext] User projects:",
-          storedUser.projects?.length || 0
-        );
         setToken(storedToken);
         setUser(storedUser);
 
@@ -151,28 +122,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         const timeSinceLastFetch = now - lastFetchRef.current;
 
         if (timeSinceLastFetch < fiveMinutes && lastFetchRef.current > 0) {
-          console.log(
-            "🔐 [AuthContext] Using cached user data (fetched",
-            Math.round(timeSinceLastFetch / 1000),
-            "seconds ago)"
-          );
           setLoading(false);
           return;
         }
 
         // Fetch fresh user data from API to get updated projects/companies
         try {
-          console.log("🔐 [AuthContext] Fetching fresh user data from API...");
           const freshUser = await authService.getCurrentUser();
           lastFetchRef.current = Date.now();
-          console.log(
-            "🔐 [AuthContext] Fresh user data received:",
-            freshUser.username
-          );
-          console.log(
-            "🔐 [AuthContext] Fresh user projects:",
-            freshUser.projects?.length || 0
-          );
           setUser(freshUser);
           localStorage.setItem("user", JSON.stringify(freshUser));
         } catch (error) {
@@ -184,7 +141,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         }
       }
 
-      console.log("🔐 [AuthContext] Setting loading to false");
       setLoading(false);
     };
 
@@ -192,22 +148,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   const login = (newToken: string, newUser: User) => {
-    console.log("🔐 [AuthContext] Login called with user:", newUser.username);
-    console.log(
-      "🔐 [AuthContext] User projects on login:",
-      newUser.projects?.length || 0
-    );
-    console.log(
-      "🔐 [AuthContext] User has_projects on login:",
-      newUser.has_projects
-    );
     setToken(newToken);
     setUser(newUser);
   };
 
   const logout = () => {
-    console.log("🔐 [AuthContext] Logging out user");
-
     // Clear refresh timer
     if (refreshTimeoutRef.current) {
       clearTimeout(refreshTimeoutRef.current);

@@ -63,7 +63,6 @@ class WebSocketService {
     if (this.connections.has(path)) {
       const existingWs = this.connections.get(path)!;
       if (existingWs.readyState === WebSocketReadyState.OPEN) {
-        console.log(`📡 [WebSocket] Already connected to ${path}`);
         return existingWs;
       }
     }
@@ -79,14 +78,11 @@ class WebSocketService {
     const wsUrl = this.getWebSocketUrl(path);
     const urlWithToken = `${wsUrl}?token=${token}`;
 
-    console.log(`🔌 [WebSocket] Connecting to ${path}...`);
-
     try {
       const ws = new WebSocket(urlWithToken);
 
       // Connection opened
       ws.onopen = () => {
-        console.log(`✅ [WebSocket] Connected to ${path}`);
         this.reconnectAttempts.set(path, 0); // Reset reconnect attempts
         
         // Clear reconnect timeout if exists
@@ -101,7 +97,6 @@ class WebSocketService {
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          console.log(`📨 [WebSocket] Message from ${path}:`, data);
 
           // Call all registered handlers
           const handlers = this.messageHandlers.get(path);
@@ -128,7 +123,6 @@ class WebSocketService {
 
       // Connection closed
       ws.onclose = (event) => {
-        console.log(`🔌 [WebSocket] Disconnected from ${path}`, event.code, event.reason);
         this.connections.delete(path);
 
         if (onClose) {
@@ -172,10 +166,6 @@ class WebSocketService {
       this.maxReconnectDelay
     );
 
-    console.log(
-      `⏰ [WebSocket] Reconnecting to ${path} in ${delay / 1000}s (attempt ${attempts + 1}/${this.maxReconnectAttempts})`
-    );
-
     this.reconnectAttempts.set(path, attempts + 1);
 
     const timeout = window.setTimeout(() => {
@@ -199,7 +189,6 @@ class WebSocketService {
     try {
       const message = typeof data === 'string' ? data : JSON.stringify(data);
       ws.send(message);
-      console.log(`📤 [WebSocket] Sent to ${path}:`, data);
       return true;
     } catch (error) {
       console.error(`❌ [WebSocket] Failed to send message to ${path}:`, error);
@@ -234,7 +223,6 @@ class WebSocketService {
     const ws = this.connections.get(path);
 
     if (ws) {
-      console.log(`🔌 [WebSocket] Disconnecting from ${path}...`);
       ws.close(1000, 'Client disconnecting');
       this.connections.delete(path);
     }
@@ -257,7 +245,6 @@ class WebSocketService {
    * Disconnect all WebSocket connections
    */
   disconnectAll(): void {
-    console.log('🔌 [WebSocket] Disconnecting all connections...');
     this.connections.forEach((_ws, path) => {
       this.disconnect(path);
     });

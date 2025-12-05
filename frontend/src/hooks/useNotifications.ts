@@ -37,11 +37,8 @@ export function useNotifications(): UseNotificationsReturn {
   // Subscribe to notification WebSocket
   useEffect(() => {
     const handleNotification = (data: any) => {
-      console.log('📨 [useNotifications] Received:', data);
-
       // Handle connection messages
       if (data.type === 'connection_established') {
-        console.log('✅ [useNotifications] Connected to notification stream');
         return;
       }
 
@@ -64,10 +61,7 @@ export function useNotifications(): UseNotificationsReturn {
         showToastNotification(newNotification);
       }
 
-      // Handle pong (heartbeat response)
-      if (data.type === 'pong') {
-        console.log('💓 [useNotifications] Heartbeat received');
-      }
+      // Handle pong (heartbeat response) - silently ignore
     };
 
     // Subscribe to notification messages
