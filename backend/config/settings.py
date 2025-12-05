@@ -166,6 +166,11 @@ REST_FRAMEWORK = {
     'PAGE_SIZE_QUERY_PARAM': 'page_size',
     'MAX_PAGE_SIZE': 1000,
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    # Use Unicode-safe JSON rendering for Georgian and other non-ASCII characters
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+    ],
+    'UNICODE_JSON': True,  # Ensure non-ASCII chars are not escaped
 }
 
 # Simple JWT settings

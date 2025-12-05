@@ -1,9 +1,13 @@
 import json
+from functools import partial
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.contrib.auth.models import User
 from .models import ChatRoom, ChatMessage, ChatParticipant, MessageReaction
 from .serializers import ChatMessageSerializer, MessageReactionSerializer
+
+# Use ensure_ascii=False to properly handle Georgian and other Unicode characters
+json_dumps = partial(json.dumps, ensure_ascii=False)
 
 
 class ChatConsumer(AsyncWebsocketConsumer):
@@ -189,35 +193,35 @@ class ChatConsumer(AsyncWebsocketConsumer):
     
     async def message_new(self, event):
         """Send new message to WebSocket."""
-        await self.send(text_data=json.dumps({
+        await self.send(text_data=json_dumps({
             'type': 'message_new',
             'message': event['message']
         }))
     
     async def message_edited(self, event):
         """Send edited message to WebSocket."""
-        await self.send(text_data=json.dumps({
+        await self.send(text_data=json_dumps({
             'type': 'message_edited',
             'message': event['message']
         }))
     
     async def message_deleted(self, event):
         """Send message deletion to WebSocket."""
-        await self.send(text_data=json.dumps({
+        await self.send(text_data=json_dumps({
             'type': 'message_deleted',
             'message_id': event['message_id']
         }))
     
     async def reaction_added(self, event):
         """Send reaction addition to WebSocket."""
-        await self.send(text_data=json.dumps({
+        await self.send(text_data=json_dumps({
             'type': 'reaction_added',
             'reaction': event['reaction']
         }))
     
     async def reaction_removed(self, event):
         """Send reaction removal to WebSocket."""
-        await self.send(text_data=json.dumps({
+        await self.send(text_data=json_dumps({
             'type': 'reaction_removed',
             'message_id': event['message_id'],
             'user_id': event['user_id'],
@@ -228,7 +232,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         """Send typing indicator to WebSocket."""
         # Don't send typing event back to the sender
         if event['user_id'] != self.user.id:
-            await self.send(text_data=json.dumps({
+            await self.send(text_data=json_dumps({
                 'type': 'user_typing',
                 'user_id': event['user_id'],
                 'username': event['username'],
@@ -237,7 +241,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
     
     async def user_joined(self, event):
         """Send user joined notification to WebSocket."""
-        await self.send(text_data=json.dumps({
+        await self.send(text_data=json_dumps({
             'type': 'user_joined',
             'user_id': event['user_id'],
             'username': event['username']
@@ -245,7 +249,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
     
     async def user_left(self, event):
         """Send user left notification to WebSocket."""
-        await self.send(text_data=json.dumps({
+        await self.send(text_data=json_dumps({
             'type': 'user_left',
             'user_id': event['user_id'],
             'username': event['username']
