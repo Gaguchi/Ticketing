@@ -94,16 +94,12 @@ const Tickets: React.FC = () => {
   const [archivedTickets, setArchivedTickets] = useState<Ticket[]>([]);
   const [archiveLoading, setArchiveLoading] = useState(false);
 
-  const RECENT_UPDATE_WINDOW_MS = 5000; // Increased from 2500ms to handle slow backend
+  const RECENT_UPDATE_WINDOW_MS = 10000; // Extended to handle slow backend responses
 
   // Track ticket IDs we've received via WebSocket to prevent duplicates
   const receivedTicketIdsRef = useRef<Set<number>>(new Set());
   const recentTicketUpdatesRef = useRef<Map<number, number>>(new Map());
   const lastMoveTimeRef = useRef<number>(0);
-
-  // Track drag state to prevent WebSocket updates during drag operations
-  const isDraggingRef = useRef(false);
-  const pendingUpdatesRef = useRef<any[]>([]);
 
   // Prevent duplicate initialization
   const fetchInProgressRef = useRef(false);
@@ -248,13 +244,6 @@ const Tickets: React.FC = () => {
           recentTicketUpdatesRef.current.delete(data.id);
         }
 
-        // Queue updates during drag operations to prevent position corruption
-        if (isDraggingRef.current) {
-          console.log(`⏸️ Queuing WebSocket update during drag: ${data.id}`);
-          pendingUpdatesRef.current.push({ type, data });
-          return;
-        }
-
         // Use complete data from WebSocket instead of fetching
         console.log(`🔄 Updating ticket from WebSocket: ${data.id}`);
         const updatedTicket = {
@@ -304,9 +293,18 @@ const Tickets: React.FC = () => {
         return;
       }
 
-      // Skip refresh if we just moved a ticket (we already have the latest state)
-      if (Date.now() - lastMoveTimeRef.current < 5000) {
+      // Skip refresh if we recently moved a ticket (we already have the latest state)
+      // Extended to 10 seconds to account for slow API responses
+      if (Date.now() - lastMoveTimeRef.current < 10000) {
         console.log("⏳ Skipping column refresh (handled optimistically)");
+        return;
+      }
+
+      // Also skip if any tickets have pending updates
+      const hasPendingUpdates = Array.from(recentTicketUpdatesRef.current.values())
+        .some(timestamp => Date.now() - timestamp < 10000);
+      if (hasPendingUpdates) {
+        console.log("⏳ Skipping column refresh (pending updates)");
         return;
       }
 
@@ -345,51 +343,19 @@ const Tickets: React.FC = () => {
     }
   }, []);
 
-  // Handle drag start - pause WebSocket updates
-  const handleDragStart = useCallback(() => {
-    console.log("🚫 Drag started - pausing WebSocket updates");
-    isDraggingRef.current = true;
-    pendingUpdatesRef.current = [];
-  }, []);
-
-  // Handle drag end - resume WebSocket updates and apply pending changes
-  const handleDragEnd = useCallback(() => {
-    console.log("✅ Drag ended - resuming WebSocket updates");
-    isDraggingRef.current = false;
-
-    // Apply pending updates
-    if (pendingUpdatesRef.current.length > 0) {
-      console.log(
-        `📦 Applying ${pendingUpdatesRef.current.length} queued updates`
-      );
-
-      pendingUpdatesRef.current.forEach(({ type, data }) => {
-        if (type === "ticket_updated") {
-          const updatedTicket = {
-            ...data,
-            ticket_key: data.ticket_key || `${selectedProject?.key}-${data.id}`,
-          };
-
-          setTickets((prev) => {
-            return prev.map((t) => (t.id === data.id ? updatedTicket : t));
-          });
-        }
-      });
-
-      pendingUpdatesRef.current = [];
-    }
-  }, [selectedProject?.key]);
-
-  // Handle ticket move between columns in Kanban with optimistic updates
+  // Handle ticket move/reorder in Kanban with optimistic updates
   const handleTicketMove = async (
     ticketId: number,
     newColumnId: number,
-    order: number
+    order: number,
+    oldColumnId: number
   ) => {
     console.log("🎯 handleTicketMove called:", {
       ticketId,
       newColumnId,
       order,
+      oldColumnId,
+      isSameColumn: oldColumnId === newColumnId,
     });
 
     const ticket = tickets.find((t) => t.id === ticketId);
@@ -411,44 +377,75 @@ const Tickets: React.FC = () => {
     // Store previous state for rollback
     const previousColumnId = ticket.column;
     const previousColumnName = ticket.column_name;
+    const previousOrder = ticket.column_order;
 
-    // OPTIMISTIC UPDATE: Update UI immediately with full reordering logic
+    const isSameColumn = oldColumnId === newColumnId;
+
+    // OPTIMISTIC UPDATE: Update UI immediately
     console.log("⚡ Optimistic update: Updating UI immediately");
     setTickets((prevTickets) => {
-      return prevTickets.map((t) => {
-        // 1. The moved ticket
-        if (t.id === ticketId) {
-          return {
-            ...t,
-            column: newColumnId,
-            column_name: column.name,
-            column_order: order,
-          };
-        }
+      if (isSameColumn) {
+        // Same column reorder - just update the moved ticket and shift others
+        return prevTickets.map((t) => {
+          if (t.id === ticketId) {
+            return { ...t, column_order: order };
+          }
+          if (t.column === newColumnId) {
+            const currentOrder = t.column_order || 0;
+            const oldOrder = previousOrder || 0;
+            // Shift tickets between old and new position
+            if (order < oldOrder) {
+              // Moving up - shift tickets down
+              if (currentOrder >= order && currentOrder < oldOrder) {
+                return { ...t, column_order: currentOrder + 1 };
+              }
+            } else {
+              // Moving down - shift tickets up
+              if (currentOrder > oldOrder && currentOrder <= order) {
+                return { ...t, column_order: currentOrder - 1 };
+              }
+            }
+          }
+          return t;
+        });
+      } else {
+        // Cross-column move
+        return prevTickets.map((t) => {
+          // The moved ticket
+          if (t.id === ticketId) {
+            return {
+              ...t,
+              column: newColumnId,
+              column_name: column.name,
+              column_order: order,
+            };
+          }
 
-        // 2. Tickets in the OLD column: Shift down those that were below the moved ticket
-        if (
-          t.column === previousColumnId &&
-          t.column_order > (ticket.column_order || 0)
-        ) {
-          return { ...t, column_order: t.column_order - 1 };
-        }
+          // Tickets in the OLD column: Shift down those that were below the moved ticket
+          if (
+            t.column === previousColumnId &&
+            t.column_order > (previousOrder || 0)
+          ) {
+            return { ...t, column_order: t.column_order - 1 };
+          }
 
-        // 3. Tickets in the NEW column: Shift up those that are at or below the insertion point
-        if (t.column === newColumnId && t.column_order >= order) {
-          return { ...t, column_order: t.column_order + 1 };
-        }
+          // Tickets in the NEW column: Shift up those that are at or below the insertion point
+          if (t.column === newColumnId && t.column_order >= order) {
+            return { ...t, column_order: t.column_order + 1 };
+          }
 
-        return t;
-      });
+          return t;
+        });
+      }
     });
 
     // Send PATCH request in the background (non-blocking)
-    console.log("🚀 Queuing PATCH request:", {
+    console.log("🚀 Sending PATCH request:", {
       url: `/api/tickets/tickets/${ticketId}/`,
       payload: { column: newColumnId, order: order },
       previousColumn: previousColumnId,
-      previousOrder: ticket.column_order,
+      previousOrder: previousOrder,
+      isSameColumn,
     });
 
     recentTicketUpdatesRef.current.set(ticketId, Date.now());
@@ -481,6 +478,7 @@ const Tickets: React.FC = () => {
                   ...t,
                   column: previousColumnId,
                   column_name: previousColumnName,
+                  column_order: previousOrder,
                 }
               : t
           )
@@ -490,45 +488,7 @@ const Tickets: React.FC = () => {
       message.error("Failed to update ticket - changes reverted");
     } finally {
       recentTicketUpdatesRef.current.set(ticketId, Date.now());
-      // Extend the window to cover the WebSocket message arrival
       lastMoveTimeRef.current = Date.now();
-    }
-  };
-
-  const handleTicketReorder = async (
-    updates: Array<{ ticket_id: number; column_id: number; order: number }>
-  ) => {
-    console.log("📋 handleTicketReorder called:", updates);
-
-    // OPTIMISTIC UPDATE: Update UI immediately
-    setTickets((prevTickets) => {
-      const updatesMap = new Map(
-        updates.map((u) => [
-          u.ticket_id,
-          { column: u.column_id, order: u.order },
-        ])
-      );
-
-      return prevTickets.map((t) => {
-        const update = updatesMap.get(t.id);
-        if (update) {
-          return {
-            ...t,
-            column: update.column,
-            column_order: update.order,
-          };
-        }
-        return t;
-      });
-    });
-
-    try {
-      await ticketService.reorderTickets(updates);
-      console.log("✅ Tickets reordered successfully");
-    } catch (error: any) {
-      console.error("❌ Failed to reorder tickets:", error);
-      message.error("Failed to save ticket order");
-      // TODO: Rollback logic could be added here if needed
     }
   };
 
@@ -968,9 +928,6 @@ const Tickets: React.FC = () => {
             columns={kanbanColumns}
             onTicketClick={handleTicketClick}
             onTicketMove={handleTicketMove}
-            onTicketReorder={handleTicketReorder}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
             onTicketCreated={(ticket) => {
               receivedTicketIdsRef.current.add(ticket.id);
               setTickets((prev) => [ticket, ...prev]);
