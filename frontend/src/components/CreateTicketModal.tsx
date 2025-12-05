@@ -128,7 +128,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
     if (watchedProject === currentProjectId) return;
 
     setCurrentProjectId(watchedProject);
-    const project = availableProjects.find((p) => p.id === watchedProject);
+    const _project = availableProjects.find((p) => p.id === watchedProject);
 
     // Fetch project columns
     projectService

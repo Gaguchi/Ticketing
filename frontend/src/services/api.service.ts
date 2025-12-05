@@ -74,7 +74,7 @@ class APIService {
   /**
    * Log API response details (only slow or error responses in development)
    */
-  private logResponse(url: string, response: Response, data: any, duration: number) {
+  private logResponse(url: string, response: Response, _data: any, duration: number) {
     if (!this.isDevelopment) return;
 
     // Log slow requests or errors
