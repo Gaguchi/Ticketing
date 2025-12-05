@@ -79,9 +79,12 @@ const Chat: React.FC = () => {
   // Scroll to bottom of messages
   const scrollToBottom = (instant = false) => {
     if (messagesContainerRef.current) {
-      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+      messagesContainerRef.current.scrollTop =
+        messagesContainerRef.current.scrollHeight;
     } else if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: instant ? "instant" : "smooth" });
+      messagesEndRef.current.scrollIntoView({
+        behavior: instant ? "instant" : "smooth",
+      });
     }
   };
 
