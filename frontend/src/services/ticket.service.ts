@@ -13,7 +13,17 @@ import type {
   TicketFilterParams,
   PaginatedResponse,
   ToggleFollowResponse,
+  TicketColumn,
+  BoardColumn,
 } from '../types/api';
+
+/**
+ * Response type for Kanban view - includes columns alongside tickets
+ */
+export interface KanbanResponse extends PaginatedResponse<Ticket> {
+  board_columns: BoardColumn[];
+  columns: TicketColumn[];
+}
 
 class TicketService {
   /**
@@ -23,6 +33,15 @@ class TicketService {
     const query = this.buildTicketQuery(params);
     const url = query ? `${API_ENDPOINTS.TICKETS}?${query}` : API_ENDPOINTS.TICKETS;
     return apiService.get<PaginatedResponse<Ticket>>(url);
+  }
+
+  /**
+   * Get tickets optimized for Kanban view - includes columns in single request
+   * Uses minimal serializer (~65% smaller payload) and returns columns inline
+   */
+  async getKanbanData(projectId: number): Promise<KanbanResponse> {
+    const url = `${API_ENDPOINTS.TICKETS}?project=${projectId}&page_size=1000&view=kanban`;
+    return apiService.get<KanbanResponse>(url);
   }
 
   async getArchivedTickets(params?: TicketFilterParams): Promise<PaginatedResponse<Ticket>> {

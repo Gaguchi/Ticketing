@@ -64,7 +64,6 @@ const Chat: React.FC = () => {
   const [selectedMembers, setSelectedMembers] = useState<number[]>([]);
   const [creatingGroup, setCreatingGroup] = useState(false);
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const loadMoreSentinelRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<number | null>(null);
@@ -84,37 +83,30 @@ const Chat: React.FC = () => {
   const directChats = rooms.filter((r) => r.type === "direct");
   const groupChats = rooms.filter((r) => r.type === "group");
 
-  // Scroll to bottom of messages (only if near bottom or forced)
+  // Scroll to bottom of messages (with column-reverse, scrollTop=0 is the bottom)
   const scrollToBottom = useCallback((force = false) => {
     if (!messagesContainerRef.current) return;
-
     // Only auto-scroll if user is near bottom or forced
     if (force || isNearBottomRef.current) {
-      messagesContainerRef.current.scrollTop =
-        messagesContainerRef.current.scrollHeight;
+      // With column-reverse, scrollTop=0 is the bottom (newest messages)
+      messagesContainerRef.current.scrollTop = 0;
     }
   }, []);
 
-  // Track scroll position to determine if near bottom
+  // Track scroll position to determine if near bottom (inverted for column-reverse)
   const handleScroll = useCallback(() => {
     if (!messagesContainerRef.current) return;
 
-    const { scrollTop, scrollHeight, clientHeight } =
-      messagesContainerRef.current;
-    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-
-    // Consider "near bottom" if within 150px
-    isNearBottomRef.current = distanceFromBottom < 150;
+    const { scrollTop } = messagesContainerRef.current;
+    // With column-reverse, scrollTop=0 means at bottom, negative/larger values mean scrolled up
+    // Consider "near bottom" if scrollTop is close to 0
+    isNearBottomRef.current = Math.abs(scrollTop) < 150;
   }, []);
 
-  // Load older messages when scrolling to top
+  // Load older messages when scrolling to top (with column-reverse)
   const loadOlderMessages = useCallback(async () => {
     if (!activeRoom || loadingOlder || !hasMoreMessages || !messageCursor)
       return;
-
-    // Store current scroll position to restore after loading
-    const container = messagesContainerRef.current;
-    const previousScrollHeight = container?.scrollHeight || 0;
 
     setLoadingOlder(true);
 
@@ -124,18 +116,10 @@ const Chat: React.FC = () => {
         before: messageCursor,
       });
 
-      // Prepend older messages
+      // Prepend older messages - with column-reverse, scroll position stays stable
       setMessages((prev) => [...result.messages, ...prev]);
       setHasMoreMessages(result.hasMore);
       setMessageCursor(result.cursor);
-
-      // Restore scroll position after messages are rendered
-      requestAnimationFrame(() => {
-        if (container) {
-          const newScrollHeight = container.scrollHeight;
-          container.scrollTop = newScrollHeight - previousScrollHeight;
-        }
-      });
     } catch (error) {
       console.error("Failed to load older messages:", error);
     } finally {
@@ -272,13 +256,6 @@ const Chat: React.FC = () => {
         setMessages(result.messages);
         setHasMoreMessages(result.hasMore);
         setMessageCursor(result.cursor);
-
-        // Scroll to bottom after messages render
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            scrollToBottom(true);
-          });
-        });
 
         // Mark as read
         await chatService.markRoomAsRead(activeRoom.id);
@@ -974,7 +951,7 @@ const Chat: React.FC = () => {
               </Space>
             </div>
 
-            {/* Messages Area */}
+            {/* Messages Area - column-reverse for natural bottom-up rendering */}
             <div
               ref={messagesContainerRef}
               onScroll={handleScroll}
@@ -984,7 +961,7 @@ const Chat: React.FC = () => {
                 padding: "24px",
                 backgroundColor: "#f9fafb",
                 display: "flex",
-                flexDirection: "column",
+                flexDirection: "column-reverse", // Key: renders from bottom up
               }}
             >
               {messagesLoading ? (
@@ -995,38 +972,11 @@ const Chat: React.FC = () => {
                 </div>
               ) : (
                 <>
-                  {/* Load more sentinel - triggers loading older messages */}
-                  <div ref={loadMoreSentinelRef} style={{ minHeight: 1 }} />
-
-                  {/* Loading older indicator */}
-                  {loadingOlder && (
-                    <div style={{ textAlign: "center", padding: "12px 0" }}>
-                      <Spin size="small" />
-                      <Text
-                        style={{
-                          marginLeft: 8,
-                          color: "#8c8c8c",
-                          fontSize: 12,
-                        }}
-                      >
-                        Loading older messages...
-                      </Text>
-                    </div>
-                  )}
-
-                  {/* No more messages indicator */}
-                  {!hasMoreMessages && messages.length > 0 && (
-                    <div style={{ textAlign: "center", padding: "12px 0" }}>
-                      <Text style={{ color: "#8c8c8c", fontSize: 12 }}>
-                        Beginning of conversation
-                      </Text>
-                    </div>
-                  )}
-
+                  {/* Messages wrapper */}
                   <Space
                     direction="vertical"
                     size={16}
-                    style={{ width: "100%", marginTop: "auto" }}
+                    style={{ width: "100%" }}
                   >
                     {messages.map((msg) => {
                       const isMine = msg.user.id === user?.id;
@@ -1312,8 +1262,36 @@ const Chat: React.FC = () => {
                         </div>
                       );
                     })}
-                    <div ref={messagesEndRef} />
                   </Space>
+
+                  {/* These appear at top visually due to column-reverse */}
+                  {/* No more messages indicator */}
+                  {!hasMoreMessages && messages.length > 0 && (
+                    <div style={{ textAlign: "center", padding: "12px 0" }}>
+                      <Text style={{ color: "#8c8c8c", fontSize: 12 }}>
+                        Beginning of conversation
+                      </Text>
+                    </div>
+                  )}
+
+                  {/* Loading older indicator */}
+                  {loadingOlder && (
+                    <div style={{ textAlign: "center", padding: "12px 0" }}>
+                      <Spin size="small" />
+                      <Text
+                        style={{
+                          marginLeft: 8,
+                          color: "#8c8c8c",
+                          fontSize: 12,
+                        }}
+                      >
+                        Loading older messages...
+                      </Text>
+                    </div>
+                  )}
+
+                  {/* Load more sentinel - triggers loading older messages (at visual top) */}
+                  <div ref={loadMoreSentinelRef} style={{ minHeight: 1 }} />
                 </>
               )}
             </div>

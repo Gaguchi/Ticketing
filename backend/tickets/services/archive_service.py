@@ -20,7 +20,7 @@ def auto_archive_completed_tickets(project_id: Optional[int] = None) -> int:
     """
     cutoff = timezone.now() - timedelta(hours=AUTO_ARCHIVE_AGE_HOURS)
     
-    logger.info(f"Auto-archive: Looking for tickets done before {cutoff} (threshold: {AUTO_ARCHIVE_AGE_HOURS} hours)")
+    logger.debug(f"Auto-archive: Looking for tickets done before {cutoff} (threshold: {AUTO_ARCHIVE_AGE_HOURS} hours)")
 
     queryset = Ticket.objects.filter(
         is_archived=False,
@@ -30,14 +30,12 @@ def auto_archive_completed_tickets(project_id: Optional[int] = None) -> int:
 
     if project_id:
         queryset = queryset.filter(project_id=project_id)
-        logger.info(f"Auto-archive: Filtering by project_id={project_id}")
+        logger.debug(f"Auto-archive: Filtering by project_id={project_id}")
 
-    # Log query details
-    total_tickets = Ticket.objects.filter(is_archived=False).count()
-    tickets_with_done_at = Ticket.objects.filter(is_archived=False, done_at__isnull=False).count()
-    eligible_count = queryset.count()
-    
-    logger.info(f"Auto-archive stats: Total non-archived={total_tickets}, with done_at={tickets_with_done_at}, eligible={eligible_count}")
+    # Only log stats in debug mode to avoid extra queries in production
+    if logger.isEnabledFor(logging.DEBUG):
+        eligible_count = queryset.count()
+        logger.debug(f"Auto-archive stats: eligible={eligible_count}")
 
     archived_count = 0
     for ticket in queryset.select_related("project"):
@@ -46,5 +44,6 @@ def auto_archive_completed_tickets(project_id: Optional[int] = None) -> int:
         if archived:
             archived_count += 1
 
-    logger.info(f"Auto-archive complete: {archived_count} tickets archived")
+    if archived_count > 0:
+        logger.info(f"Auto-archive complete: {archived_count} tickets archived")
     return archived_count

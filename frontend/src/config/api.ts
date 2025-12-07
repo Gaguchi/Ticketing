@@ -99,6 +99,18 @@ export const API_ENDPOINTS = {
   DASHBOARD_WORKLOAD: `${API_BASE_URL}/api/tickets/dashboard/workload/`,
   DASHBOARD_KANBAN_SUMMARY: `${API_BASE_URL}/api/tickets/dashboard/kanban-summary/`,
   
+  // Jira-style Status System
+  STATUSES: `${API_BASE_URL}/api/tickets/statuses/`,
+  STATUS_DETAIL: (key: string) => `${API_BASE_URL}/api/tickets/statuses/${key}/`,
+  
+  // Board Columns (per-project visual groupings)
+  BOARD_COLUMNS: `${API_BASE_URL}/api/tickets/board-columns/`,
+  BOARD_COLUMN_DETAIL: (id: number) => `${API_BASE_URL}/api/tickets/board-columns/${id}/`,
+  BOARD_COLUMNS_REORDER: `${API_BASE_URL}/api/tickets/board-columns/reorder/`,
+  
+  // Ticket status-based move (new Jira-style)
+  TICKET_MOVE_TO_STATUS: (id: number) => `${API_BASE_URL}/api/tickets/tickets/${id}/move_to_status/`,
+  
   // API Documentation
   API_DOCS: `${API_BASE_URL}/api/docs/`,
   API_SCHEMA: `${API_BASE_URL}/api/schema/`,

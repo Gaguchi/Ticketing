@@ -16,7 +16,8 @@ interface KanbanColumnProps {
   items: string[];
   name: string;
   ticketMap: Record<string, Ticket>;
-  columnId: number; // Add actual column ID for ticket creation
+  columnId: number;           // Column ID for old system
+  statusKey?: string;         // Status key for new system (if using status-based creation)
   isSortingContainer?: boolean;
   dragOverlay?: boolean;
   onTicketClick?: (ticket: Ticket) => void;
@@ -29,6 +30,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
   name,
   ticketMap,
   columnId,
+  statusKey,
   isSortingContainer,
   dragOverlay,
   onTicketClick,
@@ -132,6 +134,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
           <div>
             <QuickTicketCreator
               columnId={columnId}
+              statusKey={statusKey}
               onSuccess={(ticket) => {
                 onTicketCreated?.(ticket);
               }}

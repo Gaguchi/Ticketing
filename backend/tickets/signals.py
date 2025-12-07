@@ -3,6 +3,7 @@ WebSocket Broadcasting Signals
 
 This module contains Django signals that broadcast real-time updates
 via WebSocket channels when tickets, comments, and other models are created/updated.
+Also handles auto-creation of board columns for new projects.
 """
 
 from django.db.models.signals import post_save, post_delete, pre_delete
@@ -10,7 +11,39 @@ from django.dispatch import receiver
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from django.utils import timezone
-from .models import Ticket, Comment, Notification
+from .models import Ticket, Comment, Notification, Project, BoardColumn, Status
+
+
+# Default board column configuration for new projects
+DEFAULT_BOARD_COLUMNS = [
+    {'name': 'To Do', 'order': 1, 'statuses': ['open', 'todo']},
+    {'name': 'In Progress', 'order': 2, 'statuses': ['in_progress', 'blocked']},
+    {'name': 'Review', 'order': 3, 'statuses': ['in_review']},
+    {'name': 'Done', 'order': 4, 'statuses': ['done', 'closed']},
+]
+
+
+@receiver(post_save, sender=Project)
+def create_default_board_columns(sender, instance, created, **kwargs):
+    """
+    Auto-create default board columns when a new project is created.
+    Maps global statuses to visual columns on the Kanban board.
+    """
+    if not created:
+        return
+    
+    for col_data in DEFAULT_BOARD_COLUMNS:
+        column = BoardColumn.objects.create(
+            project=instance,
+            name=col_data['name'],
+            order=col_data['order']
+        )
+        
+        # Map statuses to column
+        statuses = Status.objects.filter(key__in=col_data['statuses'])
+        column.statuses.set(statuses)
+    
+    print(f"✅ Created default board columns for project {instance.key}")
 
 
 def send_to_channel_layer(group_name: str, message_type: str, data: dict):

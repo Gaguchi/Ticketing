@@ -55,5 +55,8 @@ export type {
   CheckInvitationResponse
 } from './invitation.service';
 
+// Status Service (Jira-style status system)
+export { statusService } from './status.service';
+
 // Re-export all types from centralized types/api.ts
 export type * from '../types/api';

@@ -4,8 +4,68 @@ from django.db import models
 from .models import (
     Ticket, Project, Column, Comment, Attachment,
     Tag, Contact, TagContact, UserTag, TicketTag, IssueLink, Company, UserRole, TicketSubtask,
-    Notification, ProjectInvitation, TicketPosition, TicketHistory
+    Notification, ProjectInvitation, TicketPosition, TicketHistory, Status, BoardColumn
 )
+
+
+class StatusSerializer(serializers.ModelSerializer):
+    """Serializer for global Status model"""
+    category_color = serializers.CharField(read_only=True)
+    
+    class Meta:
+        model = Status
+        fields = [
+            'key', 'name', 'description', 'category', 
+            'color', 'category_color', 'icon', 'order', 'is_default'
+        ]
+        read_only_fields = ['is_default']
+
+
+class BoardColumnSerializer(serializers.ModelSerializer):
+    """Serializer for per-project BoardColumn"""
+    statuses = StatusSerializer(many=True, read_only=True)
+    status_keys = serializers.ListField(
+        child=serializers.SlugField(),
+        write_only=True,
+        required=False,
+        help_text='List of status keys to map to this column'
+    )
+    ticket_count = serializers.SerializerMethodField()
+    is_over_limit = serializers.BooleanField(read_only=True)
+    is_under_limit = serializers.BooleanField(read_only=True)
+    
+    class Meta:
+        model = BoardColumn
+        fields = [
+            'id', 'name', 'order', 'statuses', 'status_keys',
+            'min_limit', 'max_limit', 'is_collapsed',
+            'ticket_count', 'is_over_limit', 'is_under_limit',
+            'project', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['created_at', 'updated_at']
+    
+    def get_ticket_count(self, obj):
+        return obj.ticket_count()
+    
+    def create(self, validated_data):
+        status_keys = validated_data.pop('status_keys', [])
+        column = super().create(validated_data)
+        
+        if status_keys:
+            statuses = Status.objects.filter(key__in=status_keys)
+            column.statuses.set(statuses)
+        
+        return column
+    
+    def update(self, instance, validated_data):
+        status_keys = validated_data.pop('status_keys', None)
+        column = super().update(instance, validated_data)
+        
+        if status_keys is not None:
+            statuses = Status.objects.filter(key__in=status_keys)
+            column.statuses.set(statuses)
+        
+        return column
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -410,6 +470,20 @@ class TicketSerializer(serializers.ModelSerializer):
     column_order = serializers.SerializerMethodField()
     is_final_column = serializers.SerializerMethodField()
     
+    # NEW: Jira-style status fields
+    ticket_status_key = serializers.SlugRelatedField(
+        slug_field='key',
+        queryset=Status.objects.all(),
+        source='ticket_status',
+        required=False,
+        allow_null=True,
+        help_text='Status key (e.g., "in_progress")'
+    )
+    ticket_status_name = serializers.CharField(source='ticket_status.name', read_only=True)
+    ticket_status_category = serializers.CharField(source='ticket_status.category', read_only=True)
+    ticket_status_color = serializers.CharField(source='ticket_status.category_color', read_only=True)
+    rank = serializers.CharField(read_only=True)
+    
     # Make project and column optional for servicedesk users (will be set in perform_create)
     project = serializers.PrimaryKeyRelatedField(
         queryset=Project.objects.all(),
@@ -426,6 +500,8 @@ class TicketSerializer(serializers.ModelSerializer):
         model = Ticket
         fields = [
             'id', 'name', 'description', 'type', 'status',
+            # NEW: Jira-style status fields
+            'ticket_status_key', 'ticket_status_name', 'ticket_status_category', 'ticket_status_color', 'rank',
             'priority_id', 'urgency', 'importance',
             'company', 'company_name', 'company_logo_url',
             'project', 'project_key', 'project_number', 'ticket_key',
@@ -454,13 +530,14 @@ class TicketSerializer(serializers.ModelSerializer):
         return obj.column_order
     
     def get_is_final_column(self, obj):
-        """Check if ticket is in the last column of the project"""
-        if not obj.column or not obj.project:
-            return False
-        max_order = Column.objects.filter(project=obj.project).aggregate(
-            models.Max('order')
-        )['order__max']
-        return obj.column.order == max_order
+        """Check if ticket is in a 'done' status - uses ticket_status.category for O(1) lookup"""
+        # With the new status system, we just check if the status category is 'done'
+        if obj.ticket_status:
+            return obj.ticket_status.category == 'done'
+        # Fallback for old column system: check if column name indicates done
+        if obj.column and obj.column.name:
+            return obj.column.name.strip().lower() in ('done', 'closed', 'resolved', 'complete', 'completed')
+        return False
 
     def get_subtasks(self, obj):
         if obj.subtasks.exists():
@@ -487,6 +564,12 @@ class TicketListSerializer(serializers.ModelSerializer):
     column_order = serializers.SerializerMethodField()
     is_final_column = serializers.SerializerMethodField()
     
+    # NEW: Jira-style status fields
+    ticket_status_key = serializers.CharField(source='ticket_status.key', read_only=True, allow_null=True)
+    ticket_status_name = serializers.CharField(source='ticket_status.name', read_only=True, allow_null=True)
+    ticket_status_category = serializers.CharField(source='ticket_status.category', read_only=True, allow_null=True)
+    ticket_status_color = serializers.SerializerMethodField()
+    
     class Meta:
         model = Ticket
         fields = [
@@ -495,12 +578,29 @@ class TicketListSerializer(serializers.ModelSerializer):
             'company', 'company_name', 'company_logo_url',
             'project', 'project_key', 'project_number', 'ticket_key',
             'column', 'column_name', 'column_order', 'is_final_column',
+            # NEW: Jira-style status fields
+            'ticket_status_key', 'ticket_status_name', 'ticket_status_category', 'ticket_status_color',
+            'rank',
             'assignee_ids', 'following', 'comments_count', 'tag_names',
             'due_date', 'start_date',
             'is_archived', 'archived_at', 'archived_reason', 'done_at',
             'resolution_rating', 'resolution_feedback', 'resolved_at',
             'created_at', 'updated_at'
         ]
+    
+    def get_ticket_status_color(self, obj):
+        """Get color from ticket status (custom or category-based)"""
+        if obj.ticket_status:
+            if obj.ticket_status.color:
+                return obj.ticket_status.color
+            # Fallback to category color
+            category_colors = {
+                'todo': '#6B778C',
+                'in_progress': '#0052CC',
+                'done': '#36B37E',
+            }
+            return category_colors.get(obj.ticket_status.category, '#6B778C')
+        return None
     
     def get_company_logo_url(self, obj):
         """Return absolute URL for company logo"""
@@ -518,13 +618,14 @@ class TicketListSerializer(serializers.ModelSerializer):
         return obj.column_order
     
     def get_is_final_column(self, obj):
-        """Check if ticket is in the last column of the project"""
-        if not obj.column or not obj.project:
-            return False
-        max_order = Column.objects.filter(project=obj.project).aggregate(
-            models.Max('order')
-        )['order__max']
-        return obj.column.order == max_order
+        """Check if ticket is in a 'done' status - uses ticket_status.category for O(1) lookup"""
+        # With the new status system, we just check if the status category is 'done'
+        if obj.ticket_status:
+            return obj.ticket_status.category == 'done'
+        # Fallback for old column system: check if column name indicates done
+        if obj.column and obj.column.name:
+            return obj.column.name.strip().lower() in ('done', 'closed', 'resolved', 'complete', 'completed')
+        return False
 
     def get_assignee_ids(self, obj):
         # Use the prefetched data to avoid additional queries
@@ -533,6 +634,53 @@ class TicketListSerializer(serializers.ModelSerializer):
     def get_tag_names(self, obj):
         """Get list of tag names for quick display using prefetched data"""
         return [tag.name for tag in obj.tags.all()]
+
+
+class KanbanTicketSerializer(serializers.ModelSerializer):
+    """
+    Super lightweight serializer for Kanban board view.
+    Only includes fields actually displayed on Kanban cards.
+    ~65% smaller payload than TicketListSerializer.
+    """
+    assignee_ids = serializers.SerializerMethodField()
+    project_key = serializers.CharField(source='project.key', read_only=True)
+    project_number = serializers.IntegerField(read_only=True)
+    ticket_key = serializers.CharField(read_only=True)
+    company_logo_url = serializers.SerializerMethodField()
+    comments_count = serializers.IntegerField(read_only=True)
+    
+    class Meta:
+        model = Ticket
+        fields = [
+            # Core identification
+            'id', 'name', 'type', 'priority_id',
+            'project_key', 'project_number', 'ticket_key',
+            # Grouping (old + new systems)
+            'column', 'ticket_status_key',
+            # Display on card
+            'company_logo_url', 'following', 'comments_count',
+            'assignee_ids', 'resolved_at',
+        ]
+        # Read ticket_status_key directly from foreign key
+        extra_kwargs = {
+            'ticket_status_key': {'source': 'ticket_status.key', 'read_only': True}
+        }
+    
+    # Override to get ticket_status_key since extra_kwargs doesn't work well with FK
+    ticket_status_key = serializers.CharField(source='ticket_status.key', read_only=True, allow_null=True)
+    
+    def get_company_logo_url(self, obj):
+        """Return absolute URL for company logo"""
+        if obj.company and obj.company.logo:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.company.logo.url)
+            return obj.company.logo.url
+        return None
+    
+    def get_assignee_ids(self, obj):
+        # Use prefetched data
+        return [assignee.id for assignee in obj.assignees.all()]
 
 
 class ContactSerializer(serializers.ModelSerializer):

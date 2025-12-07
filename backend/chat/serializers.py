@@ -127,15 +127,29 @@ class ChatRoomCreateSerializer(serializers.ModelSerializer):
         fields = ['name', 'type', 'project', 'participant_ids']
     
     def create(self, validated_data):
-        """Create room and add participants."""
+        """Create room and add participants, or return existing DM if one exists."""
         participant_ids = validated_data.pop('participant_ids', [])
+        room_type = validated_data.get('type', 'direct')
+        project = validated_data.get('project')
+        creator = validated_data.get('created_by')
+        
+        # For direct messages with exactly 2 participants, check for existing room
+        if room_type == 'direct' and len(participant_ids) == 1 and creator:
+            other_user_id = participant_ids[0]
+            
+            # Find existing DM between these two users in this project
+            existing_room = self._find_existing_dm(creator.id, other_user_id, project)
+            if existing_room:
+                return existing_room
+        
+        # No existing room found, create new one
         room = super().create(validated_data)
         
         # Add participants
         for user_id in participant_ids:
             try:
                 user = User.objects.get(id=user_id)
-                ChatParticipant.objects.create(room=room, user=user)
+                ChatParticipant.objects.get_or_create(room=room, user=user)
             except User.DoesNotExist:
                 pass
         
@@ -144,3 +158,26 @@ class ChatRoomCreateSerializer(serializers.ModelSerializer):
             ChatParticipant.objects.create(room=room, user=room.created_by)
         
         return room
+    
+    def _find_existing_dm(self, user1_id, user2_id, project):
+        """Find an existing direct message room between two users in a project."""
+        from django.db.models import Count, Q
+        
+        # Find rooms that:
+        # 1. Are 'direct' type
+        # 2. In this project
+        # 3. Have exactly 2 participants
+        # 4. Both users are participants
+        rooms = ChatRoom.objects.filter(
+            type='direct',
+            project=project
+        ).annotate(
+            participant_count=Count('participants')
+        ).filter(
+            participant_count=2,
+            participants__user_id=user1_id
+        ).filter(
+            participants__user_id=user2_id
+        ).distinct()
+        
+        return rooms.first()

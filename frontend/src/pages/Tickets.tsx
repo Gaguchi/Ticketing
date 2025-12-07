@@ -31,8 +31,8 @@ import { getPriorityIcon } from "../components/PriorityIcons";
 import { TicketModal } from "../components/TicketModal";
 import { CreateTicketModal } from "../components/CreateTicketModal";
 import { useProject } from "../contexts/AppContext";
-import { ticketService, projectService } from "../services";
-import type { Ticket, TicketColumn } from "../types/api";
+import { ticketService, statusService } from "../services";
+import type { Ticket, TicketColumn, BoardColumn } from "../types/api";
 import { debug, LogCategory, LogLevel } from "../utils/debug";
 import "./Tickets.css";
 
@@ -90,6 +90,7 @@ const Tickets: React.FC = () => {
   // Real data from API
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [kanbanColumns, setKanbanColumns] = useState<TicketColumn[]>([]);
+  const [boardColumns, setBoardColumns] = useState<BoardColumn[]>([]); // New status-based columns
   const [loading, setLoading] = useState(false);
   const [archivedTickets, setArchivedTickets] = useState<Ticket[]>([]);
   const [archiveLoading, setArchiveLoading] = useState(false);
@@ -135,34 +136,36 @@ const Tickets: React.FC = () => {
           selectedProject
         );
 
-        // Fetch columns and tickets in parallel for better performance
-        const [projectColumns, ticketsResponse] = await Promise.all([
-          projectService.getProjectColumns(selectedProject.id),
-          ticketService.getTickets({
-            project: selectedProject.id,
-            page_size: 1000,
-          }),
-        ]);
+        // OPTIMIZED: Single API call with view=kanban returns tickets + columns
+        // This replaces 3 parallel API calls with 1, and uses minimal serializer
+        const kanbanData = await ticketService.getKanbanData(selectedProject.id);
 
         debug.log(
           LogCategory.TICKET,
           LogLevel.INFO,
-          "Project columns:",
-          projectColumns
+          "Kanban data loaded:",
+          {
+            tickets: kanbanData.count,
+            boardColumns: kanbanData.board_columns?.length || 0,
+            oldColumns: kanbanData.columns?.length || 0,
+          }
         );
 
-        if (projectColumns.length === 0) {
+        // Use new status system if board columns exist
+        if (kanbanData.board_columns && kanbanData.board_columns.length > 0) {
+          setBoardColumns(kanbanData.board_columns);
+        } else if (!kanbanData.columns || kanbanData.columns.length === 0) {
           message.warning(
             `Project "${selectedProject.name}" has no columns. Please set up columns first.`
           );
         }
 
-        setKanbanColumns(projectColumns);
-        setTickets(ticketsResponse.results);
+        setKanbanColumns(kanbanData.columns || []);
+        setTickets(kanbanData.results);
 
         // Track all existing ticket IDs
         receivedTicketIdsRef.current = new Set(
-          ticketsResponse.results.map((t) => t.id)
+          kanbanData.results.map((t) => t.id)
         );
       } catch (error: any) {
         console.error("Failed to fetch data:", error);
@@ -425,6 +428,93 @@ const Tickets: React.FC = () => {
       }
 
       message.error("Failed to update ticket - changes reverted");
+    } finally {
+      recentTicketUpdatesRef.current.set(ticketId, Date.now());
+      lastMoveTimeRef.current = Date.now();
+    }
+  };
+
+  // NEW: Status-based move handler (for Jira-style status system)
+  const handleTicketMoveToStatus = async (
+    ticketId: number,
+    statusKey: string,
+    beforeTicketId?: number,
+    afterTicketId?: number
+  ) => {
+    const ticket = tickets.find((t) => t.id === ticketId);
+    if (!ticket) {
+      message.error("Ticket not found");
+      return;
+    }
+
+    // Store previous state for rollback
+    const previousStatusKey = ticket.ticket_status_key;
+    const previousRank = ticket.rank;
+
+    // OPTIMISTIC UPDATE: Update UI immediately
+    recentTicketUpdatesRef.current.set(ticketId, Date.now());
+    lastMoveTimeRef.current = Date.now();
+
+    // Find the board column for this status to get the status name
+    const targetColumn = boardColumns.find((bc) =>
+      bc.statuses.some((s) => s.key === statusKey)
+    );
+    const targetStatus = targetColumn?.statuses.find((s) => s.key === statusKey);
+
+    setTickets((prevTickets) =>
+      prevTickets.map((t) =>
+        t.id === ticketId
+          ? {
+              ...t,
+              ticket_status_key: statusKey,
+              ticket_status_name: targetStatus?.name || statusKey,
+              ticket_status_category: targetStatus?.category,
+              ticket_status_color: targetStatus?.category_color,
+              // Rank will be updated by server response
+            }
+          : t
+      )
+    );
+
+    try {
+      const updatedTicket = await statusService.moveTicketToStatus(
+        ticketId,
+        statusKey,
+        { beforeId: beforeTicketId, afterId: afterTicketId }
+      );
+
+      // Update with server response (includes correct rank)
+      setTickets((prevTickets) =>
+        prevTickets.map((t) =>
+          t.id === ticketId
+            ? {
+                ...t,
+                ticket_status_key: updatedTicket.ticket_status_key,
+                ticket_status_name: updatedTicket.ticket_status_name,
+                ticket_status_category: updatedTicket.ticket_status_category,
+                ticket_status_color: updatedTicket.ticket_status_color,
+                rank: updatedTicket.rank,
+              }
+            : t
+        )
+      );
+    } catch (error: any) {
+      console.error("Failed to move ticket to status:", error);
+
+      // ROLLBACK: Revert optimistic update on error
+      setTickets((prevTickets) =>
+        prevTickets.map((t) =>
+          t.id === ticketId
+            ? {
+                ...t,
+                ticket_status_key: previousStatusKey,
+                rank: previousRank,
+              }
+            : t
+        )
+      );
+
+      message.error("Failed to move ticket - changes reverted");
     } finally {
       recentTicketUpdatesRef.current.set(ticketId, Date.now());
       lastMoveTimeRef.current = Date.now();
@@ -865,8 +955,10 @@ const Tickets: React.FC = () => {
           <KanbanBoard
             tickets={filteredTickets}
             columns={kanbanColumns}
+            boardColumns={boardColumns}
             onTicketClick={handleTicketClick}
             onTicketMove={handleTicketMove}
+            onTicketMoveToStatus={handleTicketMoveToStatus}
             onTicketCreated={(ticket) => {
               receivedTicketIdsRef.current.add(ticket.id);
               setTickets((prev) => [ticket, ...prev]);

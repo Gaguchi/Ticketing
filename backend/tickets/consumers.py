@@ -243,6 +243,37 @@ class TicketConsumer(AsyncWebsocketConsumer):
             'column_ids': event.get('column_ids', []),
         }))
     
+    async def ticket_moved(self, event):
+        """
+        Handle ticket move events (Jira-style status changes).
+        This is for the NEW status-based move system.
+        
+        Event data includes:
+        - ticket_id: ID of the moved ticket
+        - ticket_key: Human-readable key (e.g., "PROJ-123")
+        - old_status: Previous status key
+        - new_status: New status key
+        - rank: New LexoRank position
+        """
+        import time
+        await self.send(text_data=json.dumps({
+            'type': 'ticket_moved',
+            'data': event.get('data', {}),
+            'sequence': int(time.time() * 1000),  # Add sequence for ordering
+        }))
+    
+    async def status_refresh(self, event):
+        """
+        Tell clients to refresh tickets for specific statuses.
+        Used for bulk operations or sync issues.
+        """
+        import time
+        await self.send(text_data=json.dumps({
+            'type': 'status_refresh',
+            'status_keys': event.get('status_keys', []),
+            'sequence': int(time.time() * 1000),
+        }))
+    
     @database_sync_to_async
     def user_has_project_access(self, user_id, project_id):
         """

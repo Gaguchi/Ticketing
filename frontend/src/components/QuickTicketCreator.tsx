@@ -18,6 +18,7 @@ const { TextArea } = Input;
 
 interface QuickTicketCreatorProps {
   columnId: number;
+  statusKey?: string;  // NEW: Status key for new status-based system
   onSuccess?: (ticket: Ticket) => void;
   onClose?: () => void;
 }
@@ -39,6 +40,7 @@ const getTypeConfig = (type: string) => {
 
 export const QuickTicketCreator: React.FC<QuickTicketCreatorProps> = ({
   columnId,
+  statusKey,
   onSuccess,
   onClose,
 }) => {
@@ -159,6 +161,11 @@ export const QuickTicketCreator: React.FC<QuickTicketCreatorProps> = ({
         column: columnId,
         project: selectedProject.id,
       };
+
+      // NEW: If using status-based system, include status key
+      if (statusKey) {
+        ticketData.status_key = statusKey;
+      }
 
       // Only add optional fields if they have values
       if (assignee) {

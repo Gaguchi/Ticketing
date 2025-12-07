@@ -200,6 +200,170 @@ class Column(models.Model):
         return f"{self.project.key}: {self.name}"
 
 
+class StatusCategory(models.TextChoices):
+    """
+    Fixed categories - determines color and reporting group.
+    These CANNOT be changed by users - they're fundamental to Kanban.
+    """
+    TODO = 'todo', 'To Do'                      # Gray - work not started
+    IN_PROGRESS = 'in_progress', 'In Progress'  # Blue - work in progress
+    DONE = 'done', 'Done'                       # Green - work completed
+
+
+class Status(models.Model):
+    """
+    Global status definitions - shared across ALL projects.
+    Only site admins can create/edit statuses.
+    
+    Examples:
+      - key="open", name="Open", category=TODO
+      - key="in_progress", name="In Progress", category=IN_PROGRESS
+      - key="in_review", name="In Review", category=IN_PROGRESS
+      - key="done", name="Done", category=DONE
+    """
+    key = models.SlugField(
+        max_length=50, 
+        unique=True,
+        help_text='Unique identifier: "open", "in_progress", "done"'
+    )
+    name = models.CharField(
+        max_length=100,
+        help_text='Display name: "Open", "In Progress", "Done"'
+    )
+    description = models.TextField(
+        blank=True,
+        help_text='Optional description of when to use this status'
+    )
+    category = models.CharField(
+        max_length=20,
+        choices=StatusCategory.choices,
+        default=StatusCategory.TODO,
+        db_index=True,
+        help_text='Category determines color and reporting group'
+    )
+    color = models.CharField(
+        max_length=7, 
+        blank=True,
+        help_text='Optional hex color override. If empty, uses category color.'
+    )
+    icon = models.CharField(
+        max_length=50, 
+        blank=True,
+        help_text='Optional icon identifier'
+    )
+    order = models.IntegerField(
+        default=0,
+        help_text='Default display order'
+    )
+    is_default = models.BooleanField(
+        default=False,
+        help_text='System status that cannot be deleted'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['order', 'name']
+        verbose_name = 'Status'
+        verbose_name_plural = 'Statuses'
+    
+    def __str__(self):
+        return f"{self.name} ({self.category})"
+    
+    @property 
+    def category_color(self):
+        """Return color based on category if no custom color set"""
+        if self.color:
+            return self.color
+        return {
+            StatusCategory.TODO: '#6B778C',        # Gray
+            StatusCategory.IN_PROGRESS: '#0052CC', # Blue  
+            StatusCategory.DONE: '#36B37E',        # Green
+        }.get(self.category, '#6B778C')
+    
+    def save(self, *args, **kwargs):
+        # Auto-generate key from name if not provided
+        if not self.key:
+            from django.utils.text import slugify
+            self.key = slugify(self.name).replace('-', '_')
+        super().save(*args, **kwargs)
+
+
+class BoardColumn(models.Model):
+    """
+    Per-project board column configuration.
+    Maps one or more statuses to a visual column on the Kanban board.
+    
+    This is the VIEW layer - it doesn't store any ticket data.
+    Tickets store their STATUS, and columns display tickets by status.
+    """
+    project = models.ForeignKey(
+        'Project', 
+        on_delete=models.CASCADE, 
+        related_name='board_columns'
+    )
+    name = models.CharField(
+        max_length=100,
+        help_text='Display name on the board (can differ from status name)'
+    )
+    statuses = models.ManyToManyField(
+        Status, 
+        related_name='board_columns',
+        help_text='Statuses that appear in this column'
+    )
+    order = models.IntegerField(
+        default=0,
+        help_text='Column position on board (left to right)'
+    )
+    min_limit = models.PositiveIntegerField(
+        null=True, 
+        blank=True,
+        help_text='Minimum tickets warning threshold'
+    )
+    max_limit = models.PositiveIntegerField(
+        null=True, 
+        blank=True,
+        help_text='Maximum tickets (WIP limit) - column turns red if exceeded'
+    )
+    is_collapsed = models.BooleanField(
+        default=False,
+        help_text='Whether column is collapsed by default'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['project', 'order']
+        unique_together = [['project', 'name']]
+        verbose_name = 'Board Column'
+        verbose_name_plural = 'Board Columns'
+    
+    def __str__(self):
+        return f"{self.project.key}: {self.name}"
+    
+    def ticket_count(self):
+        """Count tickets in this column (across all its mapped statuses)"""
+        return Ticket.objects.filter(
+            project=self.project,
+            ticket_status__in=self.statuses.all(),
+            is_archived=False
+        ).count()
+    
+    @property
+    def is_over_limit(self):
+        """Check if column exceeds WIP limit"""
+        if self.max_limit is None:
+            return False
+        return self.ticket_count() > self.max_limit
+    
+    @property
+    def is_under_limit(self):
+        """Check if column is below minimum threshold"""
+        if self.min_limit is None:
+            return False
+        return self.ticket_count() < self.min_limit
+
+
 class TicketPosition(models.Model):
     """
     Lightweight model storing only ticket position data.
@@ -498,6 +662,23 @@ class Ticket(models.Model):
     )
     column = models.ForeignKey(Column, on_delete=models.CASCADE, related_name='tickets')
     column_order = models.IntegerField(default=0, help_text='Order of ticket within its column for kanban board')
+    
+    # NEW: Jira-style status system (ticket_status to avoid conflict with old 'status' field)
+    ticket_status = models.ForeignKey(
+        'Status',
+        on_delete=models.PROTECT,  # Prevent deleting statuses with tickets
+        related_name='tickets',
+        null=True,  # Nullable during migration, will become required
+        blank=True,
+        help_text='Current status (e.g., "in_progress", "done")'
+    )
+    rank = models.CharField(
+        max_length=50,
+        default='n',
+        db_index=True,
+        help_text='LexoRank for ordering within status group'
+    )
+    
     assignees = models.ManyToManyField(User, related_name='assigned_tickets', blank=True)
     reporter = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='reported_tickets')
     parent = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='subtasks')
@@ -545,6 +726,12 @@ class Ticket(models.Model):
     class Meta:
         ordering = ['column', 'column_order', '-created_at']
         unique_together = [['project', 'project_number']]
+        indexes = [
+            # New indexes for Jira-style status system
+            models.Index(fields=['project', 'ticket_status']),
+            models.Index(fields=['project', 'ticket_status', 'rank']),
+            models.Index(fields=['ticket_status', 'rank']),
+        ]
 
     def __str__(self):
         if self.project_number:
@@ -665,6 +852,62 @@ class Ticket(models.Model):
         
         # Delegate to the new lightweight TicketPosition.move_ticket method
         return TicketPosition.move_ticket(self, target_column_id, target_order, max_retries, broadcast)
+
+    def move_to_status(self, new_status_key, before_ticket=None, after_ticket=None, broadcast=True):
+        """
+        Move ticket to a new status and/or position using LexoRank.
+        
+        This is the NEW way to move tickets - uses Status model and LexoRank
+        instead of Column and integer positions.
+        
+        Args:
+            new_status_key: Key of target status (e.g., "in_progress")
+            before_ticket: Ticket that should be ABOVE this one (optional)
+            after_ticket: Ticket that should be BELOW this one (optional)
+            broadcast: Whether to broadcast WebSocket update (default: True)
+        
+        Returns:
+            Updated ticket instance
+        """
+        from tickets.utils.lexorank import rank_between
+        from channels.layers import get_channel_layer
+        from asgiref.sync import async_to_sync
+        
+        # Get new status
+        new_status = Status.objects.get(key=new_status_key)
+        old_status = self.ticket_status
+        
+        # Calculate new rank
+        before_rank = before_ticket.rank if before_ticket else None
+        after_rank = after_ticket.rank if after_ticket else None
+        new_rank = rank_between(before_rank, after_rank)
+        
+        # Update ticket - SINGLE database write!
+        self.ticket_status = new_status
+        self.rank = new_rank
+        self.save(update_fields=['ticket_status', 'rank', 'updated_at'])
+        
+        # Broadcast via WebSocket
+        if broadcast:
+            try:
+                channel_layer = get_channel_layer()
+                async_to_sync(channel_layer.group_send)(
+                    f'project_{self.project_id}_tickets',
+                    {
+                        'type': 'ticket_moved',
+                        'data': {
+                            'ticket_id': self.id,
+                            'ticket_key': self.ticket_key,
+                            'old_status': old_status.key if old_status else None,
+                            'new_status': new_status.key,
+                            'rank': self.rank,
+                        }
+                    }
+                )
+            except Exception as e:
+                print(f"⚠️ Failed to broadcast ticket move: {e}")
+        
+        return self
 
     def archive(self, archived_by=None, reason=None, auto=False):
         if self.is_archived:

@@ -5,7 +5,7 @@ from .views import (
     TicketViewSet, ColumnViewSet, ProjectViewSet, CommentViewSet, AttachmentViewSet,
     TagViewSet, ContactViewSet, TagContactViewSet, UserTagViewSet, TicketTagViewSet,
     IssueLinkViewSet, CompanyViewSet, UserManagementViewSet, TicketSubtaskViewSet,
-    NotificationViewSet, ProjectInvitationViewSet,
+    NotificationViewSet, ProjectInvitationViewSet, StatusViewSet, BoardColumnViewSet,
     register_user, login_user, get_current_user,
     # Dashboard views
     dashboard_company_health, dashboard_attention_needed, dashboard_newest_tickets,
@@ -29,6 +29,9 @@ router.register(r'issue-links', IssueLinkViewSet, basename='issue-link')
 router.register(r'subtasks', TicketSubtaskViewSet, basename='subtask')
 router.register(r'notifications', NotificationViewSet, basename='notification')
 router.register(r'invitations', ProjectInvitationViewSet, basename='invitation')
+# NEW: Jira-style Status System
+router.register(r'statuses', StatusViewSet, basename='status')
+router.register(r'board-columns', BoardColumnViewSet, basename='board-column')
 
 urlpatterns = [
     # Authentication endpoints

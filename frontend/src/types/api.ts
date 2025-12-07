@@ -180,6 +180,72 @@ export interface ReorderColumnsData {
 }
 
 // ============================================================================
+// Jira-style Status System
+// ============================================================================
+
+export type StatusCategory = 'todo' | 'in_progress' | 'done';
+
+export interface Status {
+  key: string;           // "in_progress", "done", etc.
+  name: string;          // "In Progress", "Done"
+  description?: string;
+  category: StatusCategory;
+  color?: string;
+  category_color: string;  // Computed from category if no custom color
+  icon?: string;
+  order: number;
+  is_default: boolean;
+}
+
+export interface BoardColumn {
+  id: number;
+  name: string;          // Display name on board
+  order: number;
+  statuses: Status[];    // Mapped statuses
+  status_keys?: string[]; // Write-only: for updates
+  min_limit?: number | null;
+  max_limit?: number | null;
+  is_collapsed: boolean;
+  ticket_count: number;
+  is_over_limit: boolean;
+  is_under_limit: boolean;
+  project: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateBoardColumnData {
+  name: string;
+  project: number;
+  order?: number;
+  status_keys: string[];
+  max_limit?: number;
+}
+
+export interface UpdateBoardColumnData {
+  name?: string;
+  order?: number;
+  status_keys?: string[];
+  min_limit?: number | null;
+  max_limit?: number | null;
+  is_collapsed?: boolean;
+}
+
+export interface ReorderBoardColumnsData {
+  project: number;
+  order: Array<{
+    id: number;
+    order: number;
+  }>;
+}
+
+export interface MoveTicketToStatusRequest {
+  status: string;        // Target status key
+  before_id?: number;    // Ticket that should be above
+  after_id?: number;     // Ticket that should be below
+}
+
+// ============================================================================
 // Ticket
 // ============================================================================
 
@@ -193,10 +259,17 @@ export interface Ticket {
   name: string;
   description?: string;
   type: TicketType;
-  status: TicketStatus;
+  status: TicketStatus;  // Legacy string status field
   priority_id: number;
   urgency: TicketUrgency;
   importance: TicketImportance;
+  
+  // NEW: Jira-style status fields
+  ticket_status_key?: string | null;           // Status KEY: "in_progress"
+  ticket_status_name?: string | null;          // Display name: "In Progress"
+  ticket_status_category?: StatusCategory | null;
+  ticket_status_color?: string | null;
+  rank?: string;                                // LexoRank: "aab", "n", etc.
   
   // Relationships
   company: number | null;

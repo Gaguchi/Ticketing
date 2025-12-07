@@ -1,7 +1,7 @@
 from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.models import User
@@ -19,17 +19,17 @@ from .pagination import StandardResultsSetPagination
 from .models import (
     Ticket, Column, Project, Comment, Attachment,
     Tag, Contact, TagContact, UserTag, TicketTag, IssueLink, Company, UserRole, TicketSubtask,
-    Notification, ProjectInvitation, TicketHistory
+    Notification, ProjectInvitation, TicketHistory, Status, BoardColumn
 )
 from .serializers import (
-    TicketSerializer, TicketListSerializer, ColumnSerializer,
+    TicketSerializer, TicketListSerializer, KanbanTicketSerializer, ColumnSerializer,
     ProjectSerializer, CommentSerializer, AttachmentSerializer,
     TagSerializer, TagListSerializer, ContactSerializer,
     TagContactSerializer, UserTagSerializer, TicketTagSerializer,
     IssueLinkSerializer, CompanySerializer, CompanyListSerializer,
     UserManagementSerializer, UserCreateUpdateSerializer, UserRoleSerializer, TicketSubtaskSerializer,
     NotificationSerializer, ProjectInvitationSerializer, InviteUserSerializer, AcceptInvitationSerializer,
-    TicketHistorySerializer
+    TicketHistorySerializer, StatusSerializer, BoardColumnSerializer
 )
 from .email_service import send_invitation_email
 from .services import auto_archive_completed_tickets
@@ -903,6 +903,107 @@ class ProjectViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
+# ==================== Jira-style Status System ViewSets ====================
+
+class StatusViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint for global statuses.
+    Only site admins can create/update/delete.
+    All authenticated users can read.
+    
+    Statuses are shared across ALL projects and define
+    the possible workflow states (e.g., Open, In Progress, Done).
+    """
+    queryset = Status.objects.all()
+    serializer_class = StatusSerializer
+    lookup_field = 'key'  # Use key instead of id in URLs
+    filter_backends = [filters.OrderingFilter]
+    ordering_fields = ['order', 'name', 'category']
+    ordering = ['order']
+    
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsAdminUser()]
+        return [IsAuthenticated()]
+    
+    def destroy(self, request, *args, **kwargs):
+        status_obj = self.get_object()
+        
+        if status_obj.is_default:
+            return Response(
+                {'error': 'Cannot delete default system status'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if status_obj.tickets.exists():
+            return Response(
+                {'error': f'Cannot delete status with {status_obj.tickets.count()} tickets. Move tickets first.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        return super().destroy(request, *args, **kwargs)
+
+
+class BoardColumnViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint for per-project board columns.
+    Board columns are visual groupings that map one or more statuses.
+    
+    Project admins can configure their board columns to customize
+    how statuses appear on the Kanban board.
+    """
+    serializer_class = BoardColumnSerializer
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ['project']
+    ordering_fields = ['order']
+    ordering = ['order']
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        return BoardColumn.objects.filter(
+            project__members=self.request.user
+        ).prefetch_related('statuses')
+    
+    @action(detail=False, methods=['post'])
+    def reorder(self, request):
+        """
+        Reorder columns within a project.
+        
+        Request body:
+        {
+            "project": 1,
+            "order": [
+                {"id": 5, "order": 0},
+                {"id": 3, "order": 1},
+                {"id": 7, "order": 2}
+            ]
+        }
+        """
+        project_id = request.data.get('project')
+        order_data = request.data.get('order', [])
+        
+        if not project_id:
+            return Response(
+                {'error': 'project is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check user has access to project
+        if not Project.objects.filter(id=project_id, members=request.user).exists():
+            return Response(
+                {'error': 'Project not found or access denied'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        for item in order_data:
+            BoardColumn.objects.filter(
+                id=item['id'],
+                project_id=project_id
+            ).update(order=item['order'])
+        
+        return Response({'status': 'columns reordered'})
+
+
 class TicketViewSet(viewsets.ModelViewSet):
     """
     ViewSet for Ticket CRUD operations with company-based filtering.
@@ -913,7 +1014,7 @@ class TicketViewSet(viewsets.ModelViewSet):
     - IT Admins: See tickets for companies they're assigned to
     - Company Users: See only their company's tickets
     """
-    queryset = Ticket.objects.select_related('company', 'column', 'project', 'reporter', 'position').prefetch_related('assignees', 'tags')
+    queryset = Ticket.objects.select_related('company', 'column', 'project', 'reporter', 'position', 'ticket_status').prefetch_related('assignees', 'tags')
     permission_classes = [IsAuthenticated]  # Basic authentication only, filtering handled in get_queryset
     pagination_class = StandardResultsSetPagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -923,6 +1024,10 @@ class TicketViewSet(viewsets.ModelViewSet):
     ordering = ['column', 'column_order', '-created_at']
     
     def get_serializer_class(self):
+        # Use minimal serializer for kanban view
+        view_mode = self.request.query_params.get('view')
+        if view_mode == 'kanban':
+            return KanbanTicketSerializer
         if self.action in ['list', 'archived']:
             return TicketListSerializer
         return TicketSerializer
@@ -931,7 +1036,7 @@ class TicketViewSet(viewsets.ModelViewSet):
         user = self.request.user
 
         base_queryset = Ticket.objects.select_related(
-            'company', 'column', 'project', 'reporter', 'position'
+            'company', 'column', 'project', 'reporter', 'position', 'ticket_status'
         ).prefetch_related(
             'assignees', 'tags'
         ).annotate(
@@ -1006,14 +1111,47 @@ class TicketViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
     
     def list(self, request, *args, **kwargs):
-        """Trigger automatic archiving before returning the ticket list."""
+        """
+        Return ticket list. Auto-archiving is rate-limited to avoid 
+        running expensive queries on every request.
+        
+        Supports ?view=kanban for optimized Kanban response with columns included.
+        """
         project_id = request.query_params.get('project')
+        view_mode = request.query_params.get('view')
+        
         try:
             project_id_int = int(project_id) if project_id else None
         except (TypeError, ValueError):
             project_id_int = None
 
-        auto_archive_completed_tickets(project_id_int)
+        # Rate limit auto-archive to once per minute per project
+        from django.core.cache import cache
+        cache_key = f'auto_archive_last_run:{project_id_int or "all"}'
+        if not cache.get(cache_key):
+            auto_archive_completed_tickets(project_id_int)
+            cache.set(cache_key, True, timeout=60)  # 60 seconds
+        
+        # For kanban view, include columns in response to save an extra API call
+        if view_mode == 'kanban' and project_id_int:
+            response = super().list(request, *args, **kwargs)
+            
+            # Get board columns (new status system) - prioritize these
+            board_columns = BoardColumn.objects.filter(
+                project_id=project_id_int
+            ).prefetch_related('statuses').order_by('order')
+            
+            # Get old columns as fallback
+            old_columns = Column.objects.filter(
+                project_id=project_id_int
+            ).order_by('order')
+            
+            # Add columns to response
+            response.data['board_columns'] = BoardColumnSerializer(board_columns, many=True).data
+            response.data['columns'] = ColumnSerializer(old_columns, many=True).data
+            
+            return response
+        
         return super().list(request, *args, **kwargs)
     
     def perform_create(self, serializer):
@@ -1309,6 +1447,65 @@ class TicketViewSet(viewsets.ModelViewSet):
             return Response(
                 {'error': 'Column not found'},
                 status=status.HTTP_404_NOT_FOUND
+            )
+
+    @action(detail=True, methods=['patch'])
+    def move_to_status(self, request, pk=None):
+        """
+        Move ticket to new status and/or position using LexoRank.
+        
+        This is the NEW way to move tickets - uses Status model and LexoRank
+        instead of Column and integer positions. Single UPDATE query, no shifting.
+        
+        Request body:
+        {
+            "status": "in_progress",     // Target status key (required)
+            "before_id": 123,            // Optional: ticket that should be above
+            "after_id": 456              // Optional: ticket that should be below
+        }
+        
+        Returns: Updated ticket data
+        """
+        ticket = self.get_object()
+        
+        new_status_key = request.data.get('status')
+        before_id = request.data.get('before_id')
+        after_id = request.data.get('after_id')
+        
+        if not new_status_key:
+            return Response(
+                {'error': 'status is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validate status exists
+        try:
+            new_status_obj = Status.objects.get(key=new_status_key)
+        except Status.DoesNotExist:
+            return Response(
+                {'error': f'Invalid status: {new_status_key}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Get neighbor tickets for rank calculation
+        before_ticket = Ticket.objects.filter(id=before_id).first() if before_id else None
+        after_ticket = Ticket.objects.filter(id=after_id).first() if after_id else None
+        
+        # Use the model's move method
+        try:
+            ticket.move_to_status(
+                new_status_key, 
+                before_ticket=before_ticket, 
+                after_ticket=after_ticket
+            )
+            
+            serializer = self.get_serializer(ticket)
+            return Response(serializer.data)
+            
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
     @action(detail=False, methods=['post'])
