@@ -99,7 +99,7 @@ class StatusService {
       before_id: options?.beforeId,
       after_id: options?.afterId,
     };
-    return apiService.post<Ticket>(
+    return apiService.patch<Ticket>(
       API_ENDPOINTS.TICKET_MOVE_TO_STATUS(ticketId),
       payload
     );

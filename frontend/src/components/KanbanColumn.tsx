@@ -16,8 +16,8 @@ interface KanbanColumnProps {
   items: string[];
   name: string;
   ticketMap: Record<string, Ticket>;
-  columnId: number;           // Column ID for old system
-  statusKey?: string;         // Status key for new system (if using status-based creation)
+  columnId: number; // Column ID for old system
+  statusKey?: string; // Status key for new system (if using status-based creation)
   isSortingContainer?: boolean;
   dragOverlay?: boolean;
   onTicketClick?: (ticket: Ticket) => void;

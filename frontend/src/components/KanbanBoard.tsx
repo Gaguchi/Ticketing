@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import {
   closestCorners,
   DndContext,
@@ -10,7 +10,8 @@ import {
   useSensor,
   MeasuringStrategy,
 } from "@dnd-kit/core";
-import type { DragStartEvent, DragEndEvent } from "@dnd-kit/core";
+import type { DragStartEvent, DragEndEvent, DragOverEvent } from "@dnd-kit/core";
+import { arrayMove } from "@dnd-kit/sortable";
 import {
   SortableContext,
   horizontalListSortingStrategy,
@@ -21,8 +22,8 @@ import type { Ticket, TicketColumn, BoardColumn } from "../types/api";
 
 // Adapter type to support both old TicketColumn and new BoardColumn
 interface KanbanColumnData {
-  id: string;           // For DnD - "column-{id}" or "status-{key}"
-  numericId: number;    // Original ID (for old system)
+  id: string; // For DnD - "column-{id}" or "status-{key}"
+  numericId: number; // Original ID (for old system)
   name: string;
   order: number;
   statusKeys: string[]; // Status keys this column represents (new system)
@@ -32,8 +33,8 @@ interface KanbanColumnData {
 interface KanbanBoardProps {
   tickets: Ticket[];
   // Support both old and new column systems
-  columns?: TicketColumn[];           // Old system
-  boardColumns?: BoardColumn[];       // New system
+  columns?: TicketColumn[]; // Old system
+  boardColumns?: BoardColumn[]; // New system
   onTicketClick?: (ticket: Ticket) => void;
   // Old move handler (column-based)
   onTicketMove?: (
@@ -63,9 +64,11 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 }) => {
   // Determine which mode we're in
   const useNewStatusSystem = Boolean(boardColumns && boardColumns.length > 0);
-  
-  // Only state: which ticket is being dragged (for DragOverlay UI)
+
+  // State for drag operations
   const [activeId, setActiveId] = useState<string | null>(null);
+  // Track items during drag for cross-column preview
+  const [dragOverItems, setDragOverItems] = useState<Record<string, string[]> | null>(null);
 
   // Normalize columns to unified format
   const normalizedColumns: KanbanColumnData[] = useMemo(() => {
@@ -122,7 +125,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     // Group tickets based on system
     tickets.forEach((ticket) => {
       let columnKey: string | undefined;
-      
+
       if (useNewStatusSystem && ticket.ticket_status_key) {
         // New system: map status key to column
         columnKey = statusToColumnMap[ticket.ticket_status_key];
@@ -130,7 +133,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         // Old system: use column ID directly
         columnKey = `column-${ticket.column}`;
       }
-      
+
       if (columnKey && grouped[columnKey]) {
         grouped[columnKey].push(`ticket-${ticket.id}`);
       }
@@ -141,11 +144,11 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       grouped[columnKey].sort((a, b) => {
         const ticketA = tickets.find((t) => `ticket-${t.id}` === a);
         const ticketB = tickets.find((t) => `ticket-${t.id}` === b);
-        
+
         if (useNewStatusSystem) {
           // New system: sort by LexoRank
-          const rankA = ticketA?.rank || '';
-          const rankB = ticketB?.rank || '';
+          const rankA = ticketA?.rank || "";
+          const rankB = ticketB?.rank || "";
           return rankA.localeCompare(rankB);
         } else {
           // Old system: sort by column_order
@@ -156,6 +159,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
     return grouped;
   }, [tickets, normalizedColumns, useNewStatusSystem, statusToColumnMap]);
+
+  // Use drag-over items during drag for preview, otherwise use computed items
+  const currentItems = dragOverItems ?? ticketsByColumn;
 
   // Map for quick ticket lookup
   const ticketMap = useMemo(() => {
@@ -183,112 +189,198 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     useSensor(KeyboardSensor)
   );
 
-  // Find which column contains a ticket
-  const findContainer = (id: string): string | undefined => {
+  // Find which column contains a ticket (uses currentItems for drag preview)
+  const findContainer = useCallback((id: string): string | undefined => {
     if (containerIds.includes(id)) return id;
+    const items = dragOverItems ?? ticketsByColumn;
     return containerIds.find((containerId) =>
-      ticketsByColumn[containerId]?.includes(id)
+      items[containerId]?.includes(id)
     );
-  };
+  }, [containerIds, dragOverItems, ticketsByColumn]);
 
   function handleDragStart({ active }: DragStartEvent) {
     setActiveId(active.id as string);
+    // Initialize dragOverItems from ticketsByColumn
+    setDragOverItems({ ...ticketsByColumn });
+  }
+
+  function handleDragOver({ active, over }: DragOverEvent) {
+    if (!over || !dragOverItems) return;
+
+    const activeId = active.id as string;
+    const overId = over.id as string;
+
+    // Find current containers
+    const activeContainer = findContainer(activeId);
+    const overContainer = containerIds.includes(overId) 
+      ? overId 
+      : findContainer(overId);
+
+    if (!activeContainer || !overContainer) {
+      console.log('[DragOver] No container found:', { activeContainer, overContainer });
+      return;
+    }
+
+    // If same container, reorder within
+    if (activeContainer === overContainer) {
+      const items = dragOverItems[activeContainer];
+      const oldIndex = items.indexOf(activeId);
+      const newIndex = containerIds.includes(overId) 
+        ? items.length - 1 // Dropped on column = end of column
+        : items.indexOf(overId);
+
+      if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
+        console.log(`[DragOver] Same column reorder: oldIndex=${oldIndex}, newIndex=${newIndex}, overId=${overId}`);
+        setDragOverItems({
+          ...dragOverItems,
+          [activeContainer]: arrayMove(items, oldIndex, newIndex),
+        });
+      }
+    } else {
+      // Cross-column move
+      const activeItems = [...dragOverItems[activeContainer]];
+      const overItems = [...dragOverItems[overContainer]];
+
+      const activeIndex = activeItems.indexOf(activeId);
+      const overIndex = containerIds.includes(overId)
+        ? overItems.length // Dropped on column = end
+        : overItems.indexOf(overId);
+
+      console.log(`[DragOver] Cross-column: from=${activeContainer} to=${overContainer}, activeIndex=${activeIndex}, overIndex=${overIndex}, overId=${overId}`);
+
+      // Remove from source
+      activeItems.splice(activeIndex, 1);
+      
+      // Insert into destination
+      overItems.splice(overIndex < 0 ? overItems.length : overIndex, 0, activeId);
+
+      setDragOverItems({
+        ...dragOverItems,
+        [activeContainer]: activeItems,
+        [overContainer]: overItems,
+      });
+    }
   }
 
   function handleDragEnd({ active, over }: DragEndEvent) {
+    const activeTicketId = active.id as string;
+    const overId = over?.id as string;
+
+    // Find source column BEFORE resetting state (uses dragOverItems if available)
+    const sourceContainer = findContainer(activeTicketId);
+    
+    // Find destination column
+    let destContainer: string | undefined;
+    if (over) {
+      if (containerIds.includes(overId)) {
+        destContainer = overId;
+      } else {
+        destContainer = findContainer(overId);
+      }
+    }
+
+    // Get the final positions from dragOverItems before resetting
+    const finalItems = dragOverItems ? { ...dragOverItems } : null;
+
+    // Reset preview state
+    setDragOverItems(null);
     setActiveId(null);
 
-    if (!over) return;
-
-    const activeTicketId = active.id as string;
-    const overId = over.id as string;
-
-    // Find source column
-    const sourceContainer = findContainer(activeTicketId);
-    if (!sourceContainer) return;
-
-    // Find destination column
-    let destContainer: string;
-    if (containerIds.includes(overId)) {
-      // Dropped on column itself
-      destContainer = overId;
-    } else {
-      // Dropped on a ticket - find its column
-      const container = findContainer(overId);
-      if (!container) return;
-      destContainer = container;
+    if (!over || !sourceContainer || !destContainer) {
+      console.log('[DragEnd] Early return - missing over/source/dest:', { over: !!over, sourceContainer, destContainer });
+      return;
     }
 
     const ticketId = parseInt(activeTicketId.replace("ticket-", ""));
 
+    console.log(`[DragEnd] ticketId=${ticketId}, from=${sourceContainer} to=${destContainer}, sameCol=${sourceContainer === destContainer}, overId=${overId}`);
+
     // Handle new status-based system
     if (useNewStatusSystem && onTicketMoveToStatus) {
       const destColumn = columnMap[destContainer];
-      if (!destColumn || destColumn.statusKeys.length === 0) return;
-      
+      if (!destColumn || destColumn.statusKeys.length === 0) {
+        console.log('[DragEnd] No dest column or status keys');
+        return;
+      }
+
       // Use the first status in the column (primary status)
       const targetStatusKey = destColumn.statusKeys[0];
+
+      // Use the FINAL drag state to determine positioning
+      // This shows where the user actually dropped the ticket
+      const finalDestTickets = finalItems?.[destContainer] || [];
+      const dropIndex = finalDestTickets.indexOf(activeTicketId);
       
-      // Determine before/after ticket for LexoRank positioning
-      const destTickets = ticketsByColumn[destContainer] || [];
-      let beforeTicketId: number | undefined;
-      let afterTicketId: number | undefined;
+      // Get original position to detect no-op
+      const origTickets = ticketsByColumn[destContainer] || [];
+      const origIndex = origTickets.indexOf(activeTicketId);
       
-      if (containerIds.includes(overId)) {
-        // Dropped on column header - put at end
-        if (sourceContainer === destContainer) return; // No-op
-        if (destTickets.length > 0) {
-          afterTicketId = parseInt(destTickets[destTickets.length - 1].replace("ticket-", ""));
+      // Check if this is a no-op (same column, same position)
+      if (sourceContainer === destContainer && dropIndex === origIndex) {
+        console.log(`[DragEnd] No-op: same position (index=${dropIndex})`);
+        return;
+      }
+      
+      console.log(`[DragEnd] status=${targetStatusKey}, origIndex=${origIndex}, dropIndex=${dropIndex}`);
+      console.log(`[DragEnd] finalTickets: ${finalDestTickets.join(', ')}`);
+      console.log(`[DragEnd] origTickets: ${origTickets.join(', ')}`);
+
+      // LexoRank semantics:
+      // - before_id = ticket ABOVE the drop position (has smaller rank)
+      // - after_id = ticket BELOW the drop position (has larger rank)
+      // 
+      // In our list, index 0 is at the top (smallest rank), so:
+      // - dropIndex - 1 = ticket above = before_id
+      // - dropIndex + 1 = ticket below = after_id
+      let beforeTicketId: number | undefined; // Ticket ABOVE (smaller rank)
+      let afterTicketId: number | undefined;  // Ticket BELOW (larger rank)
+
+      if (dropIndex === -1) {
+        // Shouldn't happen, but fallback to end of column
+        console.log('[DragEnd] Ticket not found in final items, placing at end');
+        if (origTickets.length > 0) {
+          const lastTicket = origTickets[origTickets.length - 1];
+          if (lastTicket !== activeTicketId) {
+            // Place after the last ticket (it becomes our "before")
+            beforeTicketId = parseInt(lastTicket.replace("ticket-", ""));
+          }
         }
       } else {
-        // Dropped on a ticket
-        const overIndex = destTickets.indexOf(overId);
-        if (overIndex === -1) {
-          // Fallback: put at end
-          if (destTickets.length > 0) {
-            afterTicketId = parseInt(destTickets[destTickets.length - 1].replace("ticket-", ""));
+        // Get neighbors from the final drop position
+        // Ticket ABOVE the drop position (smaller rank = "before")
+        if (dropIndex > 0) {
+          const aboveTicket = finalDestTickets[dropIndex - 1];
+          if (aboveTicket !== activeTicketId) {
+            beforeTicketId = parseInt(aboveTicket.replace("ticket-", ""));
           }
-        } else {
-          // Insert at the position of the target ticket
-          if (sourceContainer === destContainer) {
-            // Same column reorder
-            const currentIndex = destTickets.indexOf(activeTicketId);
-            if (currentIndex === overIndex) return; // No change
-            
-            if (currentIndex < overIndex) {
-              // Moving down: place after the target
-              afterTicketId = parseInt(destTickets[overIndex].replace("ticket-", ""));
-              if (overIndex + 1 < destTickets.length) {
-                beforeTicketId = parseInt(destTickets[overIndex + 1].replace("ticket-", ""));
-              }
-            } else {
-              // Moving up: place before the target  
-              beforeTicketId = parseInt(destTickets[overIndex].replace("ticket-", ""));
-              if (overIndex > 0) {
-                afterTicketId = parseInt(destTickets[overIndex - 1].replace("ticket-", ""));
-              }
-            }
-          } else {
-            // Cross-column move: insert before the target
-            beforeTicketId = parseInt(destTickets[overIndex].replace("ticket-", ""));
-            if (overIndex > 0) {
-              afterTicketId = parseInt(destTickets[overIndex - 1].replace("ticket-", ""));
-            }
+        }
+        // Ticket BELOW the drop position (larger rank = "after")
+        if (dropIndex < finalDestTickets.length - 1) {
+          const belowTicket = finalDestTickets[dropIndex + 1];
+          if (belowTicket !== activeTicketId) {
+            afterTicketId = parseInt(belowTicket.replace("ticket-", ""));
           }
         }
       }
-      
+
       // Don't pass the ticket's own ID as before/after
       if (beforeTicketId === ticketId) beforeTicketId = undefined;
       if (afterTicketId === ticketId) afterTicketId = undefined;
-      
-      onTicketMoveToStatus(ticketId, targetStatusKey, beforeTicketId, afterTicketId);
+
+      console.log(`[DragEnd] API CALL: ticketId=${ticketId}, status=${targetStatusKey}, beforeId=${beforeTicketId}, afterId=${afterTicketId}`);
+
+      onTicketMoveToStatus(
+        ticketId,
+        targetStatusKey,
+        beforeTicketId,
+        afterTicketId
+      );
       return;
     }
 
     // Handle old column-based system
     if (!onTicketMove) return;
-    
+
     const newColumnId = parseInt(destContainer.replace("column-", ""));
     const oldColumnId = parseInt(sourceContainer.replace("column-", ""));
 
@@ -328,6 +420,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   }
 
   function handleDragCancel() {
+    setDragOverItems(null);
     setActiveId(null);
   }
 
@@ -342,6 +435,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           droppable: { strategy: MeasuringStrategy.WhileDragging },
         }}
         onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
@@ -351,7 +445,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             strategy={horizontalListSortingStrategy}
           >
             {normalizedColumns.map((column) => {
-              const items = ticketsByColumn[column.id] || [];
+              const items = currentItems[column.id] || [];
 
               return (
                 <KanbanColumn

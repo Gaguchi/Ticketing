@@ -1466,11 +1466,16 @@ class TicketViewSet(viewsets.ModelViewSet):
         
         Returns: Updated ticket data
         """
+        import logging
+        logger = logging.getLogger(__name__)
+        
         ticket = self.get_object()
         
         new_status_key = request.data.get('status')
         before_id = request.data.get('before_id')
         after_id = request.data.get('after_id')
+        
+        logger.info(f"[move_to_status] Ticket {ticket.id}: status={new_status_key}, before_id={before_id}, after_id={after_id}")
         
         if not new_status_key:
             return Response(

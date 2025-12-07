@@ -18,7 +18,7 @@ const { TextArea } = Input;
 
 interface QuickTicketCreatorProps {
   columnId: number;
-  statusKey?: string;  // NEW: Status key for new status-based system
+  statusKey?: string; // NEW: Status key for new status-based system
   onSuccess?: (ticket: Ticket) => void;
   onClose?: () => void;
 }

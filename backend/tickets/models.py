@@ -873,6 +873,11 @@ class Ticket(models.Model):
         from channels.layers import get_channel_layer
         from asgiref.sync import async_to_sync
         
+        print(f"🎯 [move_to_status] Ticket {self.id} ({self.ticket_key}):")
+        print(f"   new_status_key: {new_status_key}")
+        print(f"   before_ticket: {before_ticket.id if before_ticket else None} (rank: {before_ticket.rank if before_ticket else None})")
+        print(f"   after_ticket: {after_ticket.id if after_ticket else None} (rank: {after_ticket.rank if after_ticket else None})")
+        
         # Get new status
         new_status = Status.objects.get(key=new_status_key)
         old_status = self.ticket_status
@@ -881,6 +886,10 @@ class Ticket(models.Model):
         before_rank = before_ticket.rank if before_ticket else None
         after_rank = after_ticket.rank if after_ticket else None
         new_rank = rank_between(before_rank, after_rank)
+        
+        print(f"   old_rank: {self.rank}")
+        print(f"   new_rank: {new_rank}")
+        print(f"   old_status: {old_status.key if old_status else None} -> new_status: {new_status.key}")
         
         # Update ticket - SINGLE database write!
         self.ticket_status = new_status

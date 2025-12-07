@@ -138,18 +138,15 @@ const Tickets: React.FC = () => {
 
         // OPTIMIZED: Single API call with view=kanban returns tickets + columns
         // This replaces 3 parallel API calls with 1, and uses minimal serializer
-        const kanbanData = await ticketService.getKanbanData(selectedProject.id);
-
-        debug.log(
-          LogCategory.TICKET,
-          LogLevel.INFO,
-          "Kanban data loaded:",
-          {
-            tickets: kanbanData.count,
-            boardColumns: kanbanData.board_columns?.length || 0,
-            oldColumns: kanbanData.columns?.length || 0,
-          }
+        const kanbanData = await ticketService.getKanbanData(
+          selectedProject.id
         );
+
+        debug.log(LogCategory.TICKET, LogLevel.INFO, "Kanban data loaded:", {
+          tickets: kanbanData.count,
+          boardColumns: kanbanData.board_columns?.length || 0,
+          oldColumns: kanbanData.columns?.length || 0,
+        });
 
         // Use new status system if board columns exist
         if (kanbanData.board_columns && kanbanData.board_columns.length > 0) {
@@ -441,6 +438,15 @@ const Tickets: React.FC = () => {
     beforeTicketId?: number,
     afterTicketId?: number
   ) => {
+    console.log(`[Tickets] moveToStatus: ticketId=${ticketId}, status=${statusKey}, before=${beforeTicketId}, after=${afterTicketId}`);
+
+    // Debounce: skip if same ticket was moved in the last 500ms
+    const lastMoveTime = recentTicketUpdatesRef.current.get(ticketId);
+    if (lastMoveTime && Date.now() - lastMoveTime < 500) {
+      console.log(`[Tickets] Debounced duplicate move for ticket ${ticketId}`);
+      return;
+    }
+
     const ticket = tickets.find((t) => t.id === ticketId);
     if (!ticket) {
       message.error("Ticket not found");
@@ -459,7 +465,9 @@ const Tickets: React.FC = () => {
     const targetColumn = boardColumns.find((bc) =>
       bc.statuses.some((s) => s.key === statusKey)
     );
-    const targetStatus = targetColumn?.statuses.find((s) => s.key === statusKey);
+    const targetStatus = targetColumn?.statuses.find(
+      (s) => s.key === statusKey
+    );
 
     setTickets((prevTickets) =>
       prevTickets.map((t) =>

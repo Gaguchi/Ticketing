@@ -3,6 +3,7 @@
 ## Overview
 
 This document provides a complete implementation plan that:
+
 1. Implements Jira-style Status system (global statuses, per-project board columns)
 2. Eliminates current complexity (TicketPosition dual-source-of-truth)
 3. Optimizes PostgreSQL, Redis, and WebSocket usage
@@ -82,7 +83,7 @@ class Status(models.Model):
     """
     Global status definitions - shared across ALL projects.
     Only site admins can create/edit statuses.
-    
+
     Examples:
       - key="open", name="Open", category=TODO
       - key="in_progress", name="In Progress", category=IN_PROGRESS
@@ -90,7 +91,7 @@ class Status(models.Model):
       - key="done", name="Done", category=DONE
     """
     key = models.SlugField(
-        max_length=50, 
+        max_length=50,
         unique=True,
         help_text='Unique identifier: "open", "in_progress", "done"'
     )
@@ -110,12 +111,12 @@ class Status(models.Model):
         help_text='Category determines color and reporting group'
     )
     color = models.CharField(
-        max_length=7, 
+        max_length=7,
         blank=True,
         help_text='Optional hex color override. If empty, uses category color.'
     )
     icon = models.CharField(
-        max_length=50, 
+        max_length=50,
         blank=True,
         help_text='Optional icon identifier'
     )
@@ -129,26 +130,26 @@ class Status(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         ordering = ['order', 'name']
         verbose_name = 'Status'
         verbose_name_plural = 'Statuses'
-    
+
     def __str__(self):
         return f"{self.name} ({self.category})"
-    
-    @property 
+
+    @property
     def category_color(self):
         """Return color based on category if no custom color set"""
         if self.color:
             return self.color
         return {
             StatusCategory.TODO: '#6B778C',        # Gray
-            StatusCategory.IN_PROGRESS: '#0052CC', # Blue  
+            StatusCategory.IN_PROGRESS: '#0052CC', # Blue
             StatusCategory.DONE: '#36B37E',        # Green
         }.get(self.category, '#6B778C')
-    
+
     def save(self, *args, **kwargs):
         # Auto-generate key from name if not provided
         if not self.key:
@@ -161,13 +162,13 @@ class BoardColumn(models.Model):
     """
     Per-project board column configuration.
     Maps one or more statuses to a visual column on the Kanban board.
-    
+
     This is the VIEW layer - it doesn't store any ticket data.
     Tickets store their STATUS, and columns display tickets by status.
     """
     project = models.ForeignKey(
-        'Project', 
-        on_delete=models.CASCADE, 
+        'Project',
+        on_delete=models.CASCADE,
         related_name='board_columns'
     )
     name = models.CharField(
@@ -175,7 +176,7 @@ class BoardColumn(models.Model):
         help_text='Display name on the board (can differ from status name)'
     )
     statuses = models.ManyToManyField(
-        Status, 
+        Status,
         related_name='board_columns',
         help_text='Statuses that appear in this column'
     )
@@ -184,12 +185,12 @@ class BoardColumn(models.Model):
         help_text='Column position on board (left to right)'
     )
     min_limit = models.PositiveIntegerField(
-        null=True, 
+        null=True,
         blank=True,
         help_text='Minimum tickets warning threshold'
     )
     max_limit = models.PositiveIntegerField(
-        null=True, 
+        null=True,
         blank=True,
         help_text='Maximum tickets (WIP limit) - column turns red if exceeded'
     )
@@ -199,16 +200,16 @@ class BoardColumn(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         ordering = ['project', 'order']
         unique_together = [['project', 'name']]
         verbose_name = 'Board Column'
         verbose_name_plural = 'Board Columns'
-    
+
     def __str__(self):
         return f"{self.project.key}: {self.name}"
-    
+
     @property
     def ticket_count(self):
         """Count tickets in this column (across all its mapped statuses)"""
@@ -218,14 +219,14 @@ class BoardColumn(models.Model):
             status__in=self.statuses.all(),
             is_archived=False
         ).count()
-    
+
     @property
     def is_over_limit(self):
         """Check if column exceeds WIP limit"""
         if self.max_limit is None:
             return False
         return self.ticket_count > self.max_limit
-    
+
     @property
     def is_under_limit(self):
         """Check if column is below minimum threshold"""
@@ -241,7 +242,7 @@ class BoardColumn(models.Model):
 
 class Ticket(models.Model):
     """Ticket model - updated for Jira-style status system"""
-    
+
     # === EXISTING FIELDS (keep as-is) ===
     name = models.CharField(max_length=500)
     description = models.TextField(blank=True, null=True)
@@ -256,7 +257,7 @@ class Ticket(models.Model):
     parent = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True)
     project_number = models.IntegerField(null=True, blank=True)
     # ... other existing fields ...
-    
+
     # === NEW FIELDS ===
     status = models.ForeignKey(
         Status,
@@ -264,19 +265,19 @@ class Ticket(models.Model):
         related_name='tickets',
         help_text='Current status (e.g., "in_progress", "done")'
     )
-    
+
     rank = models.CharField(
         max_length=50,
         default='n',
         db_index=True,
         help_text='LexoRank for ordering within status group'
     )
-    
+
     # === DEPRECATED FIELDS (remove after migration) ===
     # column = models.ForeignKey(Column, ...)  # REMOVE
     # column_order = models.IntegerField(...)  # REMOVE
     # status = models.CharField(...)           # REMOVE (old string status)
-    
+
     class Meta:
         ordering = ['status', 'rank']
         indexes = [
@@ -313,14 +314,14 @@ MAX_CHAR = 'z'
 def rank_between(before: str | None, after: str | None) -> str:
     """
     Calculate a rank string that sorts between `before` and `after`.
-    
+
     Args:
         before: Rank of item before insertion point (None if inserting at start)
         after: Rank of item after insertion point (None if inserting at end)
-    
+
     Returns:
         A rank string that sorts between before and after
-    
+
     Examples:
         rank_between(None, "n")     → "g"      # Before first
         rank_between("n", None)     → "u"      # After last
@@ -330,15 +331,15 @@ def rank_between(before: str | None, after: str | None) -> str:
     """
     if not before and not after:
         return MID_CHAR
-    
+
     if not before:
         # Inserting at the start
         return _rank_before(after)
-    
+
     if not after:
         # Inserting at the end
         return _rank_after(before)
-    
+
     # Inserting between two ranks
     return _rank_mid(before, after)
 
@@ -347,15 +348,15 @@ def _rank_before(after: str) -> str:
     """Generate a rank that sorts before `after`"""
     if not after:
         return MID_CHAR
-    
+
     first_char = after[0]
-    
+
     # If there's room before the first character
     if first_char > MIN_CHAR:
         # Return the midpoint between 'a' and first_char
         mid_ord = (ord(MIN_CHAR) + ord(first_char)) // 2
         return chr(mid_ord)
-    
+
     # No room - need to go deeper
     # "a..." → prepend 'a' and recurse
     if len(after) > 1:
@@ -368,15 +369,15 @@ def _rank_after(before: str) -> str:
     """Generate a rank that sorts after `before`"""
     if not before:
         return MID_CHAR
-    
+
     last_char = before[-1]
-    
+
     # If there's room after the last character
     if last_char < MAX_CHAR:
         # Return the midpoint between last_char and 'z'
         mid_ord = (ord(last_char) + ord(MAX_CHAR) + 1) // 2
         return before[:-1] + chr(mid_ord)
-    
+
     # Last char is 'z' - append midpoint
     return before + MID_CHAR
 
@@ -385,18 +386,18 @@ def _rank_mid(before: str, after: str) -> str:
     """Generate a rank that sorts between `before` and `after`"""
     if before >= after:
         raise ValueError(f"before ({before}) must be < after ({after})")
-    
+
     # Pad to same length for comparison
     max_len = max(len(before), len(after))
-    
+
     # Find first position where they differ
     for i in range(max_len):
         b_char = before[i] if i < len(before) else MIN_CHAR
         a_char = after[i] if i < len(after) else MAX_CHAR
-        
+
         if b_char == a_char:
             continue
-        
+
         # Found difference
         if ord(a_char) - ord(b_char) > 1:
             # Room to insert between
@@ -406,16 +407,16 @@ def _rank_mid(before: str, after: str) -> str:
             # No room - need to extend
             # Take before's prefix up to here, then find mid after
             prefix = before[:i+1] if i < len(before) else before + MIN_CHAR
-            
+
             # Get the "after" portion from this point
             after_suffix = after[i+1:] if i+1 < len(after) else None
             before_suffix = before[i+1:] if i+1 < len(before) else None
-            
+
             if before_suffix:
                 return prefix + _rank_after(before_suffix)
             else:
                 return prefix + (MID_CHAR if not after_suffix else _rank_before(after_suffix))
-    
+
     # Identical strings (shouldn't happen) - extend
     return before + MID_CHAR
 
@@ -429,14 +430,14 @@ def initial_ranks(count: int) -> list[str]:
         return []
     if count == 1:
         return [MID_CHAR]
-    
+
     ranks = []
     step = len(ALPHABET) // (count + 1)
-    
+
     for i in range(1, count + 1):
         idx = min(step * i, len(ALPHABET) - 1)
         ranks.append(ALPHABET[idx])
-    
+
     return ranks
 
 
@@ -445,31 +446,31 @@ def initial_ranks(count: int) -> list[str]:
 def move_ticket_to_position(ticket, new_status_key, before_ticket=None, after_ticket=None):
     """
     Move a ticket to a new status and position.
-    
+
     Args:
         ticket: Ticket instance to move
         new_status_key: Key of target status (e.g., "in_progress")
         before_ticket: Ticket that should be ABOVE this one (optional)
         after_ticket: Ticket that should be BELOW this one (optional)
-    
+
     Returns:
         Updated ticket instance
     """
     from tickets.models import Status, Ticket
-    
+
     # Get new status
     new_status = Status.objects.get(key=new_status_key)
-    
+
     # Calculate new rank
     before_rank = before_ticket.rank if before_ticket else None
     after_rank = after_ticket.rank if after_ticket else None
     new_rank = rank_between(before_rank, after_rank)
-    
+
     # Update ticket - SINGLE database write!
     ticket.status = new_status
     ticket.rank = new_rank
     ticket.save(update_fields=['status', 'rank', 'updated_at'])
-    
+
     return ticket
 ```
 
@@ -502,7 +503,7 @@ DEFAULT_BOARD_COLUMNS = [
 
 def create_default_statuses(apps, schema_editor):
     Status = apps.get_model('tickets', 'Status')
-    
+
     for status_data in DEFAULT_STATUSES:
         Status.objects.get_or_create(
             key=status_data['key'],
@@ -515,7 +516,7 @@ def create_board_columns_for_projects(apps, schema_editor):
     Project = apps.get_model('tickets', 'Project')
     BoardColumn = apps.get_model('tickets', 'BoardColumn')
     Status = apps.get_model('tickets', 'Status')
-    
+
     for project in Project.objects.all():
         for col_data in DEFAULT_BOARD_COLUMNS:
             column, created = BoardColumn.objects.get_or_create(
@@ -534,11 +535,11 @@ def migrate_tickets_to_status(apps, schema_editor):
     Ticket = apps.get_model('tickets', 'Ticket')
     Status = apps.get_model('tickets', 'Status')
     Column = apps.get_model('tickets', 'Column')
-    
+
     # Map column names to status keys
     column_to_status = {
         'to do': 'todo',
-        'todo': 'todo', 
+        'todo': 'todo',
         'in progress': 'in_progress',
         'in_progress': 'in_progress',
         'review': 'in_review',
@@ -547,10 +548,10 @@ def migrate_tickets_to_status(apps, schema_editor):
         'completed': 'done',
         'closed': 'closed',
     }
-    
+
     # Default status if no match
     default_status = Status.objects.get(key='todo')
-    
+
     for ticket in Ticket.objects.select_related('column').all():
         if not ticket.column:
             ticket.status = default_status
@@ -558,12 +559,12 @@ def migrate_tickets_to_status(apps, schema_editor):
             column_name = ticket.column.name.lower().strip()
             status_key = column_to_status.get(column_name, 'todo')
             ticket.status = Status.objects.get(key=status_key)
-        
+
         # Set initial rank based on old column_order
         # Simple: convert integer to letter-based rank
         order = ticket.column_order or 0
         ticket.rank = chr(ord('a') + min(order, 25)) + 'n'  # "an", "bn", "cn", etc.
-        
+
         ticket.save(update_fields=['status', 'rank'])
 
 
@@ -571,20 +572,20 @@ class Migration(migrations.Migration):
     dependencies = [
         ('tickets', 'previous_migration'),
     ]
-    
+
     operations = [
         # 1. Create Status model
         migrations.CreateModel(
             name='Status',
             # ... field definitions
         ),
-        
+
         # 2. Create BoardColumn model
         migrations.CreateModel(
             name='BoardColumn',
             # ... field definitions
         ),
-        
+
         # 3. Add status and rank fields to Ticket
         migrations.AddField(
             model_name='ticket',
@@ -596,16 +597,16 @@ class Migration(migrations.Migration):
             name='rank',
             # ... field definition
         ),
-        
+
         # 4. Populate default statuses
         migrations.RunPython(create_default_statuses),
-        
+
         # 5. Create board columns for existing projects
         migrations.RunPython(create_board_columns_for_projects),
-        
+
         # 6. Migrate tickets to new status system
         migrations.RunPython(migrate_tickets_to_status),
-        
+
         # 7. Make status non-nullable
         migrations.AlterField(
             model_name='ticket',
@@ -641,14 +642,14 @@ def create_default_board_columns(sender, instance, created, **kwargs):
     """
     if not created:
         return
-    
+
     for col_data in DEFAULT_BOARD_COLUMNS:
         column = BoardColumn.objects.create(
             project=instance,
             name=col_data['name'],
             order=col_data['order']
         )
-        
+
         # Map statuses to column
         statuses = Status.objects.filter(key__in=col_data['statuses'])
         column.statuses.set(statuses)
@@ -664,11 +665,11 @@ def create_default_board_columns(sender, instance, created, **kwargs):
 class StatusSerializer(serializers.ModelSerializer):
     """Serializer for global Status model"""
     category_color = serializers.CharField(read_only=True)
-    
+
     class Meta:
         model = Status
         fields = [
-            'key', 'name', 'description', 'category', 
+            'key', 'name', 'description', 'category',
             'color', 'category_color', 'icon', 'order', 'is_default'
         ]
         read_only_fields = ['is_default']
@@ -686,7 +687,7 @@ class BoardColumnSerializer(serializers.ModelSerializer):
     ticket_count = serializers.SerializerMethodField()
     is_over_limit = serializers.BooleanField(read_only=True)
     is_under_limit = serializers.BooleanField(read_only=True)
-    
+
     class Meta:
         model = BoardColumn
         fields = [
@@ -694,34 +695,34 @@ class BoardColumnSerializer(serializers.ModelSerializer):
             'min_limit', 'max_limit', 'is_collapsed',
             'ticket_count', 'is_over_limit', 'is_under_limit'
         ]
-    
+
     def get_ticket_count(self, obj):
         return obj.ticket_count
-    
+
     def create(self, validated_data):
         status_keys = validated_data.pop('status_keys', [])
         column = super().create(validated_data)
-        
+
         if status_keys:
             statuses = Status.objects.filter(key__in=status_keys)
             column.statuses.set(statuses)
-        
+
         return column
-    
+
     def update(self, instance, validated_data):
         status_keys = validated_data.pop('status_keys', None)
         column = super().update(instance, validated_data)
-        
+
         if status_keys is not None:
             statuses = Status.objects.filter(key__in=status_keys)
             column.statuses.set(statuses)
-        
+
         return column
 
 
 class TicketSerializer(serializers.ModelSerializer):
     """Updated ticket serializer with status system"""
-    
+
     # Status fields
     status = serializers.SlugRelatedField(
         slug_field='key',
@@ -730,7 +731,7 @@ class TicketSerializer(serializers.ModelSerializer):
     status_name = serializers.CharField(source='status.name', read_only=True)
     status_category = serializers.CharField(source='status.category', read_only=True)
     status_color = serializers.CharField(source='status.category_color', read_only=True)
-    
+
     # Existing fields
     assignees = UserSerializer(many=True, read_only=True)
     assignee_ids = serializers.PrimaryKeyRelatedField(
@@ -740,7 +741,7 @@ class TicketSerializer(serializers.ModelSerializer):
     project_key = serializers.CharField(source='project.key', read_only=True)
     ticket_key = serializers.CharField(read_only=True)
     company_name = serializers.CharField(source='company.name', read_only=True)
-    
+
     class Meta:
         model = Ticket
         fields = [
@@ -774,27 +775,27 @@ class StatusViewSet(viewsets.ModelViewSet):
     queryset = Status.objects.all()
     serializer_class = StatusSerializer
     lookup_field = 'key'  # Use key instead of id in URLs
-    
+
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
             return [permissions.IsAdminUser()]
         return [permissions.IsAuthenticated()]
-    
+
     def destroy(self, request, *args, **kwargs):
         status = self.get_object()
-        
+
         if status.is_default:
             return Response(
                 {'error': 'Cannot delete default system status'},
                 status=400
             )
-        
+
         if status.tickets.exists():
             return Response(
                 {'error': f'Cannot delete status with {status.tickets.count()} tickets'},
                 status=400
             )
-        
+
         return super().destroy(request, *args, **kwargs)
 
 
@@ -808,34 +809,34 @@ class BoardColumnViewSet(viewsets.ModelViewSet):
     filterset_fields = ['project']
     ordering_fields = ['order']
     ordering = ['order']
-    
+
     def get_queryset(self):
         return BoardColumn.objects.filter(
             project__members=self.request.user
         ).prefetch_related('statuses')
-    
+
     @action(detail=False, methods=['post'])
     def reorder(self, request):
         """Reorder columns within a project"""
         order_data = request.data.get('order', [])
-        
+
         for item in order_data:
             BoardColumn.objects.filter(
                 id=item['id'],
                 project__members=request.user
             ).update(order=item['order'])
-        
+
         return Response({'status': 'columns reordered'})
 
 
 class TicketViewSet(viewsets.ModelViewSet):
     """Updated ticket ViewSet with status-based moves"""
-    
+
     @action(detail=True, methods=['patch'])
     def move(self, request, pk=None):
         """
         Move ticket to new status and/or position.
-        
+
         Request body:
         {
             "status": "in_progress",     // Target status key
@@ -844,11 +845,11 @@ class TicketViewSet(viewsets.ModelViewSet):
         }
         """
         ticket = self.get_object()
-        
+
         new_status_key = request.data.get('status')
         before_id = request.data.get('before_id')
         after_id = request.data.get('after_id')
-        
+
         # Validate status
         if new_status_key:
             try:
@@ -860,36 +861,36 @@ class TicketViewSet(viewsets.ModelViewSet):
                 )
         else:
             new_status = ticket.status
-        
+
         # Get neighbor tickets for rank calculation
         before_ticket = Ticket.objects.filter(id=before_id).first() if before_id else None
         after_ticket = Ticket.objects.filter(id=after_id).first() if after_id else None
-        
+
         # Calculate new rank
         from tickets.utils.lexorank import rank_between
         before_rank = before_ticket.rank if before_ticket else None
         after_rank = after_ticket.rank if after_ticket else None
         new_rank = rank_between(before_rank, after_rank)
-        
+
         # Update ticket
         old_status = ticket.status
         ticket.status = new_status
         ticket.rank = new_rank
         ticket.save(update_fields=['status', 'rank', 'updated_at'])
-        
+
         # Broadcast via WebSocket
         self._broadcast_ticket_move(ticket, old_status, new_status)
-        
+
         serializer = self.get_serializer(ticket)
         return Response(serializer.data)
-    
+
     def _broadcast_ticket_move(self, ticket, old_status, new_status):
         """Send WebSocket notification for ticket move"""
         from channels.layers import get_channel_layer
         from asgiref.sync import async_to_sync
-        
+
         channel_layer = get_channel_layer()
-        
+
         # Send to project group
         async_to_sync(channel_layer.group_send)(
             f'project_{ticket.project_id}_tickets',
@@ -916,7 +917,7 @@ class TicketViewSet(viewsets.ModelViewSet):
 
 class TicketConsumer(AsyncWebsocketConsumer):
     """Updated consumer with status-based events"""
-    
+
     async def ticket_update(self, event):
         """Handle ticket update events"""
         await self.send(text_data=json.dumps({
@@ -924,7 +925,7 @@ class TicketConsumer(AsyncWebsocketConsumer):
             'data': event.get('data', {}),
             'sequence': int(time.time() * 1000),  # Add sequence for ordering
         }))
-    
+
     async def ticket_moved(self, event):
         """Handle ticket move events (status change)"""
         await self.send(text_data=json.dumps({
@@ -932,7 +933,7 @@ class TicketConsumer(AsyncWebsocketConsumer):
             'data': event.get('data', {}),
             'sequence': int(time.time() * 1000),
         }))
-    
+
     async def status_refresh(self, event):
         """
         Tell clients to refresh tickets for specific statuses.
@@ -954,15 +955,15 @@ class TicketConsumer(AsyncWebsocketConsumer):
 
 // === STATUS TYPES ===
 
-export type StatusCategory = 'todo' | 'in_progress' | 'done';
+export type StatusCategory = "todo" | "in_progress" | "done";
 
 export interface Status {
-  key: string;           // "in_progress", "done", etc.
-  name: string;          // "In Progress", "Done"
+  key: string; // "in_progress", "done", etc.
+  name: string; // "In Progress", "Done"
   description?: string;
   category: StatusCategory;
   color?: string;
-  category_color: string;  // Computed from category if no custom color
+  category_color: string; // Computed from category if no custom color
   icon?: string;
   order: number;
   is_default: boolean;
@@ -970,9 +971,9 @@ export interface Status {
 
 export interface BoardColumn {
   id: number;
-  name: string;          // Display name on board
+  name: string; // Display name on board
   order: number;
-  statuses: Status[];    // Mapped statuses
+  statuses: Status[]; // Mapped statuses
   min_limit?: number | null;
   max_limit?: number | null;
   is_collapsed: boolean;
@@ -988,14 +989,14 @@ export interface Ticket {
   name: string;
   description?: string;
   type: TicketType;
-  
+
   // NEW: Status-based fields
-  status: string;              // Status KEY: "in_progress"
-  status_name: string;         // Display name: "In Progress"
+  status: string; // Status KEY: "in_progress"
+  status_name: string; // Display name: "In Progress"
   status_category: StatusCategory;
   status_color: string;
-  rank: string;                // LexoRank: "aab", "n", etc.
-  
+  rank: string; // LexoRank: "aab", "n", etc.
+
   // Relationships
   project: number;
   project_key: string;
@@ -1006,7 +1007,7 @@ export interface Ticket {
   assignees: User[];
   reporter: User;
   parent: number | null;
-  
+
   // Other fields...
   priority_id: number;
   urgency: TicketUrgency;
@@ -1024,9 +1025,9 @@ export interface Ticket {
 // === API REQUEST TYPES ===
 
 export interface MoveTicketRequest {
-  status: string;        // Target status key
-  before_id?: number;    // Ticket that should be above
-  after_id?: number;     // Ticket that should be below
+  status: string; // Target status key
+  before_id?: number; // Ticket that should be above
+  after_id?: number; // Ticket that should be below
 }
 
 export interface CreateBoardColumnRequest {
@@ -1055,7 +1056,12 @@ interface KanbanBoardProps {
   tickets: Ticket[];
   columns: BoardColumn[];
   onTicketClick?: (ticket: Ticket) => void;
-  onTicketMove: (ticketId: number, newStatus: string, beforeId?: number, afterId?: number) => Promise<void>;
+  onTicketMove: (
+    ticketId: number,
+    newStatus: string,
+    beforeId?: number,
+    afterId?: number
+  ) => Promise<void>;
 }
 
 export const KanbanBoard: React.FC<KanbanBoardProps> = ({
@@ -1069,26 +1075,26 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   // Group tickets by column based on status mapping
   const ticketsByColumn = useMemo(() => {
     const grouped: Record<number, Ticket[]> = {};
-    
-    columns.forEach(column => {
-      const statusKeys = column.statuses.map(s => s.key);
-      
+
+    columns.forEach((column) => {
+      const statusKeys = column.statuses.map((s) => s.key);
+
       // Filter tickets whose status is in this column
       grouped[column.id] = tickets
-        .filter(t => statusKeys.includes(t.status))
-        .sort((a, b) => a.rank.localeCompare(b.rank));  // Sort by LexoRank
+        .filter((t) => statusKeys.includes(t.status))
+        .sort((a, b) => a.rank.localeCompare(b.rank)); // Sort by LexoRank
     });
-    
+
     return grouped;
   }, [tickets, columns]);
 
   // Find which column a ticket belongs to
   const findColumnForTicket = (ticketId: number): BoardColumn | undefined => {
-    const ticket = tickets.find(t => t.id === ticketId);
+    const ticket = tickets.find((t) => t.id === ticketId);
     if (!ticket) return undefined;
-    
-    return columns.find(col => 
-      col.statuses.some(s => s.key === ticket.status)
+
+    return columns.find((col) =>
+      col.statuses.some((s) => s.key === ticket.status)
     );
   };
 
@@ -1098,39 +1104,39 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
   const handleDragEnd = async ({ active, over }: DragEndEvent) => {
     setActiveId(null);
-    
+
     if (!over) return;
-    
-    const ticketId = parseInt((active.id as string).replace('ticket-', ''));
+
+    const ticketId = parseInt((active.id as string).replace("ticket-", ""));
     const overId = over.id as string;
-    
+
     // Determine target column
     let targetColumn: BoardColumn | undefined;
     let overTicketId: number | undefined;
-    
-    if (overId.startsWith('column-')) {
+
+    if (overId.startsWith("column-")) {
       // Dropped on column
-      const columnId = parseInt(overId.replace('column-', ''));
-      targetColumn = columns.find(c => c.id === columnId);
-    } else if (overId.startsWith('ticket-')) {
+      const columnId = parseInt(overId.replace("column-", ""));
+      targetColumn = columns.find((c) => c.id === columnId);
+    } else if (overId.startsWith("ticket-")) {
       // Dropped on another ticket
-      overTicketId = parseInt(overId.replace('ticket-', ''));
+      overTicketId = parseInt(overId.replace("ticket-", ""));
       targetColumn = findColumnForTicket(overTicketId);
     }
-    
+
     if (!targetColumn || targetColumn.statuses.length === 0) return;
-    
+
     // Get the status to assign (first status in column)
     const newStatus = targetColumn.statuses[0].key;
-    
+
     // Calculate position
     const columnTickets = ticketsByColumn[targetColumn.id] || [];
-    
+
     let beforeId: number | undefined;
     let afterId: number | undefined;
-    
+
     if (overTicketId) {
-      const overIndex = columnTickets.findIndex(t => t.id === overTicketId);
+      const overIndex = columnTickets.findIndex((t) => t.id === overTicketId);
       if (overIndex > 0) {
         beforeId = columnTickets[overIndex - 1].id;
       }
@@ -1141,13 +1147,13 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         beforeId = columnTickets[columnTickets.length - 1].id;
       }
     }
-    
+
     // Call parent handler
     await onTicketMove(ticketId, newStatus, beforeId, afterId);
   };
 
-  const activeTicket = activeId 
-    ? tickets.find(t => `ticket-${t.id}` === activeId)
+  const activeTicket = activeId
+    ? tickets.find((t) => `ticket-${t.id}` === activeId)
     : null;
 
   return (
@@ -1157,7 +1163,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       onDragEnd={handleDragEnd}
     >
       <div className="kanban-container">
-        {columns.map(column => (
+        {columns.map((column) => (
           <KanbanColumn
             key={column.id}
             column={column}
@@ -1166,7 +1172,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           />
         ))}
       </div>
-      
+
       <DragOverlay>
         {activeTicket && <TicketCard ticket={activeTicket} isDragging />}
       </DragOverlay>
@@ -1192,18 +1198,20 @@ interface SequencedMessage {
 
 class WebSocketService {
   private lastSequence: Map<string, number> = new Map();
-  
+
   handleMessage(channel: string, message: SequencedMessage) {
     const lastSeq = this.lastSequence.get(channel) || 0;
-    
+
     // Ignore out-of-order messages
     if (message.sequence <= lastSeq) {
-      console.log(`Ignoring out-of-order message: ${message.sequence} <= ${lastSeq}`);
+      console.log(
+        `Ignoring out-of-order message: ${message.sequence} <= ${lastSeq}`
+      );
       return;
     }
-    
+
     this.lastSequence.set(channel, message.sequence);
-    
+
     // Process message...
   }
 }
@@ -1228,12 +1236,12 @@ def cache_ticket_positions(project_id: int, tickets: list):
     Value: {ticket_id: {status, rank}}
     """
     key = f'project:{project_id}:positions'
-    
+
     positions = {
         str(t.id): {'status': t.status.key, 'rank': t.rank}
         for t in tickets
     }
-    
+
     redis_client.set(key, json.dumps(positions), ex=3600)  # 1 hour TTL
 
 
@@ -1255,8 +1263,9 @@ def invalidate_position_cache(project_id: int):
 ## Implementation Checklist
 
 ### Phase 1: Backend Models & Migration
+
 - [ ] Create `Status` model
-- [ ] Create `BoardColumn` model  
+- [ ] Create `BoardColumn` model
 - [ ] Add `status` and `rank` fields to Ticket
 - [ ] Create LexoRank utility module
 - [ ] Create migration with default statuses
@@ -1264,6 +1273,7 @@ def invalidate_position_cache(project_id: int):
 - [ ] Add signals for auto-creating board columns
 
 ### Phase 2: Backend API
+
 - [ ] Create `StatusSerializer`
 - [ ] Create `BoardColumnSerializer`
 - [ ] Update `TicketSerializer` for status fields
@@ -1273,6 +1283,7 @@ def invalidate_position_cache(project_id: int):
 - [ ] Update WebSocket consumer for status events
 
 ### Phase 3: Frontend Types & API
+
 - [ ] Add Status and BoardColumn types
 - [ ] Update Ticket type with status fields
 - [ ] Add LexoRank utility functions
@@ -1281,6 +1292,7 @@ def invalidate_position_cache(project_id: int):
 - [ ] Update ticket API service for moves
 
 ### Phase 4: Frontend UI
+
 - [ ] Update KanbanBoard to use status grouping
 - [ ] Simplify drag-drop to change status
 - [ ] Add column configuration UI
@@ -1288,6 +1300,7 @@ def invalidate_position_cache(project_id: int):
 - [ ] Update filters to use status
 
 ### Phase 5: Cleanup
+
 - [ ] Remove old `Column` model
 - [ ] Remove old `column` and `column_order` from Ticket
 - [ ] Remove `TicketPosition` model
@@ -1297,11 +1310,11 @@ def invalidate_position_cache(project_id: int):
 
 ## Performance Comparison
 
-| Operation | Current System | New System |
-|-----------|---------------|------------|
-| Move ticket | 4-6 UPDATE queries | 1 UPDATE query |
-| Cross-column move | Lock N rows, shift positions | Lock 1 row |
-| Same-column reorder | Lock N rows, shift positions | Lock 1 row |
-| Deadlock risk | High | None |
-| WebSocket events | `column_refresh` (full refetch) | `ticket_moved` (single update) |
-| Position calculation | O(n) integer shifts | O(1) LexoRank |
+| Operation            | Current System                  | New System                     |
+| -------------------- | ------------------------------- | ------------------------------ |
+| Move ticket          | 4-6 UPDATE queries              | 1 UPDATE query                 |
+| Cross-column move    | Lock N rows, shift positions    | Lock 1 row                     |
+| Same-column reorder  | Lock N rows, shift positions    | Lock 1 row                     |
+| Deadlock risk        | High                            | None                           |
+| WebSocket events     | `column_refresh` (full refetch) | `ticket_moved` (single update) |
+| Position calculation | O(n) integer shifts             | O(1) LexoRank                  |

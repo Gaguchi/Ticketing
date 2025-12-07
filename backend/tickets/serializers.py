@@ -657,6 +657,8 @@ class KanbanTicketSerializer(serializers.ModelSerializer):
             'project_key', 'project_number', 'ticket_key',
             # Grouping (old + new systems)
             'column', 'ticket_status_key',
+            # LexoRank ordering
+            'rank',
             # Display on card
             'company_logo_url', 'following', 'comments_count',
             'assignee_ids', 'resolved_at',
