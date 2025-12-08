@@ -78,7 +78,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     string[]
   > | null>(null);
   // Track the last moved ticket to know when we can clear dragOverItems
-  const [pendingMoveTicketId, setPendingMoveTicketId] = useState<number | null>(null);
+  const [pendingMoveTicketId, setPendingMoveTicketId] = useState<number | null>(
+    null
+  );
 
   // Normalize columns to unified format
   const normalizedColumns: KanbanColumnData[] = useMemo(() => {
@@ -175,13 +177,13 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   useEffect(() => {
     if (pendingMoveTicketId && dragOverItems && !activeId) {
       const ticketKey = `ticket-${pendingMoveTicketId}`;
-      
+
       // Find where the ticket is in dragOverItems vs ticketsByColumn
       let dragColumn: string | undefined;
       let propsColumn: string | undefined;
       let dragIndex = -1;
       let propsIndex = -1;
-      
+
       for (const [colId, ticketIds] of Object.entries(dragOverItems)) {
         const idx = ticketIds.indexOf(ticketKey);
         if (idx !== -1) {
@@ -190,7 +192,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           break;
         }
       }
-      
+
       for (const [colId, ticketIds] of Object.entries(ticketsByColumn)) {
         const idx = ticketIds.indexOf(ticketKey);
         if (idx !== -1) {
@@ -199,10 +201,12 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           break;
         }
       }
-      
+
       // If ticket is now in the correct column and position in props, clear optimistic state
       if (dragColumn === propsColumn && dragIndex === propsIndex) {
-        console.log(`[KanbanBoard] Parent state caught up for ticket ${pendingMoveTicketId}, clearing dragOverItems`);
+        console.log(
+          `[KanbanBoard] Parent state caught up for ticket ${pendingMoveTicketId}, clearing dragOverItems`
+        );
         setDragOverItems(null);
         setPendingMoveTicketId(null);
       }
