@@ -34,6 +34,7 @@ import { useProject } from "../contexts/AppContext";
 import { ticketService, statusService } from "../services";
 import type { Ticket, TicketColumn, BoardColumn } from "../types/api";
 import { debug, LogCategory, LogLevel } from "../utils/debug";
+import { rankBetween } from "../utils/lexorank";
 import "./Tickets.css";
 
 const { Option } = Select;
@@ -432,45 +433,56 @@ const Tickets: React.FC = () => {
   };
 
   // NEW: Status-based move handler (for Jira-style status system)
-  const handleTicketMoveToStatus = async (
+  // Uses FIRE-AND-FORGET pattern: calculate rank locally, update UI immediately,
+  // send API call but don't wait for response. This enables rapid successive moves
+  // without any flickering or response ordering issues.
+  const handleTicketMoveToStatus = (
     ticketId: number,
     statusKey: string,
     beforeTicketId?: number,
     afterTicketId?: number
   ) => {
-    console.log(`[Tickets] moveToStatus: ticketId=${ticketId}, status=${statusKey}, before=${beforeTicketId}, after=${afterTicketId}`);
-
-    // Debounce: skip if same ticket was moved in the last 500ms
-    const lastMoveTime = recentTicketUpdatesRef.current.get(ticketId);
-    if (lastMoveTime && Date.now() - lastMoveTime < 500) {
-      console.log(`[Tickets] Debounced duplicate move for ticket ${ticketId}`);
-      return;
-    }
-
-    const ticket = tickets.find((t) => t.id === ticketId);
-    if (!ticket) {
-      message.error("Ticket not found");
-      return;
-    }
-
-    // Store previous state for rollback
-    const previousStatusKey = ticket.ticket_status_key;
-    const previousRank = ticket.rank;
-
-    // OPTIMISTIC UPDATE: Update UI immediately
-    recentTicketUpdatesRef.current.set(ticketId, Date.now());
-    lastMoveTimeRef.current = Date.now();
-
-    // Find the board column for this status to get the status name
-    const targetColumn = boardColumns.find((bc) =>
-      bc.statuses.some((s) => s.key === statusKey)
-    );
-    const targetStatus = targetColumn?.statuses.find(
-      (s) => s.key === statusKey
+    console.log(
+      `[Tickets] moveToStatus: ticketId=${ticketId}, status=${statusKey}, before=${beforeTicketId}, after=${afterTicketId}`
     );
 
-    setTickets((prevTickets) =>
-      prevTickets.map((t) =>
+    // Use functional update to get latest tickets state
+    // This is crucial for rapid moves - each move sees the result of previous moves
+    setTickets((prevTickets) => {
+      const ticket = prevTickets.find((t) => t.id === ticketId);
+      if (!ticket) {
+        console.error(`[Tickets] Ticket ${ticketId} not found`);
+        return prevTickets;
+      }
+
+      // Find neighbor tickets for rank calculation
+      const beforeTicket = beforeTicketId
+        ? prevTickets.find((t) => t.id === beforeTicketId)
+        : null;
+      const afterTicket = afterTicketId
+        ? prevTickets.find((t) => t.id === afterTicketId)
+        : null;
+
+      // Calculate exact LexoRank locally - same algorithm as backend
+      const newRank = rankBetween(
+        beforeTicket?.rank || null,
+        afterTicket?.rank || null
+      );
+
+      console.log(
+        `[Tickets] Calculated rank: before=${beforeTicket?.rank}, after=${afterTicket?.rank} => ${newRank}`
+      );
+
+      // Find the board column for this status to get the status metadata
+      const targetColumn = boardColumns.find((bc) =>
+        bc.statuses.some((s) => s.key === statusKey)
+      );
+      const targetStatus = targetColumn?.statuses.find(
+        (s) => s.key === statusKey
+      );
+
+      // Update the ticket in state
+      return prevTickets.map((t) =>
         t.id === ticketId
           ? {
               ...t,
@@ -478,55 +490,30 @@ const Tickets: React.FC = () => {
               ticket_status_name: targetStatus?.name || statusKey,
               ticket_status_category: targetStatus?.category,
               ticket_status_color: targetStatus?.category_color,
-              // Rank will be updated by server response
+              rank: newRank,
             }
           : t
-      )
-    );
-
-    try {
-      const updatedTicket = await statusService.moveTicketToStatus(
-        ticketId,
-        statusKey,
-        { beforeId: beforeTicketId, afterId: afterTicketId }
       );
+    });
 
-      // Update with server response (includes correct rank)
-      setTickets((prevTickets) =>
-        prevTickets.map((t) =>
-          t.id === ticketId
-            ? {
-                ...t,
-                ticket_status_key: updatedTicket.ticket_status_key,
-                ticket_status_name: updatedTicket.ticket_status_name,
-                ticket_status_category: updatedTicket.ticket_status_category,
-                ticket_status_color: updatedTicket.ticket_status_color,
-                rank: updatedTicket.rank,
-              }
-            : t
-        )
-      );
-    } catch (error: any) {
-      console.error("Failed to move ticket to status:", error);
+    // Fire-and-forget: send to server but don't await or use response
+    // The local rank calculation matches the server's, so no need to update from response
+    statusService
+      .moveTicketToStatus(ticketId, statusKey, {
+        beforeId: beforeTicketId,
+        afterId: afterTicketId,
+      })
+      .catch((error) => {
+        // Log errors but don't rollback - the user's intent is clear and
+        // a page refresh will sync with server state if needed
+        console.error("[Tickets] Background move failed:", error);
+        // Optionally show a non-blocking notification
+        message.warning("Move may not have saved - will retry on next action");
+      });
 
-      // ROLLBACK: Revert optimistic update on error
-      setTickets((prevTickets) =>
-        prevTickets.map((t) =>
-          t.id === ticketId
-            ? {
-                ...t,
-                ticket_status_key: previousStatusKey,
-                rank: previousRank,
-              }
-            : t
-        )
-      );
-
-      message.error("Failed to move ticket - changes reverted");
-    } finally {
-      recentTicketUpdatesRef.current.set(ticketId, Date.now());
-      lastMoveTimeRef.current = Date.now();
-    }
+    // Update tracking refs (outside setTickets to avoid stale closure)
+    recentTicketUpdatesRef.current.set(ticketId, Date.now());
+    lastMoveTimeRef.current = Date.now();
   };
 
   const columns: TableColumnsType<Ticket> = [

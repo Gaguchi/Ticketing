@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import {
   closestCorners,
   DndContext,
@@ -10,7 +10,11 @@ import {
   useSensor,
   MeasuringStrategy,
 } from "@dnd-kit/core";
-import type { DragStartEvent, DragEndEvent, DragOverEvent } from "@dnd-kit/core";
+import type {
+  DragStartEvent,
+  DragEndEvent,
+  DragOverEvent,
+} from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
 import {
   SortableContext,
@@ -68,7 +72,13 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   // State for drag operations
   const [activeId, setActiveId] = useState<string | null>(null);
   // Track items during drag for cross-column preview
-  const [dragOverItems, setDragOverItems] = useState<Record<string, string[]> | null>(null);
+  // This stays set AFTER drag ends to prevent flicker until parent state catches up
+  const [dragOverItems, setDragOverItems] = useState<Record<
+    string,
+    string[]
+  > | null>(null);
+  // Track the last moved ticket to know when we can clear dragOverItems
+  const [pendingMoveTicketId, setPendingMoveTicketId] = useState<number | null>(null);
 
   // Normalize columns to unified format
   const normalizedColumns: KanbanColumnData[] = useMemo(() => {
@@ -160,6 +170,58 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     return grouped;
   }, [tickets, normalizedColumns, useNewStatusSystem, statusToColumnMap]);
 
+  // Clear dragOverItems once the parent's state reflects the moved ticket's new position
+  // This prevents the visual "stagger" where the ticket briefly jumps back to its old position
+  useEffect(() => {
+    if (pendingMoveTicketId && dragOverItems && !activeId) {
+      const ticketKey = `ticket-${pendingMoveTicketId}`;
+      
+      // Find where the ticket is in dragOverItems vs ticketsByColumn
+      let dragColumn: string | undefined;
+      let propsColumn: string | undefined;
+      let dragIndex = -1;
+      let propsIndex = -1;
+      
+      for (const [colId, ticketIds] of Object.entries(dragOverItems)) {
+        const idx = ticketIds.indexOf(ticketKey);
+        if (idx !== -1) {
+          dragColumn = colId;
+          dragIndex = idx;
+          break;
+        }
+      }
+      
+      for (const [colId, ticketIds] of Object.entries(ticketsByColumn)) {
+        const idx = ticketIds.indexOf(ticketKey);
+        if (idx !== -1) {
+          propsColumn = colId;
+          propsIndex = idx;
+          break;
+        }
+      }
+      
+      // If ticket is now in the correct column and position in props, clear optimistic state
+      if (dragColumn === propsColumn && dragIndex === propsIndex) {
+        console.log(`[KanbanBoard] Parent state caught up for ticket ${pendingMoveTicketId}, clearing dragOverItems`);
+        setDragOverItems(null);
+        setPendingMoveTicketId(null);
+      }
+    }
+  }, [ticketsByColumn, dragOverItems, pendingMoveTicketId, activeId]);
+
+  // Fallback timeout: if dragOverItems is stuck, clear it quickly
+  // With fire-and-forget pattern, parent updates synchronously so this is just a safety net
+  useEffect(() => {
+    if (pendingMoveTicketId && dragOverItems && !activeId) {
+      const timeout = setTimeout(() => {
+        console.log(`[KanbanBoard] Timeout: clearing dragOverItems`);
+        setDragOverItems(null);
+        setPendingMoveTicketId(null);
+      }, 100); // Short timeout - parent should have updated by now
+      return () => clearTimeout(timeout);
+    }
+  }, [pendingMoveTicketId, dragOverItems, activeId]);
+
   // Use drag-over items during drag for preview, otherwise use computed items
   const currentItems = dragOverItems ?? ticketsByColumn;
 
@@ -190,13 +252,16 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   );
 
   // Find which column contains a ticket (uses currentItems for drag preview)
-  const findContainer = useCallback((id: string): string | undefined => {
-    if (containerIds.includes(id)) return id;
-    const items = dragOverItems ?? ticketsByColumn;
-    return containerIds.find((containerId) =>
-      items[containerId]?.includes(id)
-    );
-  }, [containerIds, dragOverItems, ticketsByColumn]);
+  const findContainer = useCallback(
+    (id: string): string | undefined => {
+      if (containerIds.includes(id)) return id;
+      const items = dragOverItems ?? ticketsByColumn;
+      return containerIds.find((containerId) =>
+        items[containerId]?.includes(id)
+      );
+    },
+    [containerIds, dragOverItems, ticketsByColumn]
+  );
 
   function handleDragStart({ active }: DragStartEvent) {
     setActiveId(active.id as string);
@@ -212,12 +277,15 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
     // Find current containers
     const activeContainer = findContainer(activeId);
-    const overContainer = containerIds.includes(overId) 
-      ? overId 
+    const overContainer = containerIds.includes(overId)
+      ? overId
       : findContainer(overId);
 
     if (!activeContainer || !overContainer) {
-      console.log('[DragOver] No container found:', { activeContainer, overContainer });
+      console.log("[DragOver] No container found:", {
+        activeContainer,
+        overContainer,
+      });
       return;
     }
 
@@ -225,12 +293,14 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     if (activeContainer === overContainer) {
       const items = dragOverItems[activeContainer];
       const oldIndex = items.indexOf(activeId);
-      const newIndex = containerIds.includes(overId) 
+      const newIndex = containerIds.includes(overId)
         ? items.length - 1 // Dropped on column = end of column
         : items.indexOf(overId);
 
       if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
-        console.log(`[DragOver] Same column reorder: oldIndex=${oldIndex}, newIndex=${newIndex}, overId=${overId}`);
+        console.log(
+          `[DragOver] Same column reorder: oldIndex=${oldIndex}, newIndex=${newIndex}, overId=${overId}`
+        );
         setDragOverItems({
           ...dragOverItems,
           [activeContainer]: arrayMove(items, oldIndex, newIndex),
@@ -246,13 +316,19 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         ? overItems.length // Dropped on column = end
         : overItems.indexOf(overId);
 
-      console.log(`[DragOver] Cross-column: from=${activeContainer} to=${overContainer}, activeIndex=${activeIndex}, overIndex=${overIndex}, overId=${overId}`);
+      console.log(
+        `[DragOver] Cross-column: from=${activeContainer} to=${overContainer}, activeIndex=${activeIndex}, overIndex=${overIndex}, overId=${overId}`
+      );
 
       // Remove from source
       activeItems.splice(activeIndex, 1);
-      
+
       // Insert into destination
-      overItems.splice(overIndex < 0 ? overItems.length : overIndex, 0, activeId);
+      overItems.splice(
+        overIndex < 0 ? overItems.length : overIndex,
+        0,
+        activeId
+      );
 
       setDragOverItems({
         ...dragOverItems,
@@ -268,7 +344,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
     // Find source column BEFORE resetting state (uses dragOverItems if available)
     const sourceContainer = findContainer(activeTicketId);
-    
+
     // Find destination column
     let destContainer: string | undefined;
     if (over) {
@@ -279,27 +355,39 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       }
     }
 
-    // Get the final positions from dragOverItems before resetting
+    // Get the final positions from dragOverItems before potentially clearing
     const finalItems = dragOverItems ? { ...dragOverItems } : null;
 
-    // Reset preview state
-    setDragOverItems(null);
+    // Clear active drag state, but DON'T clear dragOverItems yet!
+    // We'll keep dragOverItems until parent's optimistic update catches up
+    // This prevents the visual "stagger" where ticket briefly returns to old position
     setActiveId(null);
 
     if (!over || !sourceContainer || !destContainer) {
-      console.log('[DragEnd] Early return - missing over/source/dest:', { over: !!over, sourceContainer, destContainer });
+      console.log("[DragEnd] Early return - missing over/source/dest:", {
+        over: !!over,
+        sourceContainer,
+        destContainer,
+      });
+      // Only reset dragOverItems on invalid drop
+      setDragOverItems(null);
+      setPendingMoveTicketId(null);
       return;
     }
 
     const ticketId = parseInt(activeTicketId.replace("ticket-", ""));
 
-    console.log(`[DragEnd] ticketId=${ticketId}, from=${sourceContainer} to=${destContainer}, sameCol=${sourceContainer === destContainer}, overId=${overId}`);
+    console.log(
+      `[DragEnd] ticketId=${ticketId}, from=${sourceContainer} to=${destContainer}, sameCol=${
+        sourceContainer === destContainer
+      }, overId=${overId}`
+    );
 
     // Handle new status-based system
     if (useNewStatusSystem && onTicketMoveToStatus) {
       const destColumn = columnMap[destContainer];
       if (!destColumn || destColumn.statusKeys.length === 0) {
-        console.log('[DragEnd] No dest column or status keys');
+        console.log("[DragEnd] No dest column or status keys");
         return;
       }
 
@@ -310,34 +398,41 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       // This shows where the user actually dropped the ticket
       const finalDestTickets = finalItems?.[destContainer] || [];
       const dropIndex = finalDestTickets.indexOf(activeTicketId);
-      
+
       // Get original position to detect no-op
       const origTickets = ticketsByColumn[destContainer] || [];
       const origIndex = origTickets.indexOf(activeTicketId);
-      
+
       // Check if this is a no-op (same column, same position)
       if (sourceContainer === destContainer && dropIndex === origIndex) {
         console.log(`[DragEnd] No-op: same position (index=${dropIndex})`);
+        // Reset optimistic state since no API call will be made
+        setDragOverItems(null);
+        setPendingMoveTicketId(null);
         return;
       }
-      
-      console.log(`[DragEnd] status=${targetStatusKey}, origIndex=${origIndex}, dropIndex=${dropIndex}`);
-      console.log(`[DragEnd] finalTickets: ${finalDestTickets.join(', ')}`);
-      console.log(`[DragEnd] origTickets: ${origTickets.join(', ')}`);
+
+      console.log(
+        `[DragEnd] status=${targetStatusKey}, origIndex=${origIndex}, dropIndex=${dropIndex}`
+      );
+      console.log(`[DragEnd] finalTickets: ${finalDestTickets.join(", ")}`);
+      console.log(`[DragEnd] origTickets: ${origTickets.join(", ")}`);
 
       // LexoRank semantics:
       // - before_id = ticket ABOVE the drop position (has smaller rank)
       // - after_id = ticket BELOW the drop position (has larger rank)
-      // 
+      //
       // In our list, index 0 is at the top (smallest rank), so:
       // - dropIndex - 1 = ticket above = before_id
       // - dropIndex + 1 = ticket below = after_id
       let beforeTicketId: number | undefined; // Ticket ABOVE (smaller rank)
-      let afterTicketId: number | undefined;  // Ticket BELOW (larger rank)
+      let afterTicketId: number | undefined; // Ticket BELOW (larger rank)
 
       if (dropIndex === -1) {
         // Shouldn't happen, but fallback to end of column
-        console.log('[DragEnd] Ticket not found in final items, placing at end');
+        console.log(
+          "[DragEnd] Ticket not found in final items, placing at end"
+        );
         if (origTickets.length > 0) {
           const lastTicket = origTickets[origTickets.length - 1];
           if (lastTicket !== activeTicketId) {
@@ -367,7 +462,13 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       if (beforeTicketId === ticketId) beforeTicketId = undefined;
       if (afterTicketId === ticketId) afterTicketId = undefined;
 
-      console.log(`[DragEnd] API CALL: ticketId=${ticketId}, status=${targetStatusKey}, beforeId=${beforeTicketId}, afterId=${afterTicketId}`);
+      console.log(
+        `[DragEnd] API CALL: ticketId=${ticketId}, status=${targetStatusKey}, beforeId=${beforeTicketId}, afterId=${afterTicketId}`
+      );
+
+      // Set pending move BEFORE calling callback - this tells the useEffect to wait
+      // for parent's optimistic update before clearing dragOverItems
+      setPendingMoveTicketId(ticketId);
 
       onTicketMoveToStatus(
         ticketId,
@@ -422,6 +523,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   function handleDragCancel() {
     setDragOverItems(null);
     setActiveId(null);
+    setPendingMoveTicketId(null);
   }
 
   const activeTicket = activeId ? ticketMap[activeId] : null;
