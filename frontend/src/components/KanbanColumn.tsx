@@ -167,7 +167,10 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
               columnId={columnId}
               statusKey={statusKey}
               onSuccess={(ticket) => {
-                console.log(`[KanbanColumn] onSuccess received ticket:`, ticket.id);
+                console.log(
+                  `[KanbanColumn] onSuccess received ticket:`,
+                  ticket.id
+                );
                 onTicketCreated?.(ticket);
               }}
               onClose={() => setShowQuickCreate(false)}

@@ -17,7 +17,7 @@ import "./QuickTicketCreator.css";
 const { TextArea } = Input;
 
 interface QuickTicketCreatorProps {
-  columnId?: number;  // Optional - for legacy column system
+  columnId?: number; // Optional - for legacy column system
   statusKey?: string; // NEW: Status key for new status-based system
   onSuccess?: (ticket: Ticket) => void;
   onClose?: () => void;
@@ -180,7 +180,11 @@ export const QuickTicketCreator: React.FC<QuickTicketCreatorProps> = ({
       }
 
       const newTicket = await ticketService.createTicket(ticketData);
-      console.log(`[QuickTicketCreator] Ticket created:`, newTicket.id, newTicket.name);
+      console.log(
+        `[QuickTicketCreator] Ticket created:`,
+        newTicket.id,
+        newTicket.name
+      );
       // message.success("Ticket created!");
 
       // Reset form
@@ -189,7 +193,10 @@ export const QuickTicketCreator: React.FC<QuickTicketCreatorProps> = ({
       setAssignee(undefined);
       setDueDate(null);
 
-      console.log(`[QuickTicketCreator] Calling onSuccess with ticket:`, newTicket.id);
+      console.log(
+        `[QuickTicketCreator] Calling onSuccess with ticket:`,
+        newTicket.id
+      );
       onSuccess?.(newTicket);
 
       // Keep the quick creator open for multiple ticket creation
