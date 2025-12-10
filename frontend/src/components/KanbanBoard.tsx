@@ -269,8 +269,13 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
   function handleDragStart({ active }: DragStartEvent) {
     setActiveId(active.id as string);
-    // Initialize dragOverItems from ticketsByColumn
-    setDragOverItems({ ...ticketsByColumn });
+    // Initialize dragOverItems from ticketsByColumn with deep copy
+    // to prevent accidental mutation of ticketsByColumn arrays
+    const deepCopy: Record<string, string[]> = {};
+    for (const [key, value] of Object.entries(ticketsByColumn)) {
+      deepCopy[key] = [...value];
+    }
+    setDragOverItems(deepCopy);
   }
 
   function handleDragOver({ active, over }: DragOverEvent) {
@@ -279,10 +284,16 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     const activeId = active.id as string;
     const overId = over.id as string;
 
+    // Check if dropping on a bottom zone (e.g., "column-3-bottom")
+    const isBottomZone = overId.endsWith("-bottom");
+    const targetColumnId = isBottomZone
+      ? overId.replace("-bottom", "")
+      : overId;
+
     // Find current containers
     const activeContainer = findContainer(activeId);
-    const overContainer = containerIds.includes(overId)
-      ? overId
+    const overContainer = containerIds.includes(targetColumnId)
+      ? targetColumnId
       : findContainer(overId);
 
     if (!activeContainer || !overContainer) {
@@ -297,13 +308,15 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     if (activeContainer === overContainer) {
       const items = dragOverItems[activeContainer];
       const oldIndex = items.indexOf(activeId);
-      const newIndex = containerIds.includes(overId)
-        ? items.length - 1 // Dropped on column = end of column
-        : items.indexOf(overId);
+      // Bottom zone or column header = end of column
+      const newIndex =
+        isBottomZone || containerIds.includes(overId)
+          ? items.length - 1
+          : items.indexOf(overId);
 
       if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
         console.log(
-          `[DragOver] Same column reorder: oldIndex=${oldIndex}, newIndex=${newIndex}, overId=${overId}`
+          `[DragOver] Same column reorder: oldIndex=${oldIndex}, newIndex=${newIndex}, overId=${overId}, isBottomZone=${isBottomZone}`
         );
         setDragOverItems({
           ...dragOverItems,
@@ -316,12 +329,14 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       const overItems = [...dragOverItems[overContainer]];
 
       const activeIndex = activeItems.indexOf(activeId);
-      const overIndex = containerIds.includes(overId)
-        ? overItems.length // Dropped on column = end
-        : overItems.indexOf(overId);
+      // Bottom zone or column header = end of column
+      const overIndex =
+        isBottomZone || containerIds.includes(overId)
+          ? overItems.length
+          : overItems.indexOf(overId);
 
       console.log(
-        `[DragOver] Cross-column: from=${activeContainer} to=${overContainer}, activeIndex=${activeIndex}, overIndex=${overIndex}, overId=${overId}`
+        `[DragOver] Cross-column: from=${activeContainer} to=${overContainer}, activeIndex=${activeIndex}, overIndex=${overIndex}, overId=${overId}, isBottomZone=${isBottomZone}`
       );
 
       // Remove from source
@@ -346,14 +361,23 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     const activeTicketId = active.id as string;
     const overId = over?.id as string;
 
+    // Check if dropping on a bottom zone (e.g., "column-3-bottom")
+    const isBottomZone = overId?.endsWith("-bottom");
+    const targetColumnId = isBottomZone
+      ? overId.replace("-bottom", "")
+      : overId;
+
     // Find source column BEFORE resetting state (uses dragOverItems if available)
     const sourceContainer = findContainer(activeTicketId);
 
     // Find destination column
     let destContainer: string | undefined;
     if (over) {
-      if (containerIds.includes(overId)) {
-        destContainer = overId;
+      if (containerIds.includes(targetColumnId)) {
+        destContainer = targetColumnId;
+      } else if (isBottomZone) {
+        // Bottom zone - the column is the target
+        destContainer = targetColumnId;
       } else {
         destContainer = findContainer(overId);
       }
@@ -384,7 +408,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     console.log(
       `[DragEnd] ticketId=${ticketId}, from=${sourceContainer} to=${destContainer}, sameCol=${
         sourceContainer === destContainer
-      }, overId=${overId}`
+      }, overId=${overId}, isBottomZone=${isBottomZone}`
     );
 
     // Handle new status-based system

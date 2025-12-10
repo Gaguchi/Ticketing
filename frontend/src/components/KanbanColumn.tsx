@@ -4,12 +4,40 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
+import { useDroppable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { Button } from "antd";
 import { PlusOutlined, CloseOutlined } from "@ant-design/icons";
 import { TicketCard } from "./TicketCard";
 import { QuickTicketCreator } from "./QuickTicketCreator";
 import type { Ticket } from "../types/api";
+
+/**
+ * Bottom drop zone component to allow dropping tickets at the end of a column.
+ * This creates an invisible droppable area below all tickets but above the Create button.
+ */
+const ColumnBottomDropZone: React.FC<{ columnId: string }> = ({ columnId }) => {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `${columnId}-bottom`,
+    data: {
+      type: "COLUMN_BOTTOM",
+      columnId: columnId,
+    },
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        // Zero height when not hovering - completely invisible
+        minHeight: isOver ? "8px" : "0px",
+        backgroundColor: isOver ? "rgba(0, 82, 204, 0.1)" : "transparent",
+        borderRadius: "4px",
+        transition: "all 0.15s ease",
+      }}
+    />
+  );
+};
 
 interface KanbanColumnProps {
   id: string;
@@ -129,6 +157,9 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
           })}
         </SortableContext>
 
+        {/* Bottom drop zone for dropping below all tickets */}
+        <ColumnBottomDropZone columnId={id} />
+
         {/* Quick Ticket Creator or Create Button */}
         {showQuickCreate ? (
           <div>
@@ -136,6 +167,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
               columnId={columnId}
               statusKey={statusKey}
               onSuccess={(ticket) => {
+                console.log(`[KanbanColumn] onSuccess received ticket:`, ticket.id);
                 onTicketCreated?.(ticket);
               }}
               onClose={() => setShowQuickCreate(false)}
@@ -166,7 +198,6 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
               textAlign: "left",
               fontSize: "14px",
               height: "32px",
-              marginTop: "4px",
               padding: "4px 8px",
               color: "#5e6c84",
               justifyContent: "flex-start",

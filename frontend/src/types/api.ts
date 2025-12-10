@@ -341,7 +341,8 @@ export interface CreateTicketData {
   priority_id: number;
   urgency: TicketUrgency;
   importance: TicketImportance;
-  column: number;
+  column?: number;  // Optional - for legacy column system
+  ticket_status_key?: string;  // For new Jira-style status system
   project: number;
   company?: number;
   assignee_ids?: number[];

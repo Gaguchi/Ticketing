@@ -194,6 +194,12 @@ def ticket_saved(sender, instance, created, **kwargs):
         'created_at': instance.created_at.isoformat() if instance.created_at else None,
         'updated_at': instance.updated_at.isoformat() if instance.updated_at else None,
         'is_archived': instance.is_archived,
+        # NEW: Jira-style status fields for KanbanBoard grouping
+        'ticket_status_key': instance.ticket_status.key if instance.ticket_status else None,
+        'ticket_status_name': instance.ticket_status.name if instance.ticket_status else None,
+        'ticket_status_category': instance.ticket_status.category if instance.ticket_status else None,
+        'ticket_status_color': instance.ticket_status.category_color if instance.ticket_status else None,
+        'rank': instance.rank,
     }
     
     # Broadcast to project ticket channel

@@ -196,7 +196,9 @@ const Tickets: React.FC = () => {
         // Check if we've already processed this ticket ID
         // Note: WebSocket may send `ticket_id` or `id`, onSuccess uses `id`
         const ticketId = data.ticket_id || data.id;
+        console.log(`[Tickets] WebSocket ticket_created: id=${ticketId}, data=`, data);
         if (receivedTicketIdsRef.current.has(ticketId)) {
+          console.log(`[Tickets] WebSocket: ticket ${ticketId} already in receivedTicketIdsRef, skipping`);
           return;
         }
 
@@ -208,12 +210,15 @@ const Tickets: React.FC = () => {
             ...data,
             ticket_key: data.ticket_key || `${selectedProject.key}-${data.id}`,
           };
+          console.log(`[Tickets] WebSocket: adding ticket to state:`, newTicket.id, newTicket.ticket_status_key);
 
           setTickets((prev) => {
             // Double-check it doesn't exist
             if (prev.some((t) => t.id === newTicket.id)) {
+              console.log(`[Tickets] WebSocket: ticket ${newTicket.id} already exists in prev, skipping`);
               return prev;
             }
+            console.log(`[Tickets] WebSocket: adding ticket ${newTicket.id} to state, prev length: ${prev.length}`);
             return [newTicket, ...prev];
           });
           // message.success(
@@ -955,8 +960,18 @@ const Tickets: React.FC = () => {
             onTicketMove={handleTicketMove}
             onTicketMoveToStatus={handleTicketMoveToStatus}
             onTicketCreated={(ticket) => {
+              console.log(`[Tickets] onTicketCreated called with ticket:`, ticket.id, ticket.name);
+              // Add to received set FIRST to prevent WebSocket race condition
               receivedTicketIdsRef.current.add(ticket.id);
-              setTickets((prev) => [ticket, ...prev]);
+              setTickets((prev) => {
+                // Check if ticket already exists to prevent duplicates
+                const exists = prev.some((t) => t.id === ticket.id);
+                console.log(`[Tickets] Ticket ${ticket.id} exists in prev: ${exists}, prev length: ${prev.length}`);
+                if (exists) {
+                  return prev;
+                }
+                return [ticket, ...prev];
+              });
             }}
           />
         ) : viewMode === "deadline" ? (
@@ -1009,13 +1024,22 @@ const Tickets: React.FC = () => {
             id: newTicket.id,
             column: newTicket.column,
             column_order: newTicket.column_order,
+            rank: newTicket.rank,
+            ticket_status_key: newTicket.ticket_status_key,
           });
           // Mark this ticket ID as received (it will come via WebSocket soon)
           receivedTicketIdsRef.current.add(newTicket.id);
 
           // Add the ticket immediately for instant feedback
-          // The WebSocket duplicate check will prevent double-adding
-          setTickets((prev) => [newTicket, ...prev]);
+          // Use functional update with duplicate check to prevent double-adding
+          setTickets((prev) => {
+            // Check if ticket already exists (from WebSocket or previous add)
+            if (prev.some((t) => t.id === newTicket.id)) {
+              console.log(`[Tickets] Ticket ${newTicket.id} already exists, skipping add`);
+              return prev;
+            }
+            return [newTicket, ...prev];
+          });
         }}
       />
     </div>

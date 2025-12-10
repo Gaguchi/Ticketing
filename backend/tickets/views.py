@@ -1159,6 +1159,7 @@ class TicketViewSet(viewsets.ModelViewSet):
         When creating a ticket:
         1. For servicedesk users (non-staff, non-admin), automatically assign company and project
         2. Auto-assign to company admins if ticket has a company
+        3. If no column is provided but ticket_status_key is, use the new status system
         """
         user = self.request.user
         print(f"🎫 Creating ticket for user: {user.username}")
@@ -1171,6 +1172,10 @@ class TicketViewSet(viewsets.ModelViewSet):
         print(f"   Is company admin: {is_company_admin}")
         print(f"   Is staff: {user.is_staff}")
         print(f"   Request data: {self.request.data}")
+        
+        # Check if using new status system (ticket_status_key provided, no column)
+        has_status_key = 'ticket_status_key' in self.request.data
+        has_column = serializer.validated_data.get('column') is not None
         
         # If this is a servicedesk user (company member, not admin, not staff)
         if user_companies.exists() and not is_company_admin and not user.is_staff:
@@ -1202,7 +1207,7 @@ class TicketViewSet(viewsets.ModelViewSet):
             
             # Get the first column for this project
             first_column = Column.objects.filter(project=support_project).order_by('order').first()
-            print(f"   📌 Assigning to column: {first_column.name}")
+            print(f"   📌 Assigning to column: {first_column.name if first_column else 'None'}")
             
             # Save with auto-assigned company, project, and column
             ticket = serializer.save(
@@ -1211,11 +1216,43 @@ class TicketViewSet(viewsets.ModelViewSet):
                 project=support_project,
                 column=first_column
             )
+            # Set rank at bottom of status group
+            self._set_bottom_rank(ticket)
             print(f"   ✅ Ticket created: {ticket.id}")
+        elif has_status_key and not has_column:
+            # New status system: create ticket without legacy column specified
+            # But we still need to assign a column for backward compatibility (column is NOT NULL)
+            print("   📋 Using new status system (ticket_status_key provided, no column)")
+            
+            # Get the project from the request data
+            project = serializer.validated_data.get('project')
+            if project:
+                # Find the first column for this project (usually "To Do")
+                first_column = Column.objects.filter(project=project).order_by('order').first()
+                if first_column:
+                    print(f"   📌 Auto-assigning to first column: {first_column.name} (id={first_column.id})")
+                    ticket = serializer.save(reporter=user, column=first_column)
+                else:
+                    # No columns exist - create default ones
+                    print("   ⚠️ No columns found, creating defaults...")
+                    Column.objects.create(project=project, name='To Do', order=1)
+                    Column.objects.create(project=project, name='In Progress', order=2)
+                    Column.objects.create(project=project, name='Review', order=3)
+                    Column.objects.create(project=project, name='Done', order=4)
+                    first_column = Column.objects.filter(project=project).order_by('order').first()
+                    ticket = serializer.save(reporter=user, column=first_column)
+            else:
+                # No project - shouldn't happen, but handle gracefully
+                ticket = serializer.save(reporter=user)
+            # Set rank at bottom of status group
+            self._set_bottom_rank(ticket)
+            print(f"   ✅ Ticket created with status system: {ticket.id}, status={ticket.ticket_status}, rank={ticket.rank}")
         else:
-            print("   ⚠️ Not a servicedesk user - requires project/column in request")
+            print("   ⚠️ Standard ticket creation")
             # For staff/admin users, save normally
             ticket = serializer.save(reporter=user)
+            # Set rank at bottom of status group
+            self._set_bottom_rank(ticket)
         
         # Auto-assign to company admins if ticket has a company
         if ticket.company:
@@ -1223,6 +1260,32 @@ class TicketViewSet(viewsets.ModelViewSet):
             if company_admins.exists():
                 ticket.assignees.set(company_admins)
                 print(f"   👥 Auto-assigned to {company_admins.count()} company admin(s)")
+    
+    def _set_bottom_rank(self, ticket):
+        """Set the ticket's rank to be at the bottom of its status group."""
+        from tickets.utils.lexorank import rank_between
+        
+        if not ticket.ticket_status:
+            return
+        
+        # Find the last ticket in this status (highest rank)
+        last_ticket = Ticket.objects.filter(
+            project=ticket.project,
+            ticket_status=ticket.ticket_status
+        ).exclude(
+            pk=ticket.pk
+        ).order_by('-rank').first()
+        
+        if last_ticket:
+            # Place after the last ticket
+            new_rank = rank_between(last_ticket.rank, None)
+        else:
+            # First ticket in this status - use default middle rank
+            new_rank = 'n'
+        
+        ticket.rank = new_rank
+        ticket.save(update_fields=['rank'])
+        print(f"   📊 Set rank to '{new_rank}' (after: {last_ticket.rank if last_ticket else 'none'})")
     
     def _capture_state(self, instance):
         """Capture current state of ticket for history tracking"""

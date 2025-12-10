@@ -17,7 +17,7 @@ import "./QuickTicketCreator.css";
 const { TextArea } = Input;
 
 interface QuickTicketCreatorProps {
-  columnId: number;
+  columnId?: number;  // Optional - for legacy column system
   statusKey?: string; // NEW: Status key for new status-based system
   onSuccess?: (ticket: Ticket) => void;
   onClose?: () => void;
@@ -158,13 +158,16 @@ export const QuickTicketCreator: React.FC<QuickTicketCreatorProps> = ({
         priority_id: 3, // Medium
         urgency: "normal",
         importance: "normal",
-        column: columnId,
+        // Use status key for new Jira-style system
+        // When statusKey is provided, we use the new system and don't need column
+        ticket_status_key: statusKey || "open",
         project: selectedProject.id,
       };
 
-      // NEW: If using status-based system, include status key
-      if (statusKey) {
-        ticketData.status_key = statusKey;
+      // Only include column if we DON'T have a statusKey (legacy system)
+      // The columnId from boardColumns is NOT the same as Column.id
+      if (columnId && !statusKey) {
+        ticketData.column = columnId;
       }
 
       // Only add optional fields if they have values
@@ -177,6 +180,7 @@ export const QuickTicketCreator: React.FC<QuickTicketCreatorProps> = ({
       }
 
       const newTicket = await ticketService.createTicket(ticketData);
+      console.log(`[QuickTicketCreator] Ticket created:`, newTicket.id, newTicket.name);
       // message.success("Ticket created!");
 
       // Reset form
@@ -185,6 +189,7 @@ export const QuickTicketCreator: React.FC<QuickTicketCreatorProps> = ({
       setAssignee(undefined);
       setDueDate(null);
 
+      console.log(`[QuickTicketCreator] Calling onSuccess with ticket:`, newTicket.id);
       onSuccess?.(newTicket);
 
       // Keep the quick creator open for multiple ticket creation

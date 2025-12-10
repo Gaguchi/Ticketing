@@ -247,7 +247,10 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
         priority_id: values.priority || 3,
         urgency: values.urgency || "normal",
         importance: values.importance || "normal",
-        column: values.column || actualColumnId, // Use selected column from form or the actual column ID
+        // Only include column if we have a valid one, otherwise use the new status system
+        ...(actualColumnId ? { column: values.column || actualColumnId } : {}),
+        // Default to 'open' status for new tickets in the Jira-style system
+        ticket_status_key: "open",
         project: selectedProject.id, // Use selected project from context
         company: values.company || undefined,
         assignee_ids: values.assignee ? [values.assignee] : undefined,
