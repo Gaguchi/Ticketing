@@ -6,6 +6,7 @@ import { Ticket } from "../types";
 import apiService from "../services/api.service";
 import { API_ENDPOINTS } from "../config/api";
 import CreateTicketModal from "../components/CreateTicketModal";
+import ReviewModal from "../components/ReviewModal";
 
 type FilterType = "all" | "open" | "resolved" | "archived";
 
@@ -25,6 +26,7 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [error, setError] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [ticketsNeedingReview, setTicketsNeedingReview] = useState<Ticket[]>([]);
 
   useEffect(() => {
     fetchAllTickets();
@@ -52,6 +54,12 @@ export default function Dashboard() {
 
       setTickets(activeList);
       setArchivedTickets(archivedList);
+
+      // Check for tickets needing review (in final column but no rating yet)
+      const needReview = activeList.filter(
+        (t: Ticket) => t.is_final_column && !t.resolution_rating
+      );
+      setTicketsNeedingReview(needReview);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load tickets");
     } finally {
@@ -144,6 +152,22 @@ export default function Dashboard() {
   // Count tickets for filter badges
   const openCount = tickets.filter((t) => !t.resolved_at).length;
   const resolvedCount = tickets.filter((t) => !!t.resolved_at).length;
+
+  const handleReviewComplete = (ticketId: number) => {
+    // Update the ticket in state to reflect it's been reviewed
+    setTickets((prev) =>
+      prev.map((t) =>
+        t.id === ticketId ? { ...t, resolution_rating: 5 } : t // Placeholder, actual rating comes from API
+      )
+    );
+    // Remove from pending reviews
+    setTicketsNeedingReview((prev) => prev.filter((t) => t.id !== ticketId));
+  };
+
+  const handleAllReviewsComplete = () => {
+    // Refresh tickets to get updated data
+    fetchAllTickets();
+  };
 
   return (
     <PageContainer>
@@ -310,6 +334,13 @@ export default function Dashboard() {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onSubmit={handleCreateTicket}
+      />
+
+      {/* Review Modal - pops up for tickets needing review */}
+      <ReviewModal
+        tickets={ticketsNeedingReview}
+        onReviewComplete={handleReviewComplete}
+        onAllReviewsComplete={handleAllReviewsComplete}
       />
     </PageContainer>
   );

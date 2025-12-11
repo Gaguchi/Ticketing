@@ -11,6 +11,7 @@ import {
 import { KanbanBoard } from "../components/KanbanBoard";
 import CreateTicketModal from "../components/CreateTicketModal";
 import TicketDetailModal from "../components/TicketDetailModal";
+import ReviewModal from "../components/ReviewModal";
 import { Ticket, Column, Project } from "../types";
 import { API_ENDPOINTS } from "../config/api";
 import apiService from "../services/api.service";
@@ -37,6 +38,7 @@ const MyTickets: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedTicketId, setSelectedTicketId] = useState<number | null>(null);
   const [view, setView] = useState<"list" | "board" | "archive">("list");
+  const [ticketsNeedingReview, setTicketsNeedingReview] = useState<Ticket[]>([]);
 
   useEffect(() => {
     fetchProjects();
@@ -110,6 +112,14 @@ const MyTickets: React.FC = () => {
       // Handle paginated response
       const data = Array.isArray(response) ? response : response.results || [];
       setTickets(data);
+
+      // Check for tickets needing review (in final column but no rating yet)
+      if (view !== "archive") {
+        const needReview = data.filter(
+          (t: Ticket) => t.is_final_column && !t.resolution_rating
+        );
+        setTicketsNeedingReview(needReview);
+      }
     } catch (error: any) {
       console.error("Failed to fetch tickets:", error);
     } finally {
@@ -406,6 +416,20 @@ const MyTickets: React.FC = () => {
         open={selectedTicketId !== null}
         onClose={() => setSelectedTicketId(null)}
         ticketId={selectedTicketId}
+      />
+
+      {/* Review Modal - pops up for tickets needing review */}
+      <ReviewModal
+        tickets={ticketsNeedingReview}
+        onReviewComplete={(ticketId) => {
+          setTickets((prev) =>
+            prev.map((t) =>
+              t.id === ticketId ? { ...t, resolution_rating: 5 } : t
+            )
+          );
+          setTicketsNeedingReview((prev) => prev.filter((t) => t.id !== ticketId));
+        }}
+        onAllReviewsComplete={() => fetchTickets()}
       />
     </div>
   );

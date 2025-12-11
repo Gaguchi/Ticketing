@@ -13,7 +13,7 @@ from datetime import timedelta
 from django_filters.rest_framework import DjangoFilterBackend
 from .permissions import (
     IsSuperuserOrCompanyAdmin, IsCompanyAdmin, IsCompanyMember,
-    IsSuperuserOrCompanyMember, IsCompanyAdminOrReadOnly
+    IsSuperuserOrCompanyMember, IsCompanyAdminOrReadOnly, IsProjectSuperadminOrReadOnly
 )
 from .pagination import StandardResultsSetPagination
 from .models import (
@@ -832,14 +832,46 @@ class UserManagementViewSet(viewsets.ModelViewSet):
 
 class ProjectViewSet(viewsets.ModelViewSet):
     """
-    ViewSet for Project CRUD operations
+    ViewSet for Project CRUD operations.
+    
+    Permissions:
+    - Create: Any authenticated user (becomes superadmin of new project)
+    - Read: Project members, leads, and users with roles
+    - Update/Delete: Only superadmins and admins of the project
     """
     queryset = Project.objects.all()
     serializer_class = ProjectSerializer
+    permission_classes = [IsAuthenticated, IsProjectSuperadminOrReadOnly]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['key', 'name', 'description']
     ordering_fields = ['name', 'created_at']
     ordering = ['name']
+    
+    def get_queryset(self):
+        """
+        Filter projects based on user access:
+        - Superusers see all projects
+        - Regular users see projects they're members of, lead, or have roles in
+        """
+        user = self.request.user
+        
+        if user.is_superuser:
+            return Project.objects.all()
+        
+        # Get projects where user is lead, member, or has a role
+        user_project_ids = UserRole.objects.filter(user=user).values_list('project_id', flat=True)
+        
+        # Get projects associated with companies where user is an admin
+        admin_company_project_ids = Project.objects.filter(
+            companies__admins=user
+        ).values_list('id', flat=True)
+        
+        return Project.objects.filter(
+            Q(lead_username=user.username) |
+            Q(members=user) |
+            Q(id__in=user_project_ids) |
+            Q(id__in=admin_company_project_ids)
+        ).distinct()
     
     def create(self, request, *args, **kwargs):
         """
@@ -901,6 +933,23 @@ class ProjectViewSet(viewsets.ModelViewSet):
         columns = project.columns.all()
         serializer = ColumnSerializer(columns, many=True)
         return Response(serializer.data)
+    
+    def destroy(self, request, *args, **kwargs):
+        """
+        Delete a project and all related data.
+        Only superadmins of the project can delete it.
+        """
+        project = self.get_object()
+        
+        # Log what's being deleted for audit purposes
+        ticket_count = project.tickets.count()
+        print(f"🗑️ Deleting project '{project.name}' (key: {project.key}) with {ticket_count} tickets")
+        
+        # Delete all related user roles for this project
+        UserRole.objects.filter(project=project).delete()
+        
+        # Django's CASCADE should handle tickets, columns, etc.
+        return super().destroy(request, *args, **kwargs)
 
 
 # ==================== Jira-style Status System ViewSets ====================
@@ -1197,6 +1246,18 @@ class TicketViewSet(viewsets.ModelViewSet):
                     description=f"Support tickets for {user_company.name}"
                 )
                 support_project.companies.add(user_company)
+                
+                # Add company admins as project members
+                company_admins = user_company.admins.all()
+                for admin in company_admins:
+                    support_project.members.add(admin)
+                    # Also give them admin role
+                    UserRole.objects.get_or_create(
+                        user=admin,
+                        project=support_project,
+                        defaults={'role': 'admin', 'assigned_by': admin}
+                    )
+                print(f"   👥 Added {company_admins.count()} company admin(s) to project")
                 
                 # Create default columns for the new project
                 Column.objects.create(project=support_project, name='New', order=1)

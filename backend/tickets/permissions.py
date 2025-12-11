@@ -1,6 +1,64 @@
 from rest_framework import permissions
 from django.db.models import Q
-from .models import Company, UserRole
+from .models import Company, UserRole, Project
+
+
+class IsProjectSuperadminOrReadOnly(permissions.BasePermission):
+    """
+    Permission class for Project management:
+    - Django Superusers: Full access
+    - Project Superadmins: Can edit/delete their own projects
+    - Authenticated users: Read-only access to projects they're members of
+    - Anyone can CREATE new projects (they become superadmin of it)
+    """
+    
+    def has_permission(self, request, view):
+        """Check if user is authenticated."""
+        if not request.user or not request.user.is_authenticated:
+            return False
+        
+        # Django superusers have full access
+        if request.user.is_superuser:
+            return True
+        
+        # Creating a project is allowed for any authenticated user
+        # They will become the superadmin of the new project
+        if request.method == 'POST':
+            return True
+        
+        # For safe methods (GET, HEAD, OPTIONS), allow access
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        
+        # For other unsafe methods (PUT, PATCH, DELETE), check in has_object_permission
+        return True
+    
+    def has_object_permission(self, request, view, obj):
+        """Check if user can manage this specific project."""
+        if not request.user or not request.user.is_authenticated:
+            return False
+        
+        # Django superusers have full access
+        if request.user.is_superuser:
+            return True
+        
+        # For safe methods, allow if user is a member of the project
+        if request.method in permissions.SAFE_METHODS:
+            # Check if user is lead, member, or has any role in the project
+            if obj.lead_username == request.user.username:
+                return True
+            if obj.members.filter(id=request.user.id).exists():
+                return True
+            if UserRole.objects.filter(user=request.user, project=obj).exists():
+                return True
+            return False
+        
+        # For unsafe methods, only superadmins and admins can modify
+        return UserRole.objects.filter(
+            user=request.user,
+            project=obj,
+            role__in=['superadmin', 'admin']
+        ).exists()
 
 
 class IsSuperuserOrCompanyAdmin(permissions.BasePermission):
