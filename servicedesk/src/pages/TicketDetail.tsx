@@ -8,8 +8,31 @@ import { useAuth } from "../contexts/AuthContext";
 import apiService from "../services/api.service";
 import { API_ENDPOINTS } from "../config/api";
 
-// Map column names to status keys for progress chain
-function getStatusKey(columnName: string): string {
+// Map ticket_status_key or category to progress chain status
+function getStatusKey(ticket: { ticket_status_key?: string; ticket_status_category?: string; column_name?: string; status?: string }): string {
+  // Prefer new ticket_status_key system
+  if (ticket.ticket_status_key) {
+    const keyMap: Record<string, string> = {
+      open: "open",
+      in_progress: "in_progress",
+      in_review: "waiting",
+      done: "done",
+    };
+    return keyMap[ticket.ticket_status_key] || "open";
+  }
+  
+  // Fallback to category
+  if (ticket.ticket_status_category) {
+    const categoryMap: Record<string, string> = {
+      todo: "open",
+      in_progress: "in_progress",
+      done: "done",
+    };
+    return categoryMap[ticket.ticket_status_category] || "open";
+  }
+  
+  // Legacy fallback using column_name
+  const columnName = ticket.column_name || ticket.status || '';
   const statusMap: Record<string, string> = {
     open: "open",
     "to do": "open",
@@ -188,9 +211,10 @@ export default function TicketDetail() {
     );
   }
 
-  const statusKey = getStatusKey(ticket.column_name || ticket.status);
+  const statusKey = getStatusKey(ticket);
   const isResolved = !!ticket.resolved_at;
-  const canReview = ticket.is_final_column && !isResolved;
+  // Check if ticket can be reviewed: must be in 'done' category (or is_final_column) and not already resolved
+  const canReview = (ticket.ticket_status_category === 'done' || ticket.is_final_column) && !isResolved;
 
   return (
     <PageContainer maxWidth="lg">
@@ -260,7 +284,7 @@ export default function TicketDetail() {
           <div>
             <p className="text-gray-500 mb-1">Status</p>
             <p className="font-medium text-gray-900 capitalize">
-              {ticket.column_name || ticket.status}
+              {ticket.ticket_status_name || ticket.column_name || ticket.status}
             </p>
           </div>
           {ticket.assignees && ticket.assignees.length > 0 && (

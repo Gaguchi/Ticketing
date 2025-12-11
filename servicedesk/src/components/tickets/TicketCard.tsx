@@ -7,8 +7,31 @@ interface TicketCardProps {
   ticket: Ticket;
 }
 
-// Map column names to status keys
-function getStatusKey(columnName: string): string {
+// Map ticket_status_key or category to progress chain status
+function getStatusKey(ticket: { ticket_status_key?: string; ticket_status_category?: string; column_name?: string; status?: string }): string {
+  // Prefer new ticket_status_key system
+  if (ticket.ticket_status_key) {
+    const keyMap: Record<string, string> = {
+      open: "open",
+      in_progress: "in_progress",
+      in_review: "waiting",
+      done: "done",
+    };
+    return keyMap[ticket.ticket_status_key] || "open";
+  }
+  
+  // Fallback to category
+  if (ticket.ticket_status_category) {
+    const categoryMap: Record<string, string> = {
+      todo: "open",
+      in_progress: "in_progress",
+      done: "done",
+    };
+    return categoryMap[ticket.ticket_status_category] || "open";
+  }
+  
+  // Legacy fallback using column_name
+  const columnName = ticket.column_name || ticket.status || '';
   const statusMap: Record<string, string> = {
     open: "open",
     "to do": "open",
@@ -42,9 +65,10 @@ function formatRelativeTime(dateString: string): string {
 }
 
 export default function TicketCard({ ticket }: TicketCardProps) {
-  const statusKey = getStatusKey(ticket.column_name || ticket.status);
+  const statusKey = getStatusKey(ticket);
   const isResolved = !!ticket.resolved_at;
-  const isFinalColumn = ticket.is_final_column || false;
+  // Check if ticket can be reviewed: must be in 'done' category (or is_final_column) and not already resolved
+  const isFinalColumn = ticket.ticket_status_category === 'done' || ticket.is_final_column || false;
   const needsReview = isFinalColumn && !isResolved;
   const commentsCount = ticket.comments_count || ticket.comment_count || 0;
 

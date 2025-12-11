@@ -29,10 +29,15 @@ export interface Ticket {
   description?: string;
   type: string;
   priority_id: number;
-  status: string;
-  column: number;
-  column_name?: string;
-  column_order?: number;
+  status: string; // Legacy field
+  column: number; // Legacy field
+  column_name?: string; // Legacy field
+  column_order?: number; // Legacy field
+  // New Jira-style status system
+  ticket_status_key?: string;
+  ticket_status_name?: string;
+  ticket_status_category?: 'todo' | 'in_progress' | 'done';
+  ticket_status_color?: string;
   reporter?: User;
   assignees?: User[];
   assignee_ids?: number[];

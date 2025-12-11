@@ -115,10 +115,10 @@ const MyTickets: React.FC = () => {
       const data = Array.isArray(response) ? response : response.results || [];
       setTickets(data);
 
-      // Check for tickets needing review (in final column but no rating yet)
+      // Check for tickets needing review (in done status but no rating yet)
       if (view !== "archive") {
         const needReview = data.filter(
-          (t: Ticket) => t.is_final_column && !t.resolution_rating
+          (t: Ticket) => (t.ticket_status_category === 'done' || t.is_final_column) && !t.resolution_rating
         );
         setTicketsNeedingReview(needReview);
       }
@@ -146,7 +146,13 @@ const MyTickets: React.FC = () => {
     }
 
     if (statusFilter !== "all") {
-      filtered = filtered.filter((ticket) => ticket.status === statusFilter);
+      filtered = filtered.filter((ticket) => {
+        // Match against ticket_status_name (display value) or ticket_status_key or legacy status
+        const ticketStatusName = ticket.ticket_status_name || ticket.column_name || ticket.status;
+        return ticketStatusName === statusFilter || 
+               ticket.ticket_status_key === statusFilter || 
+               ticket.status === statusFilter;
+      });
     }
 
     if (priorityFilter !== "all") {
@@ -157,7 +163,8 @@ const MyTickets: React.FC = () => {
     setFilteredTickets(filtered);
   };
 
-  const statuses = [...new Set(tickets.map((t) => t.status))];
+  // Get unique status display names for the filter dropdown
+  const statuses = [...new Set(tickets.map((t) => t.ticket_status_name || t.column_name || t.status))].filter(Boolean);
   const priorities = [
     { id: 1, label: "Low" },
     { id: 2, label: "Medium" },
@@ -187,14 +194,17 @@ const MyTickets: React.FC = () => {
     },
     {
       title: "Status",
-      dataIndex: "status",
       key: "status",
       width: 120,
-      render: (status: string) => (
-        <Tag color={getStatusColor(status)} className="m-0 text-[10px]">
-          {status}
-        </Tag>
-      ),
+      render: (_: any, record: Ticket) => {
+        // Use new ticket_status_name, fallback to column_name, then status
+        const displayStatus = record.ticket_status_name || record.column_name || record.status;
+        return (
+          <Tag color={getStatusColor(displayStatus)} className="m-0 text-[10px]">
+            {displayStatus}
+          </Tag>
+        );
+      },
     },
     {
       title: "Priority",
