@@ -38,7 +38,9 @@ const MyTickets: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedTicketId, setSelectedTicketId] = useState<number | null>(null);
   const [view, setView] = useState<"list" | "board" | "archive">("list");
-  const [ticketsNeedingReview, setTicketsNeedingReview] = useState<Ticket[]>([]);
+  const [ticketsNeedingReview, setTicketsNeedingReview] = useState<Ticket[]>(
+    []
+  );
 
   useEffect(() => {
     fetchProjects();
@@ -427,7 +429,9 @@ const MyTickets: React.FC = () => {
               t.id === ticketId ? { ...t, resolution_rating: 5 } : t
             )
           );
-          setTicketsNeedingReview((prev) => prev.filter((t) => t.id !== ticketId));
+          setTicketsNeedingReview((prev) =>
+            prev.filter((t) => t.id !== ticketId)
+          );
         }}
         onAllReviewsComplete={() => fetchTickets()}
       />

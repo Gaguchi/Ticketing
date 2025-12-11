@@ -1,6 +1,19 @@
 import React, { useState, useEffect } from "react";
-import { Modal, Rate, Input, Button, Typography, message, Badge, Progress } from "antd";
-import { StarFilled, CheckCircleOutlined, CommentOutlined } from "@ant-design/icons";
+import {
+  Modal,
+  Rate,
+  Input,
+  Button,
+  Typography,
+  message,
+  Badge,
+  Progress,
+} from "antd";
+import {
+  StarFilled,
+  CheckCircleOutlined,
+  CommentOutlined,
+} from "@ant-design/icons";
 import { Ticket } from "../types";
 import apiService from "../services/api.service";
 import { API_ENDPOINTS } from "../config/api";
@@ -50,7 +63,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
 
   const handleSubmit = async () => {
     if (!currentTicket) return;
-    
+
     if (rating === 0) {
       message.warning("Please provide a star rating");
       return;
@@ -63,7 +76,9 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
         feedback: feedback.trim() || undefined,
       });
 
-      message.success(`Review submitted for ${currentTicket.ticket_key || currentTicket.key}`);
+      message.success(
+        `Review submitted for ${currentTicket.ticket_key || currentTicket.key}`
+      );
       onReviewComplete(currentTicket.id);
 
       // Move to next ticket or close
@@ -101,10 +116,17 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
       {/* Progress indicator for multiple reviews */}
       {totalPending > 1 && (
         <div style={{ marginBottom: 24 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            <Badge 
-              count={remaining} 
-              style={{ backgroundColor: "#E67E22" }} 
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 8,
+            }}
+          >
+            <Badge
+              count={remaining}
+              style={{ backgroundColor: "#E67E22" }}
               overflowCount={99}
             >
               <Text type="secondary" style={{ paddingRight: 16 }}>
@@ -115,8 +137,8 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
               {currentIndex + 1} of {totalPending}
             </Text>
           </div>
-          <Progress 
-            percent={Math.round(((currentIndex) / totalPending) * 100)} 
+          <Progress
+            percent={Math.round((currentIndex / totalPending) * 100)}
             showInfo={false}
             strokeColor="#2C3E50"
             size="small"
@@ -126,16 +148,16 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
 
       {/* Header */}
       <div style={{ textAlign: "center", marginBottom: 32 }}>
-        <div 
-          style={{ 
-            width: 64, 
-            height: 64, 
-            borderRadius: "50%", 
-            backgroundColor: "#E8F5E9", 
-            display: "flex", 
-            alignItems: "center", 
+        <div
+          style={{
+            width: 64,
+            height: 64,
+            borderRadius: "50%",
+            backgroundColor: "#E8F5E9",
+            display: "flex",
+            alignItems: "center",
             justifyContent: "center",
-            margin: "0 auto 16px"
+            margin: "0 auto 16px",
           }}
         >
           <CheckCircleOutlined style={{ fontSize: 32, color: "#27AE60" }} />
@@ -149,12 +171,12 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
       </div>
 
       {/* Ticket Info */}
-      <div 
-        style={{ 
-          backgroundColor: "#F5F7FA", 
-          borderRadius: 8, 
-          padding: 16, 
-          marginBottom: 24 
+      <div
+        style={{
+          backgroundColor: "#F5F7FA",
+          borderRadius: 8,
+          padding: 16,
+          marginBottom: 24,
         }}
       >
         <Text strong style={{ display: "block", marginBottom: 4 }}>
@@ -167,22 +189,25 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
 
       {/* Star Rating */}
       <div style={{ textAlign: "center", marginBottom: 24 }}>
-        <Text strong style={{ display: "block", marginBottom: 12, fontSize: 15 }}>
+        <Text
+          strong
+          style={{ display: "block", marginBottom: 12, fontSize: 15 }}
+        >
           How would you rate the resolution?
         </Text>
-        <Rate 
+        <Rate
           value={rating}
           onChange={setRating}
           style={{ fontSize: 36 }}
           character={<StarFilled />}
         />
         {rating > 0 && (
-          <Text 
-            style={{ 
-              display: "block", 
-              marginTop: 8, 
-              color: "#E67E22", 
-              fontWeight: 500 
+          <Text
+            style={{
+              display: "block",
+              marginTop: 8,
+              color: "#E67E22",
+              fontWeight: 500,
             }}
           >
             {ratingLabels[rating]}
@@ -192,9 +217,15 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
 
       {/* Feedback (optional) */}
       <div style={{ marginBottom: 32 }}>
-        <Text strong style={{ display: "block", marginBottom: 8, fontSize: 15 }}>
+        <Text
+          strong
+          style={{ display: "block", marginBottom: 8, fontSize: 15 }}
+        >
           <CommentOutlined style={{ marginRight: 8 }} />
-          Additional feedback <Text type="secondary" style={{ fontWeight: 400 }}>(optional)</Text>
+          Additional feedback{" "}
+          <Text type="secondary" style={{ fontWeight: 400 }}>
+            (optional)
+          </Text>
         </Text>
         <TextArea
           value={feedback}
@@ -215,13 +246,13 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
         onClick={handleSubmit}
         loading={submitting}
         disabled={rating === 0}
-        style={{ 
-          height: 48, 
+        style={{
+          height: 48,
           borderRadius: 8,
           backgroundColor: rating === 0 ? undefined : "#2C3E50",
           borderColor: rating === 0 ? undefined : "#2C3E50",
           fontWeight: 500,
-          fontSize: 16
+          fontSize: 16,
         }}
       >
         {remaining > 1 ? "Submit & Continue" : "Submit Review"}
@@ -229,16 +260,17 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
 
       {/* Skip hint for multiple reviews */}
       {totalPending > 1 && (
-        <Text 
-          type="secondary" 
-          style={{ 
-            display: "block", 
-            textAlign: "center", 
-            marginTop: 12, 
-            fontSize: 13 
+        <Text
+          type="secondary"
+          style={{
+            display: "block",
+            textAlign: "center",
+            marginTop: 12,
+            fontSize: 13,
           }}
         >
-          You have {remaining} ticket{remaining !== 1 ? "s" : ""} awaiting your feedback
+          You have {remaining} ticket{remaining !== 1 ? "s" : ""} awaiting your
+          feedback
         </Text>
       )}
     </Modal>

@@ -39,7 +39,12 @@ import apiService from "../services/api.service";
 import { API_ENDPOINTS } from "../config/api";
 import { projectService } from "../services/project.service";
 import { useApp } from "../contexts/AppContext";
-import type { Project, UpdateProjectData, CreateProjectData, User } from "../types/api";
+import type {
+  Project,
+  UpdateProjectData,
+  CreateProjectData,
+  User,
+} from "../types/api";
 
 const { Title, Text } = Typography;
 
@@ -70,7 +75,10 @@ const SettingSection: React.FC<SettingSectionProps> = ({
 }) => (
   <div style={{ marginBottom: 32 }}>
     <div style={{ marginBottom: 16 }}>
-      <Title level={4} style={{ margin: 0, color: COLORS.primary, fontSize: 18 }}>
+      <Title
+        level={4}
+        style={{ margin: 0, color: COLORS.primary, fontSize: 18 }}
+      >
         {title}
       </Title>
       {description && (
@@ -130,7 +138,9 @@ const SettingRow: React.FC<SettingRowProps> = ({
         {label}
       </Text>
       {description && (
-        <Text style={{ fontSize: 13, color: COLORS.textSecondary, lineHeight: 1.4 }}>
+        <Text
+          style={{ fontSize: 13, color: COLORS.textSecondary, lineHeight: 1.4 }}
+        >
           {description}
         </Text>
       )}
@@ -210,29 +220,29 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
           label="Project Key"
           rules={[
             { required: true, message: "Please enter a project key" },
-            { pattern: /^[A-Z0-9]+$/, message: "Key must be uppercase letters and numbers only" },
+            {
+              pattern: /^[A-Z0-9]+$/,
+              message: "Key must be uppercase letters and numbers only",
+            },
             { max: 10, message: "Key must be 10 characters or less" },
           ]}
           extra="A short identifier used in ticket numbers (e.g., PROJ)"
         >
-          <Input 
-            placeholder="PROJ" 
+          <Input
+            placeholder="PROJ"
             style={{ textTransform: "uppercase" }}
             disabled={!isNew} // Can't change key after creation
           />
         </Form.Item>
 
-        <Form.Item
-          name="description"
-          label="Description"
-        >
-          <Input.TextArea rows={3} placeholder="Optional project description..." />
+        <Form.Item name="description" label="Description">
+          <Input.TextArea
+            rows={3}
+            placeholder="Optional project description..."
+          />
         </Form.Item>
 
-        <Form.Item
-          name="lead_username"
-          label="Project Lead"
-        >
+        <Form.Item name="lead_username" label="Project Lead">
           <Select
             placeholder="Select project lead"
             allowClear
@@ -240,7 +250,7 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
             filterOption={(input, option) =>
               (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
             }
-            options={users.map(u => ({
+            options={users.map((u) => ({
               value: u.username,
               label: `${u.first_name} ${u.last_name} (${u.username})`,
             }))}
@@ -253,10 +263,12 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
 
 const Settings: React.FC = () => {
   const { refreshProjects } = useApp();
-  
+
   // State
   const [theme, setTheme] = useState<"light" | "dark">("light");
-  const [fontSize, setFontSize] = useState<"small" | "medium" | "large">("medium");
+  const [fontSize, setFontSize] = useState<"small" | "medium" | "large">(
+    "medium"
+  );
   const [language, setLanguage] = useState("en");
   const [notifications, setNotifications] = useState({
     email: true,
@@ -299,7 +311,9 @@ const Settings: React.FC = () => {
 
   const loadUsers = async () => {
     try {
-      const response = await apiService.get<{ results: User[] }>(API_ENDPOINTS.USERS);
+      const response = await apiService.get<{ results: User[] }>(
+        API_ENDPOINTS.USERS
+      );
       setUsers(response.results || []);
     } catch (error) {
       console.error("Failed to load users:", error);
@@ -362,16 +376,18 @@ const Settings: React.FC = () => {
   const handleTriggerArchive = async () => {
     setArchiving(true);
     try {
-      const data = await apiService.post<{ archived_count: number; message: string }>(
-        API_ENDPOINTS.TICKET_TRIGGER_ARCHIVE,
-        {}
-      );
+      const data = await apiService.post<{
+        archived_count: number;
+        message: string;
+      }>(API_ENDPOINTS.TICKET_TRIGGER_ARCHIVE, {});
       setLastArchiveResult({
         count: data.archived_count,
         timestamp: new Date(),
       });
       if (data.archived_count > 0) {
-        message.success(`Successfully archived ${data.archived_count} ticket(s)`);
+        message.success(
+          `Successfully archived ${data.archived_count} ticket(s)`
+        );
       } else {
         message.info("No tickets were eligible for archiving");
       }
@@ -407,8 +423,12 @@ const Settings: React.FC = () => {
       key: "name",
       render: (name: string, record: Project) => (
         <div>
-          <Text strong style={{ display: "block" }}>{name}</Text>
-          <Text type="secondary" style={{ fontSize: 12 }}>{record.description || "No description"}</Text>
+          <Text strong style={{ display: "block" }}>
+            {name}
+          </Text>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            {record.description || "No description"}
+          </Text>
         </div>
       ),
     },
@@ -418,7 +438,9 @@ const Settings: React.FC = () => {
       key: "key",
       width: 100,
       render: (key: string) => (
-        <Tag color="blue" style={{ fontFamily: "monospace" }}>{key}</Tag>
+        <Tag color="blue" style={{ fontFamily: "monospace" }}>
+          {key}
+        </Tag>
       ),
     },
     {
@@ -426,14 +448,15 @@ const Settings: React.FC = () => {
       dataIndex: "lead_username",
       key: "lead_username",
       width: 150,
-      render: (lead: string) => lead ? (
-        <Space size={4}>
-          <UserOutlined style={{ color: COLORS.textSecondary }} />
-          <Text>{lead}</Text>
-        </Space>
-      ) : (
-        <Text type="secondary">—</Text>
-      ),
+      render: (lead: string) =>
+        lead ? (
+          <Space size={4}>
+            <UserOutlined style={{ color: COLORS.textSecondary }} />
+            <Text>{lead}</Text>
+          </Space>
+        ) : (
+          <Text type="secondary">—</Text>
+        ),
     },
     {
       title: "Stats",
@@ -489,11 +512,22 @@ const Settings: React.FC = () => {
       label: "Projects",
       icon: <ProjectOutlined />,
       children: (
-        <SettingSection title="Project Management" description="Create, edit, and manage your projects.">
+        <SettingSection
+          title="Project Management"
+          description="Create, edit, and manage your projects."
+        >
           <div style={{ padding: "20px 0" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 20,
+              }}
+            >
               <Text type="secondary">
-                {projects.length} project{projects.length !== 1 ? "s" : ""} in your workspace
+                {projects.length} project{projects.length !== 1 ? "s" : ""} in
+                your workspace
               </Text>
               <Button
                 type="primary"
@@ -510,10 +544,7 @@ const Settings: React.FC = () => {
                 <Spin size="large" />
               </div>
             ) : projects.length === 0 ? (
-              <Empty
-                description="No projects yet"
-                style={{ padding: 40 }}
-              >
+              <Empty description="No projects yet" style={{ padding: 40 }}>
                 <Button type="primary" onClick={handleCreateProject}>
                   Create your first project
                 </Button>
@@ -538,7 +569,10 @@ const Settings: React.FC = () => {
       icon: <BgColorsOutlined />,
       children: (
         <>
-          <SettingSection title="Interface Theme" description="Customize how the application looks.">
+          <SettingSection
+            title="Interface Theme"
+            description="Customize how the application looks."
+          >
             <SettingRow
               label="Color Theme"
               description="Select your preferred color scheme for the interface."
@@ -804,7 +838,11 @@ const Settings: React.FC = () => {
               label="Delete Account"
               description="Permanently delete your account and all associated data."
               danger
-              control={<Button danger type="primary">Delete Account</Button>}
+              control={
+                <Button danger type="primary">
+                  Delete Account
+                </Button>
+              }
               last
             />
           </SettingSection>
@@ -818,7 +856,14 @@ const Settings: React.FC = () => {
       children: (
         <SettingSection title="Maintenance">
           <div style={{ padding: "20px 0" }}>
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 16, marginBottom: 16 }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 16,
+                marginBottom: 16,
+              }}
+            >
               <div
                 style={{
                   backgroundColor: "#E8F5E9",
@@ -830,14 +875,21 @@ const Settings: React.FC = () => {
                 <InboxOutlined style={{ fontSize: 24 }} />
               </div>
               <div>
-                <Text strong style={{ fontSize: 16, display: "block", marginBottom: 4 }}>
+                <Text
+                  strong
+                  style={{ fontSize: 16, display: "block", marginBottom: 4 }}
+                >
                   Ticket Archiving
                 </Text>
-                <Text type="secondary" style={{ display: "block", marginBottom: 12, maxWidth: 600 }}>
-                  Tickets in the "Done" column for more than 24 hours are automatically archived to maintain system performance.
-                  You can manually trigger this process if needed.
+                <Text
+                  type="secondary"
+                  style={{ display: "block", marginBottom: 12, maxWidth: 600 }}
+                >
+                  Tickets in the "Done" column for more than 24 hours are
+                  automatically archived to maintain system performance. You can
+                  manually trigger this process if needed.
                 </Text>
-                
+
                 {lastArchiveResult && (
                   <Alert
                     type={lastArchiveResult.count > 0 ? "success" : "info"}
@@ -863,15 +915,26 @@ const Settings: React.FC = () => {
               </div>
             </div>
           </div>
-          
+
           <Divider />
-          
+
           <div style={{ padding: "20px 0" }}>
-             <Text strong style={{ fontSize: 15, display: "block", marginBottom: 8 }}>
+            <Text
+              strong
+              style={{ fontSize: 15, display: "block", marginBottom: 8 }}
+            >
               Background Tasks
             </Text>
-            <ul style={{ margin: 0, paddingLeft: 20, color: COLORS.textSecondary }}>
-              <li style={{ marginBottom: 4 }}>Auto-archive completed tickets (runs hourly)</li>
+            <ul
+              style={{
+                margin: 0,
+                paddingLeft: 20,
+                color: COLORS.textSecondary,
+              }}
+            >
+              <li style={{ marginBottom: 4 }}>
+                Auto-archive completed tickets (runs hourly)
+              </li>
               <li>Clean up expired sessions (runs daily)</li>
             </ul>
           </div>
@@ -882,7 +945,14 @@ const Settings: React.FC = () => {
 
   return (
     <Layout style={{ minHeight: "100vh", backgroundColor: COLORS.background }}>
-      <div style={{ maxWidth: 1200, margin: "0 auto", width: "100%", padding: "40px 24px" }}>
+      <div
+        style={{
+          maxWidth: 1200,
+          margin: "0 auto",
+          width: "100%",
+          padding: "40px 24px",
+        }}
+      >
         {/* Header */}
         <div style={{ marginBottom: 40 }}>
           <Title level={2} style={{ marginBottom: 8, color: COLORS.primary }}>
@@ -896,7 +966,7 @@ const Settings: React.FC = () => {
         <div style={{ backgroundColor: "transparent" }}>
           <Tabs
             tabPosition="left"
-            items={items.map(item => ({
+            items={items.map((item) => ({
               key: item.key,
               label: (
                 <span style={{ fontSize: 15, padding: "4px 0" }}>
@@ -908,9 +978,9 @@ const Settings: React.FC = () => {
                 <div style={{ paddingLeft: 24, maxWidth: 800 }}>
                   {item.children}
                 </div>
-              )
+              ),
             }))}
-            style={{ 
+            style={{
               backgroundColor: "transparent",
             }}
             tabBarStyle={{
@@ -921,10 +991,19 @@ const Settings: React.FC = () => {
               <div style={{ marginRight: 32 }}>
                 <DefaultTabBar {...props} />
                 <div style={{ marginTop: 40, padding: "0 16px" }}>
-                  <Button block onClick={handleReset} style={{ marginBottom: 12 }}>
+                  <Button
+                    block
+                    onClick={handleReset}
+                    style={{ marginBottom: 12 }}
+                  >
                     Reset Defaults
                   </Button>
-                  <Button block type="primary" onClick={handleSave} style={{ backgroundColor: COLORS.primary }}>
+                  <Button
+                    block
+                    type="primary"
+                    onClick={handleSave}
+                    style={{ backgroundColor: COLORS.primary }}
+                  >
                     Save Changes
                   </Button>
                 </div>

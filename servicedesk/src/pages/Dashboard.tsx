@@ -26,7 +26,9 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [error, setError] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [ticketsNeedingReview, setTicketsNeedingReview] = useState<Ticket[]>([]);
+  const [ticketsNeedingReview, setTicketsNeedingReview] = useState<Ticket[]>(
+    []
+  );
 
   useEffect(() => {
     fetchAllTickets();
@@ -156,8 +158,8 @@ export default function Dashboard() {
   const handleReviewComplete = (ticketId: number) => {
     // Update the ticket in state to reflect it's been reviewed
     setTickets((prev) =>
-      prev.map((t) =>
-        t.id === ticketId ? { ...t, resolution_rating: 5 } : t // Placeholder, actual rating comes from API
+      prev.map(
+        (t) => (t.id === ticketId ? { ...t, resolution_rating: 5 } : t) // Placeholder, actual rating comes from API
       )
     );
     // Remove from pending reviews

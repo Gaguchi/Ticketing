@@ -1322,12 +1322,51 @@ class TicketViewSet(viewsets.ModelViewSet):
                 ticket.assignees.set(company_admins)
                 print(f"   👥 Auto-assigned to {company_admins.count()} company admin(s)")
     
+    def _assign_status_from_column(self, ticket):
+        """
+        Assign a ticket_status based on the ticket's column for backward compatibility.
+        This ensures tickets created via legacy column system also work with new status system.
+        """
+        if ticket.ticket_status or not ticket.column or not ticket.project:
+            return  # Already has status, no column, or no project
+        
+        # Try to find a BoardColumn that matches this column's name
+        matching_board_column = BoardColumn.objects.filter(
+            project=ticket.project,
+            name__iexact=ticket.column.name
+        ).first()
+        
+        if not matching_board_column:
+            # Try matching by order position
+            matching_board_column = BoardColumn.objects.filter(
+                project=ticket.project,
+                order=ticket.column.order
+            ).first()
+        
+        if not matching_board_column:
+            # Fallback to first board column
+            matching_board_column = BoardColumn.objects.filter(
+                project=ticket.project
+            ).order_by('order').first()
+        
+        if matching_board_column:
+            # Get the first status from this board column
+            first_status = matching_board_column.statuses.first()
+            if first_status:
+                ticket.ticket_status = first_status
+                ticket.save(update_fields=['ticket_status'])
+                print(f"   📋 Auto-assigned ticket_status: {first_status.key} (from BoardColumn: {matching_board_column.name})")
+    
     def _set_bottom_rank(self, ticket):
         """Set the ticket's rank to be at the bottom of its status group."""
         from tickets.utils.lexorank import rank_between
         
+        # First ensure ticket has a status
         if not ticket.ticket_status:
-            return
+            self._assign_status_from_column(ticket)
+        
+        if not ticket.ticket_status:
+            return  # Still no status, can't set rank
         
         # Find the last ticket in this status (highest rank)
         last_ticket = Ticket.objects.filter(

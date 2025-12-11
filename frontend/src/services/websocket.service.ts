@@ -30,6 +30,8 @@ class WebSocketService {
 
   /**
    * Get WebSocket URL based on HTTP URL
+   * In development (empty VITE_API_BASE_URL): Uses current window location (Vite proxy handles it)
+   * In production: Uses the configured base URL
    */
   private getWebSocketUrl(path: string): string {
     // Check if explicit WebSocket URL is provided
@@ -42,8 +44,16 @@ class WebSocketService {
       return `${wsProtocol}://${cleanWsUrl}/${path}`;
     }
     
-    // Fallback: derive from API base URL
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+    // Get API base URL (empty in dev = use current host with Vite proxy)
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+    
+    if (!baseUrl) {
+      // Development mode: use current host (Vite proxy will forward /ws to backend)
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+      return `${wsProtocol}://${window.location.host}/${path}`;
+    }
+    
+    // Production mode: derive WebSocket URL from API base URL
     const wsProtocol = baseUrl.startsWith('https') ? 'wss' : 'ws';
     const wsHost = baseUrl.replace(/^https?:\/\//, '');
     
