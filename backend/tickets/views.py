@@ -1878,20 +1878,18 @@ class TicketViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # Check if ticket is in the last column of the project
-        if not ticket.column:
+        # Check if ticket is in a "done" status (category='done')
+        # This uses the new Jira-style status system
+        if not ticket.ticket_status:
             return Response(
-                {'error': 'Ticket must be in a column to submit a review'},
+                {'error': 'Ticket must have a status to submit a review'},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        max_order = Column.objects.filter(project=ticket.project).aggregate(
-            models.Max('order')
-        )['order__max']
-        
-        if ticket.column.order != max_order:
+        # Check if the ticket's status is in the 'done' category
+        if ticket.ticket_status.category != 'done':
             return Response(
-                {'error': 'Ticket must be in the final column to submit a review'},
+                {'error': 'Ticket must be completed (Done status) to submit a review'},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
