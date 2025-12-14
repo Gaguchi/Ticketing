@@ -1,15 +1,17 @@
 """
-Management command to backfill done_at for tickets already in Done columns.
-This is needed for tickets that were moved to Done before the done_at tracking was added.
+Management command to backfill done_at for tickets already in Done columns or with Done status.
+This is needed for tickets that were moved to Done before the done_at tracking was added,
+or tickets marked as Done via the new status system without done_at being set.
 """
 from django.core.management.base import BaseCommand
+from django.db.models import Q
 from django.utils import timezone
 
-from tickets.models import Ticket, Column
+from tickets.models import Ticket, Column, Status, StatusCategory
 
 
 class Command(BaseCommand):
-    help = 'Backfill done_at for tickets in Done columns that are missing this field'
+    help = 'Backfill done_at for tickets in Done columns or with Done status that are missing this field'
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -31,36 +33,55 @@ class Command(BaseCommand):
         for col in done_columns:
             self.stdout.write(f"  - {col.project.key}/{col.name} (id={col.id})")
 
-        if not done_columns.exists():
-            self.stdout.write(self.style.WARNING("No Done columns found."))
+        # Find all "Done" category statuses (new Jira-style status system)
+        done_statuses = Status.objects.filter(category=StatusCategory.DONE)
+        
+        self.stdout.write(f"\nFound {done_statuses.count()} Done-category statuses:")
+        for status in done_statuses:
+            self.stdout.write(f"  - {status.name} (key={status.key})")
+
+        if not done_columns.exists() and not done_statuses.exists():
+            self.stdout.write(self.style.WARNING("No Done columns or statuses found."))
             return
 
-        # Find tickets in Done columns that don't have done_at set
+        # Find tickets that are "done" (in Done column OR have Done status) but don't have done_at set
+        # A ticket is "done" if:
+        # 1. It's in a Done column, OR
+        # 2. It has a ticket_status with category='done'
         tickets_to_update = Ticket.objects.filter(
-            column__in=done_columns,
+            Q(column__in=done_columns) | Q(ticket_status__in=done_statuses),
             done_at__isnull=True,
             is_archived=False
-        ).select_related('project', 'column')
+        ).select_related('project', 'column', 'ticket_status').distinct()
 
         count = tickets_to_update.count()
 
         if count == 0:
             self.stdout.write(self.style.SUCCESS(
-                "All tickets in Done columns already have done_at set."
+                "All tickets in Done state already have done_at set."
             ))
             
             # Show stats
-            total_in_done = Ticket.objects.filter(column__in=done_columns, is_archived=False).count()
-            with_done_at = Ticket.objects.filter(column__in=done_columns, is_archived=False, done_at__isnull=False).count()
-            self.stdout.write(f"\nStats: {with_done_at}/{total_in_done} tickets in Done columns have done_at set")
+            total_in_done = Ticket.objects.filter(
+                Q(column__in=done_columns) | Q(ticket_status__in=done_statuses),
+                is_archived=False
+            ).distinct().count()
+            with_done_at = Ticket.objects.filter(
+                Q(column__in=done_columns) | Q(ticket_status__in=done_statuses),
+                is_archived=False,
+                done_at__isnull=False
+            ).distinct().count()
+            self.stdout.write(f"\nStats: {with_done_at}/{total_in_done} tickets in Done state have done_at set")
             return
 
-        self.stdout.write(f"\nFound {count} ticket(s) in Done columns without done_at:")
+        self.stdout.write(f"\nFound {count} ticket(s) in Done state without done_at:")
 
         for ticket in tickets_to_update:
+            status_info = f"status: {ticket.ticket_status.name}" if ticket.ticket_status else "no status"
+            column_info = f"column: {ticket.column.name}" if ticket.column else "no column"
             self.stdout.write(
                 f"  - {ticket.project.key}-{ticket.project_number}: {ticket.name} "
-                f"(column: {ticket.column.name}, updated: {ticket.updated_at})"
+                f"({column_info}, {status_info}, updated: {ticket.updated_at})"
             )
 
         if dry_run:

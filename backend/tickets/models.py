@@ -754,19 +754,26 @@ class Ticket(models.Model):
                 self.project_number = 1
 
         previous_column_id = None
+        previous_status_id = None
         column_changed = False
+        status_changed = False
         
         if self.pk:
             try:
                 previous = Ticket.objects.get(pk=self.pk)
                 previous_column_id = previous.column_id
+                previous_status_id = previous.ticket_status_id
                 column_changed = previous_column_id != self.column_id
+                status_changed = previous_status_id != self.ticket_status_id
             except Ticket.DoesNotExist:
                 previous_column_id = None
+                previous_status_id = None
                 column_changed = True
+                status_changed = True
         else:
             # New ticket
             column_changed = True
+            status_changed = True
 
         # Auto-assign column_order when:
         # 1. New ticket is created
@@ -787,15 +794,16 @@ class Ticket(models.Model):
                 
                 self.column_order = (max_order or -1) + 1
 
-        # Update done_at when entering/leaving Done column
-        if self.column_id:
-            is_done_column = self._is_done_column()
-
-            if is_done_column and (column_changed or not self.done_at):
-                self.done_at = timezone.now()
-            elif not is_done_column and column_changed:
-                self.done_at = None
-        else:
+        # Update done_at when entering/leaving "Done" state
+        # A ticket is "done" if it's in a Done column OR has a status with category='done'
+        state_changed = column_changed or status_changed
+        is_done = self._is_done()
+        
+        if is_done and (state_changed or not self.done_at):
+            # Entering done state - set done_at timestamp
+            self.done_at = timezone.now()
+        elif not is_done and state_changed and self.done_at:
+            # Leaving done state - clear done_at
             self.done_at = None
         
         super().save(*args, **kwargs)
@@ -830,6 +838,21 @@ class Ticket(models.Model):
         if not column or not column.name:
             return False
         return column.name.strip().lower() in self.DONE_COLUMN_NAMES
+    
+    def _is_done_status(self):
+        """Check if the ticket's status has category='done' (new Jira-style status system)."""
+        if not self.ticket_status_id:
+            return False
+        status = getattr(self, 'ticket_status', None)
+        if status is None or status.id != self.ticket_status_id:
+            status = Status.objects.filter(id=self.ticket_status_id).first()
+        if not status:
+            return False
+        return status.category == StatusCategory.DONE
+    
+    def _is_done(self):
+        """Check if ticket is 'done' via either the old column system or new status system."""
+        return self._is_done_column() or self._is_done_status()
     
     def move_to_position(self, target_column_id, target_order, max_retries=3, broadcast=True):
         """
@@ -891,10 +914,26 @@ class Ticket(models.Model):
         print(f"   new_rank: {new_rank}")
         print(f"   old_status: {old_status.key if old_status else None} -> new_status: {new_status.key}")
         
-        # Update ticket - SINGLE database write!
+        # Update done_at based on status category change
+        update_fields = ['ticket_status', 'rank', 'updated_at']
+        old_is_done = old_status and old_status.category == StatusCategory.DONE
+        new_is_done = new_status.category == StatusCategory.DONE
+        
+        if new_is_done and not old_is_done:
+            # Entering done state - set done_at timestamp
+            self.done_at = timezone.now()
+            update_fields.append('done_at')
+            print(f"   Setting done_at={self.done_at}")
+        elif old_is_done and not new_is_done:
+            # Leaving done state - clear done_at
+            self.done_at = None
+            update_fields.append('done_at')
+            print(f"   Clearing done_at")
+        
+        # Update ticket
         self.ticket_status = new_status
         self.rank = new_rank
-        self.save(update_fields=['ticket_status', 'rank', 'updated_at'])
+        self.save(update_fields=update_fields)
         
         # Broadcast via WebSocket
         if broadcast:
