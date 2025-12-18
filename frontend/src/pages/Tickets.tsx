@@ -857,7 +857,9 @@ const Tickets: React.FC = () => {
       }
       if (existing) {
         // Merge the updated ticket to ensure all fields (including company_logo_url) are updated
-        return prev.map((t) => (t.id === updatedTicket.id ? { ...t, ...updatedTicket } : t));
+        return prev.map((t) =>
+          t.id === updatedTicket.id ? { ...t, ...updatedTicket } : t
+        );
       }
       return [updatedTicket, ...prev];
     });
