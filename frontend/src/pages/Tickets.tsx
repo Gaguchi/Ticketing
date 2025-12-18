@@ -519,10 +519,12 @@ const Tickets: React.FC = () => {
 
         // Handle resolution_status transitions
         // When entering Done from non-Done, set to awaiting_review (unless already accepted)
+        // Only applies to tickets with companies attached
         if (
           isEnteringDone &&
           !wasInDone &&
-          t.resolution_status !== "accepted"
+          t.resolution_status !== "accepted" &&
+          t.company
         ) {
           update.resolution_status = "awaiting_review";
         }
@@ -854,7 +856,8 @@ const Tickets: React.FC = () => {
         return prev.filter((t) => t.id !== updatedTicket.id);
       }
       if (existing) {
-        return prev.map((t) => (t.id === updatedTicket.id ? updatedTicket : t));
+        // Merge the updated ticket to ensure all fields (including company_logo_url) are updated
+        return prev.map((t) => (t.id === updatedTicket.id ? { ...t, ...updatedTicket } : t));
       }
       return [updatedTicket, ...prev];
     });
