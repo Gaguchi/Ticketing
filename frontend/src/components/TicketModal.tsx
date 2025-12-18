@@ -274,7 +274,6 @@ export const TicketModal: React.FC<TicketModalProps> = ({
 
       // Load all users for assignee dropdown if not already loaded
       if (availableUsers.length === 0) {
-        setLoadingUsers(true);
         userService
           .getAllUsers()
           .then((users) => {
@@ -282,9 +281,6 @@ export const TicketModal: React.FC<TicketModalProps> = ({
           })
           .catch((error) => {
             console.error("Failed to load users:", error);
-          })
-          .finally(() => {
-            setLoadingUsers(false);
           });
       }
 
