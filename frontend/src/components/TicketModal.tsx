@@ -13,6 +13,7 @@ import {
   Spin,
   Tag,
   Input,
+  Rate,
 } from "antd";
 import type { MenuProps } from "antd";
 import {
@@ -45,6 +46,7 @@ import {
   ticketService,
   projectService,
   tagService,
+  companyService,
   userService,
   subtaskService,
   type Subtask,
@@ -145,6 +147,9 @@ export const TicketModal: React.FC<TicketModalProps> = ({
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(
     ticket?.project || null
   );
+  const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(
+    ticket?.company || null
+  );
   const [tags, setTags] = useState<number[]>(ticket?.tags || []);
   const [assignees, setAssignees] = useState<number[]>(
     ticket?.assignees?.map((a: any) => a.id) || []
@@ -164,6 +169,10 @@ export const TicketModal: React.FC<TicketModalProps> = ({
   const [projectColumns, setProjectColumns] = useState<any[]>([]);
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [companies, setCompanies] = useState<any[]>([]);
+  const [loadingCompanies, setLoadingCompanies] = useState(false);
+  const [admins, setAdmins] = useState<any[]>([]);
+  const [loadingAdmins, setLoadingAdmins] = useState(false);
 
   // Subtask state
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
@@ -280,6 +289,16 @@ export const TicketModal: React.FC<TicketModalProps> = ({
           });
       }
 
+      // Load companies if project selected
+      if (selectedProjectId) {
+        setLoadingCompanies(true);
+        companyService
+          .getAllCompanies(selectedProjectId)
+          .then(setCompanies)
+          .catch((err) => console.error("Failed to load companies", err))
+          .finally(() => setLoadingCompanies(false));
+      }
+
       // Load current project info for context
       const projectData = localStorage.getItem("currentProject");
       if (projectData) {
@@ -345,7 +364,9 @@ export const TicketModal: React.FC<TicketModalProps> = ({
       setPriority(ticket.priority_id || 3);
       setUrgency((ticket.urgency as TicketUrgency) || "medium");
       setImportance((ticket.importance as TicketImportance) || "medium");
+      setImportance((ticket.importance as TicketImportance) || "medium");
       setSelectedProjectId(ticket.project || null);
+      setSelectedCompanyId(ticket.company || null);
       setTags(ticket.tags || []);
       setAssignees(ticket.assignees?.map((a: any) => a.id) || []);
       setDueDate(ticket.due_date ? dayjs(ticket.due_date) : null);
@@ -380,8 +401,46 @@ export const TicketModal: React.FC<TicketModalProps> = ({
           console.error("Failed to load tags:", error);
           setProjectTags([]); // Ensure it's always an array
         });
+
+      // Load companies
+      setLoadingCompanies(true);
+      companyService
+        .getAllCompanies(selectedProjectId)
+        .then(setCompanies)
+        .catch((err) => console.error("Failed to load companies", err))
+        .finally(() => setLoadingCompanies(false));
     }
   }, [open, selectedProjectId]); // Only runs when selectedProjectId changes
+
+  // Fetch admins when project or company changes
+  useEffect(() => {
+    if (!open) return;
+
+    const projectId = selectedProjectId;
+    if (!projectId) return;
+
+    setLoadingAdmins(true);
+
+    // If company is selected, fetch company admins
+    // Otherwise fetch project admins
+    const fetchPromise = selectedCompanyId
+      ? companyService.getCompanyAdmins(selectedCompanyId)
+      : projectService.getProjectAdmins(projectId);
+
+    fetchPromise
+      .then((users) => {
+        setAdmins(users);
+        // We don't auto-clear assignees in Edit mode to avoid accidental data loss,
+        // but user will see warnings if current assignee is not in list (implied)
+      })
+      .catch((err) => {
+        console.error("Failed to load admins:", err);
+        setAdmins([]);
+      })
+      .finally(() => {
+        setLoadingAdmins(false);
+      });
+  }, [open, selectedProjectId, selectedCompanyId]);
 
   // Load subtasks when ticket is opened in edit mode
   useEffect(() => {
@@ -502,6 +561,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
           (isCreateMode
             ? currentProject.id
             : ticket?.project || currentProject?.id || 1),
+        company: selectedCompanyId || undefined,
         due_date: dueDate ? dueDate.format("YYYY-MM-DD") : null,
         start_date: startDate ? startDate.format("YYYY-MM-DD") : null,
         assignee_ids: assignees,
@@ -1365,6 +1425,114 @@ export const TicketModal: React.FC<TicketModalProps> = ({
               ) : null}
             </div>
 
+            {/* Resolution Feedback History Section */}
+            {!isCreateMode &&
+              ticket?.resolution_feedbacks &&
+              ticket.resolution_feedbacks.length > 0 && (
+                <div style={{ marginBottom: "24px" }}>
+                  <h3
+                    style={{
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      color: "#9E9E9E",
+                      textTransform: "uppercase",
+                      marginBottom: "12px",
+                    }}
+                  >
+                    Resolution Feedback History
+                  </h3>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "12px",
+                    }}
+                  >
+                    {ticket.resolution_feedbacks.map((fb) => (
+                      <div
+                        key={fb.id}
+                        style={{
+                          padding: "12px",
+                          border: "1px solid",
+                          borderColor:
+                            fb.feedback_type === "rejected"
+                              ? "#FFCCC7"
+                              : "#B7EB8F",
+                          borderRadius: "6px",
+                          backgroundColor:
+                            fb.feedback_type === "rejected"
+                              ? "#FFF1F0"
+                              : "#F6FFED",
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            marginBottom: "8px",
+                          }}
+                        >
+                          <Tag
+                            color={
+                              fb.feedback_type === "rejected"
+                                ? "error"
+                                : "success"
+                            }
+                          >
+                            {fb.feedback_type === "rejected"
+                              ? "Rejected"
+                              : "Accepted"}
+                          </Tag>
+                          <span style={{ fontSize: "11px", color: "#9E9E9E" }}>
+                            {new Date(fb.created_at).toLocaleDateString()}{" "}
+                            {new Date(fb.created_at).toLocaleTimeString()}
+                          </span>
+                        </div>
+                        {fb.rating && (
+                          <div style={{ marginBottom: "8px" }}>
+                            <Rate
+                              disabled
+                              value={fb.rating}
+                              style={{ fontSize: "14px" }}
+                            />
+                          </div>
+                        )}
+                        <div
+                          style={{
+                            fontSize: "13px",
+                            color: "#2C3E50",
+                            whiteSpace: "pre-wrap",
+                          }}
+                        >
+                          {fb.feedback || (
+                            <span
+                              style={{ color: "#9E9E9E", fontStyle: "italic" }}
+                            >
+                              No feedback provided
+                            </span>
+                          )}
+                        </div>
+                        {fb.created_by && (
+                          <div
+                            style={{
+                              marginTop: "8px",
+                              fontSize: "11px",
+                              color: "#9E9E9E",
+                            }}
+                          >
+                            —{" "}
+                            {fb.created_by.first_name
+                              ? `${fb.created_by.first_name} ${fb.created_by.last_name}`
+                              : fb.created_by.username}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
             {/* Activity Section */}
             <div style={{ marginTop: "32px" }}>
               <h3
@@ -1622,80 +1790,139 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                 mode="multiple"
                 value={assignees}
                 onChange={setAssignees}
-                loading={loadingUsers}
+                loading={loadingAdmins}
                 placeholder="Select assignees"
                 style={{ width: "100%" }}
                 size="small"
                 allowClear
                 showSearch
                 filterOption={(input, option) => {
-                  const user = availableUsers.find(
-                    (u) => u.id === option?.value
-                  );
-                  if (!user) return false;
-                  const searchStr =
-                    `${user.first_name} ${user.last_name} ${user.username}`.toLowerCase();
-                  return searchStr.includes(input.toLowerCase());
+                  // The children prop of Option is intricate, so we access text content safely
+                  const content = (option?.children as any)?.props?.children;
+                  // If content is an array (avatar + text), get the text part
+                  const text = Array.isArray(content)
+                    ? content[1]?.props?.children
+                    : content;
+
+                  if (!text) return false;
+                  return String(text)
+                    .toLowerCase()
+                    .includes(input.toLowerCase());
                 }}
               >
-                {availableUsers.map((user) => (
-                  <Select.Option key={user.id} value={user.id}>
-                    <div
+                {admins.length > 0
+                  ? admins.map((user) => (
+                      <Select.Option key={user.id} value={user.id}>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                          }}
+                        >
+                          <Avatar
+                            size={16}
+                            style={{
+                              backgroundColor: user.first_name
+                                ? "#1890ff"
+                                : "#f56a00",
+                              fontSize: "10px",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                          >
+                            {user.first_name?.[0]?.toUpperCase() ||
+                              user.username?.[0]?.toUpperCase()}
+                          </Avatar>
+                          <span>
+                            {user.first_name && user.last_name
+                              ? `${user.first_name} ${user.last_name}`
+                              : user.username}
+                          </span>
+                        </div>
+                      </Select.Option>
+                    ))
+                  : // Fallback to currently selected assignees if admins not loaded yet
+                    assignees.map((id) => {
+                      const user = availableUsers.find((u) => u.id === id);
+                      if (!user) return null;
+                      return (
+                        <Select.Option key={user.id} value={user.id}>
+                          {user.username}
+                        </Select.Option>
+                      );
+                    })}
+              </Select>
+              {/* Only show "Assign to me" if current user is an admin for this project/company */}
+              {(() => {
+                const currentUser = localStorage.getItem("user");
+                if (!currentUser) return null;
+                try {
+                  const user = JSON.parse(currentUser);
+                  const isEligible = admins.some(
+                    (admin) => admin.id === user.id
+                  );
+
+                  if (!isEligible) return null;
+
+                  return (
+                    <Button
+                      type="link"
+                      size="small"
+                      onClick={() => {
+                        if (user.id && !assignees.includes(user.id)) {
+                          setAssignees([...assignees, user.id]);
+                        }
+                      }}
                       style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
+                        padding: "4px 0",
+                        height: "auto",
+                        fontSize: "12px",
                       }}
                     >
-                      <Avatar
-                        size={16}
-                        style={{
-                          backgroundColor: user.first_name
-                            ? "#1890ff"
-                            : "#f56a00",
-                          fontSize: "10px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        {user.first_name?.[0]?.toUpperCase() ||
-                          user.username?.[0]?.toUpperCase()}
-                      </Avatar>
-                      <span>
-                        {user.first_name && user.last_name
-                          ? `${user.first_name} ${user.last_name}`
-                          : user.username}
-                      </span>
-                    </div>
-                  </Select.Option>
-                ))}
-              </Select>
-              <Button
-                type="link"
-                size="small"
-                onClick={() => {
-                  // Get current user ID from localStorage or auth context
-                  const currentUser = localStorage.getItem("user");
-                  if (currentUser) {
-                    try {
-                      const user = JSON.parse(currentUser);
-                      if (user.id && !assignees.includes(user.id)) {
-                        setAssignees([...assignees, user.id]);
-                      }
-                    } catch (error) {
-                      console.error("Failed to parse current user:", error);
-                    }
-                  }
-                }}
+                      Assign to me
+                    </Button>
+                  );
+                } catch (e) {
+                  return null;
+                }
+              })()}
+            </div>
+
+            {/* Company */}
+            <div style={{ marginBottom: "16px" }}>
+              <div
                 style={{
-                  padding: "4px 0",
-                  height: "auto",
                   fontSize: "12px",
+                  fontWeight: 600,
+                  color: "#9E9E9E",
+                  marginBottom: "4px",
                 }}
               >
-                Assign to me
-              </Button>
+                Company
+              </div>
+              <Select
+                placeholder="Select company"
+                allowClear
+                showSearch
+                loading={loadingCompanies}
+                value={selectedCompanyId}
+                onChange={setSelectedCompanyId}
+                style={{ width: "100%" }}
+                size="small"
+                filterOption={(input, option) =>
+                  ((option?.children ?? "") as string)
+                    .toLowerCase()
+                    .includes(input.toLowerCase())
+                }
+              >
+                {companies.map((company) => (
+                  <Option key={company.id} value={company.id}>
+                    {company.name}
+                  </Option>
+                ))}
+              </Select>
             </div>
 
             {/* Parent */}

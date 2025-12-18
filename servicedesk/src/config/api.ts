@@ -17,17 +17,20 @@ export const API_ENDPOINTS = {
   AUTH_LOGIN: getEndpoint('/auth/login/'),
   AUTH_ME: getEndpoint('/auth/me/'),
   AUTH_CHANGE_PASSWORD: getEndpoint('/auth/change-password/'),
-  
+
   // Tickets
   MY_TICKETS: getEndpoint('/tickets/'),
   ARCHIVED_TICKETS: getEndpoint('/tickets/archived/'),
   COLUMNS: getEndpoint('/columns/'),
   TICKET_DETAIL: (id: number) => getEndpoint(`/tickets/${id}/`),
+  TICKET_HISTORY: (id: number) => getEndpoint(`/tickets/${id}/history/`),
   TICKET_REVIEW: (id: number) => getEndpoint(`/tickets/${id}/review/`),
-  
+  TICKET_REJECT_RESOLUTION: (id: number) => getEndpoint(`/tickets/${id}/reject_resolution/`),
+  TICKET_FOLLOW: (id: number) => getEndpoint(`/tickets/${id}/toggle_follow/`),
+
   // Comments
   TICKET_COMMENTS: (ticketId: number) => getEndpoint(`/tickets/${ticketId}/comments/`),
-  
+
   // Attachments
   ATTACHMENTS: getEndpoint('/attachments/'),
 };

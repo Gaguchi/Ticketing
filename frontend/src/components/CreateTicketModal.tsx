@@ -37,6 +37,7 @@ interface CreateTicketModalProps {
   onClose: () => void;
   columnId?: number;
   onSuccess?: (ticket: Ticket) => void;
+  initialCompanyId?: number;
 }
 
 const getTypeIcon = (type: string) => {
@@ -59,6 +60,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
   onClose,
   columnId = 1,
   onSuccess,
+  initialCompanyId,
 }) => {
   const [form] = Form.useForm();
   const [saving, setSaving] = useState(false);
@@ -73,17 +75,25 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
   const [projectColumns, setProjectColumns] = useState<any[]>([]);
   const [currentProjectId, setCurrentProjectId] = useState<number | null>(null);
   const [companies, setCompanies] = useState<any[]>([]);
+  const [admins, setAdmins] = useState<any[]>([]);
+  const [loadingAdmins, setLoadingAdmins] = useState(false);
 
-  // Watch for project field changes
+  // Watch for project and company field changes
   const watchedProject = Form.useWatch("project", form);
+  const watchedCompany = Form.useWatch("company", form);
 
   // Load project columns when modal opens or project changes
   useEffect(() => {
     if (open && selectedProject) {
       // Set initial project when modal opens
       form.setFieldValue("project", selectedProject.id);
+      // Set initial project when modal opens
+      form.setFieldValue("project", selectedProject.id);
     }
-  }, [open, selectedProject, form]);
+    if (open && initialCompanyId) {
+      form.setFieldValue("company", initialCompanyId);
+    }
+  }, [open, selectedProject, form, initialCompanyId]);
 
   // Fetch companies scoped to current project when modal opens/project changes
   useEffect(() => {
@@ -109,6 +119,45 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
         setCompanies([]);
       });
   }, [open, watchedProject, selectedProject?.id]);
+
+  // Fetch admins when project or company changes
+  useEffect(() => {
+    if (!open) {
+      setAdmins([]);
+      return;
+    }
+
+    const projectId = watchedProject || selectedProject?.id;
+    if (!projectId) return;
+
+    setLoadingAdmins(true);
+
+    // If company is selected, fetch company admins
+    // Otherwise fetch project admins
+    const fetchPromise = watchedCompany
+      ? companyService.getCompanyAdmins(watchedCompany)
+      : projectService.getProjectAdmins(projectId);
+
+    fetchPromise
+      .then((users) => {
+        setAdmins(users);
+        // If current assignee is not in new list, clear it
+        const currentAssignee = form.getFieldValue("assignee");
+        if (
+          currentAssignee &&
+          !users.find((u: any) => u.id === currentAssignee)
+        ) {
+          form.setFieldValue("assignee", undefined);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to load admins:", err);
+        setAdmins([]);
+      })
+      .finally(() => {
+        setLoadingAdmins(false);
+      });
+  }, [open, watchedProject, watchedCompany, selectedProject?.id, form]);
 
   // Load project data when project selection changes
   useEffect(() => {
@@ -599,6 +648,30 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               />
             </Form.Item>
 
+            {/* Company - moved here from detailed form */}
+            <Form.Item
+              label="Company"
+              name="company"
+              style={{ marginBottom: "10px" }}
+            >
+              <Select
+                placeholder="Select company (Optional)"
+                allowClear
+                showSearch
+                filterOption={(input, option) =>
+                  ((option?.children ?? "") as string)
+                    .toLowerCase()
+                    .includes(input.toLowerCase())
+                }
+              >
+                {companies.map((company) => (
+                  <Option key={company.id} value={company.id}>
+                    {company.name}
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
+
             {/* Assignee and Due Date - Always visible in simple grid */}
             <div
               style={{
@@ -608,40 +681,90 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               }}
             >
               {/* Assignee */}
+              {/* Assignee */}
               <Form.Item
                 label="Assignee"
                 name="assignee"
                 style={{ marginBottom: "10px" }}
               >
-                <Select placeholder="Automatic" allowClear showSearch>
-                  <Option value={1}>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                      }}
-                    >
+                <Select
+                  placeholder="Select assignee"
+                  allowClear
+                  showSearch
+                  loading={loadingAdmins}
+                  filterOption={(input, option) =>
+                    (option?.children as any)?.props?.children[1]?.props?.children
+                      ?.toLowerCase()
+                      ?.includes(input.toLowerCase())
+                  }
+                >
+                  {admins.map((user) => (
+                    <Option key={user.id} value={user.id}>
                       <div
                         style={{
-                          width: 24,
-                          height: 24,
-                          borderRadius: "50%",
-                          backgroundColor: "#0052cc",
                           display: "flex",
                           alignItems: "center",
-                          justifyContent: "center",
-                          color: "#fff",
-                          fontSize: "12px",
-                          fontWeight: 600,
+                          gap: "8px",
                         }}
                       >
-                        BK
+                        <div
+                          style={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: "50%",
+                            backgroundColor: "#0052cc",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            color: "#fff",
+                            fontSize: "12px",
+                            fontWeight: 600,
+                          }}
+                        >
+                          {user.first_name?.[0] || user.username[0].toUpperCase()}
+                        </div>
+                        <span>
+                          {user.first_name
+                            ? `${user.first_name} ${user.last_name}`
+                            : user.username}
+                        </span>
                       </div>
-                      <span>Boris Karaya</span>
-                    </div>
-                  </Option>
+                    </Option>
+                  ))}
                 </Select>
+                {/* Only show "Assign to me" if current user is an admin for this project/company */}
+                {(() => {
+                  const currentUser = localStorage.getItem("user");
+                  if (!currentUser) return null;
+                  try {
+                    const user = JSON.parse(currentUser);
+                    const isEligible = admins.some((admin) => admin.id === user.id);
+                    
+                    if (!isEligible) return null;
+
+                    return (
+                      <Button
+                        type="link"
+                        size="small"
+                        onClick={() => {
+                          const currentAssignee = form.getFieldValue("assignee");
+                          if (user.id && currentAssignee !== user.id) {
+                             form.setFieldValue("assignee", user.id);
+                          }
+                        }}
+                        style={{
+                          padding: "4px 0",
+                          height: "auto",
+                          fontSize: "12px",
+                        }}
+                      >
+                        Assign to me
+                      </Button>
+                    );
+                  } catch (e) {
+                    return null;
+                  }
+                })()}
               </Form.Item>
 
               {/* Due date */}
@@ -668,29 +791,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                     gap: "10px",
                   }}
                 >
-                  {/* Company */}
-                  <Form.Item
-                    label="Company"
-                    name="company"
-                    style={{ marginBottom: "10px" }}
-                  >
-                    <Select
-                      placeholder="Select company"
-                      allowClear
-                      showSearch
-                      filterOption={(input, option) =>
-                        ((option?.children ?? "") as string)
-                          .toLowerCase()
-                          .includes(input.toLowerCase())
-                      }
-                    >
-                      {companies.map((company) => (
-                        <Option key={company.id} value={company.id}>
-                          {company.name}
-                        </Option>
-                      ))}
-                    </Select>
-                  </Form.Item>
+                  {/* Company was here - moved up */}
 
                   {/* Parent */}
                   <Form.Item
@@ -775,33 +876,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                     />
                   </Form.Item>
 
-                  {/* Tags */}
-                  <Form.Item
-                    label="Tags"
-                    name="tags"
-                    style={{ marginBottom: "10px" }}
-                  >
-                    <Select
-                      mode="tags"
-                      placeholder="Type to add tags (e.g., Nikora, Nokia, High Priority)"
-                      allowClear
-                      showSearch
-                      filterOption={(input, option) =>
-                        (option?.label ?? "")
-                          .toLowerCase()
-                          .includes(input.toLowerCase())
-                      }
-                      options={
-                        Array.isArray(projectTags)
-                          ? projectTags.map((tag) => ({
-                              value: tag.name,
-                              label: tag.name,
-                            }))
-                          : []
-                      }
-                      tokenSeparators={[","]}
-                    />
-                  </Form.Item>
+
 
                   {/* Start date */}
                   <Form.Item

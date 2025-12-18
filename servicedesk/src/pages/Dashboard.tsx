@@ -57,9 +57,9 @@ export default function Dashboard() {
       setTickets(activeList);
       setArchivedTickets(archivedList);
 
-      // Check for tickets needing review (in final column but no rating yet)
+      // Check for tickets needing review - only 'awaiting_review' status
       const needReview = activeList.filter(
-        (t: Ticket) => t.is_final_column && !t.resolution_rating
+        (t: Ticket) => t.resolution_status === "awaiting_review"
       );
       setTicketsNeedingReview(needReview);
     } catch (err) {

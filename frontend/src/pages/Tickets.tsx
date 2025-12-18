@@ -499,19 +499,36 @@ const Tickets: React.FC = () => {
         (s) => s.key === statusKey
       );
 
+      // Determine if we're entering a "done" status
+      const isEnteringDone = targetStatus?.category === "done";
+      const wasInDone = ticket.ticket_status_category === "done";
+
       // Update the ticket in state
-      return prevTickets.map((t) =>
-        t.id === ticketId
-          ? {
-              ...t,
-              ticket_status_key: statusKey,
-              ticket_status_name: targetStatus?.name || statusKey,
-              ticket_status_category: targetStatus?.category,
-              ticket_status_color: targetStatus?.category_color,
-              rank: newRank,
-            }
-          : t
-      );
+      return prevTickets.map((t) => {
+        if (t.id !== ticketId) return t;
+
+        // Build the base update
+        const update: Partial<Ticket> = {
+          ...t,
+          ticket_status_key: statusKey,
+          ticket_status_name: targetStatus?.name || statusKey,
+          ticket_status_category: targetStatus?.category,
+          ticket_status_color: targetStatus?.category_color,
+          rank: newRank,
+        };
+
+        // Handle resolution_status transitions
+        // When entering Done from non-Done, set to awaiting_review (unless already accepted)
+        if (
+          isEnteringDone &&
+          !wasInDone &&
+          t.resolution_status !== "accepted"
+        ) {
+          update.resolution_status = "awaiting_review";
+        }
+
+        return update as Ticket;
+      });
     });
 
     // Fire-and-forget: send to server but don't await or use response

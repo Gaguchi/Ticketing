@@ -61,6 +61,9 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
   onClick,
 }) => {
   const isResolved = !!ticket.resolved_at;
+  console.log(
+    `[TicketCard] ID: ${id}, Status: ${ticket.resolution_status}, ResolvedAt: ${ticket.resolved_at}`
+  );
 
   const {
     setNodeRef,
@@ -115,17 +118,57 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
     >
       <div>
         {/* Resolved indicator */}
-        {isResolved && (
+        {/* Expanded Resolution Workflow Statuses */}
+        {ticket.resolution_status === "rejected" && (
           <div style={{ marginBottom: "6px" }}>
-            <Tag
-              icon={<CheckCircleOutlined />}
-              color="success"
-              style={{ margin: 0, fontSize: "11px" }}
-            >
-              Resolved
+            <Tag color="#cd201f" style={{ margin: 0, fontSize: "11px" }}>
+              Resolution Rejected
             </Tag>
           </div>
         )}
+        {ticket.resolution_status === "awaiting_review" && (
+          <div style={{ marginBottom: "6px" }}>
+            <Tag color="gold" style={{ margin: 0, fontSize: "11px" }}>
+              Awaiting Review
+            </Tag>
+          </div>
+        )}
+        {/* Legacy or Accepted Resolved indicator - Only show if NOT rejected/awaiting review */}
+        {(isResolved || ticket.resolution_status === "accepted") &&
+          ticket.resolution_status !== "rejected" &&
+          ticket.resolution_status !== "awaiting_review" && (
+            <div style={{ marginBottom: "6px" }}>
+              <Tag
+                icon={<CheckCircleOutlined />}
+                color="success"
+                style={{ margin: 0, fontSize: "11px" }}
+              >
+                Resolved
+              </Tag>
+            </div>
+          )}
+
+        {/* Rejection Feedback Preview - Shows latest feedback truncated */}
+        {ticket.resolution_status === "rejected" &&
+          ticket.resolution_feedback && (
+            <div
+              style={{
+                marginBottom: "8px",
+                padding: "6px 8px",
+                backgroundColor: "#FFF1F0",
+                border: "1px solid #FFCCC7",
+                borderRadius: "4px",
+                fontSize: "11px",
+                color: "#CF1322",
+              }}
+              title={ticket.resolution_feedback}
+            >
+              <span style={{ fontWeight: 600 }}>Feedback: </span>
+              {ticket.resolution_feedback.length > 80
+                ? `${ticket.resolution_feedback.substring(0, 80)}...`
+                : ticket.resolution_feedback}
+            </div>
+          )}
         <div
           style={{
             fontSize: "14px",

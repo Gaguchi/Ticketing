@@ -4,7 +4,7 @@ from django.db import models
 from .models import (
     Ticket, Project, Column, Comment, Attachment,
     Tag, Contact, TagContact, UserTag, TicketTag, IssueLink, Company, UserRole, TicketSubtask,
-    Notification, ProjectInvitation, TicketPosition, TicketHistory, Status, BoardColumn
+    Notification, ProjectInvitation, TicketPosition, TicketHistory, Status, BoardColumn, ResolutionFeedback
 )
 
 
@@ -447,6 +447,16 @@ class AttachmentSerializer(serializers.ModelSerializer):
         read_only_fields = ['uploaded_by']
 
 
+class ResolutionFeedbackSerializer(serializers.ModelSerializer):
+    """Serializer for resolution feedback history entries"""
+    created_by = UserSerializer(read_only=True)
+    
+    class Meta:
+        model = ResolutionFeedback
+        fields = ['id', 'feedback_type', 'feedback', 'rating', 'created_by', 'created_at']
+        read_only_fields = ['created_by', 'created_at']
+
+
 class TicketSerializer(serializers.ModelSerializer):
     assignees = UserSerializer(many=True, read_only=True)
     assignee_ids = serializers.PrimaryKeyRelatedField(
@@ -469,6 +479,9 @@ class TicketSerializer(serializers.ModelSerializer):
     archived_by = UserSerializer(read_only=True)
     column_order = serializers.SerializerMethodField()
     is_final_column = serializers.SerializerMethodField()
+    
+    # Resolution feedback history
+    resolution_feedbacks = ResolutionFeedbackSerializer(many=True, read_only=True)
     
     # NEW: Jira-style status fields
     ticket_status_key = serializers.SlugRelatedField(
@@ -510,7 +523,7 @@ class TicketSerializer(serializers.ModelSerializer):
             'parent', 'subtasks', 'following', 'tags', 'tags_detail',
             'due_date', 'start_date', 'comments_count',
             'is_archived', 'archived_at', 'archived_by', 'archived_reason', 'done_at',
-            'resolution_rating', 'resolution_feedback', 'resolved_at',
+            'resolution_status', 'resolution_rating', 'resolution_feedback', 'resolution_feedbacks', 'resolved_at',
             'created_at', 'updated_at'
         ]
     
@@ -584,7 +597,7 @@ class TicketListSerializer(serializers.ModelSerializer):
             'assignee_ids', 'following', 'comments_count', 'tag_names',
             'due_date', 'start_date',
             'is_archived', 'archived_at', 'archived_reason', 'done_at',
-            'resolution_rating', 'resolution_feedback', 'resolved_at',
+            'resolution_status', 'resolution_rating', 'resolution_feedback', 'resolved_at',
             'created_at', 'updated_at'
         ]
     
@@ -661,7 +674,7 @@ class KanbanTicketSerializer(serializers.ModelSerializer):
             'rank',
             # Display on card
             'company_logo_url', 'following', 'comments_count',
-            'assignee_ids', 'resolved_at',
+            'assignee_ids', 'resolved_at', 'resolution_status',
         ]
         # Read ticket_status_key directly from foreign key
         extra_kwargs = {

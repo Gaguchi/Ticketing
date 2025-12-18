@@ -19,7 +19,7 @@ from .pagination import StandardResultsSetPagination
 from .models import (
     Ticket, Column, Project, Comment, Attachment,
     Tag, Contact, TagContact, UserTag, TicketTag, IssueLink, Company, UserRole, TicketSubtask,
-    Notification, ProjectInvitation, TicketHistory, Status, BoardColumn
+    Notification, ProjectInvitation, TicketHistory, Status, BoardColumn, ResolutionFeedback
 )
 from .serializers import (
     TicketSerializer, TicketListSerializer, KanbanTicketSerializer, ColumnSerializer,
@@ -249,6 +249,21 @@ class CompanyViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(projects__id=project_id)
         
         return queryset
+    
+    @action(detail=True, methods=['get'], url_path='admins')
+    def admins(self, request, pk=None):
+        """
+        Get all admin users assigned to this company.
+        
+        GET /api/tickets/companies/{id}/admins/
+        """
+        company = self.get_object()
+        admins = company.admins.all()
+        
+        # Use UserSimpleSerializer for a lightweight response
+        from .serializers import UserSimpleSerializer
+        serializer = UserSimpleSerializer(admins, many=True)
+        return Response(serializer.data)
     
     @action(detail=True, methods=['post'])
     def assign_admin(self, request, pk=None):
@@ -950,6 +965,35 @@ class ProjectViewSet(viewsets.ModelViewSet):
         
         # Django's CASCADE should handle tickets, columns, etc.
         return super().destroy(request, *args, **kwargs)
+    
+    @action(detail=True, methods=['get'])
+    def admins(self, request, pk=None):
+        """
+        Get all admin users for this project.
+        Returns users with 'admin' or 'superadmin' role in this project.
+        
+        GET /api/tickets/projects/{id}/admins/
+        """
+        project = self.get_object()
+        admin_roles = UserRole.objects.filter(
+            project=project, 
+            role__in=['admin', 'superadmin']
+        ).select_related('user')
+        users = [role.user for role in admin_roles]
+        
+        # Also include project lead if they exist
+        if project.lead_username:
+            try:
+                lead_user = User.objects.get(username=project.lead_username)
+                if lead_user not in users:
+                    users.append(lead_user)
+            except User.DoesNotExist:
+                pass
+        
+        # Use UserSimpleSerializer for a lightweight response
+        from .serializers import UserSimpleSerializer
+        serializer = UserSimpleSerializer(users, many=True)
+        return Response(serializer.data)
 
 
 # ==================== Jira-style Status System ViewSets ====================
@@ -1102,8 +1146,10 @@ class TicketViewSet(viewsets.ModelViewSet):
         
         # If user is a company user but NOT an admin and NOT staff, show only their created tickets
         if user_companies.exists() and not is_company_admin and not user.is_staff:
-            # Regular company user accessing via servicedesk - only see their tickets
-            return base_queryset.filter(reporter=user)
+            # Regular company user accessing via servicedesk - only see their tickets OR tickets assigned to their company
+            return base_queryset.filter(
+                Q(reporter=user) | Q(company__in=user_companies)
+            ).distinct()
 
         # For IT staff, admins, and project members, use the original logic
         member_projects = Project.objects.filter(members=user).values_list('id', flat=True)
@@ -1857,6 +1903,8 @@ class TicketViewSet(viewsets.ModelViewSet):
         
         After submission:
             - Updates resolution_rating, resolution_feedback, resolved_at
+            - Creates a ResolutionFeedback history entry
+            - Sets resolution_status to 'accepted'
         """
         ticket = self.get_object()
         
@@ -1893,10 +1941,64 @@ class TicketViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
+        feedback_text = request.data.get('feedback', '')
+        
+        # Create ResolutionFeedback history entry
+        ResolutionFeedback.objects.create(
+            ticket=ticket,
+            feedback_type='accepted',
+            feedback=feedback_text,
+            rating=rating,
+            created_by=request.user
+        )
+        
         # Update ticket with review data
+        ticket.resolution_status = 'accepted'
         ticket.resolution_rating = rating
-        ticket.resolution_feedback = request.data.get('feedback', '')
+        ticket.resolution_feedback = feedback_text
         ticket.resolved_at = timezone.now()
+        ticket.save()
+        
+        serializer = self.get_serializer(ticket)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def reject_resolution(self, request, pk=None):
+        """
+        Reject the resolution of a ticket.
+        
+        Request body:
+            - feedback (str, required): Reason for rejection
+            
+        After rejection:
+            - Creates a ResolutionFeedback history entry
+            - Sets resolution_status to 'rejected'
+            - Clears resolution_rating and resolved_at
+        """
+        ticket = self.get_object()
+        feedback = request.data.get('feedback')
+        
+        if not feedback:
+            return Response(
+                {'error': 'Feedback is required when rejecting a resolution'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Create ResolutionFeedback history entry
+        ResolutionFeedback.objects.create(
+            ticket=ticket,
+            feedback_type='rejected',
+            feedback=feedback,
+            rating=None,
+            created_by=request.user
+        )
+            
+        ticket.resolution_status = 'rejected'
+        ticket.resolution_feedback = feedback  # Keep latest feedback on ticket for quick access
+        # Clear resolution rating/time as it's not resolved anymore
+        ticket.resolution_rating = None
+        ticket.resolved_at = None
+        
         ticket.save()
         
         serializer = self.get_serializer(ticket)

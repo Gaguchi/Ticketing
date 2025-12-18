@@ -21,11 +21,11 @@ class ProjectService {
     const queryParams = new URLSearchParams();
     if (params?.page) queryParams.append('page', params.page.toString());
     if (params?.page_size) queryParams.append('page_size', params.page_size.toString());
-    
+
     const url = queryParams.toString()
       ? `${API_ENDPOINTS.PROJECTS}?${queryParams.toString()}`
       : API_ENDPOINTS.PROJECTS;
-    
+
     return await apiService.get<PaginatedResponse<Project>>(url);
   }
 
@@ -87,16 +87,23 @@ class ProjectService {
   async userHasProjects(username: string): Promise<boolean> {
     try {
       const projects = await this.getAllProjects();
-      
+
       // Check if user is lead or member of any project
-      return projects.some(project => 
-        project.lead_username === username || 
+      return projects.some(project =>
+        project.lead_username === username ||
         (project.members && project.members.some(member => member.username === username))
       );
     } catch (error) {
       console.error('Error checking user projects:', error);
       return false;
     }
+  }
+
+  /**
+   * Get project admins
+   */
+  async getProjectAdmins(id: number): Promise<any[]> {
+    return await apiService.get<any[]>(API_ENDPOINTS.PROJECT_ADMINS(id));
   }
 }
 

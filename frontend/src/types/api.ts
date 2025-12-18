@@ -263,14 +263,14 @@ export interface Ticket {
   priority_id: number;
   urgency: TicketUrgency;
   importance: TicketImportance;
-  
+
   // NEW: Jira-style status fields
   ticket_status_key?: string | null;           // Status KEY: "in_progress"
   ticket_status_name?: string | null;          // Display name: "In Progress"
   ticket_status_category?: StatusCategory | null;
   ticket_status_color?: string | null;
   rank?: string;                                // LexoRank: "aab", "n", etc.
-  
+
   // Relationships
   company: number | null;
   company_name?: string;
@@ -289,7 +289,7 @@ export interface Ticket {
   subtasks: Ticket[];
   tags: number[];
   tags_detail: Tag[];
-  
+
   // Metadata
   following: boolean;
   due_date: string | null;
@@ -300,15 +300,27 @@ export interface Ticket {
   archived_by?: User | null;
   archived_reason?: string | null;
   done_at?: string | null;
-  
+
   // Resolution fields
+  resolution_status?: 'none' | 'awaiting_review' | 'accepted' | 'rejected';
   resolution_rating?: number | null;
   resolution_feedback?: string;
+  resolution_feedbacks?: ResolutionFeedback[];
   resolved_at?: string | null;
   is_final_column?: boolean;
-  
+
   created_at: string;
   updated_at: string;
+}
+
+// Resolution feedback history entry
+export interface ResolutionFeedback {
+  id: number;
+  feedback_type: 'accepted' | 'rejected';
+  feedback: string;
+  rating: number | null;
+  created_by: User | null;
+  created_at: string;
 }
 
 export interface TicketHistoryItem {

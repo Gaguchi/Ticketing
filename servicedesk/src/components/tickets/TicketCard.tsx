@@ -71,11 +71,12 @@ function formatRelativeTime(dateString: string): string {
 
 export default function TicketCard({ ticket }: TicketCardProps) {
   const statusKey = getStatusKey(ticket);
-  const isResolved = !!ticket.resolved_at;
-  // Check if ticket can be reviewed: must be in 'done' category (or is_final_column) and not already resolved
+  const isResolved =
+    !!ticket.resolved_at || ticket.resolution_status === "accepted";
+  const isRejected = ticket.resolution_status === "rejected";
+  const isAwaitingReview = ticket.resolution_status === "awaiting_review";
   const isFinalColumn =
     ticket.ticket_status_category === "done" || ticket.is_final_column || false;
-  const needsReview = isFinalColumn && !isResolved;
   const commentsCount = ticket.comments_count || ticket.comment_count || 0;
 
   return (
@@ -85,7 +86,9 @@ export default function TicketCard({ ticket }: TicketCardProps) {
         className={`border-l-4 ${
           isResolved
             ? "border-l-green-500 bg-gray-50"
-            : needsReview
+            : isRejected
+            ? "border-l-red-500"
+            : isAwaitingReview
             ? "border-l-amber-500"
             : "border-l-brand-400"
         }`}
@@ -107,12 +110,29 @@ export default function TicketCard({ ticket }: TicketCardProps) {
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
                   ✓ Resolved
                 </span>
-              ) : needsReview ? (
+              ) : isRejected ? (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
+                  ✗ Rejected
+                </span>
+              ) : isAwaitingReview ? (
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
                   ⭐ Awaiting Review
                 </span>
               ) : null}
             </div>
+
+            {/* Rejection Feedback Preview */}
+            {isRejected && ticket.resolution_feedback && (
+              <div
+                className="mb-2 px-2 py-1.5 bg-red-50 border border-red-200 rounded text-xs text-red-700"
+                title={ticket.resolution_feedback}
+              >
+                <span className="font-semibold">Your feedback: </span>
+                {ticket.resolution_feedback.length > 60
+                  ? `${ticket.resolution_feedback.substring(0, 60)}...`
+                  : ticket.resolution_feedback}
+              </div>
+            )}
 
             {/* Title */}
             <h3

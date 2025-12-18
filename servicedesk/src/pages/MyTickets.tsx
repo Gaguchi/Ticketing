@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Input, Select, Empty, Spin, Button, Radio, Table, Tag } from "antd";
 import {
   SearchOutlined,
@@ -15,6 +15,7 @@ import ReviewModal from "../components/ReviewModal";
 import { Ticket, Column, Project } from "../types";
 import { API_ENDPOINTS } from "../config/api";
 import apiService from "../services/api.service";
+import { useWebSocketContext } from "../contexts/WebSocketContext";
 import {
   formatDate,
   getPriorityColor,
@@ -38,9 +39,13 @@ const MyTickets: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedTicketId, setSelectedTicketId] = useState<number | null>(null);
   const [view, setView] = useState<"list" | "board" | "archive">("list");
-  const [ticketsNeedingReview, setTicketsNeedingReview] = useState<Ticket[]>(
-    []
-  );
+  /* ticketsNeedingReview is now derived via useMemo */
+
+  // WebSocket context for real-time updates
+  const { connectTickets, disconnectTickets } = useWebSocketContext();
+
+  // Track ticket IDs we've already processed to avoid duplicates
+  const processedTicketIdsRef = useRef<Set<number>>(new Set());
 
   useEffect(() => {
     fetchProjects();
@@ -57,6 +62,76 @@ const MyTickets: React.FC = () => {
       fetchColumns();
     }
   }, [view, selectedProjectId, projectsLoaded]);
+
+  // Connect to ticket WebSocket when project is selected
+  useEffect(() => {
+    if (selectedProjectId && projectsLoaded) {
+      console.log(
+        `🔌 [MyTickets] Connecting to ticket WebSocket for project ${selectedProjectId}`
+      );
+      connectTickets(selectedProjectId);
+
+      // Cleanup: disconnect when project changes or component unmounts
+      return () => {
+        console.log(`🔌 [MyTickets] Disconnecting from ticket WebSocket`);
+        disconnectTickets();
+      };
+    }
+  }, [selectedProjectId, projectsLoaded, connectTickets, disconnectTickets]);
+
+  // Listen for real-time ticket updates via WebSocket
+  useEffect(() => {
+    const handleTicketUpdate = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { type, data, projectId } = customEvent.detail;
+
+      // Only process if it's for the current project
+      if (!selectedProjectId || projectId !== selectedProjectId) {
+        return;
+      }
+
+      console.log(`📨 [MyTickets] Received ${type} event:`, data);
+
+      if (type === "ticket_created") {
+        const ticketId = data.id;
+
+        // Skip if already processed
+        if (processedTicketIdsRef.current.has(ticketId)) {
+          console.log(
+            `[MyTickets] Ticket ${ticketId} already processed, skipping`
+          );
+          return;
+        }
+
+        // Mark as processed
+        processedTicketIdsRef.current.add(ticketId);
+
+        // Add to tickets list
+        setTickets((prev) => {
+          // Double check it doesn't already exist
+          if (prev.some((t) => t.id === ticketId)) {
+            return prev;
+          }
+          console.log(`[MyTickets] Adding new ticket ${ticketId} to state`);
+          return [data, ...prev];
+        });
+      } else if (type === "ticket_updated") {
+        // Update the ticket in state
+        setTickets((prev) =>
+          prev.map((t) => (t.id === data.id ? { ...t, ...data } : t))
+        );
+      } else if (type === "ticket_deleted") {
+        // Remove from state
+        setTickets((prev) => prev.filter((t) => t.id !== data.id));
+        processedTicketIdsRef.current.delete(data.id);
+      }
+    };
+
+    window.addEventListener("ticketUpdate", handleTicketUpdate);
+    return () => {
+      window.removeEventListener("ticketUpdate", handleTicketUpdate);
+    };
+  }, [selectedProjectId]);
 
   useEffect(() => {
     filterTickets();
@@ -114,22 +189,23 @@ const MyTickets: React.FC = () => {
       // Handle paginated response
       const data = Array.isArray(response) ? response : response.results || [];
       setTickets(data);
-
-      // Check for tickets needing review (in done status but no rating yet)
-      if (view !== "archive") {
-        const needReview = data.filter(
-          (t: Ticket) =>
-            (t.ticket_status_category === "done" || t.is_final_column) &&
-            !t.resolution_rating
-        );
-        setTicketsNeedingReview(needReview);
-      }
     } catch (error: any) {
       console.error("Failed to fetch tickets:", error);
     } finally {
       setLoading(false);
     }
   };
+
+  // Derive reviews needed from tickets state to ensure sync with WebSockets
+  // Only show tickets with 'awaiting_review' status - rejected tickets need to be
+  // moved out of Done and back in to trigger a new review
+  const ticketsNeedingReview = React.useMemo(() => {
+    if (view === "archive") return [];
+
+    return tickets.filter(
+      (t: Ticket) => t.resolution_status === "awaiting_review"
+    );
+  }, [tickets, view]);
 
   const filterTickets = () => {
     let filtered = [...tickets];
@@ -209,13 +285,27 @@ const MyTickets: React.FC = () => {
         // Use new ticket_status_name, fallback to column_name, then status
         const displayStatus =
           record.ticket_status_name || record.column_name || record.status;
+
         return (
-          <Tag
-            color={getStatusColor(displayStatus)}
-            className="m-0 text-[10px]"
-          >
-            {displayStatus}
-          </Tag>
+          <div className="flex flex-col gap-1 items-start">
+            <Tag
+              color={getStatusColor(displayStatus)}
+              className="m-0 text-[10px]"
+            >
+              {displayStatus}
+            </Tag>
+            {/* Resolution Status Modifiers */}
+            {record.resolution_status === "awaiting_review" && (
+              <Tag color="gold" className="m-0 text-[10px]">
+                Review Needed
+              </Tag>
+            )}
+            {record.resolution_status === "rejected" && (
+              <Tag color="red" className="m-0 text-[10px]">
+                Rejected
+              </Tag>
+            )}
+          </div>
         );
       },
     },
@@ -446,14 +536,19 @@ const MyTickets: React.FC = () => {
       {/* Review Modal - pops up for tickets needing review */}
       <ReviewModal
         tickets={ticketsNeedingReview}
-        onReviewComplete={(ticketId) => {
+        onReviewComplete={(ticketId, updates) => {
           setTickets((prev) =>
             prev.map((t) =>
-              t.id === ticketId ? { ...t, resolution_rating: 5 } : t
+              t.id === ticketId
+                ? {
+                    ...t,
+                    ...(updates || {
+                      resolution_rating: 5,
+                      resolution_status: "accepted",
+                    }),
+                  }
+                : t
             )
-          );
-          setTicketsNeedingReview((prev) =>
-            prev.filter((t) => t.id !== ticketId)
           );
         }}
         onAllReviewsComplete={() => fetchTickets()}

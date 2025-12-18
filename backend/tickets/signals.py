@@ -186,6 +186,8 @@ def ticket_saved(sender, instance, created, **kwargs):
         'column_order': instance.column_order,
         'project': instance.project_id,
         'company': instance.company_id,
+        'company_name': instance.company.name if instance.company else None,
+        'company_logo_url': instance.company.logo.url if instance.company and instance.company.logo else None,
         'reporter': instance.reporter_id,
         'assignee_ids': assignee_ids,
         'tag_names': tag_names,

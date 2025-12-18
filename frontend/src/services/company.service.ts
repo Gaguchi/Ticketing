@@ -25,11 +25,11 @@ class CompanyService {
     if (params?.page) queryParams.append('page', params.page.toString());
     if (params?.page_size) queryParams.append('page_size', params.page_size.toString());
     if (params?.project) queryParams.append('project', params.project.toString());
-    
+
     const url = queryParams.toString()
       ? `${API_ENDPOINTS.COMPANIES}?${queryParams.toString()}`
       : API_ENDPOINTS.COMPANIES;
-    
+
     return apiService.get<PaginatedResponse<Company>>(url);
   }
 
@@ -102,6 +102,13 @@ class CompanyService {
    */
   async getCompanyTickets(id: number): Promise<PaginatedResponse<Ticket>> {
     return apiService.get<PaginatedResponse<Ticket>>(API_ENDPOINTS.COMPANY_TICKETS(id));
+  }
+
+  /**
+   * Get company admins
+   */
+  async getCompanyAdmins(id: number): Promise<any[]> {
+    return apiService.get<any[]>(API_ENDPOINTS.COMPANY_ADMINS(id));
   }
 }
 

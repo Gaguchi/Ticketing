@@ -141,6 +141,20 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
         </div>
       ) : ticket ? (
         <div className="flex flex-col h-full">
+          {/* Resolution Status Alert */}
+          {ticket.resolution_status === "rejected" && (
+            <div className="bg-red-50 px-6 py-2 border-b border-red-100 flex items-center gap-2 text-red-700 text-sm">
+              <span className="font-bold">Resolution Rejected:</span>{" "}
+              {ticket.resolution_feedback}
+            </div>
+          )}
+          {ticket.resolution_status === "awaiting_review" && (
+            <div className="bg-amber-50 px-6 py-2 border-b border-amber-100 flex items-center gap-2 text-amber-700 text-sm">
+              <span className="font-bold">Action Required:</span> Please review
+              the resolution of this ticket.
+            </div>
+          )}
+
           {/* Header */}
           <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-start bg-white sticky top-0 z-10 shrink-0">
             <div className="flex-1 pr-8">
@@ -231,6 +245,71 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
                   </p>
                 </div>
               </div>
+
+              {/* Resolution Feedback History */}
+              {ticket.resolution_feedbacks &&
+                ticket.resolution_feedbacks.length > 0 && (
+                  <div className="border-t border-slate-100 pt-6">
+                    <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide mb-4">
+                      Resolution Feedback History
+                    </h3>
+                    <div className="space-y-4">
+                      {ticket.resolution_feedbacks.map((fb) => (
+                        <div
+                          key={fb.id}
+                          className={`p-4 rounded-xl border ${
+                            fb.feedback_type === "rejected"
+                              ? "bg-red-50 border-red-200"
+                              : "bg-green-50 border-green-200"
+                          }`}
+                        >
+                          <div className="flex justify-between items-center mb-2">
+                            <span
+                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                                fb.feedback_type === "rejected"
+                                  ? "bg-red-100 text-red-700"
+                                  : "bg-green-100 text-green-700"
+                              }`}
+                            >
+                              {fb.feedback_type === "rejected"
+                                ? "✗ Rejected"
+                                : "✓ Accepted"}
+                            </span>
+                            <span className="text-xs text-slate-400">
+                              {formatDate(fb.created_at)}
+                            </span>
+                          </div>
+                          {fb.rating && (
+                            <div className="mb-2">
+                              <span className="text-sm text-slate-600">
+                                Rating:{" "}
+                              </span>
+                              <span className="text-amber-500">
+                                {"★".repeat(fb.rating)}
+                                {"☆".repeat(5 - fb.rating)}
+                              </span>
+                            </div>
+                          )}
+                          <p className="text-sm text-slate-700 whitespace-pre-wrap">
+                            {fb.feedback || (
+                              <span className="text-slate-400 italic">
+                                No feedback provided
+                              </span>
+                            )}
+                          </p>
+                          {fb.created_by && (
+                            <p className="mt-2 text-xs text-slate-400">
+                              —{" "}
+                              {fb.created_by.first_name
+                                ? `${fb.created_by.first_name} ${fb.created_by.last_name}`
+                                : fb.created_by.username}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
               <div className="border-t border-slate-100 pt-8">
                 <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide mb-4">

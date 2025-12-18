@@ -157,6 +157,13 @@ const Chat: React.FC = () => {
         // Only show loading spinner on initial load, not on refreshes
         if (isInitialLoadRef.current) {
           setLoading(true);
+          // Reset state for new project
+          setRooms([]);
+          setActiveRoom(null);
+          setMessages([]);
+          setSearchQuery("");
+          setHasMoreMessages(false);
+          setMessageCursor(null);
         }
 
         const data = await chatService.getRooms(selectedProject.id);

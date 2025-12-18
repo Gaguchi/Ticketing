@@ -54,9 +54,21 @@ export interface Ticket {
   is_archived?: boolean;
   is_final_column?: boolean;
   // Resolution fields
+  resolution_status?: 'none' | 'awaiting_review' | 'accepted' | 'rejected';
   resolution_rating?: number | null;
   resolution_feedback?: string;
+  resolution_feedbacks?: ResolutionFeedback[];
   resolved_at?: string | null;
+}
+
+// Resolution feedback history entry
+export interface ResolutionFeedback {
+  id: number;
+  feedback_type: 'accepted' | 'rejected';
+  feedback: string;
+  rating: number | null;
+  created_by: User | null;
+  created_at: string;
 }
 
 export interface Comment {

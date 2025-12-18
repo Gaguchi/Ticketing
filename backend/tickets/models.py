@@ -703,6 +703,18 @@ class Ticket(models.Model):
     done_at = models.DateTimeField(null=True, blank=True, help_text='Timestamp for when the ticket entered the Done column')
     
     # Resolution/Review fields
+    RESOLUTION_STATUS_CHOICES = [
+        ('none', 'None'),
+        ('awaiting_review', 'Awaiting Review'),
+        ('accepted', 'Accepted'),
+        ('rejected', 'Rejected'),
+    ]
+    resolution_status = models.CharField(
+        max_length=20, 
+        choices=RESOLUTION_STATUS_CHOICES, 
+        default='none',
+        help_text='Status of the resolution review process'
+    )
     resolution_rating = models.IntegerField(
         null=True, 
         blank=True,
@@ -797,6 +809,14 @@ class Ticket(models.Model):
         # Update done_at when entering/leaving "Done" state
         # A ticket is "done" if it's in a Done column OR has a status with category='done'
         state_changed = column_changed or status_changed
+        was_done = False
+        if self.pk:
+            try:
+                previous = Ticket.objects.get(pk=self.pk)
+                was_done = previous._is_done()
+            except Ticket.DoesNotExist:
+                pass
+        
         is_done = self._is_done()
         
         if is_done and (state_changed or not self.done_at):
@@ -806,7 +826,39 @@ class Ticket(models.Model):
             # Leaving done state - clear done_at
             self.done_at = None
         
+        # Handle resolution_status transitions
+        # Only trigger if status/column actually changed (not just order changes)
+        resolution_status_changed = False
+        old_resolution_status = None
+        if self.pk:
+            try:
+                previous = Ticket.objects.get(pk=self.pk)
+                old_resolution_status = previous.resolution_status
+            except Ticket.DoesNotExist:
+                pass
+        
+        if state_changed:
+            if is_done and not was_done:
+                # Entering done state
+                if self.resolution_status == 'none':
+                    # First time entering done - set to awaiting_review
+                    self.resolution_status = 'awaiting_review'
+                    resolution_status_changed = True
+                elif self.resolution_status == 'rejected':
+                    # Re-entering done after rejection - reset to awaiting_review
+                    self.resolution_status = 'awaiting_review'
+                    resolution_status_changed = True
+                # Note: 'accepted' tickets stay accepted (immutable)
+            elif not is_done and was_done:
+                # Leaving done state - no change to resolution_status
+                # (we want to preserve 'rejected' status so it resets on re-entry)
+                pass
+        
         super().save(*args, **kwargs)
+        
+        # Broadcast resolution status change via WebSocket
+        if resolution_status_changed:
+            self._broadcast_resolution_status_change(old_resolution_status, self.resolution_status)
 
     def __getattribute__(self, name):
         """
@@ -924,6 +976,15 @@ class Ticket(models.Model):
             self.done_at = timezone.now()
             update_fields.append('done_at')
             print(f"   Setting done_at={self.done_at}")
+            
+            # Resolution status transition: when entering Done, set to awaiting_review
+            # (unless already accepted - accepted tickets stay accepted)
+            if self.resolution_status != 'accepted':
+                old_resolution_status = self.resolution_status
+                self.resolution_status = 'awaiting_review'
+                update_fields.append('resolution_status')
+                print(f"   Resolution status: {old_resolution_status} -> awaiting_review")
+                
         elif old_is_done and not new_is_done:
             # Leaving done state - clear done_at
             self.done_at = None
@@ -949,9 +1010,15 @@ class Ticket(models.Model):
                             'old_status': old_status.key if old_status else None,
                             'new_status': new_status.key,
                             'rank': self.rank,
+                            'resolution_status': self.resolution_status,
                         }
                     }
                 )
+                
+                # Also broadcast resolution status change for ServiceDesk real-time updates
+                if new_is_done and not old_is_done and self.resolution_status == 'awaiting_review':
+                    self._broadcast_resolution_status_change()
+                    
             except Exception as e:
                 print(f"⚠️ Failed to broadcast ticket move: {e}")
         
@@ -1004,6 +1071,38 @@ class Ticket(models.Model):
         )
         return True
 
+    def _broadcast_resolution_status_change(self, old_status, new_status):
+        """
+        Broadcast resolution status change via WebSocket.
+        This is called when a ticket's resolution_status changes (e.g., to awaiting_review).
+        """
+        try:
+            from channels.layers import get_channel_layer
+            from asgiref.sync import async_to_sync
+            
+            channel_layer = get_channel_layer()
+            if channel_layer:
+                async_to_sync(channel_layer.group_send)(
+                    f'project_{self.project_id}_tickets',
+                    {
+                        'type': 'ticket_update',
+                        'action': 'updated',
+                        'data': {
+                            'id': self.id,
+                            'ticket_key': self.ticket_key,
+                            'name': self.name,
+                            'resolution_status': new_status,
+                            'old_resolution_status': old_status,
+                            'ticket_status_key': self.ticket_status.key if self.ticket_status else None,
+                            'ticket_status_category': self.ticket_status.category if self.ticket_status else None,
+                            'project': self.project_id,
+                        }
+                    }
+                )
+                print(f"📡 Broadcasted resolution status change: {self.ticket_key} {old_status} → {new_status}")
+        except Exception as e:
+            print(f"⚠️ Failed to broadcast resolution status change: {e}")
+
 
 class Comment(models.Model):
     """Comment model for tickets"""
@@ -1018,6 +1117,35 @@ class Comment(models.Model):
 
     def __str__(self):
         return f"Comment by {self.user.username} on {self.ticket.name}"
+
+
+class ResolutionFeedback(models.Model):
+    """
+    Stores history of resolution feedback from customers.
+    A ticket can be rejected multiple times, so we keep all feedback entries.
+    """
+    FEEDBACK_TYPE_CHOICES = [
+        ('accepted', 'Accepted'),
+        ('rejected', 'Rejected'),
+    ]
+    
+    ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name='resolution_feedbacks')
+    feedback_type = models.CharField(max_length=20, choices=FEEDBACK_TYPE_CHOICES)
+    feedback = models.TextField(help_text='Customer feedback text')
+    rating = models.IntegerField(
+        null=True, 
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        help_text='Customer satisfaction rating (1-5 stars) - only for accepted'
+    )
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='resolution_feedbacks')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']  # Most recent first
+
+    def __str__(self):
+        return f"{self.feedback_type} feedback on {self.ticket.ticket_key} at {self.created_at}"
 
 
 class Attachment(models.Model):
