@@ -168,7 +168,6 @@ export const TicketModal: React.FC<TicketModalProps> = ({
   const [projectTags, setProjectTags] = useState<any[]>([]);
   const [projectColumns, setProjectColumns] = useState<any[]>([]);
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
-  const [loadingUsers, setLoadingUsers] = useState(false);
   const [companies, setCompanies] = useState<any[]>([]);
   const [loadingCompanies, setLoadingCompanies] = useState(false);
   const [admins, setAdmins] = useState<any[]>([]);

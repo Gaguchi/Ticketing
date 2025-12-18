@@ -22,6 +22,7 @@ export const API_ENDPOINTS = {
 
   // Projects
   PROJECTS: api('/projects/'),
+  PROJECT_DETAIL: (id: number) => api(`/projects/${id}/`),
   PROJECT_TICKETS: (id: number) => api(`/projects/${id}/tickets/`),
   PROJECT_COLUMNS: (id: number) => api(`/projects/${id}/columns/`),
   PROJECT_ADMINS: (id: number) => api(`/projects/${id}/admins/`),
