@@ -64,10 +64,8 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
   const handleSubmit = async () => {
     if (!currentTicket) return;
 
-    if (rating === 0) {
-      message.warning("Please provide a star rating");
-      return;
-    }
+    // Rating is mandatory (logic implies it must be > 0 to see buttons)
+    if (rating === 0) return;
 
     setSubmitting(true);
     try {
@@ -79,35 +77,25 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
       message.success(
         `Review submitted for ${currentTicket.ticket_key || currentTicket.key}`
       );
-      onReviewComplete(currentTicket.id, { 
-        resolution_rating: rating, 
+      onReviewComplete(currentTicket.id, {
+        resolution_rating: rating,
         resolution_status: 'accepted',
-        resolution_feedback: feedback 
+        resolution_feedback: feedback
       });
 
-      // Move to next ticket or close
-      if (currentIndex < totalPending - 1) {
-        setCurrentIndex(currentIndex + 1);
-        setRating(0);
-        setFeedback("");
-      } else {
-        setVisible(false);
-        onAllReviewsComplete();
-      }
+      handleNext();
     } catch (error: any) {
       console.error("Failed to submit review:", error);
       message.error(error.response?.data?.error || "Failed to submit review");
-    } finally {
       setSubmitting(false);
     }
   };
 
-  /* Reject Button logic */
   const handleReject = async () => {
     if (!currentTicket) return;
 
     if (!feedback.trim()) {
-      message.warning("Please provide feedback explaining why the issue is not resolved");
+      message.warning("Please provide a description explaining why the issue is not resolved");
       return;
     }
 
@@ -120,33 +108,39 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
       message.info(
         `Resolution rejected for ${currentTicket.ticket_key || currentTicket.key}`
       );
-      onReviewComplete(currentTicket.id, { 
+      onReviewComplete(currentTicket.id, {
         resolution_status: 'rejected',
         resolution_feedback: feedback,
         resolution_rating: undefined,
         resolved_at: undefined
       });
 
-      // Move to next ticket or close
-      if (currentIndex < totalPending - 1) {
-        setCurrentIndex(currentIndex + 1);
-        setRating(0);
-        setFeedback("");
-      } else {
-        setVisible(false);
-        onAllReviewsComplete();
-      }
+      handleNext();
     } catch (error: any) {
       console.error("Failed to reject resolution:", error);
       message.error(error.response?.data?.error || "Failed to reject resolution");
-    } finally {
       setSubmitting(false);
     }
   };
 
-  const isRejecting = rating === 0 && feedback.length > 0;
+  const handleNext = () => {
+    if (currentIndex < totalPending - 1) {
+      setCurrentIndex(currentIndex + 1);
+      setRating(0);
+      setFeedback("");
+      setSubmitting(false);
+    } else {
+      setVisible(false);
+      onAllReviewsComplete();
+    }
+  };
 
   if (!currentTicket || !visible) return null;
+
+  // Logic for progressive disclosure
+  const showFeedback = rating > 0;
+  const showRejectButton = rating > 0 && rating < 3;
+  const showConfirmButton = rating >= 3 || (rating > 0 && rating < 3); // Basically rating > 0, but allows Reject if < 3
 
   return (
     <Modal
@@ -197,31 +191,25 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
       {/* Header */}
       <div style={{ textAlign: "center", marginBottom: 32 }}>
         <div
-            style={{
-              width: 64,
-              height: 64,
-              borderRadius: "50%",
-              backgroundColor: isRejecting ? "#FFF0F0" : "#E8F5E9",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              margin: "0 auto 16px",
-              transition: "all 0.3s ease"
-            }}
+          style={{
+            width: 64,
+            height: 64,
+            borderRadius: "50%",
+            backgroundColor: "#E8F5E9",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            margin: "0 auto 16px",
+            transition: "all 0.3s ease"
+          }}
         >
-            {isRejecting ? (
-                 <CommentOutlined style={{ fontSize: 32, color: "#E74C3C" }} />
-            ) : (
-                 <CheckCircleOutlined style={{ fontSize: 32, color: "#27AE60" }} />
-            )}
+          <CheckCircleOutlined style={{ fontSize: 32, color: "#27AE60" }} />
         </div>
         <Title level={4} style={{ margin: 0, color: "#2C3E50" }}>
-          {isRejecting ? "Issue Not Resolved?" : "Your ticket has been resolved!"}
+          Your ticket has been resolved!
         </Title>
         <Text type="secondary" style={{ fontSize: 14 }}>
-          {isRejecting 
-            ? "Please verify the ticket is not resolved logic" 
-            : "Please take a moment to rate your experience"}
+          Please take a moment to rate your experience
         </Text>
       </div>
 
@@ -242,8 +230,8 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
         </Text>
       </div>
 
-      {/* Star Rating */}
-      <div style={{ textAlign: "center", marginBottom: 24, opacity: isRejecting ? 0.3 : 1 }}>
+      {/* Star Rating - Always Visible */}
+      <div style={{ textAlign: "center", marginBottom: 24 }}>
         <Text
           strong
           style={{ display: "block", marginBottom: 12, fontSize: 15 }}
@@ -255,7 +243,6 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
           onChange={setRating}
           style={{ fontSize: 36 }}
           character={<StarFilled />}
-          disabled={isRejecting} // Disable rating if rejecting
         />
         {rating > 0 && (
           <Text
@@ -271,39 +258,46 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
         )}
       </div>
 
-      {/* Feedback (optional usually, required for rejection) */}
-      <div style={{ marginBottom: 32 }}>
-        <Text
-          strong
-          style={{ display: "block", marginBottom: 8, fontSize: 15 }}
-        >
-          <CommentOutlined style={{ marginRight: 8 }} />
-          {isRejecting ? "Why is it not resolved?" : "Additional feedback"}
-          {!isRejecting && (
-             <Text type="secondary" style={{ fontWeight: 400 }}>
-                {" "}(optional)
-             </Text>
-          )}
-        </Text>
-        <TextArea
-          value={feedback}
-          onChange={(e) => setFeedback(e.target.value)}
-          placeholder={isRejecting ? "Please explain why the issue persists..." : "Share your thoughts about how your issue was handled..."}
-          rows={3}
-          maxLength={500}
-          showCount
-          style={{ borderRadius: 8, borderColor: isRejecting ? "#E74C3C" : undefined }}
-        />
-      </div>
+      {/* Feedback & Actions - Conditional on Rating */}
+      {showFeedback && (
+        <div className="animate-fade-in">
+          {/* Feedback */}
+          <div style={{ marginBottom: 32 }}>
+            <Text
+              strong
+              style={{ display: "block", marginBottom: 8, fontSize: 15 }}
+            >
+              <CommentOutlined style={{ marginRight: 8 }} />
+              {rating < 3 ? "What could go better?" : "Additional feedback"}
+              {rating >= 3 && (
+                <Text type="secondary" style={{ fontWeight: 400 }}>
+                  {" "}(optional)
+                </Text>
+              )}
+              {rating < 3 && (
+                <Text type="secondary" style={{ fontWeight: 400, color: '#E74C3C' }}>
+                  {" "}(required for rejection)
+                </Text>
+              )}
+            </Text>
+            <TextArea
+              value={feedback}
+              onChange={(e) => setFeedback(e.target.value)}
+              placeholder={rating < 3 ? "Please explain why the issue is not resolved or what we can improve..." : "Share your thoughts about how your issue was handled..."}
+              rows={3}
+              maxLength={500}
+              showCount
+              style={{ borderRadius: 8 }}
+            />
+          </div>
 
-      {/* Action Buttons */}
-      <div style={{ display: 'flex', gap: '12px' }}>
-          {/* Reject Button (Visible if no rating selected yet) */}
-          {rating === 0 && (
-             <Button
-                danger
+          {/* Action Buttons */}
+          <div style={{ display: 'flex', gap: '12px' }}>
+            {/* Reject Button (Visible if rating < 3) */}
+            {showRejectButton && (
+              <Button
+                type="text"
                 size="large"
-                block
                 onClick={handleReject}
                 loading={submitting}
                 style={{
@@ -311,32 +305,40 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
                   borderRadius: 8,
                   fontWeight: 500,
                   fontSize: 16,
+                  color: "#94a3b8", // slate-400
+                  transition: "all 0.2s"
                 }}
+                className="hover:text-red-500 hover:bg-red-50 flex-1"
               >
                 No, Not Resolved
               </Button>
-          )}
+            )}
 
-          {/* Accept/Submit Button */}
-          <Button
-            type="primary"
-            size="large"
-            block
-            onClick={handleSubmit}
-            loading={submitting}
-            disabled={rating === 0}
-            style={{
-              height: 48,
-              borderRadius: 8,
-              backgroundColor: rating === 0 ? undefined : "#2C3E50",
-              borderColor: rating === 0 ? undefined : "#2C3E50",
-              fontWeight: 500,
-              fontSize: 16,
-            }}
-          >
-            {remaining > 1 ? "Submit & Continue" : "Confirm Resolution"}
-          </Button>
-      </div>
+            {/* Accept/Submit Button */}
+            {showConfirmButton && (
+              <Button
+                type="primary"
+                size="large"
+                onClick={handleSubmit}
+                loading={submitting}
+                style={{
+                  height: 48,
+                  borderRadius: 8,
+                  backgroundColor: "#2C3E50",
+                  borderColor: "#2C3E50",
+                  fontWeight: 500,
+                  fontSize: 16,
+                  flex: showRejectButton ? 1 : undefined,
+                  width: showRejectButton ? undefined : '100%'
+                }}
+                block={!showRejectButton}
+              >
+                {remaining > 1 ? "Submit & Continue" : "Confirm Resolution"}
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Skip hint for multiple reviews */}
       {totalPending > 1 && (

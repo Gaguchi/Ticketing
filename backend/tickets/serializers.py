@@ -674,7 +674,7 @@ class KanbanTicketSerializer(serializers.ModelSerializer):
             'rank',
             # Display on card
             'company_logo_url', 'following', 'comments_count',
-            'assignee_ids', 'resolved_at', 'resolution_status',
+            'assignee_ids', 'resolved_at', 'resolution_status', 'resolution_feedback',
         ]
         # Read ticket_status_key directly from foreign key
         extra_kwargs = {

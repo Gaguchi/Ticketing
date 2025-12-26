@@ -5,17 +5,27 @@ from tickets.models import Project
 
 class ChatRoom(models.Model):
     """
-    Chat room for direct messages or group chats within a project.
+    Chat room for direct messages, group chats, or ticket-specific chats within a project.
     All chat rooms are project-scoped.
     """
     ROOM_TYPE_CHOICES = [
         ('direct', 'Direct Message'),
         ('group', 'Group Chat'),
+        ('ticket', 'Ticket Chat'),  # NEW: Ticket-specific chat room
     ]
     
     name = models.CharField(max_length=255, blank=True)  # Group name (empty for DMs)
     type = models.CharField(max_length=10, choices=ROOM_TYPE_CHOICES, default='direct')
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='chat_rooms')
+    # NEW: Link to ticket for ticket-specific chats
+    ticket = models.OneToOneField(
+        'tickets.Ticket',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='chat_room',
+        help_text='The ticket this chat room is associated with (for ticket chats only)'
+    )
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_rooms')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -30,6 +40,8 @@ class ChatRoom(models.Model):
             if participants.count() == 2:
                 users = [p.user.username for p in participants]
                 return f"DM: {' & '.join(users)}"
+        elif self.type == 'ticket' and self.ticket:
+            return f"Ticket: {self.ticket.ticket_key}"
         return self.name or f"Room {self.id}"
     
     def get_display_name(self, for_user):
@@ -40,7 +52,49 @@ class ChatRoom(models.Model):
             if other_user:
                 full_name = other_user.user.get_full_name()
                 return full_name if full_name else other_user.user.username
+        elif self.type == 'ticket' and self.ticket:
+            # For ticket chats, show ticket key and title
+            return f"{self.ticket.ticket_key}: {self.ticket.name[:30]}"
         return self.name or f"Chat {self.id}"
+    
+    @classmethod
+    def get_or_create_for_ticket(cls, ticket, created_by=None):
+        """
+        Get or create a chat room for a specific ticket.
+        Automatically adds the reporter and company admins as participants.
+        """
+        # Check if chat room already exists for this ticket
+        try:
+            return cls.objects.get(ticket=ticket), False
+        except cls.DoesNotExist:
+            pass
+        
+        # Create new chat room for ticket
+        room = cls.objects.create(
+            name=f"{ticket.ticket_key} Chat",
+            type='ticket',
+            project=ticket.project,
+            ticket=ticket,
+            created_by=created_by or ticket.reporter
+        )
+        
+        # Add participants
+        from .models import ChatParticipant
+        
+        # Add ticket reporter
+        if ticket.reporter:
+            ChatParticipant.objects.get_or_create(room=room, user=ticket.reporter)
+        
+        # Add company admins if ticket has a company
+        if ticket.company:
+            for admin in ticket.company.admins.all():
+                ChatParticipant.objects.get_or_create(room=room, user=admin)
+        
+        # Add ticket assignees
+        for assignee in ticket.assignees.all():
+            ChatParticipant.objects.get_or_create(room=room, user=assignee)
+        
+        return room, True
 
 
 class ChatParticipant(models.Model):

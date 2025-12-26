@@ -28,6 +28,14 @@ class ChatRoomViewSet(viewsets.ModelViewSet):
         project_id = self.request.query_params.get('project')
         if project_id:
             queryset = queryset.filter(project_id=project_id)
+        
+        # Filter by room type if specified (e.g., 'ticket', 'direct', 'group')
+        room_type = self.request.query_params.get('type')
+        if room_type:
+            queryset = queryset.filter(type=room_type)
+        
+        # Optimize queries with select_related for ticket info
+        queryset = queryset.select_related('ticket')
             
         # Optimize unread count calculation
         # 1. Get the user's last_read_at for each room
@@ -115,6 +123,115 @@ class ChatRoomViewSet(viewsets.ModelViewSet):
             return Response({'status': 'marked as read'})
         
         return Response({'error': 'Not a participant'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=False, methods=['post'])
+    def create_for_ticket(self, request):
+        """
+        Create a chat room for a specific ticket.
+        
+        Only ticket assignees or company admins can create chat rooms.
+        If a chat room already exists for the ticket, returns it instead.
+        
+        Request body:
+        {
+            "ticket_id": 123
+        }
+        
+        Returns: ChatRoom data
+        """
+        from tickets.models import Ticket
+        
+        ticket_id = request.data.get('ticket_id')
+        if not ticket_id:
+            return Response(
+                {'error': 'ticket_id is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            ticket = Ticket.objects.select_related('company', 'project', 'reporter').get(id=ticket_id)
+        except Ticket.DoesNotExist:
+            return Response(
+                {'error': 'Ticket not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        user = request.user
+        
+        # Check if user can create chat for this ticket
+        # Allowed: ticket assignees, company admins, project admins, superusers
+        is_assignee = ticket.assignees.filter(id=user.id).exists()
+        is_company_admin = ticket.company and ticket.company.admins.filter(id=user.id).exists()
+        is_project_admin = ticket.project.members.filter(id=user.id).exists()
+        
+        if not (is_assignee or is_company_admin or is_project_admin or user.is_superuser):
+            return Response(
+                {'error': 'You must be assigned to this ticket or be an admin to create a chat'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Create or get existing chat room
+        chat_room, created = ChatRoom.get_or_create_for_ticket(ticket, created_by=user)
+        
+        # Also add the requesting user as participant if not already
+        ChatParticipant.objects.get_or_create(room=chat_room, user=user)
+        
+        serializer = ChatRoomSerializer(chat_room, context={'request': request})
+        return Response(
+            serializer.data,
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK
+        )
+    
+    @action(detail=False, methods=['get'])
+    def for_ticket(self, request):
+        """
+        Get the chat room for a specific ticket.
+        
+        Query params:
+        - ticket_id: ID of the ticket
+        
+        Returns: ChatRoom data or 404 if no chat exists
+        """
+        ticket_id = request.query_params.get('ticket_id')
+        if not ticket_id:
+            return Response(
+                {'error': 'ticket_id query parameter is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            room = ChatRoom.objects.get(ticket_id=ticket_id)
+            
+            # Check user is a participant
+            if not room.participants.filter(user=request.user).exists():
+                # If user is assigned to ticket or is admin, add them as participant
+                from tickets.models import Ticket
+                try:
+                    ticket = Ticket.objects.get(id=ticket_id)
+                    is_assignee = ticket.assignees.filter(id=request.user.id).exists()
+                    is_company_admin = ticket.company and ticket.company.admins.filter(id=request.user.id).exists()
+                    
+                    if is_assignee or is_company_admin or request.user.is_superuser:
+                        ChatParticipant.objects.get_or_create(room=room, user=request.user)
+                    else:
+                        return Response(
+                            {'error': 'You do not have access to this chat'},
+                            status=status.HTTP_403_FORBIDDEN
+                        )
+                except Ticket.DoesNotExist:
+                    return Response(
+                        {'error': 'Ticket not found'},
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+            
+            serializer = ChatRoomSerializer(room, context={'request': request})
+            return Response(serializer.data)
+            
+        except ChatRoom.DoesNotExist:
+            return Response(
+                {'error': 'No chat room exists for this ticket', 'exists': False},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
 
 class ChatMessageViewSet(viewsets.ModelViewSet):

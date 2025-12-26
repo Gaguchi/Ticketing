@@ -61,9 +61,6 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
   onClick,
 }) => {
   const isResolved = !!ticket.resolved_at;
-  console.log(
-    `[TicketCard] ID: ${id}, Status: ${ticket.resolution_status}, ResolvedAt: ${ticket.resolved_at}`
-  );
 
   const {
     setNodeRef,

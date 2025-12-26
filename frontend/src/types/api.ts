@@ -375,7 +375,7 @@ export interface UpdateTicketData {
   importance?: TicketImportance;
   column?: number;
   order?: number; // Position within column (for reordering)
-  company?: number;
+  company?: number | null;
   assignee_ids?: number[];
   parent?: number;
   tags?: number[];

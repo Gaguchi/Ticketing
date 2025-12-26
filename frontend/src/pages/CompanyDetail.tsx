@@ -61,6 +61,7 @@ import { KanbanBoard } from "../components/KanbanBoard";
 import { DeadlineView } from "../components/DeadlineView";
 import { TicketModal } from "../components/TicketModal";
 import { CreateTicketModal } from "../components/CreateTicketModal";
+import { CompanyMonthlyReport } from "../components/CompanyMonthlyReport";
 import type { TicketColumn, Ticket } from "../types/api";
 
 const { Title, Text } = Typography;
@@ -185,7 +186,7 @@ const CompanyDetail: React.FC = () => {
   const [editForm] = Form.useForm();
   const [editSubmitting, setEditSubmitting] = useState(false);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
-  
+
   // Create ticket modal state
   const [createTicketOpen, setCreateTicketOpen] = useState(false);
 
@@ -235,33 +236,33 @@ const CompanyDetail: React.FC = () => {
       // Fetch columns
       // If a project is selected, use that. Otherwise try to infer from tickets.
       let projectIdToUse = selectedProject?.id;
-      
+
       if (!projectIdToUse && Array.isArray(ticketData) && ticketData.length > 0) {
         // Use the project from the first ticket
         projectIdToUse = ticketData[0].project;
       }
-      
+
       // Fallback: if no project selected and no tickets to infer from (or inferred failed),
       // try to find the project this company belongs to from availableProjects
       if (!projectIdToUse && availableProjects.length > 0) {
         // Find a project that has this company
-        const associatedProject = availableProjects.find(p => 
+        const associatedProject = availableProjects.find(p =>
           p.companies?.some(c => c.id === company.id)
         );
         if (associatedProject) {
           projectIdToUse = associatedProject.id;
         }
       }
-      
+
       if (projectIdToUse) {
         // Fetch BOTH types of columns to see which system to use
         const [columnsData, boardColumnsData] = await Promise.all([
-           apiService.get<any>(`${API_ENDPOINTS.COLUMNS}?project=${projectIdToUse}`),
-           apiService.get<any>(`${API_ENDPOINTS.BOARD_COLUMNS}?project=${projectIdToUse}`)
+          apiService.get<any>(`${API_ENDPOINTS.COLUMNS}?project=${projectIdToUse}`),
+          apiService.get<any>(`${API_ENDPOINTS.BOARD_COLUMNS}?project=${projectIdToUse}`)
         ]);
 
         setColumns(Array.isArray(columnsData) ? columnsData : columnsData.results || []);
-        
+
         const boardCols = Array.isArray(boardColumnsData) ? boardColumnsData : boardColumnsData.results || [];
         setBoardColumns(boardCols);
       }
@@ -828,9 +829,9 @@ const CompanyDetail: React.FC = () => {
             <Button icon={<EditOutlined />} onClick={handleEditCompany}>
               Edit
             </Button>
-            <Button 
-              type="primary" 
-              icon={<PlusOutlined />} 
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
               onClick={() => setCreateTicketOpen(true)}
             >
               Create Ticket
@@ -1436,39 +1437,39 @@ const CompanyDetail: React.FC = () => {
             {ticketViewMode === "kanban" && (
               <KanbanBoard
                 tickets={tickets.map(t => {
-                   // Map resolved tickets to the virtual Resolved column
-                   if (t.status === 'done' || t.resolved_at) {
-                       // If using new system, mapped via status 'done' usually, but let's Ensure
-                       if (boardColumns.length > 0) {
-                           // For new system, we trust the status mapping, but force 'done' status if needed?
-                           // Actually the backend status should be 'done', so it maps to Done column.
-                           // But if it's resolved but status is not 'done', we might need to fake it?
-                           // Let's leave it to natural mapping for new system, unless we want to force a column.
-                           
-                           // If using OLD system (boardColumns empty), we use column ID 999999
-                       } else {
-                           return { ...t, column: 999999 };
-                       }
-                   }
-                   return t;
+                  // Map resolved tickets to the virtual Resolved column
+                  if (t.status === 'done' || t.resolved_at) {
+                    // If using new system, mapped via status 'done' usually, but let's Ensure
+                    if (boardColumns.length > 0) {
+                      // For new system, we trust the status mapping, but force 'done' status if needed?
+                      // Actually the backend status should be 'done', so it maps to Done column.
+                      // But if it's resolved but status is not 'done', we might need to fake it?
+                      // Let's leave it to natural mapping for new system, unless we want to force a column.
+
+                      // If using OLD system (boardColumns empty), we use column ID 999999
+                    } else {
+                      return { ...t, column: 999999 };
+                    }
+                  }
+                  return t;
                 })}
                 columns={boardColumns.length > 0 ? undefined : [
-                    ...columns, 
-                    ...(columns.some(c => c.id === 999999) ? [] : [{
-                        id: 999999,
-                        name: "Resolved",
-                        order: 9999,
-                        project: 0
-                    }])
+                  ...columns,
+                  ...(columns.some(c => c.id === 999999) ? [] : [{
+                    id: 999999,
+                    name: "Resolved",
+                    order: 9999,
+                    project: 0
+                  }])
                 ]}
                 boardColumns={boardColumns.length > 0 ? boardColumns : undefined}
                 onTicketMove={async () => {
                   await fetchTickets();
                 }}
                 onTicketMoveToStatus={async () => {
-                   await fetchTickets();
+                  await fetchTickets();
                 }}
-                onTicketClick={() => {}}
+                onTicketClick={() => { }}
               />
             )}
 
@@ -1476,7 +1477,7 @@ const CompanyDetail: React.FC = () => {
               <DeadlineView
                 tickets={tickets}
                 columns={columns}
-                onTicketClick={() => {}}
+                onTicketClick={() => { }}
               />
             )}
 
@@ -1553,9 +1554,8 @@ const CompanyDetail: React.FC = () => {
                         loading={loadingUsers}
                         options={availableUsers.map((u) => ({
                           value: u.id,
-                          label: `${u.first_name || u.username} ${
-                            u.last_name || ""
-                          }`.trim(),
+                          label: `${u.first_name || u.username} ${u.last_name || ""
+                            }`.trim(),
                         }))}
                         allowClear
                       />
@@ -1855,6 +1855,16 @@ const CompanyDetail: React.FC = () => {
                 </Card>
               </Col>
             </Row>
+          </TabPane>
+
+          {/* Monthly Report Tab */}
+          <TabPane tab="Monthly Report" key="report">
+            {company && (
+              <CompanyMonthlyReport
+                companyId={company.id}
+                projectId={selectedProject?.id}
+              />
+            )}
           </TabPane>
         </Tabs>
       </Card>

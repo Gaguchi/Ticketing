@@ -6,6 +6,7 @@
 import { API_HEADERS, API_CONFIG, API_BASE_URL } from '../config/api';
 import { tokenInterceptor } from '../utils/token-interceptor';
 import { perfLogger } from '../utils/perf-logger';
+import authService from './auth.service';
 
 export interface APIError {
   message: string;
@@ -29,12 +30,12 @@ class APIService {
     if (path.startsWith('http://') || path.startsWith('https://')) {
       return path;
     }
-    
+
     // In development, use relative URLs (Vite dev server proxy)
     if (this.isDevelopment) {
       return path;
     }
-    
+
     // In production, prepend API_BASE_URL
     return `${API_BASE_URL}${path}`;
   }
@@ -104,13 +105,13 @@ class APIService {
     options: RequestInit = {}
   ): Promise<T> {
     const startTime = performance.now();
-    
+
     // Build full URL (adds base URL in production)
     const fullUrl = this.buildUrl(url);
-    
+
     // Check if body is FormData - if so, don't set Content-Type (browser will auto-set with boundary)
     const isFormData = options.body instanceof FormData;
-    
+
     const config: RequestInit = {
       ...options,
       headers: {
@@ -140,8 +141,8 @@ class APIService {
         // Handle 401 Unauthorized or 403 Forbidden (invalid/expired token)
         // Django can return 403 with "token_not_valid" error code
         if (
-          (response.status === 401 || 
-          (response.status === 403 && errorData.code === 'token_not_valid')) &&
+          (response.status === 401 ||
+            (response.status === 403 && errorData.code === 'token_not_valid')) &&
           !isRefreshEndpoint &&
           !isLoginEndpoint
         ) {
@@ -155,11 +156,10 @@ class APIService {
         // If refresh endpoint failed, logout immediately
         if (isRefreshEndpoint && (response.status === 401 || response.status === 403)) {
           console.error('❌ [APIService] Refresh token invalid, logging out...');
-          const { default: authService } = await import('./auth.service');
           authService.logout();
           window.location.href = '/login';
         }
-        
+
         throw {
           message: errorData.detail || errorData.message || `HTTP Error: ${response.status}`,
           status: response.status,
@@ -179,7 +179,7 @@ class APIService {
     } catch (error) {
       const duration = Math.round(performance.now() - startTime);
       this.logError(fullUrl, error, duration);
-      
+
       if ((error as APIError).status) {
         throw error;
       }
@@ -216,7 +216,7 @@ class APIService {
     // Don't set Content-Type header for FormData - browser will set it with boundary
     const authHeader = this.getAuthHeader();
     const projectHeader = this.getProjectHeader();
-    
+
     return this.request<T>(url, {
       method: 'POST',
       body: formData,
@@ -235,7 +235,7 @@ class APIService {
     // Don't set Content-Type header for FormData - browser will set it with boundary
     const authHeader = this.getAuthHeader();
     const projectHeader = this.getProjectHeader();
-    
+
     return this.request<T>(url, {
       method: 'PATCH',
       body: formData,

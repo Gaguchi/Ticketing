@@ -71,11 +71,15 @@ class ChatRoomSerializer(serializers.ModelSerializer):
     last_message = serializers.SerializerMethodField()
     unread_count = serializers.SerializerMethodField()
     display_name = serializers.SerializerMethodField()
+    ticket_id = serializers.IntegerField(source='ticket.id', read_only=True, allow_null=True)
+    ticket_key = serializers.CharField(source='ticket.ticket_key', read_only=True, allow_null=True)
+    ticket_name = serializers.CharField(source='ticket.name', read_only=True, allow_null=True)
     
     class Meta:
         model = ChatRoom
         fields = [
             'id', 'name', 'type', 'project', 'created_by',
+            'ticket_id', 'ticket_key', 'ticket_name',  # NEW: ticket info
             'participants', 'last_message', 'unread_count', 'display_name',
             'created_at', 'updated_at'
         ]

@@ -59,6 +59,8 @@ export interface Ticket {
   resolution_feedback?: string;
   resolution_feedbacks?: ResolutionFeedback[];
   resolved_at?: string | null;
+  attachment?: string | null;
+  project_name?: string;
 }
 
 // Resolution feedback history entry

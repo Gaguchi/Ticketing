@@ -89,8 +89,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
         content = data.get('content', '')
         message_type = data.get('message_type', 'text')
         
-        # Save message to database
-        message = await self.create_message(content, message_type)
+        # Save message to database and get room info for broadcasting
+        message, room_data = await self.create_message(content, message_type)
         
         # Broadcast to room group
         await self.channel_layer.group_send(
@@ -100,6 +100,17 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 'message': message
             }
         )
+        
+        # Broadcast room update to project group (for room list updates)
+        if room_data:
+            await self.channel_layer.group_send(
+                f"chat_project_{room_data['project_id']}",
+                {
+                    'type': 'room_updated',
+                    'room': room_data,
+                    'message': message
+                }
+            )
     
     async def handle_message_edit(self, data):
         """Handle editing a message."""
@@ -267,14 +278,27 @@ class ChatConsumer(AsyncWebsocketConsumer):
     
     @database_sync_to_async
     def create_message(self, content, message_type):
-        """Create a new message in the database."""
+        """Create a new message in the database and return message + room data."""
         message = ChatMessage.objects.create(
             room_id=self.room_id,
             user=self.user,
             content=content,
             type=message_type
         )
-        return ChatMessageSerializer(message).data
+        message_data = ChatMessageSerializer(message).data
+        
+        # Get room data for project broadcast
+        room = message.room
+        room_data = {
+            'id': room.id,
+            'project_id': room.project_id,
+            'type': room.type,
+            'name': room.name,
+            'last_message': message_data,
+            'updated_at': room.updated_at.isoformat() if room.updated_at else None,
+        }
+        
+        return message_data, room_data
     
     @database_sync_to_async
     def edit_message(self, message_id, new_content):
@@ -326,3 +350,72 @@ class ChatConsumer(AsyncWebsocketConsumer):
             return True
         except MessageReaction.DoesNotExist:
             return False
+
+
+class ChatProjectConsumer(AsyncWebsocketConsumer):
+    """
+    WebSocket consumer for project-level chat updates.
+    Clients subscribe to this to receive real-time updates when any room
+    in the project has new messages (for updating unread counts, last_message, etc.)
+    """
+    
+    async def connect(self):
+        """Handle WebSocket connection."""
+        self.user = self.scope['user']
+        self.project_id = self.scope['url_route']['kwargs']['project_id']
+        self.project_group_name = f'chat_project_{self.project_id}'
+        
+        # Check if user is authenticated
+        if not self.user.is_authenticated:
+            await self.close(code=4001)
+            return
+        
+        # Check if user has access to project
+        has_access = await self.check_project_access()
+        if not has_access:
+            await self.close(code=4003)
+            return
+        
+        # Join project chat group
+        await self.channel_layer.group_add(
+            self.project_group_name,
+            self.channel_name
+        )
+        
+        await self.accept()
+    
+    async def disconnect(self, close_code):
+        """Handle WebSocket disconnection."""
+        await self.channel_layer.group_discard(
+            self.project_group_name,
+            self.channel_name
+        )
+    
+    async def receive(self, text_data):
+        """Handle incoming messages (ping/pong for keepalive)."""
+        data = json.loads(text_data)
+        if data.get('type') == 'ping':
+            await self.send(text_data=json_dumps({
+                'type': 'pong',
+                'timestamp': data.get('timestamp')
+            }))
+    
+    # Event handlers (receive from channel layer)
+    
+    async def room_updated(self, event):
+        """Send room update to WebSocket client."""
+        await self.send(text_data=json_dumps({
+            'type': 'room_updated',
+            'room': event['room'],
+            'message': event.get('message')
+        }))
+    
+    @database_sync_to_async
+    def check_project_access(self):
+        """Check if user has access to the project."""
+        from tickets.models import Project
+        return Project.objects.filter(
+            id=self.project_id,
+            members__user=self.user
+        ).exists()
+

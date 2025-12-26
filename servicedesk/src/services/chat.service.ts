@@ -20,8 +20,8 @@ class ChatService {
    * Get all chat rooms for the current user
    */
   async getRooms(projectId?: number): Promise<ChatRoom[]> {
-    const url = projectId 
-      ? `${this.BASE_URL}/rooms/?project=${projectId}` 
+    const url = projectId
+      ? `${this.BASE_URL}/rooms/?project=${projectId}`
       : `${this.BASE_URL}/rooms/`;
     const response = await apiService.get<{ count: number; results: ChatRoom[] }>(url);
     return response.results;
@@ -91,7 +91,7 @@ class ChatService {
     options?: { limit?: number; before?: number; after?: number }
   ): Promise<{ messages: ChatMessage[]; hasMore: boolean; cursor: number | null }> {
     const params = new URLSearchParams({ room: roomId.toString() });
-    
+
     if (options?.limit) {
       params.append('limit', options.limit.toString());
     }
@@ -101,13 +101,13 @@ class ChatService {
     if (options?.after) {
       params.append('after', options.after.toString());
     }
-    
+
     const response = await apiService.get<{
       messages: ChatMessage[];
       has_more: boolean;
       cursor: number | null;
     }>(`${this.BASE_URL}/messages/?${params.toString()}`);
-    
+
     return {
       messages: response.messages,
       hasMore: response.has_more,
@@ -187,6 +187,35 @@ class ChatService {
     }
     const response = await apiService.get<{ count: number; results: ChatMessage[] }>(url);
     return response.results;
+  }
+
+  /**
+   * Get the chat room for a specific ticket
+   * @returns The chat room if it exists, null otherwise
+   */
+  async getTicketChatRoom(ticketId: number): Promise<ChatRoom | null> {
+    try {
+      const room = await apiService.get<ChatRoom>(
+        `${this.BASE_URL}/rooms/for_ticket/?ticket_id=${ticketId}`
+      );
+      return room;
+    } catch (error: any) {
+      if (error?.response?.status === 404 || error?.status === 404) {
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Create a chat room for a specific ticket
+   * Returns existing room if one already exists
+   */
+  async createTicketChatRoom(ticketId: number): Promise<ChatRoom> {
+    return await apiService.post<ChatRoom>(
+      `${this.BASE_URL}/rooms/create_for_ticket/`,
+      { ticket_id: ticketId }
+    );
   }
 }
 

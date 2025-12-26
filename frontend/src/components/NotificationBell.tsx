@@ -256,7 +256,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
   return (
     <Dropdown
       menu={{ items: [] }}
-      dropdownRender={() => dropdownContent}
+      popupRender={() => dropdownContent}
       trigger={["click"]}
       open={dropdownVisible}
       onOpenChange={setDropdownVisible}

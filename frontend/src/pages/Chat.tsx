@@ -11,8 +11,6 @@ import {
   Upload,
   Popover,
   Badge,
-  Modal,
-  Select,
   Divider,
   Tabs,
 } from "antd";
@@ -25,7 +23,7 @@ import {
   DownloadOutlined,
   SmileOutlined,
   CloseOutlined,
-  TeamOutlined,
+  CustomerServiceOutlined,
 } from "@ant-design/icons";
 import EmojiPicker from "emoji-picker-react";
 import { useProject, useAuth } from "../contexts/AppContext";
@@ -55,11 +53,7 @@ const Chat: React.FC = () => {
   const [emojiPickerVisible, setEmojiPickerVisible] = useState<number | null>(
     null
   );
-  const [sidebarTab, setSidebarTab] = useState<"direct" | "groups">("direct");
-  const [groupModalVisible, setGroupModalVisible] = useState(false);
-  const [groupName, setGroupName] = useState("");
-  const [selectedMembers, setSelectedMembers] = useState<number[]>([]);
-  const [creatingGroup, setCreatingGroup] = useState(false);
+  const [sidebarTab, setSidebarTab] = useState<"direct" | "tickets">("direct");
 
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const loadMoreSentinelRef = useRef<HTMLDivElement>(null);
@@ -76,9 +70,9 @@ const Chat: React.FC = () => {
     (m) => m.username !== user?.username
   );
 
-  // Separate direct and group chats
+  // Separate direct and ticket chats
   const directChats = rooms.filter((r) => r.type === "direct");
-  const groupChats = rooms.filter((r) => r.type === "group");
+  const ticketChats = rooms.filter((r) => r.type === "ticket");
 
   // Scroll to bottom of messages (with column-reverse, scrollTop=0 is the bottom)
   const scrollToBottom = useCallback((force = false) => {
@@ -240,10 +234,42 @@ const Chat: React.FC = () => {
 
     loadRooms();
 
-    // Refresh rooms every 10 seconds to update unread counts
-    const interval = setInterval(loadRooms, 10000);
+    // Connect to project-level WebSocket for real-time room updates
+    const projectWsPath = `ws/chat/project/${selectedProject.id}/`;
+    webSocketService.connect(
+      projectWsPath,
+      (event: any) => {
+        if (event.type === 'room_updated' && event.room) {
+          // Update the room in our list with new last_message
+          setRooms((prev) => {
+            const updated = prev.map((room) => {
+              if (room.id === event.room.id) {
+                return {
+                  ...room,
+                  last_message: event.room.last_message,
+                  // Increment unread if not the active room and message is from another user
+                  unread_count: room.id === activeRoom?.id ? 0 : room.unread_count + 1,
+                };
+              }
+              return room;
+            });
+
+            // Dispatch total unread count update
+            const totalUnread = updated.reduce((sum, room) => sum + room.unread_count, 0);
+            window.dispatchEvent(
+              new CustomEvent('chatUnreadUpdate', { detail: { unreadCount: totalUnread } })
+            );
+
+            return updated;
+          });
+        }
+      },
+      (error) => console.error('Project chat WebSocket error:', error),
+      () => { } // onClose - reconnection handled by service
+    );
+
     return () => {
-      clearInterval(interval);
+      webSocketService.disconnect(projectWsPath);
       isInitialLoadRef.current = true; // Reset for next project
     };
   }, [selectedProject?.id]); // Only depend on project ID
@@ -585,35 +611,6 @@ const Chat: React.FC = () => {
     }
   };
 
-  // Create group chat
-  const handleCreateGroup = async () => {
-    if (!selectedProject || !groupName.trim() || selectedMembers.length === 0) {
-      antMessage.error("Please enter a group name and select members");
-      return;
-    }
-
-    try {
-      setCreatingGroup(true);
-      const newRoom = await chatService.createRoom({
-        name: groupName,
-        type: "group",
-        project: selectedProject.id,
-        participant_ids: selectedMembers,
-      });
-
-      setRooms([newRoom, ...rooms]);
-      setActiveRoom(newRoom);
-      setGroupModalVisible(false);
-      setGroupName("");
-      setSelectedMembers([]);
-      antMessage.success("Group created successfully");
-    } catch (error) {
-      console.error("Failed to create group:", error);
-      antMessage.error("Failed to create group");
-    } finally {
-      setCreatingGroup(false);
-    }
-  };
 
   // Format timestamp
   const formatTime = (timestamp: string) => {
@@ -661,24 +658,9 @@ const Chat: React.FC = () => {
           borderBottom: "1px solid #e8e8e8",
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <Text style={{ fontSize: 20, fontWeight: 600, color: "#172b4d" }}>
-            Messages
-          </Text>
-          <Button
-            type="primary"
-            icon={<TeamOutlined />}
-            onClick={() => setGroupModalVisible(true)}
-          >
-            New Group
-          </Button>
-        </div>
+        <Text style={{ fontSize: 20, fontWeight: 600, color: "#172b4d" }}>
+          Messages
+        </Text>
       </div>
 
       {/* Main Content */}
@@ -696,7 +678,7 @@ const Chat: React.FC = () => {
           {/* Tabs */}
           <Tabs
             activeKey={sidebarTab}
-            onChange={(key) => setSidebarTab(key as "direct" | "groups")}
+            onChange={(key) => setSidebarTab(key as "direct" | "tickets")}
             style={{ padding: "0 16px" }}
             items={[
               {
@@ -708,10 +690,17 @@ const Chat: React.FC = () => {
                 ),
               },
               {
-                key: "groups",
+                key: "tickets",
                 label: (
                   <span>
-                    <TeamOutlined /> Groups
+                    <CustomerServiceOutlined /> Ticket Chats
+                    {ticketChats.reduce((sum, r) => sum + r.unread_count, 0) > 0 && (
+                      <Badge
+                        count={ticketChats.reduce((sum, r) => sum + r.unread_count, 0)}
+                        size="small"
+                        style={{ marginLeft: 4 }}
+                      />
+                    )}
                   </span>
                 ),
               },
@@ -722,7 +711,9 @@ const Chat: React.FC = () => {
           <div style={{ padding: "0 16px 12px" }}>
             <Input
               placeholder={
-                sidebarTab === "direct" ? "Search users..." : "Search groups..."
+                sidebarTab === "direct"
+                  ? "Search users..."
+                  : "Search tickets..."
               }
               prefix={<SearchOutlined style={{ color: "#8c8c8c" }} />}
               style={{ borderRadius: 8 }}
@@ -743,17 +734,17 @@ const Chat: React.FC = () => {
 
           {/* List */}
           <div style={{ flex: 1, overflowY: "auto" }}>
-            {sidebarTab === "direct" ? (
+            {sidebarTab === "direct" && (
               // Direct Messages - Show project members
               <List
                 dataSource={otherMembers.filter((m) =>
                   searchQuery
                     ? m.username
-                        .toLowerCase()
-                        .includes(searchQuery.toLowerCase()) ||
-                      `${m.first_name} ${m.last_name}`
-                        .toLowerCase()
-                        .includes(searchQuery.toLowerCase())
+                      .toLowerCase()
+                      .includes(searchQuery.toLowerCase()) ||
+                    `${m.first_name} ${m.last_name}`
+                      .toLowerCase()
+                      .includes(searchQuery.toLowerCase())
                     : true
                 )}
                 renderItem={(member) => {
@@ -830,14 +821,17 @@ const Chat: React.FC = () => {
                   );
                 }}
               />
-            ) : (
-              // Groups
+            )}
+
+
+            {sidebarTab === "tickets" && (
+              // Ticket Chats
               <List
-                dataSource={groupChats.filter((g) =>
+                dataSource={ticketChats.filter((t) =>
                   searchQuery
-                    ? g.display_name
-                        .toLowerCase()
-                        .includes(searchQuery.toLowerCase())
+                    ? (t.ticket_key?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      t.ticket_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      t.display_name.toLowerCase().includes(searchQuery.toLowerCase()))
                     : true
                 )}
                 renderItem={(room) => {
@@ -865,9 +859,9 @@ const Chat: React.FC = () => {
                           >
                             <Avatar
                               size={40}
-                              icon={<TeamOutlined />}
+                              icon={<CustomerServiceOutlined />}
                               style={{
-                                backgroundColor: "#52c41a",
+                                backgroundColor: "#722ed1",
                               }}
                             />
                           </Badge>
@@ -884,7 +878,7 @@ const Chat: React.FC = () => {
                               strong
                               style={{ fontSize: 14, color: "#172b4d" }}
                             >
-                              {room.display_name}
+                              {room.ticket_key || room.display_name}
                             </Text>
                             {room.last_message && (
                               <Text style={{ fontSize: 11, color: "#8c8c8c" }}>
@@ -894,17 +888,31 @@ const Chat: React.FC = () => {
                           </div>
                         }
                         description={
-                          <Text
-                            ellipsis
-                            style={{
-                              fontSize: 13,
-                              color:
-                                room.unread_count > 0 ? "#172b4d" : "#8c8c8c",
-                              fontWeight: room.unread_count > 0 ? 500 : 400,
-                            }}
-                          >
-                            {room.last_message?.content || "No messages yet"}
-                          </Text>
+                          <div>
+                            {room.ticket_name && (
+                              <Text
+                                ellipsis
+                                style={{
+                                  fontSize: 12,
+                                  color: "#595959",
+                                  display: "block",
+                                }}
+                              >
+                                {room.ticket_name}
+                              </Text>
+                            )}
+                            <Text
+                              ellipsis
+                              style={{
+                                fontSize: 13,
+                                color:
+                                  room.unread_count > 0 ? "#172b4d" : "#8c8c8c",
+                                fontWeight: room.unread_count > 0 ? 500 : 400,
+                              }}
+                            >
+                              {room.last_message?.content || "No messages yet"}
+                            </Text>
+                          </div>
                         }
                       />
                     </List.Item>
@@ -913,19 +921,16 @@ const Chat: React.FC = () => {
                 locale={{
                   emptyText: (
                     <div style={{ padding: "40px 0", textAlign: "center" }}>
-                      <TeamOutlined
+                      <CustomerServiceOutlined
                         style={{ fontSize: 48, color: "#d9d9d9" }}
                       />
                       <div style={{ marginTop: 16 }}>
-                        <Text type="secondary">No groups yet</Text>
+                        <Text type="secondary">No ticket chats yet</Text>
                       </div>
                       <div style={{ marginTop: 8 }}>
-                        <Button
-                          type="link"
-                          onClick={() => setGroupModalVisible(true)}
-                        >
-                          Create your first group
-                        </Button>
+                        <Text type="secondary" style={{ fontSize: 12 }}>
+                          Ticket chats are created automatically when customers submit tickets
+                        </Text>
                       </div>
                     </div>
                   ),
@@ -1207,11 +1212,10 @@ const Chat: React.FC = () => {
                                             backgroundColor: hasUserReacted
                                               ? "#e6f7ff"
                                               : "#fafafa",
-                                            border: `1px solid ${
-                                              hasUserReacted
-                                                ? "#1890ff"
-                                                : "#d9d9d9"
-                                            }`,
+                                            border: `1px solid ${hasUserReacted
+                                              ? "#1890ff"
+                                              : "#d9d9d9"
+                                              }`,
                                             borderRadius: 12,
                                             cursor: "pointer",
                                             fontSize: 14,
@@ -1434,60 +1438,6 @@ const Chat: React.FC = () => {
           </div>
         )}
       </div>
-
-      {/* Group Creation Modal */}
-      <Modal
-        title="Create New Group"
-        open={groupModalVisible}
-        onOk={handleCreateGroup}
-        onCancel={() => {
-          setGroupModalVisible(false);
-          setGroupName("");
-          setSelectedMembers([]);
-        }}
-        confirmLoading={creatingGroup}
-        okText="Create Group"
-        cancelText="Cancel"
-      >
-        <Space direction="vertical" style={{ width: "100%" }} size="large">
-          <div>
-            <Text strong>Group Name</Text>
-            <Input
-              placeholder="Enter group name"
-              value={groupName}
-              onChange={(e) => setGroupName(e.target.value)}
-              style={{ marginTop: 8 }}
-              maxLength={50}
-            />
-          </div>
-          <div>
-            <Text strong>Add Members</Text>
-            <Select
-              mode="multiple"
-              placeholder="Select members to add"
-              value={selectedMembers}
-              onChange={setSelectedMembers}
-              style={{ width: "100%", marginTop: 8 }}
-              optionFilterProp="children"
-              filterOption={(input, option) =>
-                (option?.label?.toString() ?? "")
-                  .toLowerCase()
-                  .includes(input.toLowerCase())
-              }
-              options={otherMembers.map((member) => ({
-                label:
-                  member.first_name && member.last_name
-                    ? `${member.first_name} ${member.last_name} (${member.username})`
-                    : member.username,
-                value: member.id,
-              }))}
-            />
-            <Text type="secondary" style={{ fontSize: 12, marginTop: 4 }}>
-              Select at least one member to create a group
-            </Text>
-          </div>
-        </Space>
-      </Modal>
     </div>
   );
 };

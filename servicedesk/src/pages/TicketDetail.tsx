@@ -1,533 +1,540 @@
-import { useState, useEffect, useRef, FormEvent } from "react";
-import { useParams, Link } from "react-router-dom";
-import { PageContainer } from "../components/layout";
-import { Card, Button, Spinner, Avatar, StarRating } from "../components/ui";
-import { ProgressChain } from "../components/tickets";
-import { Ticket, Comment, User } from "../types";
-import { useAuth } from "../contexts/AuthContext";
-import apiService from "../services/api.service";
+import React, { useState, useEffect, useRef } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import {
+  Tag,
+  Button,
+  message,
+  Spin,
+  Avatar,
+  Input,
+  Modal,
+  Rate,
+  Divider,
+} from "antd";
+import {
+  ArrowLeftOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  SendOutlined,
+  PaperClipOutlined,
+  InfoCircleOutlined,
+} from "@ant-design/icons";
+import { Ticket } from "../types";
+import { ChatRoom, ChatMessage } from "../types/chat";
 import { API_ENDPOINTS } from "../config/api";
+import apiService from "../services/api.service";
+import { chatService } from "../services/chat.service";
+import { webSocketService } from "../services/websocket.service";
+import {
+  formatDate,
+  getPriorityColor,
+  getPriorityLabel,
+  getStatusColor,
+} from "../utils/helpers";
+import { useAuth } from "../contexts/AuthContext";
 
-// Map ticket_status_key or category to progress chain status
-function getStatusKey(ticket: {
-  ticket_status_key?: string;
-  ticket_status_category?: string;
-  column_name?: string;
-  status?: string;
-}): string {
-  // Prefer new ticket_status_key system
-  if (ticket.ticket_status_key) {
-    const keyMap: Record<string, string> = {
-      open: "open",
-      in_progress: "in_progress",
-      in_review: "waiting",
-      done: "done",
-    };
-    return keyMap[ticket.ticket_status_key] || "open";
-  }
+const { TextArea } = Input;
 
-  // Fallback to category
-  if (ticket.ticket_status_category) {
-    const categoryMap: Record<string, string> = {
-      todo: "open",
-      in_progress: "in_progress",
-      done: "done",
-    };
-    return categoryMap[ticket.ticket_status_category] || "open";
-  }
-
-  // Legacy fallback using column_name
-  const columnName = ticket.column_name || ticket.status || "";
-  const statusMap: Record<string, string> = {
-    open: "open",
-    "to do": "open",
-    "in progress": "in_progress",
-    in_progress: "in_progress",
-    waiting: "waiting",
-    "on hold": "waiting",
-    review: "waiting",
-    done: "done",
-    completed: "done",
-    closed: "done",
-  };
-  return statusMap[columnName.toLowerCase()] || "open";
-}
-
-function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
-
-function getUserName(user?: User): string {
-  if (!user) return "Unknown";
-  return `${user.first_name} ${user.last_name}`.trim() || user.username;
-}
-
-export default function TicketDetail() {
+const TicketDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { user } = useAuth();
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
   const [ticket, setTicket] = useState<Ticket | null>(null);
-  const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+
+  // Resolution Feedback State
+  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
+  const [feedbackType, setFeedbackType] = useState<"accepted" | "rejected" | null>(null);
+  const [feedbackText, setFeedbackText] = useState("");
+  const [rating, setRating] = useState(0);
+  const [submittingFeedback, setSubmittingFeedback] = useState(false);
+
+  // Chat State
+  const [chatRoom, setChatRoom] = useState<ChatRoom | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messagesLoading, setMessagesLoading] = useState(false);
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
 
-  // Review state
-  const [rating, setRating] = useState(0);
-  const [feedback, setFeedback] = useState("");
-  const [submittingReview, setSubmittingReview] = useState(false);
-  const [reviewError, setReviewError] = useState("");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const wsPathRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (id) {
-      fetchTicket();
-      fetchComments();
-    }
+    fetchTicket();
   }, [id]);
 
   useEffect(() => {
-    // Scroll to bottom when comments change
+    if (ticket?.id) {
+      loadChatRoom();
+    }
+  }, [ticket?.id]);
+
+  // Connect WebSocket
+  useEffect(() => {
+    if (!chatRoom?.id) return;
+
+    const wsPath = `ws/chat/${chatRoom.id}/`;
+    wsPathRef.current = wsPath;
+
+    const ws = webSocketService.connect(
+      wsPath,
+      handleWebSocketMessage,
+      (error) => console.error("WebSocket error:", error),
+      () => {
+        // Reconnect logic is handled by service, but we can log user activity
+        console.log("Chat connected");
+      }
+    );
+
+    if (ws) {
+      loadMessages();
+    }
+
+    return () => {
+      if (wsPathRef.current) {
+        webSocketService.disconnect(wsPathRef.current);
+        wsPathRef.current = null;
+      }
+    };
+  }, [chatRoom?.id]);
+
+  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [comments]);
+  }, [messages]);
 
   const fetchTicket = async () => {
     try {
+      setLoading(true);
       const data = await apiService.get<Ticket>(
         API_ENDPOINTS.TICKET_DETAIL(Number(id))
       );
       setTicket(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load ticket");
+    } catch (error: any) {
+      message.error("Failed to load ticket details");
+      navigate("/");
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchComments = async () => {
+  const loadChatRoom = async () => {
+    if (!ticket?.id) return;
     try {
-      const data = await apiService.get<
-        Comment[] | { results: Comment[]; count?: number }
-      >(API_ENDPOINTS.TICKET_COMMENTS(Number(id)));
-      // Handle both array and paginated response formats
-      const commentList = Array.isArray(data) ? data : data.results || [];
-      setComments(commentList);
+      let room = await chatService.getTicketChatRoom(ticket.id);
+      if (!room) {
+        room = await chatService.createTicketChatRoom(ticket.id);
+      }
+      setChatRoom(room);
     } catch (err) {
-      console.error("Failed to load comments:", err);
+      console.error("Failed to load chat room:", err);
     }
   };
 
-  const handleSendMessage = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!newMessage.trim() || sending) return;
+  const loadMessages = async () => {
+    if (!chatRoom?.id) return;
 
-    setSending(true);
+    setMessagesLoading(true);
     try {
-      const comment = await apiService.post<Comment>(
-        API_ENDPOINTS.TICKET_COMMENTS(Number(id)),
-        {
-          content: newMessage.trim(),
-        }
-      );
-      setComments((prev) => [...prev, comment]);
-      setNewMessage("");
+      const result = await chatService.getMessages(chatRoom.id, { limit: 50 });
+      setMessages(result.messages.slice().reverse());
     } catch (err) {
-      console.error("Failed to send message:", err);
+      console.error("Failed to load messages:", err);
+    } finally {
+      setMessagesLoading(false);
+    }
+  };
+
+  const handleWebSocketMessage = (data: any) => {
+    // Backend sends 'message_new' with message object in 'message' field
+    if (data.type === "message_new" && data.message) {
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === data.message.id)) return prev;
+        return [...prev, data.message];
+      });
+    } else if (data.type === "message_deleted" && data.message_id) {
+      setMessages((prev) => prev.filter((m) => m.id !== data.message_id));
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || sending || !chatRoom?.id) return;
+
+    try {
+      setSending(true);
+      await chatService.sendMessage({
+        room: chatRoom.id,
+        content: newMessage.trim(),
+        type: "text",
+      });
+      setNewMessage("");
+      // Message update will come via WebSocket
+    } catch (error: any) {
+      message.error(error.message || "Failed to send message");
     } finally {
       setSending(false);
     }
   };
 
-  const handleSubmitReview = async () => {
-    if (rating === 0) {
-      setReviewError("Please select a rating");
+  const handleResolutionAction = (type: "accepted" | "rejected") => {
+    setFeedbackType(type);
+    setFeedbackModalOpen(true);
+  };
+
+  const submitResolutionFeedback = async () => {
+    if (!id || !feedbackType) return;
+    if (feedbackType === "rejected" && !feedbackText.trim()) {
+      message.warning("Please provide a reason for rejection");
       return;
     }
 
-    setSubmittingReview(true);
-    setReviewError("");
-
     try {
-      const updatedTicket = await apiService.post<Ticket>(
-        API_ENDPOINTS.TICKET_REVIEW(Number(id)),
+      setSubmittingFeedback(true);
+      await apiService.post(
+        `${API_ENDPOINTS.TICKET_DETAIL(Number(id))}resolve/`,
         {
-          rating,
-          feedback: feedback.trim(),
+          action: feedbackType,
+          feedback: feedbackText,
+          rating: feedbackType === "accepted" ? rating : undefined,
         }
       );
-      setTicket(updatedTicket);
-      setRating(0);
-      setFeedback("");
-    } catch (err) {
-      setReviewError(
-        err instanceof Error ? err.message : "Failed to submit review"
+      message.success(
+        feedbackType === "accepted"
+          ? "Ticket resolved successfully"
+          : "Ticket reopened"
       );
+      setFeedbackModalOpen(false);
+      setFeedbackText("");
+      setRating(0);
+      fetchTicket();
+    } catch (error: any) {
+      message.error(error.message || "Failed to submit feedback");
     } finally {
-      setSubmittingReview(false);
+      setSubmittingFeedback(false);
     }
+  };
+
+  const formatTime = (dateString: string) => {
+    return new Date(dateString).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   };
 
   if (loading) {
     return (
-      <PageContainer>
-        <div className="flex items-center justify-center py-12">
-          <Spinner size="lg" />
-        </div>
-      </PageContainer>
+      <div className="flex justify-center items-center py-20">
+        <Spin size="large" />
+      </div>
     );
   }
 
-  if (error || !ticket) {
-    return (
-      <PageContainer>
-        <div className="text-center py-12">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
-            <svg
-              className="w-8 h-8 text-red-500"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-              />
-            </svg>
-          </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-1">
-            Failed to load ticket
-          </h3>
-          <p className="text-gray-500 mb-4">{error}</p>
-          <Link to="/">
-            <Button variant="secondary">Back to Tickets</Button>
-          </Link>
-        </div>
-      </PageContainer>
-    );
-  }
-
-  const statusKey = getStatusKey(ticket);
-  const isResolved = !!ticket.resolved_at;
-  // Check if ticket can be reviewed: must be in 'done' category (or is_final_column) and not already resolved
-  const canReview =
-    (ticket.ticket_status_category === "done" || ticket.is_final_column) &&
-    !isResolved;
+  if (!ticket) return null;
 
   return (
-    <PageContainer maxWidth="lg">
+    <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-6 h-[calc(100vh-80px)]">
       {/* Back Button */}
-      <Link
-        to="/"
-        className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6"
+      <Button
+        type="text"
+        icon={<ArrowLeftOutlined />}
+        onClick={() => navigate(-1)}
+        className="mb-4 hover:bg-slate-100 text-slate-500 font-medium"
       >
-        <svg
-          className="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M10 19l-7-7m0 0l7-7m-7 7h18"
-          />
-        </svg>
         Back to Tickets
-      </Link>
+      </Button>
 
-      {/* Ticket Header */}
-      <div className="mb-6">
-        <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
-          <span className="font-medium">
-            #{ticket.ticket_key || ticket.key}
-          </span>
-          {ticket.type && (
-            <>
-              <span>·</span>
-              <span>{ticket.type}</span>
-            </>
-          )}
-          {isResolved ? (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 ml-2">
-              ✓ Resolved
-            </span>
-          ) : canReview ? (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700 ml-2">
-              ⭐ Awaiting Review
-            </span>
-          ) : null}
-        </div>
-        <h1 className="text-2xl font-semibold text-gray-900 mb-4">
-          {ticket.name}
-        </h1>
-        <ProgressChain
-          currentStatus={statusKey}
-          showLabels
-          isResolved={isResolved}
-          isFinalColumn={ticket.is_final_column || false}
-        />
-      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full pb-4">
 
-      {/* Ticket Info Card */}
-      <Card className="mb-6">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
-          <div>
-            <p className="text-gray-500 mb-1">Created</p>
-            <p className="font-medium text-gray-900">
-              {formatDate(ticket.created_at)}
-            </p>
-          </div>
-          <div>
-            <p className="text-gray-500 mb-1">Status</p>
-            <p className="font-medium text-gray-900 capitalize">
-              {ticket.ticket_status_name || ticket.column_name || ticket.status}
-            </p>
-          </div>
-          {ticket.assignees && ticket.assignees.length > 0 && (
-            <div>
-              <p className="text-gray-500 mb-1">Assigned To</p>
-              <p className="font-medium text-gray-900">
-                {getUserName(ticket.assignees[0])}
-              </p>
-            </div>
-          )}
-          {ticket.due_date && (
-            <div>
-              <p className="text-gray-500 mb-1">Due Date</p>
-              <p className="font-medium text-gray-900">
-                {formatDate(ticket.due_date)}
-              </p>
-            </div>
-          )}
-        </div>
-      </Card>
-
-      {/* Description */}
-      {ticket.description && (
-        <Card className="mb-6">
-          <h2 className="text-sm font-medium text-gray-500 mb-2">
-            Description
-          </h2>
-          <p className="text-gray-900 whitespace-pre-wrap">
-            {ticket.description}
-          </p>
-        </Card>
-      )}
-
-      {/* Review Form - Show when ticket is in final column and not yet resolved */}
-      {canReview && (
-        <Card className="mb-6 border-2 border-amber-200 bg-amber-50">
-          <div className="text-center">
-            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-amber-100 flex items-center justify-center">
-              <svg
-                className="w-6 h-6 text-amber-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
-                />
-              </svg>
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Rate Your Experience
-            </h3>
-            <p className="text-gray-600 mb-4">
-              Your ticket has been completed. Please rate your experience to
-              close the ticket.
-            </p>
-
-            <div className="flex justify-center mb-4">
-              <StarRating value={rating} onChange={setRating} size="lg" />
-            </div>
-
-            {rating > 0 && (
-              <p className="text-sm text-gray-500 mb-4">
-                {rating === 1 && "Very Dissatisfied"}
-                {rating === 2 && "Dissatisfied"}
-                {rating === 3 && "Neutral"}
-                {rating === 4 && "Satisfied"}
-                {rating === 5 && "Very Satisfied"}
-              </p>
-            )}
-
-            <div className="mb-4">
-              <textarea
-                value={feedback}
-                onChange={(e) => setFeedback(e.target.value)}
-                placeholder="Share your feedback (optional)..."
-                rows={3}
-                className="w-full rounded-md border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400"
-              />
-            </div>
-
-            {reviewError && (
-              <p className="text-sm text-red-600 mb-4">{reviewError}</p>
-            )}
-
-            <Button
-              onClick={handleSubmitReview}
-              loading={submittingReview}
-              disabled={rating === 0}
-            >
-              Submit Review & Close Ticket
-            </Button>
-          </div>
-        </Card>
-      )}
-
-      {/* Show rating if ticket is resolved */}
-      {isResolved && ticket.resolution_rating && (
-        <Card className="mb-6 bg-green-50 border border-green-200">
-          <div className="text-center">
-            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-green-100 flex items-center justify-center">
-              <svg
-                className="w-6 h-6 text-green-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Ticket Resolved
-            </h3>
-            <div className="flex justify-center mb-2">
-              <StarRating value={ticket.resolution_rating} readonly size="lg" />
-            </div>
-            {ticket.resolution_feedback && (
-              <p className="text-gray-600 italic mt-2">
-                "{ticket.resolution_feedback}"
-              </p>
-            )}
-            {ticket.resolved_at && (
-              <p className="text-sm text-gray-500 mt-2">
-                Resolved on {formatDate(ticket.resolved_at)}
-              </p>
-            )}
-          </div>
-        </Card>
-      )}
-
-      {/* Conversation */}
-      <div className="mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
-          Conversation
-        </h2>
-
-        <div className="space-y-4 mb-4">
-          {comments.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <p>No messages yet. Start the conversation below.</p>
-            </div>
-          ) : (
-            comments.map((comment) => {
-              const author = comment.author || comment.user;
-              const isCurrentUser = author?.id === user?.id;
-
-              return (
-                <div
-                  key={comment.id}
-                  className={`flex gap-3 ${
-                    isCurrentUser ? "flex-row-reverse" : ""
-                  }`}
+        {/* Left Sidebar: Ticket Info (3 cols - 25%) */}
+        <div className="lg:col-span-3 flex flex-col gap-6 overflow-y-auto pr-2 custom-scrollbar">
+          {/* Header Card */}
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+            <div className="flex flex-col gap-3 mb-4">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-xs font-medium text-slate-500 bg-slate-100 px-2 py-1 rounded">
+                  {ticket.ticket_key || `#${ticket.id}`}
+                </span>
+                <Tag
+                  color={getStatusColor(ticket.status)}
+                  className="m-0 px-2 py-0.5 text-xs rounded font-semibold border-0"
                 >
-                  <Avatar
-                    name={getUserName(author)}
-                    size="sm"
-                    className="flex-shrink-0 mt-1"
-                  />
-                  <div
-                    className={`flex-1 max-w-[80%] ${
-                      isCurrentUser ? "text-right" : ""
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      <span
-                        className={`text-sm font-medium text-gray-900 ${
-                          isCurrentUser ? "order-2" : ""
-                        }`}
-                      >
-                        {isCurrentUser ? "You" : getUserName(author)}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        {formatDate(comment.created_at)}
-                      </span>
+                  {ticket.status}
+                </Tag>
+              </div>
+
+              <h1 className="text-xl font-bold text-slate-800 leading-snug">
+                {ticket.name}
+              </h1>
+
+              <div className="flex items-center gap-2">
+                <Tag
+                  color={getPriorityColor(ticket.priority_id)}
+                  className="m-0 border-0 px-2 py-0.5 text-xs rounded font-medium"
+                >
+                  {getPriorityLabel(ticket.priority_id)}
+                </Tag>
+              </div>
+            </div>
+
+            <Divider className="my-4" />
+
+            {/* Metadata */}
+            <div className="space-y-4">
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-slate-500 uppercase tracking-wide">Project</span>
+                <span className="text-sm font-semibold text-slate-800">{ticket.project_name}</span>
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-slate-500 uppercase tracking-wide">Created</span>
+                <span className="text-sm text-slate-800">{formatDate(ticket.created_at)}</span>
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-slate-500 uppercase tracking-wide">Assignees</span>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {ticket.assignees && ticket.assignees.length > 0 ? (
+                    ticket.assignees.map(a => (
+                      <div key={a.id} className="flex items-center gap-2 bg-slate-50 px-2 py-1 rounded border border-slate-200">
+                        <Avatar size={20} className="bg-blue-100 text-blue-600 text-[10px]">
+                          {a.first_name?.[0] || a.username[0]}
+                        </Avatar>
+                        <span className="text-xs font-medium text-slate-700">
+                          {a.first_name ? `${a.first_name} ${a.last_name}` : a.username}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <span className="text-sm text-slate-400 italic">No assignees</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Actions / Resolution Status */}
+          {ticket.resolution_status === "awaiting_review" && (
+            <div className="bg-amber-50 rounded-xl p-5 border border-amber-200">
+              <div className="flex items-center gap-3 mb-3">
+                <InfoCircleOutlined className="text-lg text-amber-600" />
+                <h3 className="font-bold text-amber-900 text-sm">Review Pending</h3>
+              </div>
+              <p className="text-amber-800 text-xs mb-4">Please review the proposed resolution.</p>
+              <div className="flex gap-2">
+                <Button
+                  type="text"
+                  size="small"
+                  className="flex-1 text-slate-400 hover:text-red-600 hover:bg-red-50"
+                  onClick={() => handleResolutionAction("rejected")}
+                >
+                  Not Resolved
+                </Button>
+                <Button
+                  type="primary"
+                  size="small"
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 border-none"
+                  onClick={() => handleResolutionAction("accepted")}
+                >
+                  Accept
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Description */}
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">Description</h3>
+            <div className="prose prose-slate prose-sm max-w-none text-slate-700">
+              <p className="whitespace-pre-wrap break-words">
+                {ticket.description || <span className="text-slate-400 italic">No description provided.</span>}
+              </p>
+            </div>
+            {ticket.attachment && (
+              <a
+                href={ticket.attachment}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-4 flex items-center gap-2 text-blue-600 hover:text-blue-800 text-sm font-medium p-2 bg-blue-50 rounded-lg border border-blue-100 transition-colors"
+              >
+                <PaperClipOutlined />
+                View Attachment
+              </a>
+            )}
+          </div>
+
+          {/* Resolution History */}
+          {ticket.resolution_feedbacks && ticket.resolution_feedbacks.length > 0 && (
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+              <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-4">History</h3>
+              <div className="space-y-4">
+                {ticket.resolution_feedbacks.map((fb) => (
+                  <div key={fb.id} className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                    <div className="flex justify-between items-start mb-2">
+                      <Tag color={fb.feedback_type === 'accepted' ? 'success' : 'error'} className="m-0 rounded border-0 text-[10px] font-bold uppercase px-1.5">
+                        {fb.feedback_type}
+                      </Tag>
+                      <span className="text-[10px] text-slate-400">{formatDate(fb.created_at)}</span>
                     </div>
-                    <div
-                      className={`inline-block rounded-md px-4 py-2 text-left ${
-                        isCurrentUser
-                          ? "bg-brand-400 text-white"
-                          : "bg-gray-100 text-gray-900"
-                      }`}
-                    >
-                      <p className="whitespace-pre-wrap">{comment.content}</p>
+                    <p className="text-xs text-slate-600 mb-2 whitespace-pre-wrap">{fb.feedback || "No comment"}</p>
+                    {fb.rating && <Rate disabled defaultValue={fb.rating} className="text-xs text-amber-500" />}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Right Column: Chat Panel (9 cols - 75%) */}
+        {/* We make this section expansive and central */}
+        <div className="lg:col-span-9 flex flex-col h-full bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+
+          {/* Chat Header */}
+          <div className="px-6 py-4 border-b border-slate-100 bg-white flex justify-between items-center z-10">
+            <div>
+              <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2">
+                Discussion
+                <span className="flex h-2.5 w-2.5 relative">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                </span>
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">Real-time collaboration</p>
+            </div>
+            <div className="flex -space-x-2">
+              {/* Avatars of active participants could go here */}
+            </div>
+          </div>
+
+          {/* Chat Messages Area */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50">
+            {messagesLoading ? (
+              <div className="flex justify-center py-10"><Spin /></div>
+            ) : messages.length === 0 ? (
+              <div className="h-full flex flex-col justify-center items-center text-center p-10 text-slate-400 opacity-60">
+                <InfoCircleOutlined className="text-4xl mb-4" />
+                <p className="text-base font-medium">No messages yet</p>
+                <p className="text-sm">Start the conversation with the team</p>
+              </div>
+            ) : (
+              messages.map(msg => {
+                const isMe = msg.user?.username === user?.username;
+                return (
+                  <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} group`}>
+                    <div className={`flex flex-col max-w-[70%] ${isMe ? 'items-end' : 'items-start'}`}>
+                      <div className="flex items-end gap-2 mb-1">
+                        {!isMe && (
+                          <Avatar size="small" className="bg-slate-200 text-slate-600 text-xs translate-y-1">
+                            {msg.user?.first_name?.[0] || msg.user?.username?.[0] || "?"}
+                          </Avatar>
+                        )}
+                        <div className={`
+                                  px-5 py-3 text-sm shadow-sm
+                                  ${isMe
+                            ? 'bg-blue-600 text-white rounded-2xl rounded-tr-sm'
+                            : 'bg-white text-slate-800 border border-slate-200 rounded-2xl rounded-tl-sm'}
+                               `}>
+                          {msg.content}
+                        </div>
+                      </div>
+                      <span className={`text-[10px] text-slate-400 px-1 opacity-0 group-hover:opacity-100 transition-opacity ${isMe ? 'mr-2' : 'ml-8'}`}>
+                        {formatTime(msg.created_at)}
+                      </span>
                     </div>
                   </div>
-                </div>
-              );
-            })
-          )}
-          <div ref={messagesEndRef} />
-        </div>
+                );
+              })
+            )}
+            <div ref={messagesEndRef} />
+          </div>
 
-        {/* Message Input */}
-        {!isResolved && (
-          <form onSubmit={handleSendMessage}>
-            <Card padding="sm">
-              <div className="flex gap-3 items-center">
-                <input
-                  type="text"
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
+          {/* Input Area */}
+          <div className="p-5 bg-white border-t border-slate-200">
+            <div className="flex gap-4 items-end max-w-5xl mx-auto">
+              <div className="flex-1 relative">
+                <TextArea
                   placeholder="Type your message..."
-                  className="flex-1 rounded-md border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
+                  autoSize={{ minRows: 1, maxRows: 6 }}
+                  className="w-full py-3 px-4 rounded-xl border-slate-300 bg-slate-50 focus:bg-white focus:border-blue-500 focus:shadow-sm resize-none text-sm transition-all"
+                  value={newMessage}
+                  onChange={e => setNewMessage(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
-                      handleSendMessage(e);
+                      handleSendMessage();
                     }
                   }}
                 />
-                <Button
-                  type="submit"
-                  loading={sending}
-                  disabled={!newMessage.trim()}
-                >
-                  Send
-                </Button>
               </div>
-            </Card>
-          </form>
-        )}
+              <Button
+                type="primary"
+                size="large"
+                icon={<SendOutlined />}
+                className="h-[46px] px-6 rounded-xl bg-blue-600 hover:bg-blue-700 border-none shadow-sm flex-shrink-0"
+                onClick={handleSendMessage}
+                loading={sending}
+                disabled={!newMessage.trim()}
+              >
+                Send
+              </Button>
+            </div>
+            <div className="text-center mt-2">
+              <span className="text-[10px] text-slate-400">
+                Press <kbd className="font-sans border border-slate-200 rounded px-1 bg-slate-50">Enter</kbd> to send
+              </span>
+            </div>
+          </div>
+        </div>
 
-        {isResolved && (
-          <Card className="bg-gray-50 text-center">
-            <p className="text-gray-600">This ticket has been resolved.</p>
-          </Card>
-        )}
       </div>
-    </PageContainer>
+
+      {/* Resolution Modal */}
+      <Modal
+        title={
+          <div className="flex items-center gap-2 text-slate-800">
+            {feedbackType === "accepted" ? (
+              <CheckCircleOutlined className="text-emerald-500" />
+            ) : (
+              <CloseCircleOutlined className="text-red-500" />
+            )}
+            <span className="font-bold">
+              {feedbackType === "accepted" ? "Accept Resolution" : "Reject Resolution"}
+            </span>
+          </div>
+        }
+        open={feedbackModalOpen}
+        onCancel={() => setFeedbackModalOpen(false)}
+        onOk={submitResolutionFeedback}
+        confirmLoading={submittingFeedback}
+        okText="Submit"
+        okButtonProps={{
+          className: feedbackType === "accepted" ? "bg-emerald-500" : "bg-red-500",
+        }}
+      >
+        <div className="py-4">
+          {feedbackType === "accepted" && (
+            <div className="mb-6 text-center">
+              <p className="text-slate-500 mb-2 font-medium">Rate your experience</p>
+              <Rate
+                value={rating}
+                onChange={setRating}
+                className="text-3xl text-amber-500"
+              />
+            </div>
+          )}
+          <div className="mb-2">
+            <span className="block text-sm font-bold text-slate-700 mb-2">
+              {feedbackType === "accepted" ? "Comments (Optional)" : "Reason for Rejection"}
+            </span>
+            <TextArea
+              rows={4}
+              value={feedbackText}
+              onChange={(e: any) => setFeedbackText(e.target.value)}
+              placeholder={
+                feedbackType === "accepted"
+                  ? "Any additional feedback..."
+                  : "Please explain why the resolution isn't satisfactory..."
+              }
+              className="rounded-lg border-slate-200"
+            />
+          </div>
+        </div>
+      </Modal>
+    </div>
   );
-}
+};
+
+export default TicketDetail;

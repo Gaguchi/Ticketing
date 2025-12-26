@@ -45,22 +45,27 @@ export interface ChatMessage {
 export interface ChatRoom {
   id: number;
   name: string;
-  type: 'direct' | 'group';
+  type: 'direct' | 'group' | 'ticket';
   project: number;
   participants: ChatParticipant[];
   created_by: ChatUser | null;
   last_message: ChatMessage | null;
   unread_count: number;
   display_name: string;
+  // Ticket chat fields (only for type='ticket')
+  ticket_id?: number | null;
+  ticket_key?: string | null;
+  ticket_name?: string | null;
   created_at: string;
   updated_at: string;
 }
 
 export interface ChatRoomCreate {
   name?: string;
-  type: 'direct' | 'group';
+  type: 'direct' | 'group' | 'ticket';
   project: number;
   participant_ids: number[];
+  ticket_id?: number;  // For creating ticket chat rooms
 }
 
 export interface ChatMessageCreate {
@@ -76,9 +81,9 @@ export interface ChatMessageUpdate {
 
 // WebSocket event types
 export interface WSChatEvent {
-  type: 'message_new' | 'message_edited' | 'message_deleted' | 
-        'reaction_added' | 'reaction_removed' | 'user_typing' |
-        'user_joined' | 'user_left';
+  type: 'message_new' | 'message_edited' | 'message_deleted' |
+  'reaction_added' | 'reaction_removed' | 'user_typing' |
+  'user_joined' | 'user_left';
 }
 
 export interface WSMessageNew extends WSChatEvent {
@@ -127,12 +132,12 @@ export interface WSUserLeft extends WSChatEvent {
   username: string;
 }
 
-export type ChatWebSocketEvent = 
-  | WSMessageNew 
-  | WSMessageEdited 
-  | WSMessageDeleted 
-  | WSReactionAdded 
-  | WSReactionRemoved 
-  | WSUserTyping 
-  | WSUserJoined 
+export type ChatWebSocketEvent =
+  | WSMessageNew
+  | WSMessageEdited
+  | WSMessageDeleted
+  | WSReactionAdded
+  | WSReactionRemoved
+  | WSUserTyping
+  | WSUserJoined
   | WSUserLeft;

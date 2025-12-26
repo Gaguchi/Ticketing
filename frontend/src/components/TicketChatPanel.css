@@ -1,0 +1,149 @@
+.ticket-chat-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #fff;
+  border-left: 1px solid #e8e8e8;
+}
+
+.ticket-chat-loading,
+.ticket-chat-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  flex-direction: column;
+}
+
+.ticket-chat-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid #e8e8e8;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fafafa;
+}
+
+.ticket-chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column-reverse;
+  background: #f5f5f5;
+}
+
+.ticket-chat-messages-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ticket-chat-no-messages {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 40px;
+  text-align: center;
+}
+
+.ticket-chat-load-more {
+  text-align: center;
+  padding: 12px 0;
+}
+
+.ticket-chat-date-divider {
+  text-align: center;
+  padding: 16px 0 8px;
+}
+
+.ticket-chat-date-divider span {
+  background: #e8e8e8;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  color: #666;
+}
+
+.ticket-chat-message {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  max-width: 85%;
+}
+
+.ticket-chat-message.own {
+  margin-left: auto;
+  flex-direction: row-reverse;
+}
+
+.ticket-chat-message-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ticket-chat-message.own .ticket-chat-message-content {
+  align-items: flex-end;
+}
+
+.ticket-chat-message-author {
+  font-size: 12px;
+  font-weight: 500;
+  color: #666;
+}
+
+.ticket-chat-message-bubble {
+  background: #fff;
+  padding: 8px 12px;
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  word-break: break-word;
+}
+
+.ticket-chat-message.own .ticket-chat-message-bubble {
+  background: #1890ff;
+  color: #fff;
+}
+
+.ticket-chat-message-time {
+  font-size: 11px;
+  color: #999;
+}
+
+.ticket-chat-attachment {
+  margin-top: 8px;
+}
+
+.ticket-chat-attachment img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+}
+
+.ticket-chat-input {
+  border-top: 1px solid #e8e8e8;
+  background: #fff;
+}
+
+.ticket-chat-upload-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #f0f5ff;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.ticket-chat-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+}
+
+.ticket-chat-input-row .ant-input {
+  flex: 1;
+  border-radius: 20px;
+}

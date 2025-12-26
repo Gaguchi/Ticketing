@@ -585,6 +585,200 @@ class CompanyViewSet(viewsets.ModelViewSet):
             'last_activity': last_activity.isoformat() if last_activity else None,
         })
     
+    @action(detail=True, methods=['get'], url_path='monthly-report')
+    def monthly_report(self, request, pk=None):
+        """
+        Generate a monthly report for a company showing productivity and satisfaction metrics.
+        
+        GET /api/tickets/companies/{id}/monthly-report/
+        Query params:
+            - month: Month number 1-12 (default: current month)
+            - year: Year (default: current year)
+            - project: Filter by project ID (optional)
+        
+        Returns comprehensive report data for client-facing monthly reports.
+        """
+        from datetime import datetime, timedelta
+        from django.db.models import Avg, Count, Q, F
+        from django.db.models.functions import ExtractHour
+        from calendar import monthrange
+        
+        company = self.get_object()
+        
+        # Parse month/year from query params
+        now = timezone.now()
+        try:
+            month = int(request.query_params.get('month', now.month))
+            year = int(request.query_params.get('year', now.year))
+        except (ValueError, TypeError):
+            month = now.month
+            year = now.year
+        
+        project_id = request.query_params.get('project')
+        
+        # Calculate date range for selected month
+        _, last_day = monthrange(year, month)
+        month_start = timezone.make_aware(datetime(year, month, 1, 0, 0, 0))
+        month_end = timezone.make_aware(datetime(year, month, last_day, 23, 59, 59))
+        
+        # Previous month for comparison
+        if month == 1:
+            prev_month, prev_year = 12, year - 1
+        else:
+            prev_month, prev_year = month - 1, year
+        _, prev_last_day = monthrange(prev_year, prev_month)
+        prev_month_start = timezone.make_aware(datetime(prev_year, prev_month, 1, 0, 0, 0))
+        prev_month_end = timezone.make_aware(datetime(prev_year, prev_month, prev_last_day, 23, 59, 59))
+        
+        # Base queryset
+        base_qs = Ticket.objects.filter(company=company)
+        if project_id:
+            base_qs = base_qs.filter(project_id=project_id)
+        
+        # ============ CURRENT MONTH METRICS ============
+        
+        # Tickets resolved this month (done_at in range)
+        resolved_qs = base_qs.filter(done_at__gte=month_start, done_at__lte=month_end)
+        tickets_resolved = resolved_qs.count()
+        
+        # Tickets created this month
+        created_qs = base_qs.filter(created_at__gte=month_start, created_at__lte=month_end)
+        tickets_created = created_qs.count()
+        
+        # Average resolution time (created_at to done_at) in hours
+        resolution_times = []
+        for ticket in resolved_qs.exclude(done_at__isnull=True):
+            if ticket.done_at and ticket.created_at:
+                delta = ticket.done_at - ticket.created_at
+                resolution_times.append(delta.total_seconds() / 3600)  # Convert to hours
+        
+        avg_resolution_hours = round(sum(resolution_times) / len(resolution_times), 1) if resolution_times else 0
+        
+        # On-time completion (resolved before or on due_date)
+        resolved_with_due = resolved_qs.exclude(due_date__isnull=True)
+        on_time_count = sum(
+            1 for t in resolved_with_due 
+            if t.done_at and t.due_date and t.done_at.date() <= t.due_date
+        )
+        on_time_percentage = round((on_time_count / resolved_with_due.count()) * 100) if resolved_with_due.count() > 0 else 100
+        
+        # Average customer rating
+        ratings = list(resolved_qs.exclude(resolution_rating__isnull=True).values_list('resolution_rating', flat=True))
+        avg_rating = round(sum(ratings) / len(ratings), 1) if ratings else None
+        
+        # Acceptance rate (first-time accept vs rejected)
+        accepted_count = resolved_qs.filter(resolution_status='accepted').count()
+        acceptance_rate = round((accepted_count / tickets_resolved) * 100) if tickets_resolved > 0 else 100
+        
+        # By priority breakdown
+        by_priority = {
+            'low': resolved_qs.filter(priority_id=1).count(),
+            'medium': resolved_qs.filter(priority_id=2).count(),
+            'high': resolved_qs.filter(priority_id=3).count(),
+            'critical': resolved_qs.filter(priority_id=4).count(),
+        }
+        
+        # By type breakdown
+        by_type = {
+            'task': resolved_qs.filter(type='task').count(),
+            'bug': resolved_qs.filter(type='bug').count(),
+            'story': resolved_qs.filter(type='story').count(),
+            'epic': resolved_qs.filter(type='epic').count(),
+        }
+        
+        # ============ PREVIOUS MONTH METRICS (for comparison) ============
+        prev_resolved_qs = base_qs.filter(done_at__gte=prev_month_start, done_at__lte=prev_month_end)
+        prev_tickets_resolved = prev_resolved_qs.count()
+        
+        prev_resolution_times = []
+        for ticket in prev_resolved_qs.exclude(done_at__isnull=True):
+            if ticket.done_at and ticket.created_at:
+                delta = ticket.done_at - ticket.created_at
+                prev_resolution_times.append(delta.total_seconds() / 3600)
+        prev_avg_resolution = round(sum(prev_resolution_times) / len(prev_resolution_times), 1) if prev_resolution_times else 0
+        
+        # Calculate changes
+        resolved_change = tickets_resolved - prev_tickets_resolved if prev_tickets_resolved else tickets_resolved
+        resolved_change_pct = round((resolved_change / prev_tickets_resolved) * 100) if prev_tickets_resolved > 0 else 0
+        resolution_time_change = round(avg_resolution_hours - prev_avg_resolution, 1) if prev_avg_resolution else 0
+        
+        # ============ DYNAMIC HIGHLIGHTS ============
+        highlights = []
+        
+        if resolved_change > 0:
+            highlights.append({
+                'type': 'achievement',
+                'icon': '🎉',
+                'text': f"{tickets_resolved} tickets resolved — {resolved_change_pct}% more than last month"
+            })
+        elif tickets_resolved > 0:
+            highlights.append({
+                'type': 'info',
+                'icon': '✅',
+                'text': f"{tickets_resolved} tickets successfully resolved this month"
+            })
+        
+        if resolution_time_change < 0 and avg_resolution_hours > 0:
+            highlights.append({
+                'type': 'improvement',
+                'icon': '⚡',
+                'text': f"Resolution time improved by {abs(resolution_time_change)} hours on average"
+            })
+        
+        if avg_rating and avg_rating >= 4.5:
+            highlights.append({
+                'type': 'achievement',
+                'icon': '⭐',
+                'text': f"Excellent customer satisfaction rating: {avg_rating}/5"
+            })
+        
+        if on_time_percentage >= 90:
+            highlights.append({
+                'type': 'achievement',
+                'icon': '🎯',
+                'text': f"{on_time_percentage}% of tickets completed on or before deadline"
+            })
+        
+        if by_priority['critical'] > 0:
+            highlights.append({
+                'type': 'info',
+                'icon': '🔥',
+                'text': f"{by_priority['critical']} critical priority issues handled"
+            })
+        
+        # ============ RESPONSE ============
+        return Response({
+            'period': {
+                'month': month,
+                'year': year,
+                'month_name': datetime(year, month, 1).strftime('%B'),
+            },
+            'company': {
+                'id': company.id,
+                'name': company.name,
+                'logo_url': company.logo.url if company.logo else None,
+            },
+            'summary': {
+                'tickets_resolved': tickets_resolved,
+                'tickets_created': tickets_created,
+                'avg_resolution_hours': avg_resolution_hours,
+                'avg_rating': avg_rating,
+                'acceptance_rate': acceptance_rate,
+                'on_time_percentage': on_time_percentage,
+            },
+            'by_priority': by_priority,
+            'by_type': by_type,
+            'comparison': {
+                'prev_month': prev_month,
+                'prev_year': prev_year,
+                'prev_tickets_resolved': prev_tickets_resolved,
+                'tickets_resolved_change': resolved_change,
+                'tickets_resolved_change_pct': resolved_change_pct,
+                'avg_resolution_change': resolution_time_change,
+            },
+            'highlights': highlights,
+        })
+
     @action(detail=True, methods=['post'])
     def create_user(self, request, pk=None):
         """
@@ -1367,6 +1561,14 @@ class TicketViewSet(viewsets.ModelViewSet):
             if company_admins.exists():
                 ticket.assignees.set(company_admins)
                 print(f"   👥 Auto-assigned to {company_admins.count()} company admin(s)")
+        
+        # Create chat room for ticket (for servicedesk tickets)
+        # This enables direct communication between customer and IT support
+        if ticket.company and ticket.reporter:
+            from chat.models import ChatRoom
+            chat_room, created = ChatRoom.get_or_create_for_ticket(ticket, created_by=user)
+            if created:
+                print(f"   💬 Created chat room for ticket: {chat_room.id}")
     
     def _assign_status_from_column(self, ticket):
         """
