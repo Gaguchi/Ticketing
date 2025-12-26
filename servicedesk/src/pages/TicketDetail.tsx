@@ -136,7 +136,7 @@ const TicketDetail: React.FC = () => {
     setMessagesLoading(true);
     try {
       const result = await chatService.getMessages(chatRoom.id, { limit: 50 });
-      setMessages(result.messages.slice().reverse());
+      setMessages(result.messages);
     } catch (err) {
       console.error("Failed to load messages:", err);
     } finally {
