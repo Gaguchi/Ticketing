@@ -411,8 +411,8 @@ const Users: React.FC = () => {
               background: record.is_superuser
                 ? "#f5222d"
                 : record.is_staff
-                ? "#1890ff"
-                : "#52c41a",
+                  ? "#1890ff"
+                  : "#52c41a",
             }}
             icon={<UserOutlined />}
           />
@@ -716,6 +716,41 @@ const Users: React.FC = () => {
             >
               <Input.Password placeholder="Enter password" />
             </Form.Item>
+          )}
+
+          {/* Project assignment - only for new users */}
+          {!editingUser && (
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item
+                  name="project_id"
+                  label="Assign to Project"
+                  initialValue={selectedProject?.id}
+                >
+                  <Select placeholder="Select Project (optional)" allowClear>
+                    {superadminProjects.map((project) => (
+                      <Option key={project.id} value={project.id}>
+                        {project.key}: {project.name}
+                      </Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
+                  name="role"
+                  label="Project Role"
+                  initialValue="user"
+                >
+                  <Select placeholder="Select Role">
+                    <Option value="superadmin">Superadmin</Option>
+                    <Option value="admin">Admin</Option>
+                    <Option value="manager">Manager</Option>
+                    <Option value="user">User</Option>
+                  </Select>
+                </Form.Item>
+              </Col>
+            </Row>
           )}
 
           <Form.Item name="is_active" label="Active" valuePropName="checked">

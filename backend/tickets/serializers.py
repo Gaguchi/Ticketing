@@ -925,12 +925,21 @@ class UserManagementSerializer(serializers.ModelSerializer):
 class UserCreateUpdateSerializer(serializers.ModelSerializer):
     """Serializer for creating/updating users"""
     password = serializers.CharField(write_only=True, required=False)
+    # Optional fields for auto-assigning to a project during creation
+    project_id = serializers.IntegerField(write_only=True, required=False)
+    role = serializers.ChoiceField(
+        choices=['superadmin', 'admin', 'manager', 'user'],
+        write_only=True,
+        required=False,
+        default='user'
+    )
     
     class Meta:
         model = User
         fields = [
             'id', 'username', 'email', 'first_name', 'last_name',
-            'password', 'is_active', 'is_staff', 'is_superuser'
+            'password', 'is_active', 'is_staff', 'is_superuser',
+            'project_id', 'role'
         ]
     
     def validate(self, attrs):
@@ -950,6 +959,9 @@ class UserCreateUpdateSerializer(serializers.ModelSerializer):
     
     def create(self, validated_data):
         password = validated_data.pop('password', None)
+        project_id = validated_data.pop('project_id', None)
+        role = validated_data.pop('role', 'user')
+        
         # Ensure non-superusers cannot create superusers/staff
         request = self.context.get('request')
         if request and not request.user.is_superuser:
@@ -960,6 +972,26 @@ class UserCreateUpdateSerializer(serializers.ModelSerializer):
         if password:
             user.set_password(password)
             user.save()
+        
+        # Auto-assign to project if project_id is provided
+        if project_id:
+            from tickets.models import Project, UserRole
+            try:
+                project = Project.objects.get(id=project_id)
+                # Add user to project members
+                project.members.add(user)
+                # Create UserRole
+                UserRole.objects.get_or_create(
+                    user=user,
+                    project=project,
+                    defaults={
+                        'role': role,
+                        'assigned_by': request.user if request else None
+                    }
+                )
+            except Project.DoesNotExist:
+                pass  # Silently ignore if project doesn't exist
+        
         return user
     
     def update(self, instance, validated_data):
