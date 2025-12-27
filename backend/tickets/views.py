@@ -227,24 +227,40 @@ class CompanyViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """
         Filter companies based on user role and selected project:
-        - Superusers see all companies (filtered by project if specified)
-        - IT Admins see companies they're assigned to (filtered by project if specified)
-        - Company Users see only their company (filtered by project if specified)
+        - Django superusers OR project superadmins/admins see all companies in the project
+        - Company Admins see companies they're assigned to
+        - Company Users see only their company
         - If ?project=<id> is provided, only show companies assigned to that project
         """
         user = self.request.user
+        project_id = self.request.query_params.get('project')
         
-        # Start with base queryset based on user permissions
+        # Django superusers always see all companies
         if user.is_superuser:
             queryset = Company.objects.all()
-        else:
-            # Get companies where user is an admin or a member
-            queryset = Company.objects.filter(
-                Q(admins=user) | Q(users=user)
-            ).distinct()
+            if project_id:
+                queryset = queryset.filter(projects__id=project_id)
+            return queryset
         
-        # Filter by selected project if provided
-        project_id = self.request.query_params.get('project')
+        # Check if user has superadmin or admin role in the specified project
+        if project_id:
+            has_admin_role = UserRole.objects.filter(
+                user=user,
+                project_id=project_id,
+                role__in=['superadmin', 'admin']
+            ).exists()
+            
+            if has_admin_role:
+                # Project superadmins/admins see ALL companies in that project
+                return Company.objects.filter(projects__id=project_id)
+        
+        # For non-admins OR when no project is specified:
+        # Only show companies where user is explicitly assigned as company admin or user
+        queryset = Company.objects.filter(
+            Q(admins=user) | Q(users=user)
+        ).distinct()
+        
+        # Apply project filter if provided
         if project_id:
             queryset = queryset.filter(projects__id=project_id)
         
@@ -836,6 +852,10 @@ class CompanyViewSet(viewsets.ModelViewSet):
             
             # Get the company's projects and assign user role to each
             for project in company.projects.all():
+                # Add user to project members
+                project.members.add(user)
+                
+                # Create UserRole for the user in this project
                 UserRole.objects.get_or_create(
                     user=user,
                     project=project,
