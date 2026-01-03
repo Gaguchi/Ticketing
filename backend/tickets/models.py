@@ -840,15 +840,18 @@ class Ticket(models.Model):
         if state_changed:
             if is_done and not was_done:
                 # Entering done state
-                if self.resolution_status == 'none':
-                    # First time entering done - set to awaiting_review
-                    self.resolution_status = 'awaiting_review'
-                    resolution_status_changed = True
-                elif self.resolution_status == 'rejected':
-                    # Re-entering done after rejection - reset to awaiting_review
-                    self.resolution_status = 'awaiting_review'
-                    resolution_status_changed = True
-                # Note: 'accepted' tickets stay accepted (immutable)
+                # Only trigger awaiting_review if ticket has a company attached
+                # Tickets without companies skip the review workflow
+                if self.company_id:
+                    if self.resolution_status == 'none':
+                        # First time entering done - set to awaiting_review
+                        self.resolution_status = 'awaiting_review'
+                        resolution_status_changed = True
+                    elif self.resolution_status == 'rejected':
+                        # Re-entering done after rejection - reset to awaiting_review
+                        self.resolution_status = 'awaiting_review'
+                        resolution_status_changed = True
+                    # Note: 'accepted' tickets stay accepted (immutable)
             elif not is_done and was_done:
                 # Leaving done state - no change to resolution_status
                 # (we want to preserve 'rejected' status so it resets on re-entry)
@@ -979,7 +982,8 @@ class Ticket(models.Model):
             
             # Resolution status transition: when entering Done, set to awaiting_review
             # (unless already accepted - accepted tickets stay accepted)
-            if self.resolution_status != 'accepted':
+            # Only trigger awaiting_review if ticket has a company attached
+            if self.resolution_status != 'accepted' and self.company_id:
                 old_resolution_status = self.resolution_status
                 self.resolution_status = 'awaiting_review'
                 update_fields.append('resolution_status')
