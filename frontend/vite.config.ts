@@ -20,20 +20,17 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          // React core
-          if (id.includes('react-dom') || id.includes('react-router-dom')) {
+          // React must be in its own chunk and load first
+          if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/') || id.includes('node_modules/scheduler/')) {
             return 'vendor-react';
           }
-          if (id.includes('node_modules/react/')) {
-            return 'vendor-react';
+          // React Router separate
+          if (id.includes('react-router')) {
+            return 'vendor-router';
           }
-          // Ant Design core
-          if (id.includes('node_modules/antd/')) {
-            return 'vendor-antd-core';
-          }
-          // Ant Design icons
-          if (id.includes('@ant-design/icons')) {
-            return 'vendor-antd-icons';
+          // Ant Design + icons together (icons depend on React context)
+          if (id.includes('node_modules/antd/') || id.includes('@ant-design/')) {
+            return 'vendor-antd';
           }
           // DnD Kit
           if (id.includes('@dnd-kit/')) {
