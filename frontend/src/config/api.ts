@@ -7,7 +7,9 @@
  */
 
 // Get base URL from environment variable (empty string for dev = Vite proxy)
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+// Remove trailing slash to prevent double slashes in URLs
+const rawBaseUrl = import.meta.env.VITE_API_BASE_URL || '';
+export const API_BASE_URL = rawBaseUrl.replace(/\/+$/, '');
 
 // Helper to build API endpoint paths
 const api = (path: string) => `${API_BASE_URL}/api/tickets${path}`;

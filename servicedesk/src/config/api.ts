@@ -1,4 +1,6 @@
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+// Remove trailing slash from API_BASE_URL to prevent double slashes
+const rawBaseUrl = import.meta.env.VITE_API_BASE_URL || '';
+export const API_BASE_URL = rawBaseUrl.replace(/\/+$/, '');
 
 // In development (no VITE_API_BASE_URL), use /api prefix for Vite proxy
 // In production (with VITE_API_BASE_URL), use the backend base URL + /api/tickets
