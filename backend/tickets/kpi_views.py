@@ -55,22 +55,30 @@ class KPIViewSet(viewsets.ViewSet):
         - avg_rating: Average customer satisfaction rating
         - active_tickets: Currently assigned open tickets
         """
-        # Base querysets for the project
-        tickets_qs = Ticket.objects.filter(project_id=project_id, is_archived=False)
+        # Base queryset for active tickets (not archived) - used for active/overdue counts
+        active_tickets_qs = Ticket.objects.filter(project_id=project_id, is_archived=False)
+        
+        # Base queryset for ALL tickets including archived - used for resolved/completed metrics
+        # Archived tickets represent completed work that should count toward KPIs
+        all_tickets_qs = Ticket.objects.filter(project_id=project_id)
         
         # Apply date filters if provided
         if date_from:
-            tickets_qs = tickets_qs.filter(created_at__gte=date_from)
+            active_tickets_qs = active_tickets_qs.filter(created_at__gte=date_from)
+            all_tickets_qs = all_tickets_qs.filter(created_at__gte=date_from)
         if date_to:
-            tickets_qs = tickets_qs.filter(created_at__lte=date_to)
+            active_tickets_qs = active_tickets_qs.filter(created_at__lte=date_to)
+            all_tickets_qs = all_tickets_qs.filter(created_at__lte=date_to)
         
-        # Tickets created by user
-        tickets_created = tickets_qs.filter(reporter=user).count()
+        # Tickets created by user (all tickets including archived)
+        tickets_created = all_tickets_qs.filter(reporter=user).count()
         
-        # Tickets resolved by user (assigned to user and in Done status category)
-        resolved_tickets = tickets_qs.filter(
-            assignees=user,
-            ticket_status__category=StatusCategory.DONE
+        # Tickets resolved by user - include archived since they represent completed work
+        # A ticket is "resolved" if it's in Done status OR has been archived (which means it was completed)
+        resolved_tickets = all_tickets_qs.filter(
+            assignees=user
+        ).filter(
+            Q(ticket_status__category=StatusCategory.DONE) | Q(is_archived=True)
         )
         tickets_resolved = resolved_tickets.count()
         
@@ -86,8 +94,8 @@ class KPIViewSet(viewsets.ViewSet):
             if resolution_times else None
         )
         
-        # Overdue tickets (past due date, not in Done)
-        overdue_count = tickets_qs.filter(
+        # Overdue tickets (past due date, not in Done) - only active tickets
+        overdue_count = active_tickets_qs.filter(
             assignees=user,
             due_date__lt=timezone.now().date()
         ).exclude(
@@ -110,8 +118,8 @@ class KPIViewSet(viewsets.ViewSet):
             resolution_rating__isnull=False
         ).aggregate(avg=Avg('resolution_rating'))['avg']
         
-        # Active tickets (assigned and not in Done)
-        active_tickets = tickets_qs.filter(
+        # Active tickets (assigned and not in Done) - only non-archived
+        active_tickets = active_tickets_qs.filter(
             assignees=user
         ).exclude(
             ticket_status__category=StatusCategory.DONE
@@ -332,36 +340,43 @@ class KPIViewSet(viewsets.ViewSet):
                 status=status.HTTP_403_FORBIDDEN
             )
         
-        # Base queryset
-        tickets_qs = Ticket.objects.filter(project_id=project_id, is_archived=False)
+        # Base querysets - include archived for totals/completed metrics
+        all_tickets_qs = Ticket.objects.filter(project_id=project_id)
+        active_tickets_qs = Ticket.objects.filter(project_id=project_id, is_archived=False)
         
         if date_from:
-            tickets_qs = tickets_qs.filter(created_at__gte=date_from)
+            all_tickets_qs = all_tickets_qs.filter(created_at__gte=date_from)
+            active_tickets_qs = active_tickets_qs.filter(created_at__gte=date_from)
         if date_to:
-            tickets_qs = tickets_qs.filter(created_at__lte=date_to)
+            all_tickets_qs = all_tickets_qs.filter(created_at__lte=date_to)
+            active_tickets_qs = active_tickets_qs.filter(created_at__lte=date_to)
         
-        # Total tickets
-        total_tickets = tickets_qs.count()
+        # Total tickets (including archived - represents all work)
+        total_tickets = all_tickets_qs.count()
         
-        # Tickets by status category
+        # Tickets by status category - for active tickets only (shows current state)
         by_category = {
-            'todo': tickets_qs.filter(ticket_status__category=StatusCategory.TODO).count(),
-            'in_progress': tickets_qs.filter(ticket_status__category=StatusCategory.IN_PROGRESS).count(),
-            'done': tickets_qs.filter(ticket_status__category=StatusCategory.DONE).count(),
+            'todo': active_tickets_qs.filter(ticket_status__category=StatusCategory.TODO).count(),
+            'in_progress': active_tickets_qs.filter(ticket_status__category=StatusCategory.IN_PROGRESS).count(),
+            # Done count includes archived tickets (completed work)
+            'done': all_tickets_qs.filter(
+                Q(ticket_status__category=StatusCategory.DONE) | Q(is_archived=True)
+            ).count(),
         }
         
-        # Tickets by priority
+        # Tickets by priority (all tickets)
         by_priority = {
-            'low': tickets_qs.filter(priority_id=1).count(),
-            'medium': tickets_qs.filter(priority_id=2).count(),
-            'high': tickets_qs.filter(priority_id=3).count(),
-            'critical': tickets_qs.filter(priority_id=4).count(),
+            'low': all_tickets_qs.filter(priority_id=1).count(),
+            'medium': all_tickets_qs.filter(priority_id=2).count(),
+            'high': all_tickets_qs.filter(priority_id=3).count(),
+            'critical': all_tickets_qs.filter(priority_id=4).count(),
         }
         
-        # Average resolution time
-        resolved = tickets_qs.filter(
-            done_at__isnull=False,
-            ticket_status__category=StatusCategory.DONE
+        # Average resolution time - include archived (they have done_at)
+        resolved = all_tickets_qs.filter(
+            done_at__isnull=False
+        ).filter(
+            Q(ticket_status__category=StatusCategory.DONE) | Q(is_archived=True)
         )
         resolution_times = []
         for ticket in resolved:
@@ -374,32 +389,33 @@ class KPIViewSet(viewsets.ViewSet):
             if resolution_times else None
         )
         
-        # Overdue count
-        overdue_count = tickets_qs.filter(
+        # Overdue count - only active (non-archived) tickets
+        overdue_count = active_tickets_qs.filter(
             due_date__lt=timezone.now().date()
         ).exclude(
             ticket_status__category=StatusCategory.DONE
         ).count()
         
-        # Unassigned tickets
-        unassigned_count = tickets_qs.annotate(
+        # Unassigned tickets - only active
+        unassigned_count = active_tickets_qs.annotate(
             assignee_count=Count('assignees')
         ).filter(assignee_count=0).exclude(
             ticket_status__category=StatusCategory.DONE
         ).count()
         
-        # Average customer rating
-        avg_customer_rating = tickets_qs.filter(
+        # Average customer rating - include archived (completed work has ratings)
+        avg_customer_rating = all_tickets_qs.filter(
             resolution_rating__isnull=False
         ).aggregate(avg=Avg('resolution_rating'))['avg']
         
-        # Top performers (top 5 by resolved tickets)
+        # Top performers (top 5 by resolved tickets) - include archived
         members = project.members.all()
         performer_metrics = []
         for member in members:
-            resolved_count = tickets_qs.filter(
-                assignees=member,
-                ticket_status__category=StatusCategory.DONE
+            resolved_count = all_tickets_qs.filter(
+                assignees=member
+            ).filter(
+                Q(ticket_status__category=StatusCategory.DONE) | Q(is_archived=True)
             ).count()
             performer_metrics.append({
                 'user_id': member.id,
@@ -469,11 +485,13 @@ class KPIViewSet(viewsets.ViewSet):
             )
         
         # Get resolved tickets where user was assignee
+        # INCLUDE archived tickets - they represent completed work that should count toward KPIs
+        # A ticket is considered "resolved" if it's in Done status OR has been archived
         tickets_qs = Ticket.objects.filter(
             project_id=project_id,
             assignees=request.user,
-            ticket_status__category=StatusCategory.DONE,
-            is_archived=False
+        ).filter(
+            Q(ticket_status__category=StatusCategory.DONE) | Q(is_archived=True)
         ).select_related('ticket_status').order_by('-done_at', '-updated_at')
         
         if date_from:
@@ -686,7 +704,8 @@ class KPIViewSet(viewsets.ViewSet):
         dates = [start_date + timedelta(days=x) for x in range(days)]
         results = []
         
-        tickets_qs = Ticket.objects.filter(project_id=project_id, is_archived=False)
+        # Include archived tickets - they represent completed work that should appear in trends
+        tickets_qs = Ticket.objects.filter(project_id=project_id)
         
         if target_user_id:
              # Filter for specific user
