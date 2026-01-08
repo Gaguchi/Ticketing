@@ -22,6 +22,7 @@ import {
   MessageOutlined,
   UsergroupAddOutlined,
   ProjectOutlined,
+  BarChartOutlined,
 } from "@ant-design/icons";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AppContext";
@@ -209,6 +210,12 @@ const MainLayout: React.FC = () => {
       icon: <UsergroupAddOutlined />,
       label: "Users",
       path: "/users",
+    },
+    {
+      key: "/kpi",
+      icon: <BarChartOutlined />,
+      label: "KPI",
+      path: "/kpi",
     },
     {
       key: "/settings",

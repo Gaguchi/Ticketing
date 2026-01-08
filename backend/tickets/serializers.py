@@ -4,7 +4,8 @@ from django.db import models
 from .models import (
     Ticket, Project, Column, Comment, Attachment,
     Tag, Contact, TagContact, UserTag, TicketTag, IssueLink, Company, UserRole, TicketSubtask,
-    Notification, ProjectInvitation, TicketPosition, TicketHistory, Status, BoardColumn, ResolutionFeedback
+    Notification, ProjectInvitation, TicketPosition, TicketHistory, Status, BoardColumn, ResolutionFeedback,
+    UserReview
 )
 
 
@@ -1150,4 +1151,81 @@ class TicketHistorySerializer(serializers.ModelSerializer):
     class Meta:
         model = TicketHistory
         fields = ['id', 'ticket', 'user', 'field', 'old_value', 'new_value', 'created_at']
+
+
+class UserReviewSerializer(serializers.ModelSerializer):
+    """
+    Serializer for admin reviews of users.
+    
+    These reviews are hidden from the user being reviewed.
+    Only superadmins and managers can view them.
+    """
+    reviewer = UserSimpleSerializer(read_only=True)
+    user_detail = UserSimpleSerializer(source='user', read_only=True)
+    project_name = serializers.CharField(source='project.name', read_only=True)
+    project_key = serializers.CharField(source='project.key', read_only=True)
+    ticket_key = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = UserReview
+        fields = [
+            'id', 'user', 'user_detail', 'reviewer', 'project', 'project_name', 
+            'project_key', 'ticket', 'ticket_key', 'rating', 'feedback', 
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['reviewer', 'created_at', 'updated_at']
+    
+    def get_ticket_key(self, obj):
+        """Get ticket key if ticket is linked"""
+        if obj.ticket:
+            return obj.ticket.ticket_key
+        return None
+    
+    def validate_rating(self, value):
+        """Ensure rating is between 1 and 5"""
+        if value < 1 or value > 5:
+            raise serializers.ValidationError("Rating must be between 1 and 5")
+        return value
+    
+    def validate(self, data):
+        """Validate reviewer can't review themselves"""
+        request = self.context.get('request')
+        if request and request.user:
+            user = data.get('user')
+            if user and user.id == request.user.id:
+                raise serializers.ValidationError(
+                    {"user": "You cannot review yourself"}
+                )
+        return data
+
+
+class UserReviewCreateSerializer(serializers.ModelSerializer):
+    """Serializer for creating user reviews"""
+    
+    class Meta:
+        model = UserReview
+        fields = ['user', 'project', 'ticket', 'rating', 'feedback']
+    
+    def validate_rating(self, value):
+        """Ensure rating is between 1 and 5"""
+        if value < 1 or value > 5:
+            raise serializers.ValidationError("Rating must be between 1 and 5")
+        return value
+    
+    def validate(self, data):
+        """Validate reviewer can't review themselves"""
+        request = self.context.get('request')
+        if request and request.user:
+            user = data.get('user')
+            if user and user.id == request.user.id:
+                raise serializers.ValidationError(
+                    {"user": "You cannot review yourself"}
+                )
+        return data
+    
+    def create(self, validated_data):
+        """Set reviewer to current user"""
+        request = self.context.get('request')
+        validated_data['reviewer'] = request.user
+        return super().create(validated_data)
 

@@ -1534,3 +1534,68 @@ class TicketHistory(models.Model):
     def __str__(self):
         return f"{self.ticket.id} - {self.field} changed by {self.user.username if self.user else 'System'}"
 
+
+class UserReview(models.Model):
+    """
+    Admin review of a user's work performance.
+    Hidden from the reviewed user - only visible to superadmins/managers.
+    
+    These reviews are used for internal performance tracking and are NOT
+    visible to the user being reviewed. Only superadmins and managers can view them.
+    """
+    user = models.ForeignKey(
+        User, 
+        on_delete=models.CASCADE, 
+        related_name='received_reviews',
+        help_text='The user being reviewed'
+    )
+    reviewer = models.ForeignKey(
+        User, 
+        on_delete=models.CASCADE, 
+        related_name='given_reviews',
+        help_text='The admin/superadmin who created this review'
+    )
+    project = models.ForeignKey(
+        'Project', 
+        on_delete=models.CASCADE, 
+        related_name='user_reviews',
+        help_text='Project context for this review'
+    )
+    ticket = models.ForeignKey(
+        'Ticket', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='user_reviews',
+        help_text='Optional: Link review to specific ticket'
+    )
+    
+    rating = models.IntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        help_text='Rating 1-5 stars'
+    )
+    feedback = models.TextField(
+        blank=True, 
+        help_text='Private feedback notes'
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'User Review'
+        verbose_name_plural = 'User Reviews'
+        # One review per user per ticket (if ticket provided)
+        constraints = [
+            models.UniqueConstraint(
+                fields=['reviewer', 'user', 'ticket'],
+                condition=models.Q(ticket__isnull=False),
+                name='unique_review_per_ticket'
+            )
+        ]
+    
+    def __str__(self):
+        ticket_info = f" (Ticket: {self.ticket.ticket_key})" if self.ticket else ""
+        return f"Review of {self.user.username} by {self.reviewer.username}{ticket_info} - {self.rating}★"
+

@@ -6,11 +6,13 @@ from .views import (
     TagViewSet, ContactViewSet, TagContactViewSet, UserTagViewSet, TicketTagViewSet,
     IssueLinkViewSet, CompanyViewSet, UserManagementViewSet, TicketSubtaskViewSet,
     NotificationViewSet, ProjectInvitationViewSet, StatusViewSet, BoardColumnViewSet,
+    UserReviewViewSet,
     register_user, login_user, get_current_user,
     # Dashboard views
     dashboard_company_health, dashboard_attention_needed, dashboard_newest_tickets,
     dashboard_live_activity, dashboard_agent_workload, dashboard_kanban_summary
 )
+from .kpi_views import KPIViewSet
 
 router = DefaultRouter()
 router.register(r'companies', CompanyViewSet, basename='company')
@@ -32,6 +34,9 @@ router.register(r'invitations', ProjectInvitationViewSet, basename='invitation')
 # NEW: Jira-style Status System
 router.register(r'statuses', StatusViewSet, basename='status')
 router.register(r'board-columns', BoardColumnViewSet, basename='board-column')
+# NEW: KPI and User Reviews
+router.register(r'kpi', KPIViewSet, basename='kpi')
+router.register(r'user-reviews', UserReviewViewSet, basename='user-review')
 
 urlpatterns = [
     # Authentication endpoints

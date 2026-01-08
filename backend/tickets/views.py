@@ -19,7 +19,8 @@ from .pagination import StandardResultsSetPagination
 from .models import (
     Ticket, Column, Project, Comment, Attachment,
     Tag, Contact, TagContact, UserTag, TicketTag, IssueLink, Company, UserRole, TicketSubtask,
-    Notification, ProjectInvitation, TicketHistory, Status, BoardColumn, ResolutionFeedback
+    Notification, ProjectInvitation, TicketHistory, Status, BoardColumn, ResolutionFeedback,
+    UserReview
 )
 from .serializers import (
     TicketSerializer, TicketListSerializer, KanbanTicketSerializer, ColumnSerializer,
@@ -3431,4 +3432,298 @@ def dashboard_kanban_summary(request):
         'columns': column_data,
         'total_tickets': tickets_qs.count(),
     })
+
+
+# ==================== User Reviews ViewSet ====================
+
+class UserReviewViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for admin reviews of users.
+    
+    CRUD operations with strict permission controls:
+    - Create: admin/superadmin only
+    - Read: superadmin/manager only (users CANNOT see their own reviews)
+    - Update/Delete: reviewer or superadmin only
+    
+    IMPORTANT: Users cannot see reviews about themselves.
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def get_serializer_class(self):
+        from .serializers import UserReviewSerializer, UserReviewCreateSerializer
+        if self.action in ['create', 'update', 'partial_update']:
+            return UserReviewCreateSerializer
+        return UserReviewSerializer
+    
+    def get_queryset(self):
+        from .models import UserReview, UserRole
+        
+        user = self.request.user
+        project_id = self.request.query_params.get('project')
+        
+        # For retrieve/update/delete actions, we need access to reviews by ID
+        # regardless of normal queryset filtering (permission checked in methods)
+        if self.action in ['retrieve', 'update', 'partial_update', 'destroy']:
+            # Allow access to reviews where user is superadmin, reviewer, 
+            # or has manager/superadmin role in the project
+            if user.is_superuser:
+                return UserReview.objects.all().select_related(
+                    'user', 'reviewer', 'project', 'ticket'
+                )
+            
+            # Get projects where user has elevated permissions
+            elevated_projects = UserRole.objects.filter(
+                user=user,
+                role__in=['superadmin', 'manager', 'admin']
+            ).values_list('project_id', flat=True)
+            
+            # Can access reviews they created OR reviews in projects they manage
+            return UserReview.objects.filter(
+                Q(reviewer=user) | Q(project_id__in=elevated_projects)
+            ).select_related('user', 'reviewer', 'project', 'ticket')
+        
+        # For list action - never include reviews OF the current user
+        # Users should NEVER see their own reviews
+        queryset = UserReview.objects.exclude(user=user).select_related(
+            'user', 'reviewer', 'project', 'ticket'
+        )
+        
+        # Superusers can see all reviews (except their own)
+        if user.is_superuser:
+            if project_id:
+                return queryset.filter(project_id=project_id)
+            return queryset
+        
+        # Get projects where user is superadmin or manager (can view all reviews)
+        # OR where user is admin (can view reviews they created)
+        viewable_projects = UserRole.objects.filter(
+            user=user,
+            role__in=['superadmin', 'manager']
+        ).values_list('project_id', flat=True)
+        
+        admin_projects = UserRole.objects.filter(
+            user=user,
+            role='admin'
+        ).values_list('project_id', flat=True)
+        
+        # Filter: reviews in projects user can view OR reviews user created
+        queryset = queryset.filter(
+            Q(project_id__in=viewable_projects) | 
+            Q(reviewer=user, project_id__in=admin_projects)
+        )
+        
+        if project_id:
+            queryset = queryset.filter(project_id=project_id)
+        
+        return queryset
+    
+    def _get_user_role(self, user, project_id):
+        """Get user's role in a specific project."""
+        from .models import UserRole
+        try:
+            user_role = UserRole.objects.get(user=user, project_id=project_id)
+            return user_role.role
+        except UserRole.DoesNotExist:
+            return None
+    
+    def _can_create_review(self, user, project_id):
+        """Check if user can create reviews (admin/superadmin)."""
+        if user.is_superuser:
+            return True
+        role = self._get_user_role(user, project_id)
+        return role in ['superadmin', 'admin']
+    
+    def _can_view_reviews(self, user, project_id):
+        """Check if user can view reviews (superadmin/manager)."""
+        if user.is_superuser:
+            return True
+        role = self._get_user_role(user, project_id)
+        return role in ['superadmin', 'manager']
+    
+    def create(self, request, *args, **kwargs):
+        """Create a new review - admin/superadmin only."""
+        from .serializers import UserReviewCreateSerializer
+        
+        project_id = request.data.get('project')
+        if not project_id:
+            return Response(
+                {'error': 'project is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if not self._can_create_review(request.user, project_id):
+            return Response(
+                {'error': 'Only admins and superadmins can create reviews'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Prevent reviewing yourself
+        user_id = request.data.get('user')
+        if user_id and int(user_id) == request.user.id:
+            return Response(
+                {'error': 'You cannot review yourself'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        serializer = UserReviewCreateSerializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        review = serializer.save()
+        
+        # Return full serializer data
+        from .serializers import UserReviewSerializer
+        return Response(
+            UserReviewSerializer(review).data,
+            status=status.HTTP_201_CREATED
+        )
+    
+    def update(self, request, *args, **kwargs):
+        """Update a review - only reviewer or superadmin."""
+        instance = self.get_object()
+        
+        # Only reviewer, Django superuser, or project superadmin can update
+        is_project_superadmin = self._get_user_role(request.user, instance.project_id) == 'superadmin'
+        if not (request.user.is_superuser or is_project_superadmin or instance.reviewer == request.user):
+            return Response(
+                {'error': 'Only the reviewer or superadmin can update this review'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        return super().update(request, *args, **kwargs)
+    
+    def partial_update(self, request, *args, **kwargs):
+        """Partial update a review - only reviewer or superadmin."""
+        instance = self.get_object()
+        
+        is_project_superadmin = self._get_user_role(request.user, instance.project_id) == 'superadmin'
+        if not (request.user.is_superuser or is_project_superadmin or instance.reviewer == request.user):
+            return Response(
+                {'error': 'Only the reviewer or superadmin can update this review'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        return super().partial_update(request, *args, **kwargs)
+    
+    def destroy(self, request, *args, **kwargs):
+        """Delete a review - only reviewer or superadmin."""
+        instance = self.get_object()
+        
+        is_project_superadmin = self._get_user_role(request.user, instance.project_id) == 'superadmin'
+        if not (request.user.is_superuser or is_project_superadmin or instance.reviewer == request.user):
+            return Response(
+                {'error': 'Only the reviewer or superadmin can delete this review'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        return super().destroy(request, *args, **kwargs)
+    
+    @action(detail=False, methods=['get'], url_path='for-user/(?P<user_id>[0-9]+)')
+    def for_user(self, request, user_id=None):
+        """
+        Get all reviews for a specific user.
+        
+        Only superadmin/manager can access this.
+        Users CANNOT see their own reviews.
+        """
+        from .models import UserReview
+        
+        # Prevent users from seeing their own reviews
+        if int(user_id) == request.user.id:
+            return Response(
+                {'error': 'You cannot view your own reviews'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        project_id = request.query_params.get('project')
+        
+        if project_id and not self._can_view_reviews(request.user, project_id):
+            return Response(
+                {'error': 'You do not have permission to view reviews in this project'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Get reviews from the filtered queryset
+        reviews = self.get_queryset().filter(user_id=user_id)
+        
+        if project_id:
+            reviews = reviews.filter(project_id=project_id)
+        
+        from .serializers import UserReviewSerializer
+        serializer = UserReviewSerializer(reviews, many=True)
+        
+        # Calculate summary stats
+        avg_rating = reviews.aggregate(avg=models.Avg('rating'))['avg']
+        
+        return Response({
+            'reviews': serializer.data,
+            'summary': {
+                'total_reviews': reviews.count(),
+                'avg_rating': round(avg_rating, 2) if avg_rating else None,
+            }
+        })
+    
+    @action(detail=False, methods=['get'], url_path='pending-prompts')
+    def pending_prompts(self, request):
+        """
+        Get list of recently resolved tickets that haven't been reviewed yet.
+        
+        This helps prompt admins to review users after ticket resolution.
+        Only admin/superadmin can access this.
+        """
+        from .models import Ticket, UserReview, UserRole, StatusCategory
+        
+        project_id = request.query_params.get('project')
+        
+        if not project_id:
+            return Response(
+                {'error': 'project parameter is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if not self._can_create_review(request.user, project_id):
+            return Response(
+                {'error': 'You do not have permission to view review prompts'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Get recently resolved tickets (last 30 days) with assignees
+        thirty_days_ago = timezone.now() - timedelta(days=30)
+        
+        resolved_tickets = Ticket.objects.filter(
+            project_id=project_id,
+            ticket_status__category=StatusCategory.DONE,
+            done_at__gte=thirty_days_ago,
+            is_archived=False
+        ).prefetch_related('assignees').select_related('project')
+        
+        # Find tickets where the assignee hasn't been reviewed by this reviewer
+        prompts = []
+        for ticket in resolved_tickets:
+            for assignee in ticket.assignees.all():
+                # Skip self-reviews
+                if assignee.id == request.user.id:
+                    continue
+                    
+                # Check if review already exists for this ticket
+                existing_review = UserReview.objects.filter(
+                    reviewer=request.user,
+                    user=assignee,
+                    ticket=ticket
+                ).exists()
+                
+                if not existing_review:
+                    prompts.append({
+                        'ticket_id': ticket.id,
+                        'ticket_key': ticket.ticket_key,
+                        'ticket_name': ticket.name,
+                        'user_id': assignee.id,
+                        'username': assignee.username,
+                        'first_name': assignee.first_name,
+                        'last_name': assignee.last_name,
+                        'resolved_at': ticket.done_at.isoformat() if ticket.done_at else None,
+                    })
+        
+        # Sort by resolved_at descending and limit to 20
+        prompts.sort(key=lambda x: x['resolved_at'] or '', reverse=True)
+        
+        return Response(prompts[:20])
 

@@ -19,32 +19,38 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
+        manualChunks(id) {
           // React core
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          // Ant Design core (largest dependency)
-          'vendor-antd-core': ['antd'],
-          // Ant Design icons (separate for better caching)
-          'vendor-antd-icons': ['@ant-design/icons'],
+          if (id.includes('react-dom') || id.includes('react-router-dom')) {
+            return 'vendor-react';
+          }
+          if (id.includes('node_modules/react/')) {
+            return 'vendor-react';
+          }
+          // Ant Design core
+          if (id.includes('node_modules/antd/')) {
+            return 'vendor-antd-core';
+          }
+          // Ant Design icons
+          if (id.includes('@ant-design/icons')) {
+            return 'vendor-antd-icons';
+          }
           // DnD Kit
-          'vendor-dnd': ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities'],
+          if (id.includes('@dnd-kit/')) {
+            return 'vendor-dnd';
+          }
           // TipTap editor
-          'vendor-editor': [
-            '@tiptap/react',
-            '@tiptap/starter-kit',
-            '@tiptap/extension-link',
-            '@tiptap/extension-image',
-            '@tiptap/extension-task-item',
-            '@tiptap/extension-task-list',
-          ],
+          if (id.includes('@tiptap/')) {
+            return 'vendor-editor';
+          }
           // FontAwesome
-          'vendor-icons': [
-            '@fortawesome/fontawesome-svg-core',
-            '@fortawesome/free-solid-svg-icons',
-            '@fortawesome/react-fontawesome',
-          ],
+          if (id.includes('@fortawesome/')) {
+            return 'vendor-icons';
+          }
           // Calendar
-          'vendor-calendar': ['react-big-calendar'],
+          if (id.includes('react-big-calendar')) {
+            return 'vendor-calendar';
+          }
         },
       },
     },

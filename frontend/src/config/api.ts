@@ -119,6 +119,19 @@ export const API_ENDPOINTS = {
   // Ticket status-based move (new Jira-style)
   TICKET_MOVE_TO_STATUS: (id: number) => api(`/tickets/${id}/move_to_status/`),
 
+  // KPI (Key Performance Indicators)
+  KPI_USER_METRICS: api('/kpi/user-metrics/'),
+  KPI_MY_METRICS: api('/kpi/my-metrics/'),
+  KPI_PROJECT_SUMMARY: api('/kpi/project-summary/'),
+  KPI_MY_TICKETS: api('/kpi/my-tickets/'),
+  KPI_MY_ACTIVE: api('/kpi/my-active/'),
+
+  // User Reviews (Admin reviews of users - hidden from reviewed users)
+  USER_REVIEWS: api('/user-reviews/'),
+  USER_REVIEW_DETAIL: (id: number) => api(`/user-reviews/${id}/`),
+  USER_REVIEWS_FOR_USER: (userId: number) => api(`/user-reviews/for-user/${userId}/`),
+  USER_REVIEWS_PENDING_PROMPTS: api('/user-reviews/pending-prompts/'),
+
   // API Documentation
   API_DOCS: `${API_BASE_URL}/api/docs/`,
   API_SCHEMA: `${API_BASE_URL}/api/schema/`,
