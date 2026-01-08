@@ -620,3 +620,136 @@ class KPIViewSet(viewsets.ViewSet):
             'results': results,
         })
 
+    @action(detail=False, methods=['get'], url_path='project-trends')
+    def project_trends(self, request):
+        """
+        Get daily trend data for project KPIs.
+        Can be filtered by user to get personal trends ("My Trends").
+        
+        Query params:
+            - project: Required - Project ID
+            - user_id: Optional - Filter by specific user (for personal charts)
+            - days: Optional - Number of days to look back (default 30)
+        """
+        project_id = request.query_params.get('project')
+        target_user_id = request.query_params.get('user_id')
+        
+        try:
+            days = int(request.query_params.get('days', 30))
+        except ValueError:
+            days = 30
+            
+        if not project_id:
+            return Response(
+                {'error': 'project parameter is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        # Check project access
+        try:
+            project = Project.objects.get(id=project_id)
+        except Project.DoesNotExist:
+            return Response(
+                {'error': 'Project not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+            
+        # Check permission:
+        # - If viewing project-wide trends (no user_id): Need admin/manager role
+        # - If viewing personal trends (user_id provided):
+        #   - Can view own trends
+        #   - Admin/manager can view anyone's trends
+        
+        current_role = self._get_user_role_in_project(request.user, project_id)
+        is_manager = request.user.is_superuser or current_role in ['superadmin', 'admin', 'manager']
+        
+        if target_user_id:
+            # Viewing for specific user
+            if str(target_user_id) != str(request.user.id) and not is_manager:
+                 return Response(
+                    {'error': 'You do not have permission to view these metrics'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+        else:
+            # Viewing project-wide
+            if not is_manager:
+                return Response(
+                    {'error': 'You do not have permission to view project trends'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+        
+        # Calculate date range
+        end_date = timezone.now().date() + timedelta(days=1)
+        start_date = end_date - timedelta(days=days)
+        
+        dates = [start_date + timedelta(days=x) for x in range(days)]
+        results = []
+        
+        tickets_qs = Ticket.objects.filter(project_id=project_id, is_archived=False)
+        
+        if target_user_id:
+             # Filter for specific user
+             # Created: tickets they reported? or tickets they are assigned to? 
+             # Usually "My Performance" = tickets I resolved.
+             # "Tickets Created" -> Tickets where reporter = user
+             # BUT usually KPI charts show "Work done".
+             # Let's stick to:
+             # - Created: Tickets assigned to them (Workload incoming) OR Tickets they reported?
+             #   Let's use "Assigned To" for 'Incoming Work' context if filtering by user, 
+             #   OR stick to "Created by" if strictly following "Tickets Created".
+             #   Reflecting on typical dashboards: "My Output" is Resolved. "My Input" is Assigned.
+             #   However, to keep consistent with "Tickets Created" label, let's filter by reporter if that's the metric.
+             #   Actually, for a "Performance" dashboard, "Assigned" is more relevant than "Reported".
+             #   Let's check the existing metrics. `user_metrics` uses `tickets_created` (reported) and `tickets_resolved` (done).
+             #   So we will use Reporter for Created, and Assignee for Resolved.
+             pass
+
+        for date_obj in dates:
+            day_start = timezone.make_aware(timezone.datetime.combine(date_obj, timezone.datetime.min.time()))
+            day_end = timezone.make_aware(timezone.datetime.combine(date_obj, timezone.datetime.max.time()))
+            
+            # Base filters
+            created_filter = {'created_at__range': (day_start, day_end)}
+            resolved_filter = {
+                'done_at__range': (day_start, day_end), 
+                'ticket_status__category': StatusCategory.DONE
+            }
+
+            if target_user_id:
+                # For personal metrics:
+                # Created -> Tickets Reported by user
+                # Resolved -> Tickets Assigned to user that are done
+                # Ensure we use the correct field names for the Ticket model
+                # Assuming 'created_by' (reporter) and 'assigned_to' (assignee)
+                try:
+                    uid = int(target_user_id)
+                    created_filter['created_by_id'] = uid
+                    resolved_filter['assigned_to_id'] = uid
+                except (ValueError, TypeError):
+                    pass # Ignore invalid user_id
+            
+            # Created count
+            created_count = tickets_qs.filter(**created_filter).count()
+            
+            # Resolved count & time
+            resolved_in_day = tickets_qs.filter(**resolved_filter)
+            resolved_count = resolved_in_day.count()
+            
+            resolution_times = []
+            for t in resolved_in_day:
+                if t.created_at and t.done_at:
+                    delta = t.done_at - t.created_at
+                    resolution_times.append(delta.total_seconds() / 3600)
+            
+            avg_time = (sum(resolution_times) / len(resolution_times)) if resolution_times else 0
+            
+            results.append({
+                'date': date_obj.strftime('%Y-%m-%d'),
+                'created': created_count,
+                'resolved': resolved_count,
+                'avg_resolution_hours': round(avg_time, 2)
+            })
+            
+        return Response(results)
+

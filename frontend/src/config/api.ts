@@ -127,6 +127,7 @@ export const API_ENDPOINTS = {
   KPI_PROJECT_SUMMARY: api('/kpi/project-summary/'),
   KPI_MY_TICKETS: api('/kpi/my-tickets/'),
   KPI_MY_ACTIVE: api('/kpi/my-active/'),
+  KPI_PROJECT_TRENDS: api('/kpi/project-trends/'),
 
   // User Reviews (Admin reviews of users - hidden from reviewed users)
   USER_REVIEWS: api('/user-reviews/'),

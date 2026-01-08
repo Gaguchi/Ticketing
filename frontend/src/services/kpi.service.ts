@@ -17,6 +17,7 @@ import type {
   KPIQueryParams,
   MyResolvedTicketsResponse,
   MyActiveTicketsResponse,
+  ProjectTrends,
 } from '../types/kpi';
 
 // ============================================================================
@@ -25,13 +26,13 @@ import type {
 
 function buildQueryString(params?: KPIQueryParams): string {
   if (!params) return '';
-  
+
   const queryParams = new URLSearchParams();
   if (params.project) queryParams.set('project', params.project.toString());
   if (params.date_from) queryParams.set('date_from', params.date_from);
   if (params.date_to) queryParams.set('date_to', params.date_to);
   if (params.user_id) queryParams.set('user_id', params.user_id.toString());
-  
+
   return queryParams.toString() ? '?' + queryParams.toString() : '';
 }
 
@@ -82,7 +83,7 @@ export async function fetchMyResolvedTickets(
   if (dateFrom) queryParams.set('date_from', dateFrom);
   if (dateTo) queryParams.set('date_to', dateTo);
   if (limit) queryParams.set('limit', limit.toString());
-  
+
   const url = `${API_ENDPOINTS.KPI_MY_TICKETS}?${queryParams.toString()}`;
   return apiService.get<MyResolvedTicketsResponse>(url);
 }
@@ -98,7 +99,7 @@ export async function fetchMyActiveTickets(
   const queryParams = new URLSearchParams();
   queryParams.set('project', projectId.toString());
   if (limit) queryParams.set('limit', limit.toString());
-  
+
   const url = `${API_ENDPOINTS.KPI_MY_ACTIVE}?${queryParams.toString()}`;
   return apiService.get<MyActiveTicketsResponse>(url);
 }
@@ -164,6 +165,18 @@ export async function fetchPendingReviewPrompts(projectId: number): Promise<Revi
   return apiService.get<ReviewPrompt[]>(url);
 }
 
+/**
+ * Fetch project KPI trends (chart data)
+ */
+export async function fetchProjectTrends(projectId: number, days?: number, userId?: number): Promise<ProjectTrends> {
+  let queryParams = `?project=${projectId}`;
+  if (days) queryParams += `&days=${days}`;
+  if (userId) queryParams += `&user_id=${userId}`;
+
+  const url = `${API_ENDPOINTS.KPI_PROJECT_TRENDS}${queryParams}`;
+  return apiService.get<ProjectTrends>(url);
+}
+
 // ============================================================================
 // Export all as default object for convenient importing
 // ============================================================================
@@ -175,7 +188,7 @@ const kpiService = {
   fetchProjectSummary,
   fetchMyResolvedTickets,
   fetchMyActiveTickets,
-  
+
   // User Reviews
   fetchUserReviews,
   fetchReviewsForUser,
@@ -183,6 +196,7 @@ const kpiService = {
   updateUserReview,
   deleteUserReview,
   fetchPendingReviewPrompts,
+  fetchProjectTrends,
 };
 
 export default kpiService;

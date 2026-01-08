@@ -16,34 +16,34 @@ export interface UserMetrics {
   first_name: string;
   last_name: string;
   email: string;
-  
+
   /** Total tickets created by user */
   tickets_created: number;
-  
+
   /** Tickets moved to Done (by assignee) */
   tickets_resolved: number;
-  
+
   /** Average time from created → done (hours) */
   avg_resolution_hours: number | null;
-  
+
   /** Tickets past due date */
   overdue_count: number;
-  
+
   /** % of resolutions accepted on first try */
   acceptance_rate: number | null;
-  
+
   /** Average customer satisfaction rating (1-5) */
   avg_customer_rating: number | null;
-  
+
   /** Currently assigned open tickets */
   active_tickets: number;
-  
+
   /** Average admin rating (only visible to managers/superadmins) */
   avg_admin_rating?: number | null;
-  
+
   /** Total admin reviews received (only visible to managers/superadmins) */
   total_admin_reviews?: number;
-  
+
   // Additional fields for my-metrics endpoint
   project_id?: number;
   project_name?: string;
@@ -83,23 +83,23 @@ export interface ProjectKPISummary {
   project_id: number;
   project_name: string;
   project_key: string;
-  
+
   total_tickets: number;
   tickets_by_category: TicketsByCategory;
   tickets_by_priority: TicketsByPriority;
-  
+
   /** Average resolution time in hours */
   avg_resolution_hours: number | null;
-  
+
   /** Tickets past due date */
   overdue_count: number;
-  
+
   /** Tickets with no assignees */
   unassigned_count: number;
-  
+
   /** Average customer satisfaction rating */
   avg_customer_rating: number | null;
-  
+
   /** Top 5 performers by resolved tickets */
   top_performers: TopPerformer[];
 }
@@ -130,13 +130,13 @@ export interface UserReview {
   project_key: string;
   ticket: number | null;
   ticket_key: string | null;
-  
+
   /** Rating 1-5 stars */
   rating: number;
-  
+
   /** Private feedback notes */
   feedback: string;
-  
+
   created_at: string;
   updated_at: string;
 }
@@ -277,3 +277,16 @@ export interface MyActiveTicketsResponse {
   count: number;
   results: MyActiveTicket[];
 }
+
+// ============================================================================
+// Project Trends (for charts)
+// ============================================================================
+
+export interface ProjectTrendPoint {
+  date: string;
+  created: number;
+  resolved: number;
+  avg_resolution_hours: number;
+}
+
+export type ProjectTrends = ProjectTrendPoint[];
