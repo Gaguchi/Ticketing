@@ -62,24 +62,58 @@ class KPIViewSet(viewsets.ViewSet):
         # Archived tickets represent completed work that should count toward KPIs
         all_tickets_qs = Ticket.objects.filter(project_id=project_id)
         
+        # Annotate with completion date for filtering resolved tickets
+        all_tickets_qs = all_tickets_qs.annotate(
+            completion_date=Coalesce('done_at', 'archived_at', 'updated_at')
+        )
+        
         # Apply date filters if provided
+        # For active tickets: filter by created_at (when was it created)
+        # For resolved tickets: we'll filter by completion_date below
         if date_from:
             active_tickets_qs = active_tickets_qs.filter(created_at__gte=date_from)
-            all_tickets_qs = all_tickets_qs.filter(created_at__gte=date_from)
         if date_to:
             active_tickets_qs = active_tickets_qs.filter(created_at__lte=date_to)
-            all_tickets_qs = all_tickets_qs.filter(created_at__lte=date_to)
         
         # Tickets created by user (all tickets including archived)
-        tickets_created = all_tickets_qs.filter(reporter=user).count()
+        # For created count, filter by created_at
+        created_qs = Ticket.objects.filter(project_id=project_id, reporter=user)
+        if date_from:
+            created_qs = created_qs.filter(created_at__gte=date_from)
+        if date_to:
+            created_qs = created_qs.filter(created_at__lte=date_to)
+        tickets_created = created_qs.count()
         
         # Tickets resolved by user - include archived since they represent completed work
         # A ticket is "resolved" if it's in Done status OR has been archived (which means it was completed)
-        resolved_tickets = all_tickets_qs.filter(
-            assignees=user
-        ).filter(
-            Q(ticket_status__category=StatusCategory.DONE) | Q(is_archived=True)
+        # 
+        # IMPORTANT: We count tickets where:
+        # 1. User is an assignee (worked on it), OR
+        # 2. User is the reporter AND there are no assignees (they handled it themselves)
+        #
+        # This handles the common case where tickets are completed without formal assignment.
+        done_filter = Q(ticket_status__category=StatusCategory.DONE) | Q(is_archived=True)
+        
+        # Subquery to check if ticket has any assignees
+        from django.db.models import Exists, OuterRef
+        from tickets.models import Ticket as TicketModel
+        
+        has_assignees_subquery = TicketModel.objects.filter(
+            id=OuterRef('id'),
+            assignees__isnull=False
         )
+        
+        resolved_tickets = all_tickets_qs.filter(done_filter).filter(
+            # User is assignee OR (user is reporter AND no assignees)
+            Q(assignees=user) | (Q(reporter=user) & ~Exists(has_assignees_subquery))
+        ).distinct()
+        
+        # Apply date filters to resolved tickets based on completion_date
+        if date_from:
+            resolved_tickets = resolved_tickets.filter(completion_date__gte=date_from)
+        if date_to:
+            resolved_tickets = resolved_tickets.filter(completion_date__lte=date_to)
+        
         tickets_resolved = resolved_tickets.count()
         
         # Average resolution time (hours)
@@ -484,20 +518,41 @@ class KPIViewSet(viewsets.ViewSet):
                 status=status.HTTP_403_FORBIDDEN
             )
         
-        # Get resolved tickets where user was assignee
+        # Get resolved tickets where user was assignee or reporter (if no assignees)
         # INCLUDE archived tickets - they represent completed work that should count toward KPIs
         # A ticket is considered "resolved" if it's in Done status OR has been archived
+        #
+        # We count tickets where:
+        # 1. User is an assignee (worked on it), OR
+        # 2. User is the reporter AND there are no assignees (they handled it themselves)
+        from django.db.models import Exists, OuterRef
+        
+        done_filter = Q(ticket_status__category=StatusCategory.DONE) | Q(is_archived=True)
+        
+        # Subquery to check if ticket has any assignees
+        has_assignees_subquery = Ticket.objects.filter(
+            id=OuterRef('id'),
+            assignees__isnull=False
+        )
+        
         tickets_qs = Ticket.objects.filter(
             project_id=project_id,
-            assignees=request.user,
-        ).filter(
-            Q(ticket_status__category=StatusCategory.DONE) | Q(is_archived=True)
-        ).select_related('ticket_status').order_by('-done_at', '-updated_at')
+        ).filter(done_filter).filter(
+            # User is assignee OR (user is reporter AND no assignees)
+            Q(assignees=request.user) | (Q(reporter=request.user) & ~Exists(has_assignees_subquery))
+        ).distinct().select_related('ticket_status')
+        
+        # Use annotated completion date for filtering and sorting
+        # Fall back to archived_at, then updated_at if done_at is NULL
+        tickets_qs = tickets_qs.annotate(
+            completion_date=Coalesce('done_at', 'archived_at', 'updated_at')
+        ).order_by('-completion_date')
         
         if date_from:
-            tickets_qs = tickets_qs.filter(done_at__gte=date_from)
+            # Filter by completion date (done_at OR archived_at OR updated_at)
+            tickets_qs = tickets_qs.filter(completion_date__gte=date_from)
         if date_to:
-            tickets_qs = tickets_qs.filter(done_at__lte=date_to)
+            tickets_qs = tickets_qs.filter(completion_date__lte=date_to)
         
         tickets_qs = tickets_qs[:limit]
         
