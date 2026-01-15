@@ -66,6 +66,27 @@
   color: #666;
 }
 
+/* System messages (status/assignment changes) */
+.ticket-chat-system-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 16px;
+  margin: 4px 0;
+  background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.02), transparent);
+  border-radius: 4px;
+  text-align: center;
+}
+
+.ticket-chat-system-message::before,
+.ticket-chat-system-message::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.08), transparent);
+}
+
 .ticket-chat-message {
   display: flex;
   gap: 8px;

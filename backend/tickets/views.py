@@ -1689,8 +1689,11 @@ class TicketViewSet(viewsets.ModelViewSet):
         }
 
     def _record_changes(self, old_state, new_instance, user):
-        """Compare old state with new instance and record history"""
+        """Compare old state with new instance and record history + chat messages"""
         changes = []
+        
+        # Import chat utilities for posting system messages
+        from chat.utils import post_status_change_message, post_assignment_change_message, post_column_change_message
         
         # Simple fields mapping (field_name, display_name/value_getter)
         simple_checks = [
@@ -1733,6 +1736,10 @@ class TicketViewSet(viewsets.ModelViewSet):
                     old_value=old_state.get(field),
                     new_value=new_val
                 ))
+                
+                # Post chat message for status changes
+                if field == 'status':
+                    post_status_change_message(new_instance, user, old_state.get(field), new_val)
 
         # Foreign Keys
         if old_state['column_id'] != new_instance.column_id:
@@ -1741,6 +1748,9 @@ class TicketViewSet(viewsets.ModelViewSet):
                 ticket=new_instance, user=user, field='column',
                 old_value=old_state['column_name'], new_value=new_col_name
             ))
+             # Post chat message for column changes
+             if old_state['column_name'] and new_col_name:
+                 post_column_change_message(new_instance, user, old_state['column_name'], new_col_name)
             
         if old_state['project_id'] != new_instance.project_id:
              new_proj_name = new_instance.project.name if new_instance.project else None
@@ -1770,6 +1780,8 @@ class TicketViewSet(viewsets.ModelViewSet):
                 ticket=new_instance, user=user, field='assignees',
                 old_value=", ".join(old_state['assignees']), new_value=", ".join(new_assignees)
             ))
+             # Post chat message for assignment changes
+             post_assignment_change_message(new_instance, user, old_state['assignees'], new_assignees)
             
         new_tags = list(new_instance.tags.all().values_list('name', flat=True))
         if set(old_state['tags']) != set(new_tags):

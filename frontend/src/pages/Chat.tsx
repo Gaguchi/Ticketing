@@ -340,9 +340,15 @@ const Chat: React.FC = () => {
     const onMessage = (event: ChatWebSocketEvent) => {
       switch (event.type) {
         case "message_new":
-          // Add message to list (only if from another user, we add ours optimistically)
-          if (event.message.user.id !== user?.id) {
-            setMessages((prev) => [...prev, event.message]);
+          // For system messages, always add them
+          // For regular messages, skip if it's our own (we added it optimistically)
+          const isSystemMessage = event.message.is_system || event.message.type === 'system';
+          if (isSystemMessage || event.message.user.id !== user?.id) {
+            setMessages((prev) => {
+              // Avoid duplicates
+              if (prev.some(m => m.id === event.message.id)) return prev;
+              return [...prev, event.message];
+            });
             // Scroll to bottom if user is near bottom
             requestAnimationFrame(() => scrollToBottom());
           }
@@ -1010,6 +1016,34 @@ const Chat: React.FC = () => {
                   >
                     {messages.map((msg) => {
                       const isMine = msg.user.id === user?.id;
+                      const isSystem = msg.is_system || msg.type === 'system';
+                      
+                      // System messages (status/assignment changes)
+                      if (isSystem) {
+                        return (
+                          <div
+                            key={msg.id}
+                            style={{
+                              display: "flex",
+                              justifyContent: "center",
+                              margin: "8px 0",
+                            }}
+                          >
+                            <Text
+                              type="secondary"
+                              style={{
+                                fontSize: 12,
+                                backgroundColor: "#f0f0f0",
+                                padding: "6px 16px",
+                                borderRadius: 12,
+                              }}
+                            >
+                              {msg.content}
+                            </Text>
+                          </div>
+                        );
+                      }
+                      
                       return (
                         <div
                           key={msg.id}

@@ -139,8 +139,15 @@ export const TicketChatPanel: React.FC<TicketChatPanelProps> = ({
         const onMessage = (event: ChatWebSocketEvent) => {
             switch (event.type) {
                 case "message_new":
-                    if (event.message.user.id !== user?.id) {
-                        setMessages((prev) => [...prev, event.message]);
+                    // For system messages, always add them
+                    // For regular messages, skip if it's our own (we added it optimistically)
+                    const isSystemMessage = event.message.is_system || event.message.type === 'system';
+                    if (isSystemMessage || event.message.user.id !== user?.id) {
+                        setMessages((prev) => {
+                            // Avoid duplicates
+                            if (prev.some(m => m.id === event.message.id)) return prev;
+                            return [...prev, event.message];
+                        });
                         if (isNearBottomRef.current && messagesContainerRef.current) {
                             messagesContainerRef.current.scrollTop = 0;
                         }
@@ -518,49 +525,65 @@ export const TicketChatPanel: React.FC<TicketChatPanelProps> = ({
                                     <span>{date}</span>
                                 </div>
                                 {msgs.map((msg) => (
-                                    <div
-                                        key={msg.id}
-                                        className={`ticket-chat-message ${msg.user.id === user?.id ? "own" : ""
-                                            }`}
-                                    >
-                                        {msg.user.id !== user?.id && (
-                                            <Avatar size={32} style={{ backgroundColor: "#1890ff" }}>
-                                                {msg.user.first_name?.[0] || msg.user.username[0]}
-                                            </Avatar>
-                                        )}
-                                        <div className="ticket-chat-message-content">
-                                            {msg.user.id !== user?.id && (
-                                                <Text className="ticket-chat-message-author">
-                                                    {msg.user.display_name || msg.user.username}
-                                                </Text>
-                                            )}
-                                            <div className="ticket-chat-message-bubble">
+                                    msg.is_system || msg.type === 'system' ? (
+                                        // System message (status/assignment changes)
+                                        <div
+                                            key={msg.id}
+                                            className="ticket-chat-system-message"
+                                        >
+                                            <Text type="secondary" style={{ fontSize: 12 }}>
                                                 {msg.content}
-                                                {msg.attachment_url && (
-                                                    <div className="ticket-chat-attachment">
-                                                        {msg.type === "image" ? (
-                                                            <img
-                                                                src={msg.attachment_url}
-                                                                alt="attachment"
-                                                                style={{ maxWidth: 200, borderRadius: 4 }}
-                                                            />
-                                                        ) : (
-                                                            <a
-                                                                href={msg.attachment_url}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                            >
-                                                                📎 {msg.attachment_name || "Download file"}
-                                                            </a>
-                                                        )}
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <Text className="ticket-chat-message-time">
+                                            </Text>
+                                            <Text type="secondary" style={{ fontSize: 10, marginLeft: 8 }}>
                                                 {formatTime(msg.created_at)}
                                             </Text>
                                         </div>
-                                    </div>
+                                    ) : (
+                                        // Regular message
+                                        <div
+                                            key={msg.id}
+                                            className={`ticket-chat-message ${msg.user.id === user?.id ? "own" : ""
+                                                }`}
+                                        >
+                                            {msg.user.id !== user?.id && (
+                                                <Avatar size={32} style={{ backgroundColor: "#1890ff" }}>
+                                                    {msg.user.first_name?.[0] || msg.user.username[0]}
+                                                </Avatar>
+                                            )}
+                                            <div className="ticket-chat-message-content">
+                                                {msg.user.id !== user?.id && (
+                                                    <Text className="ticket-chat-message-author">
+                                                        {msg.user.display_name || msg.user.username}
+                                                    </Text>
+                                                )}
+                                                <div className="ticket-chat-message-bubble">
+                                                    {msg.content}
+                                                    {msg.attachment_url && (
+                                                        <div className="ticket-chat-attachment">
+                                                            {msg.type === "image" ? (
+                                                                <img
+                                                                    src={msg.attachment_url}
+                                                                    alt="attachment"
+                                                                    style={{ maxWidth: 200, borderRadius: 4 }}
+                                                                />
+                                                            ) : (
+                                                                <a
+                                                                    href={msg.attachment_url}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                >
+                                                                    📎 {msg.attachment_name || "Download file"}
+                                                                </a>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <Text className="ticket-chat-message-time">
+                                                    {formatTime(msg.created_at)}
+                                                </Text>
+                                            </div>
+                                        </div>
+                                    )
                                 ))}
                             </div>
                         ))}

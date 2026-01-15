@@ -5,7 +5,7 @@ import React, {
   useCallback,
   useMemo,
 } from "react";
-import { Button, Input, Select, Table, Tag, message, Segmented } from "antd";
+import { Button, Input, Select, Table, Tag, message, Segmented, Avatar, Tooltip } from "antd";
 import type { TableColumnsType } from "antd";
 import {
   PlusOutlined,
@@ -624,32 +624,58 @@ const Tickets: React.FC = () => {
       render: (priorityId: number) => getPriorityIcon(priorityId),
     },
     {
-      title: "Urgency",
-      dataIndex: "urgency",
-      key: "urgency",
-      width: 100,
-      render: (urgency: string) => {
-        const colorMap: Record<string, string> = {
-          High: "red",
-          Normal: "blue",
-          Low: "green",
-        };
-        return <Tag color={colorMap[urgency]}>{urgency}</Tag>;
+      title: "Due Date",
+      dataIndex: "due_date",
+      key: "due_date",
+      width: 120,
+      render: (due_date: string | null) => {
+        if (!due_date) return <span style={{ color: "#8c8c8c" }}>—</span>;
+        const dueDate = new Date(due_date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const isOverdue = dueDate < today;
+        const isToday = dueDate.toDateString() === today.toDateString();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const isTomorrow = dueDate.toDateString() === tomorrow.toDateString();
+        
+        let color = "default";
+        let text = dueDate.toLocaleDateString();
+        
+        if (isOverdue) {
+          color = "red";
+          text = `Overdue`;
+        } else if (isToday) {
+          color = "orange";
+          text = "Today";
+        } else if (isTomorrow) {
+          color = "gold";
+          text = "Tomorrow";
+        }
+        
+        return <Tag color={color}>{text}</Tag>;
       },
     },
     {
-      title: "Importance",
-      dataIndex: "importance",
-      key: "importance",
-      width: 120,
-      render: (importance: string) => {
-        const colorMap: Record<string, string> = {
-          Critical: "red",
-          High: "volcano",
-          Normal: "blue",
-          Low: "green",
-        };
-        return <Tag color={colorMap[importance]}>{importance}</Tag>;
+      title: "Assignees",
+      dataIndex: "assignees_detail",
+      key: "assignees_detail",
+      width: 150,
+      render: (assignees: any[]) => {
+        if (!assignees || assignees.length === 0) {
+          return <span style={{ color: "#8c8c8c" }}>Unassigned</span>;
+        }
+        return (
+          <Avatar.Group maxCount={3} size="small">
+            {assignees.map((assignee: any) => (
+              <Tooltip key={assignee.id} title={assignee.first_name ? `${assignee.first_name} ${assignee.last_name}` : assignee.username}>
+                <Avatar size="small" style={{ backgroundColor: "#1890ff" }}>
+                  {assignee.first_name?.[0] || assignee.username?.[0] || "?"}
+                </Avatar>
+              </Tooltip>
+            ))}
+          </Avatar.Group>
+        );
       },
     },
     {

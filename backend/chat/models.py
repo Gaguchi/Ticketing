@@ -120,17 +120,22 @@ class ChatMessage(models.Model):
     """
     Individual chat messages within a room.
     Supports text, images, and file attachments.
+    System messages are auto-generated for ticket updates.
     """
     MESSAGE_TYPE_CHOICES = [
         ('text', 'Text'),
         ('image', 'Image'),
         ('file', 'File'),
+        ('system', 'System'),  # For auto-generated ticket update messages
     ]
     
     room = models.ForeignKey(ChatRoom, on_delete=models.CASCADE, related_name='messages')
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='chat_messages')
     content = models.TextField(blank=True)  # Text content
     type = models.CharField(max_length=10, choices=MESSAGE_TYPE_CHOICES, default='text')
+    
+    # System message flag (for ticket updates like status/assignment changes)
+    is_system = models.BooleanField(default=False)
     
     # File attachments
     attachment = models.FileField(upload_to='chat_attachments/%Y/%m/%d/', null=True, blank=True)

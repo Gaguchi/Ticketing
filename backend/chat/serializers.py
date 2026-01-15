@@ -47,12 +47,12 @@ class ChatMessageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ChatMessage
         fields = [
-            'id', 'room', 'user', 'content', 'type',
+            'id', 'room', 'user', 'content', 'type', 'is_system',
             'attachment', 'attachment_url', 'attachment_name', 'attachment_size',
             'is_edited', 'edited_at', 'reactions',
             'created_at', 'updated_at'
         ]
-        read_only_fields = ['user', 'is_edited', 'edited_at', 'created_at', 'updated_at']
+        read_only_fields = ['user', 'is_system', 'is_edited', 'edited_at', 'created_at', 'updated_at']
     
     def get_attachment_url(self, obj):
         """Get full URL for attachment."""

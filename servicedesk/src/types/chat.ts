@@ -30,7 +30,8 @@ export interface ChatMessage {
   room: number;
   user: ChatUser;
   content: string;
-  type: 'text' | 'image' | 'file';
+  type: 'text' | 'image' | 'file' | 'system';
+  is_system: boolean;
   attachment: string | null;
   attachment_url: string | null;
   attachment_name: string;

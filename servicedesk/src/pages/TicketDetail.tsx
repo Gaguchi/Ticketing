@@ -412,6 +412,21 @@ const TicketDetail: React.FC = () => {
             ) : (
               messages.map(msg => {
                 const isMe = msg.user?.username === user?.username;
+                const isSystem = msg.is_system || msg.type === 'system';
+                
+                // System messages (status/assignment changes)
+                if (isSystem) {
+                  return (
+                    <div key={msg.id} className="flex justify-center my-4">
+                      <div className="flex items-center gap-2 text-xs text-slate-500 bg-slate-100 px-4 py-2 rounded-full">
+                        <span>{msg.content}</span>
+                        <span className="text-slate-400">·</span>
+                        <span className="text-slate-400">{formatTime(msg.created_at)}</span>
+                      </div>
+                    </div>
+                  );
+                }
+                
                 return (
                   <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} group`}>
                     <div className={`flex flex-col max-w-[70%] ${isMe ? 'items-end' : 'items-start'}`}>
