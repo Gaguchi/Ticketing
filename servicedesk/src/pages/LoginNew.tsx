@@ -52,7 +52,7 @@ export default function Login() {
       <Card variant="elevated" padding="lg" className="w-full max-w-md">
         {/* Logo */}
         <div className="flex justify-center mb-8">
-          <img src="/logo.png" alt="iTECH" className="h-12" />
+          <img src="/logo.png" alt="MAX network" className="h-12" />
         </div>
 
         {/* Welcome Text */}

@@ -5,7 +5,17 @@ import React, {
   useCallback,
   useMemo,
 } from "react";
-import { Button, Input, Select, Table, Tag, message, Segmented, Avatar, Tooltip } from "antd";
+import {
+  Button,
+  Input,
+  Select,
+  Table,
+  Tag,
+  message,
+  Segmented,
+  Avatar,
+  Tooltip,
+} from "antd";
 import type { TableColumnsType } from "antd";
 import {
   PlusOutlined,
@@ -638,10 +648,10 @@ const Tickets: React.FC = () => {
         const tomorrow = new Date(today);
         tomorrow.setDate(tomorrow.getDate() + 1);
         const isTomorrow = dueDate.toDateString() === tomorrow.toDateString();
-        
+
         let color = "default";
         let text = dueDate.toLocaleDateString();
-        
+
         if (isOverdue) {
           color = "red";
           text = `Overdue`;
@@ -652,7 +662,7 @@ const Tickets: React.FC = () => {
           color = "gold";
           text = "Tomorrow";
         }
-        
+
         return <Tag color={color}>{text}</Tag>;
       },
     },
@@ -668,7 +678,14 @@ const Tickets: React.FC = () => {
         return (
           <Avatar.Group maxCount={3} size="small">
             {assignees.map((assignee: any) => (
-              <Tooltip key={assignee.id} title={assignee.first_name ? `${assignee.first_name} ${assignee.last_name}` : assignee.username}>
+              <Tooltip
+                key={assignee.id}
+                title={
+                  assignee.first_name
+                    ? `${assignee.first_name} ${assignee.last_name}`
+                    : assignee.username
+                }
+              >
                 <Avatar size="small" style={{ backgroundColor: "#1890ff" }}>
                   {assignee.first_name?.[0] || assignee.username?.[0] || "?"}
                 </Avatar>

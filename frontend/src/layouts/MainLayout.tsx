@@ -279,7 +279,7 @@ const MainLayout: React.FC = () => {
             background: "#ffffff",
           }}
         >
-          {collapsed ? <LogoIcon size={20} /> : <Logo size={20} showText />}
+          {collapsed ? <LogoIcon size={32} /> : <Logo size={32} showText />}
         </div>
 
         {/* Navigation Items */}

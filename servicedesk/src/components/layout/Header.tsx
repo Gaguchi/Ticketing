@@ -45,7 +45,7 @@ export default function Header() {
         <div className="flex justify-between items-center h-14">
           {/* Left: Logo */}
           <Link to="/" className="flex items-center">
-            <img src="/logo.png" alt="iTECH" className="h-7" />
+            <img src="/logo.png" alt="MAX network" className="h-7" />
           </Link>
 
           {/* Right: Notifications + User */}

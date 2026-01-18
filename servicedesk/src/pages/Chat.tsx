@@ -980,8 +980,8 @@ const Chat: React.FC = () => {
                   >
                     {messages.map((msg) => {
                       const isMine = msg.user.id === user?.id;
-                      const isSystem = msg.is_system || msg.type === 'system';
-                      
+                      const isSystem = msg.is_system || msg.type === "system";
+
                       // System messages (status/assignment changes)
                       if (isSystem) {
                         return (
@@ -1007,7 +1007,7 @@ const Chat: React.FC = () => {
                           </div>
                         );
                       }
-                      
+
                       return (
                         <div
                           key={msg.id}

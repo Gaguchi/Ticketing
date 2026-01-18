@@ -44,7 +44,9 @@ const TicketDetail: React.FC = () => {
 
   // Resolution Feedback State
   const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
-  const [feedbackType, setFeedbackType] = useState<"accepted" | "rejected" | null>(null);
+  const [feedbackType, setFeedbackType] = useState<
+    "accepted" | "rejected" | null
+  >(null);
   const [feedbackText, setFeedbackText] = useState("");
   const [rating, setRating] = useState(0);
   const [submittingFeedback, setSubmittingFeedback] = useState(false);
@@ -214,7 +216,10 @@ const TicketDetail: React.FC = () => {
   };
 
   const formatTime = (dateString: string) => {
-    return new Date(dateString).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    return new Date(dateString).toLocaleTimeString([], {
+      hour: "numeric",
+      minute: "2-digit",
+    });
   };
 
   if (loading) {
@@ -240,7 +245,6 @@ const TicketDetail: React.FC = () => {
       </Button>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full pb-4">
-
         {/* Left Sidebar: Ticket Info (3 cols - 25%) */}
         <div className="lg:col-span-3 flex flex-col gap-6 overflow-y-auto pr-2 custom-scrollbar">
           {/* Header Card */}
@@ -277,29 +281,49 @@ const TicketDetail: React.FC = () => {
             {/* Metadata */}
             <div className="space-y-4">
               <div className="flex flex-col gap-1">
-                <span className="text-xs text-slate-500 uppercase tracking-wide">Project</span>
-                <span className="text-sm font-semibold text-slate-800">{ticket.project_name}</span>
+                <span className="text-xs text-slate-500 uppercase tracking-wide">
+                  Project
+                </span>
+                <span className="text-sm font-semibold text-slate-800">
+                  {ticket.project_name}
+                </span>
               </div>
               <div className="flex flex-col gap-1">
-                <span className="text-xs text-slate-500 uppercase tracking-wide">Created</span>
-                <span className="text-sm text-slate-800">{formatDate(ticket.created_at)}</span>
+                <span className="text-xs text-slate-500 uppercase tracking-wide">
+                  Created
+                </span>
+                <span className="text-sm text-slate-800">
+                  {formatDate(ticket.created_at)}
+                </span>
               </div>
               <div className="flex flex-col gap-1">
-                <span className="text-xs text-slate-500 uppercase tracking-wide">Assignees</span>
+                <span className="text-xs text-slate-500 uppercase tracking-wide">
+                  Assignees
+                </span>
                 <div className="flex flex-wrap gap-2 mt-1">
                   {ticket.assignees && ticket.assignees.length > 0 ? (
-                    ticket.assignees.map(a => (
-                      <div key={a.id} className="flex items-center gap-2 bg-slate-50 px-2 py-1 rounded border border-slate-200">
-                        <Avatar size={20} className="bg-blue-100 text-blue-600 text-[10px]">
+                    ticket.assignees.map((a) => (
+                      <div
+                        key={a.id}
+                        className="flex items-center gap-2 bg-slate-50 px-2 py-1 rounded border border-slate-200"
+                      >
+                        <Avatar
+                          size={20}
+                          className="bg-blue-100 text-blue-600 text-[10px]"
+                        >
                           {a.first_name?.[0] || a.username[0]}
                         </Avatar>
                         <span className="text-xs font-medium text-slate-700">
-                          {a.first_name ? `${a.first_name} ${a.last_name}` : a.username}
+                          {a.first_name
+                            ? `${a.first_name} ${a.last_name}`
+                            : a.username}
                         </span>
                       </div>
                     ))
                   ) : (
-                    <span className="text-sm text-slate-400 italic">No assignees</span>
+                    <span className="text-sm text-slate-400 italic">
+                      No assignees
+                    </span>
                   )}
                 </div>
               </div>
@@ -311,9 +335,13 @@ const TicketDetail: React.FC = () => {
             <div className="bg-amber-50 rounded-xl p-5 border border-amber-200">
               <div className="flex items-center gap-3 mb-3">
                 <InfoCircleOutlined className="text-lg text-amber-600" />
-                <h3 className="font-bold text-amber-900 text-sm">Review Pending</h3>
+                <h3 className="font-bold text-amber-900 text-sm">
+                  Review Pending
+                </h3>
               </div>
-              <p className="text-amber-800 text-xs mb-4">Please review the proposed resolution.</p>
+              <p className="text-amber-800 text-xs mb-4">
+                Please review the proposed resolution.
+              </p>
               <div className="flex gap-2">
                 <Button
                   type="text"
@@ -337,10 +365,16 @@ const TicketDetail: React.FC = () => {
 
           {/* Description */}
           <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
-            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">Description</h3>
+            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">
+              Description
+            </h3>
             <div className="prose prose-slate prose-sm max-w-none text-slate-700">
               <p className="whitespace-pre-wrap break-words">
-                {ticket.description || <span className="text-slate-400 italic">No description provided.</span>}
+                {ticket.description || (
+                  <span className="text-slate-400 italic">
+                    No description provided.
+                  </span>
+                )}
               </p>
             </div>
             {ticket.attachment && (
@@ -357,31 +391,53 @@ const TicketDetail: React.FC = () => {
           </div>
 
           {/* Resolution History */}
-          {ticket.resolution_feedbacks && ticket.resolution_feedbacks.length > 0 && (
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
-              <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-4">History</h3>
-              <div className="space-y-4">
-                {ticket.resolution_feedbacks.map((fb) => (
-                  <div key={fb.id} className="p-3 bg-slate-50 rounded-lg border border-slate-200">
-                    <div className="flex justify-between items-start mb-2">
-                      <Tag color={fb.feedback_type === 'accepted' ? 'success' : 'error'} className="m-0 rounded border-0 text-[10px] font-bold uppercase px-1.5">
-                        {fb.feedback_type}
-                      </Tag>
-                      <span className="text-[10px] text-slate-400">{formatDate(fb.created_at)}</span>
+          {ticket.resolution_feedbacks &&
+            ticket.resolution_feedbacks.length > 0 && (
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-4">
+                  History
+                </h3>
+                <div className="space-y-4">
+                  {ticket.resolution_feedbacks.map((fb) => (
+                    <div
+                      key={fb.id}
+                      className="p-3 bg-slate-50 rounded-lg border border-slate-200"
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <Tag
+                          color={
+                            fb.feedback_type === "accepted"
+                              ? "success"
+                              : "error"
+                          }
+                          className="m-0 rounded border-0 text-[10px] font-bold uppercase px-1.5"
+                        >
+                          {fb.feedback_type}
+                        </Tag>
+                        <span className="text-[10px] text-slate-400">
+                          {formatDate(fb.created_at)}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-600 mb-2 whitespace-pre-wrap">
+                        {fb.feedback || "No comment"}
+                      </p>
+                      {fb.rating && (
+                        <Rate
+                          disabled
+                          defaultValue={fb.rating}
+                          className="text-xs text-amber-500"
+                        />
+                      )}
                     </div>
-                    <p className="text-xs text-slate-600 mb-2 whitespace-pre-wrap">{fb.feedback || "No comment"}</p>
-                    {fb.rating && <Rate disabled defaultValue={fb.rating} className="text-xs text-amber-500" />}
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
         </div>
 
         {/* Right Column: Chat Panel (9 cols - 75%) */}
         {/* We make this section expansive and central */}
         <div className="lg:col-span-9 flex flex-col h-full bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-
           {/* Chat Header */}
           <div className="px-6 py-4 border-b border-slate-100 bg-white flex justify-between items-center z-10">
             <div>
@@ -392,7 +448,9 @@ const TicketDetail: React.FC = () => {
                   <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
                 </span>
               </h3>
-              <p className="text-xs text-slate-400 mt-0.5">Real-time collaboration</p>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Real-time collaboration
+              </p>
             </div>
             <div className="flex -space-x-2">
               {/* Avatars of active participants could go here */}
@@ -402,7 +460,9 @@ const TicketDetail: React.FC = () => {
           {/* Chat Messages Area */}
           <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50">
             {messagesLoading ? (
-              <div className="flex justify-center py-10"><Spin /></div>
+              <div className="flex justify-center py-10">
+                <Spin />
+              </div>
             ) : messages.length === 0 ? (
               <div className="h-full flex flex-col justify-center items-center text-center p-10 text-slate-400 opacity-60">
                 <InfoCircleOutlined className="text-4xl mb-4" />
@@ -410,10 +470,10 @@ const TicketDetail: React.FC = () => {
                 <p className="text-sm">Start the conversation with the team</p>
               </div>
             ) : (
-              messages.map(msg => {
+              messages.map((msg) => {
                 const isMe = msg.user?.username === user?.username;
-                const isSystem = msg.is_system || msg.type === 'system';
-                
+                const isSystem = msg.is_system || msg.type === "system";
+
                 // System messages (status/assignment changes)
                 if (isSystem) {
                   return (
@@ -421,31 +481,55 @@ const TicketDetail: React.FC = () => {
                       <div className="flex items-center gap-2 text-xs text-slate-500 bg-slate-100 px-4 py-2 rounded-full">
                         <span>{msg.content}</span>
                         <span className="text-slate-400">·</span>
-                        <span className="text-slate-400">{formatTime(msg.created_at)}</span>
+                        <span className="text-slate-400">
+                          {formatTime(msg.created_at)}
+                        </span>
                       </div>
                     </div>
                   );
                 }
-                
+
                 return (
-                  <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} group`}>
-                    <div className={`flex flex-col max-w-[70%] ${isMe ? 'items-end' : 'items-start'}`}>
+                  <div
+                    key={msg.id}
+                    className={`flex ${
+                      isMe ? "justify-end" : "justify-start"
+                    } group`}
+                  >
+                    <div
+                      className={`flex flex-col max-w-[70%] ${
+                        isMe ? "items-end" : "items-start"
+                      }`}
+                    >
                       <div className="flex items-end gap-2 mb-1">
                         {!isMe && (
-                          <Avatar size="small" className="bg-slate-200 text-slate-600 text-xs translate-y-1">
-                            {msg.user?.first_name?.[0] || msg.user?.username?.[0] || "?"}
+                          <Avatar
+                            size="small"
+                            className="bg-slate-200 text-slate-600 text-xs translate-y-1"
+                          >
+                            {msg.user?.first_name?.[0] ||
+                              msg.user?.username?.[0] ||
+                              "?"}
                           </Avatar>
                         )}
-                        <div className={`
+                        <div
+                          className={`
                                   px-5 py-3 text-sm shadow-sm
-                                  ${isMe
-                            ? 'bg-blue-600 text-white rounded-2xl rounded-tr-sm'
-                            : 'bg-white text-slate-800 border border-slate-200 rounded-2xl rounded-tl-sm'}
-                               `}>
+                                  ${
+                                    isMe
+                                      ? "bg-blue-600 text-white rounded-2xl rounded-tr-sm"
+                                      : "bg-white text-slate-800 border border-slate-200 rounded-2xl rounded-tl-sm"
+                                  }
+                               `}
+                        >
                           {msg.content}
                         </div>
                       </div>
-                      <span className={`text-[10px] text-slate-400 px-1 opacity-0 group-hover:opacity-100 transition-opacity ${isMe ? 'mr-2' : 'ml-8'}`}>
+                      <span
+                        className={`text-[10px] text-slate-400 px-1 opacity-0 group-hover:opacity-100 transition-opacity ${
+                          isMe ? "mr-2" : "ml-8"
+                        }`}
+                      >
                         {formatTime(msg.created_at)}
                       </span>
                     </div>
@@ -465,9 +549,9 @@ const TicketDetail: React.FC = () => {
                   autoSize={{ minRows: 1, maxRows: 6 }}
                   className="w-full py-3 px-4 rounded-xl border-slate-300 bg-slate-50 focus:bg-white focus:border-blue-500 focus:shadow-sm resize-none text-sm transition-all"
                   value={newMessage}
-                  onChange={e => setNewMessage(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
                       handleSendMessage();
                     }
@@ -488,12 +572,15 @@ const TicketDetail: React.FC = () => {
             </div>
             <div className="text-center mt-2">
               <span className="text-[10px] text-slate-400">
-                Press <kbd className="font-sans border border-slate-200 rounded px-1 bg-slate-50">Enter</kbd> to send
+                Press{" "}
+                <kbd className="font-sans border border-slate-200 rounded px-1 bg-slate-50">
+                  Enter
+                </kbd>{" "}
+                to send
               </span>
             </div>
           </div>
         </div>
-
       </div>
 
       {/* Resolution Modal */}
@@ -506,7 +593,9 @@ const TicketDetail: React.FC = () => {
               <CloseCircleOutlined className="text-red-500" />
             )}
             <span className="font-bold">
-              {feedbackType === "accepted" ? "Accept Resolution" : "Reject Resolution"}
+              {feedbackType === "accepted"
+                ? "Accept Resolution"
+                : "Reject Resolution"}
             </span>
           </div>
         }
@@ -516,13 +605,16 @@ const TicketDetail: React.FC = () => {
         confirmLoading={submittingFeedback}
         okText="Submit"
         okButtonProps={{
-          className: feedbackType === "accepted" ? "bg-emerald-500" : "bg-red-500",
+          className:
+            feedbackType === "accepted" ? "bg-emerald-500" : "bg-red-500",
         }}
       >
         <div className="py-4">
           {feedbackType === "accepted" && (
             <div className="mb-6 text-center">
-              <p className="text-slate-500 mb-2 font-medium">Rate your experience</p>
+              <p className="text-slate-500 mb-2 font-medium">
+                Rate your experience
+              </p>
               <Rate
                 value={rating}
                 onChange={setRating}
@@ -532,7 +624,9 @@ const TicketDetail: React.FC = () => {
           )}
           <div className="mb-2">
             <span className="block text-sm font-bold text-slate-700 mb-2">
-              {feedbackType === "accepted" ? "Comments (Optional)" : "Reason for Rejection"}
+              {feedbackType === "accepted"
+                ? "Comments (Optional)"
+                : "Reason for Rejection"}
             </span>
             <TextArea
               rows={4}

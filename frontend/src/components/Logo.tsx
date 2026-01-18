@@ -8,11 +8,11 @@ interface LogoProps {
 }
 
 /**
- * iTech logo component
+ * MAX network logo component
  * Used across the application for branding consistency
  */
 export const Logo: React.FC<LogoProps> = ({
-  size = 20,
+  size = 32,
   showText = false,
   textColor = "#262626",
 }) => {
@@ -20,7 +20,7 @@ export const Logo: React.FC<LogoProps> = ({
     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
       <img
         src={logoImage}
-        alt="iTech Logo"
+        alt="MAX network Logo"
         style={{
           height: size,
           width: "auto",
@@ -45,11 +45,11 @@ export const Logo: React.FC<LogoProps> = ({
 /**
  * Logo icon only (for collapsed sidebar, favicons, etc.)
  */
-export const LogoIcon: React.FC<{ size?: number }> = ({ size = 20 }) => {
+export const LogoIcon: React.FC<{ size?: number }> = ({ size = 32 }) => {
   return (
     <img
       src={logoImage}
-      alt="iTech Logo"
+      alt="MAX network Logo"
       style={{
         height: size,
         width: "auto",

@@ -239,7 +239,7 @@ const Chat: React.FC = () => {
     webSocketService.connect(
       projectWsPath,
       (event: any) => {
-        if (event.type === 'room_updated' && event.room) {
+        if (event.type === "room_updated" && event.room) {
           // Update the room in our list with new last_message
           setRooms((prev) => {
             const updated = prev.map((room) => {
@@ -248,24 +248,30 @@ const Chat: React.FC = () => {
                   ...room,
                   last_message: event.room.last_message,
                   // Increment unread if not the active room and message is from another user
-                  unread_count: room.id === activeRoom?.id ? 0 : room.unread_count + 1,
+                  unread_count:
+                    room.id === activeRoom?.id ? 0 : room.unread_count + 1,
                 };
               }
               return room;
             });
 
             // Dispatch total unread count update
-            const totalUnread = updated.reduce((sum, room) => sum + room.unread_count, 0);
+            const totalUnread = updated.reduce(
+              (sum, room) => sum + room.unread_count,
+              0
+            );
             window.dispatchEvent(
-              new CustomEvent('chatUnreadUpdate', { detail: { unreadCount: totalUnread } })
+              new CustomEvent("chatUnreadUpdate", {
+                detail: { unreadCount: totalUnread },
+              })
             );
 
             return updated;
           });
         }
       },
-      (error) => console.error('Project chat WebSocket error:', error),
-      () => { } // onClose - reconnection handled by service
+      (error) => console.error("Project chat WebSocket error:", error),
+      () => {} // onClose - reconnection handled by service
     );
 
     return () => {
@@ -342,11 +348,12 @@ const Chat: React.FC = () => {
         case "message_new":
           // For system messages, always add them
           // For regular messages, skip if it's our own (we added it optimistically)
-          const isSystemMessage = event.message.is_system || event.message.type === 'system';
+          const isSystemMessage =
+            event.message.is_system || event.message.type === "system";
           if (isSystemMessage || event.message.user.id !== user?.id) {
             setMessages((prev) => {
               // Avoid duplicates
-              if (prev.some(m => m.id === event.message.id)) return prev;
+              if (prev.some((m) => m.id === event.message.id)) return prev;
               return [...prev, event.message];
             });
             // Scroll to bottom if user is near bottom
@@ -617,7 +624,6 @@ const Chat: React.FC = () => {
     }
   };
 
-
   // Format timestamp
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -700,9 +706,13 @@ const Chat: React.FC = () => {
                 label: (
                   <span>
                     <CustomerServiceOutlined /> Ticket Chats
-                    {ticketChats.reduce((sum, r) => sum + r.unread_count, 0) > 0 && (
+                    {ticketChats.reduce((sum, r) => sum + r.unread_count, 0) >
+                      0 && (
                       <Badge
-                        count={ticketChats.reduce((sum, r) => sum + r.unread_count, 0)}
+                        count={ticketChats.reduce(
+                          (sum, r) => sum + r.unread_count,
+                          0
+                        )}
                         size="small"
                         style={{ marginLeft: 4 }}
                       />
@@ -746,11 +756,11 @@ const Chat: React.FC = () => {
                 dataSource={otherMembers.filter((m) =>
                   searchQuery
                     ? m.username
-                      .toLowerCase()
-                      .includes(searchQuery.toLowerCase()) ||
-                    `${m.first_name} ${m.last_name}`
-                      .toLowerCase()
-                      .includes(searchQuery.toLowerCase())
+                        .toLowerCase()
+                        .includes(searchQuery.toLowerCase()) ||
+                      `${m.first_name} ${m.last_name}`
+                        .toLowerCase()
+                        .includes(searchQuery.toLowerCase())
                     : true
                 )}
                 renderItem={(member) => {
@@ -829,15 +839,20 @@ const Chat: React.FC = () => {
               />
             )}
 
-
             {sidebarTab === "tickets" && (
               // Ticket Chats
               <List
                 dataSource={ticketChats.filter((t) =>
                   searchQuery
-                    ? (t.ticket_key?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                      t.ticket_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                      t.display_name.toLowerCase().includes(searchQuery.toLowerCase()))
+                    ? t.ticket_key
+                        ?.toLowerCase()
+                        .includes(searchQuery.toLowerCase()) ||
+                      t.ticket_name
+                        ?.toLowerCase()
+                        .includes(searchQuery.toLowerCase()) ||
+                      t.display_name
+                        .toLowerCase()
+                        .includes(searchQuery.toLowerCase())
                     : true
                 )}
                 renderItem={(room) => {
@@ -935,7 +950,8 @@ const Chat: React.FC = () => {
                       </div>
                       <div style={{ marginTop: 8 }}>
                         <Text type="secondary" style={{ fontSize: 12 }}>
-                          Ticket chats are created automatically when customers submit tickets
+                          Ticket chats are created automatically when customers
+                          submit tickets
                         </Text>
                       </div>
                     </div>
@@ -1016,8 +1032,8 @@ const Chat: React.FC = () => {
                   >
                     {messages.map((msg) => {
                       const isMine = msg.user.id === user?.id;
-                      const isSystem = msg.is_system || msg.type === 'system';
-                      
+                      const isSystem = msg.is_system || msg.type === "system";
+
                       // System messages (status/assignment changes)
                       if (isSystem) {
                         return (
@@ -1043,7 +1059,7 @@ const Chat: React.FC = () => {
                           </div>
                         );
                       }
-                      
+
                       return (
                         <div
                           key={msg.id}
@@ -1246,10 +1262,11 @@ const Chat: React.FC = () => {
                                             backgroundColor: hasUserReacted
                                               ? "#e6f7ff"
                                               : "#fafafa",
-                                            border: `1px solid ${hasUserReacted
-                                              ? "#1890ff"
-                                              : "#d9d9d9"
-                                              }`,
+                                            border: `1px solid ${
+                                              hasUserReacted
+                                                ? "#1890ff"
+                                                : "#d9d9d9"
+                                            }`,
                                             borderRadius: 12,
                                             cursor: "pointer",
                                             fontSize: 14,

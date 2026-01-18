@@ -45,7 +45,9 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
   const [submitting, setSubmitting] = useState(false);
 
   // Feedback State for Modal
-  const [feedbackView, setFeedbackView] = useState<"none" | "accept" | "reject">("none");
+  const [feedbackView, setFeedbackView] = useState<
+    "none" | "accept" | "reject"
+  >("none");
   const [feedbackText, setFeedbackText] = useState("");
   const [rating, setRating] = useState(0);
   const [submittingFeedback, setSubmittingFeedback] = useState(false);
@@ -209,7 +211,10 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
   };
 
   const formatTime = (dateString: string) => {
-    return new Date(dateString).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    return new Date(dateString).toLocaleTimeString([], {
+      hour: "numeric",
+      minute: "2-digit",
+    });
   };
 
   return (
@@ -250,10 +255,18 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
               <div className="font-mono text-xs font-medium text-slate-500 bg-slate-100 px-2 py-1 rounded">
                 {ticket.ticket_key || ticket.key}
               </div>
-              <h2 className="text-lg font-bold text-slate-800 truncate" title={ticket.name}>
+              <h2
+                className="text-lg font-bold text-slate-800 truncate"
+                title={ticket.name}
+              >
                 {ticket.name}
               </h2>
-              <Tag color={getStatusColor(ticket.status)} className="m-0 rounded border-0 text-xs font-semibold px-2">{ticket.status}</Tag>
+              <Tag
+                color={getStatusColor(ticket.status)}
+                className="m-0 rounded border-0 text-xs font-semibold px-2"
+              >
+                {ticket.status}
+              </Tag>
             </div>
             <Button
               type="text"
@@ -265,14 +278,14 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
 
           {/* Main Content Area */}
           <div className="flex flex-1 overflow-hidden h-full">
-
             {/* LEFT Col: Details (30%) */}
             <div className="w-[30%] min-w-[300px] overflow-y-auto p-4 space-y-4 border-r border-slate-200 bg-white">
-
               {/* Info Bar */}
               <div className="flex flex-col gap-3 text-sm text-slate-500 bg-slate-50 p-4 rounded-lg border border-slate-200">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs uppercase tracking-wide">Created</span>
+                  <span className="text-xs uppercase tracking-wide">
+                    Created
+                  </span>
                   <div className="flex items-center gap-2 text-slate-700 font-medium">
                     <ClockCircleOutlined className="text-slate-400" />
                     <span>{formatDate(ticket.created_at)}</span>
@@ -280,13 +293,24 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
                 </div>
                 <div className="w-full h-px bg-slate-200"></div>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs uppercase tracking-wide">Priority</span>
-                  <Tag color={getPriorityColor(ticket.priority_id)} className="m-0 border-0 rounded text-xs">{getPriorityLabel(ticket.priority_id)}</Tag>
+                  <span className="text-xs uppercase tracking-wide">
+                    Priority
+                  </span>
+                  <Tag
+                    color={getPriorityColor(ticket.priority_id)}
+                    className="m-0 border-0 rounded text-xs"
+                  >
+                    {getPriorityLabel(ticket.priority_id)}
+                  </Tag>
                 </div>
                 <div className="w-full h-px bg-slate-200"></div>
                 <div className="flex flex-col gap-1">
-                  <span className="text-xs uppercase tracking-wide">Project</span>
-                  <span className="font-medium text-slate-800">{ticket.project_name}</span>
+                  <span className="text-xs uppercase tracking-wide">
+                    Project
+                  </span>
+                  <span className="font-medium text-slate-800">
+                    {ticket.project_name}
+                  </span>
                 </div>
               </div>
 
@@ -295,9 +319,13 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
                 <div className="bg-amber-50 rounded-lg p-4 border border-amber-200 shadow-sm">
                   <div className="flex items-center gap-2 mb-2">
                     <InfoCircleOutlined className="text-amber-600" />
-                    <h3 className="font-bold text-amber-900 text-xs uppercase">Review Required</h3>
+                    <h3 className="font-bold text-amber-900 text-xs uppercase">
+                      Review Required
+                    </h3>
                   </div>
-                  <p className="text-slate-700 mb-3 text-xs leading-relaxed">Agent marked as resolved. Please review.</p>
+                  <p className="text-slate-700 mb-3 text-xs leading-relaxed">
+                    Agent marked as resolved. Please review.
+                  </p>
                   <div className="flex gap-2">
                     <Button
                       type="text"
@@ -321,25 +349,44 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
                     <div className="mt-3 pt-3 border-t border-amber-200/50">
                       {feedbackView === "accept" && (
                         <div className="mb-2">
-                          <span className="text-xs font-medium text-amber-900 block mb-1">Rate Service</span>
-                          <Rate value={rating} onChange={setRating} className="text-amber-500 text-sm" />
+                          <span className="text-xs font-medium text-amber-900 block mb-1">
+                            Rate Service
+                          </span>
+                          <Rate
+                            value={rating}
+                            onChange={setRating}
+                            className="text-amber-500 text-sm"
+                          />
                         </div>
                       )}
                       <TextArea
-                        placeholder={feedbackView === "accept" ? "Optional feedback..." : "Reason for rejection..."}
+                        placeholder={
+                          feedbackView === "accept"
+                            ? "Optional feedback..."
+                            : "Reason for rejection..."
+                        }
                         rows={2}
                         value={feedbackText}
-                        onChange={e => setFeedbackText(e.target.value)}
+                        onChange={(e) => setFeedbackText(e.target.value)}
                         className="mb-2 bg-white text-xs"
                       />
                       <div className="flex justify-end gap-2">
-                        <Button size="small" onClick={() => setFeedbackView("none")}>Cancel</Button>
+                        <Button
+                          size="small"
+                          onClick={() => setFeedbackView("none")}
+                        >
+                          Cancel
+                        </Button>
                         <Button
                           type="primary"
                           size="small"
                           onClick={submitFeedback}
                           loading={submittingFeedback}
-                          className={feedbackView === "accept" ? "bg-emerald-600" : "bg-red-600"}
+                          className={
+                            feedbackView === "accept"
+                              ? "bg-emerald-600"
+                              : "bg-red-600"
+                          }
                         >
                           Submit
                         </Button>
@@ -351,7 +398,9 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
 
               {/* Description */}
               <div className="bg-white p-4 rounded-lg border border-slate-200">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Description</h3>
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                  Description
+                </h3>
                 <div className="prose prose-slate max-w-none text-slate-600 text-xs leading-relaxed whitespace-pre-wrap">
                   {ticket.description || "No description provided."}
                 </div>
@@ -370,25 +419,51 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
               </div>
 
               {/* Resolution History */}
-              {ticket.resolution_feedbacks && ticket.resolution_feedbacks.length > 0 && (
-                <div className="bg-white p-4 rounded-lg border border-slate-200">
-                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">History</h3>
-                  <div className="space-y-3">
-                    {ticket.resolution_feedbacks.map(fb => (
-                      <div key={fb.id} className="p-3 bg-slate-50 rounded border border-slate-200">
-                        <div className="flex justify-between items-start mb-1">
-                          <div className="flex items-center gap-2">
-                            <Tag color={fb.feedback_type === 'accepted' ? 'success' : 'error'} className="m-0 border-0 text-[10px] px-1 font-bold">{fb.feedback_type}</Tag>
-                            {fb.rating && <Rate disabled defaultValue={fb.rating} className="text-xs text-amber-500" style={{ fontSize: 10 }} />}
+              {ticket.resolution_feedbacks &&
+                ticket.resolution_feedbacks.length > 0 && (
+                  <div className="bg-white p-4 rounded-lg border border-slate-200">
+                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
+                      History
+                    </h3>
+                    <div className="space-y-3">
+                      {ticket.resolution_feedbacks.map((fb) => (
+                        <div
+                          key={fb.id}
+                          className="p-3 bg-slate-50 rounded border border-slate-200"
+                        >
+                          <div className="flex justify-between items-start mb-1">
+                            <div className="flex items-center gap-2">
+                              <Tag
+                                color={
+                                  fb.feedback_type === "accepted"
+                                    ? "success"
+                                    : "error"
+                                }
+                                className="m-0 border-0 text-[10px] px-1 font-bold"
+                              >
+                                {fb.feedback_type}
+                              </Tag>
+                              {fb.rating && (
+                                <Rate
+                                  disabled
+                                  defaultValue={fb.rating}
+                                  className="text-xs text-amber-500"
+                                  style={{ fontSize: 10 }}
+                                />
+                              )}
+                            </div>
+                            <span className="text-[10px] text-slate-400">
+                              {formatDate(fb.created_at)}
+                            </span>
                           </div>
-                          <span className="text-[10px] text-slate-400">{formatDate(fb.created_at)}</span>
+                          <p className="text-xs text-slate-600 mb-1">
+                            {fb.feedback || "No feedback provided"}
+                          </p>
                         </div>
-                        <p className="text-xs text-slate-600 mb-1">{fb.feedback || "No feedback provided"}</p>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
             </div>
 
             {/* RIGHT Col: Chat (70%) */}
@@ -402,16 +477,18 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
 
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 {messagesLoading ? (
-                  <div className="flex justify-center py-8"><Spin size="small" /></div>
+                  <div className="flex justify-center py-8">
+                    <Spin size="small" />
+                  </div>
                 ) : messages.length === 0 ? (
                   <div className="text-center py-10 text-slate-400">
                     <p className="text-sm">No messages yet</p>
                   </div>
                 ) : (
-                  messages.map(msg => {
+                  messages.map((msg) => {
                     const isMe = msg.user?.username === user?.username;
-                    const isSystem = msg.is_system || msg.type === 'system';
-                    
+                    const isSystem = msg.is_system || msg.type === "system";
+
                     // System messages (status/assignment changes)
                     if (isSystem) {
                       return (
@@ -419,31 +496,55 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
                           <div className="flex items-center gap-2 text-xs text-slate-500 bg-slate-100 px-3 py-1.5 rounded-full">
                             <span>{msg.content}</span>
                             <span className="text-slate-400">·</span>
-                            <span className="text-slate-400">{formatTime(msg.created_at)}</span>
+                            <span className="text-slate-400">
+                              {formatTime(msg.created_at)}
+                            </span>
                           </div>
                         </div>
                       );
                     }
-                    
+
                     return (
-                      <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`flex flex-col max-w-[85%] ${isMe ? 'items-end' : 'items-start'}`}>
+                      <div
+                        key={msg.id}
+                        className={`flex ${
+                          isMe ? "justify-end" : "justify-start"
+                        }`}
+                      >
+                        <div
+                          className={`flex flex-col max-w-[85%] ${
+                            isMe ? "items-end" : "items-start"
+                          }`}
+                        >
                           <div className="flex items-end gap-2">
                             {!isMe && (
-                              <Avatar size="small" className="bg-slate-200 text-slate-600 text-[10px] mb-1">
-                                {msg.user?.first_name?.[0] || msg.user?.username?.[0] || "?"}
+                              <Avatar
+                                size="small"
+                                className="bg-slate-200 text-slate-600 text-[10px] mb-1"
+                              >
+                                {msg.user?.first_name?.[0] ||
+                                  msg.user?.username?.[0] ||
+                                  "?"}
                               </Avatar>
                             )}
-                            <div className={`
+                            <div
+                              className={`
                                   px-4 py-2 text-sm shadow-sm
-                                  ${isMe
-                                ? 'bg-blue-600 text-white rounded-2xl rounded-tr-sm'
-                                : 'bg-white text-slate-800 border border-slate-200 rounded-2xl rounded-tl-sm'}
-                                `}>
+                                  ${
+                                    isMe
+                                      ? "bg-blue-600 text-white rounded-2xl rounded-tr-sm"
+                                      : "bg-white text-slate-800 border border-slate-200 rounded-2xl rounded-tl-sm"
+                                  }
+                                `}
+                            >
                               {msg.content}
                             </div>
                           </div>
-                          <span className={`text-[10px] text-slate-400 mt-1 px-1 ${isMe ? 'mr-1' : 'ml-8'}`}>
+                          <span
+                            className={`text-[10px] text-slate-400 mt-1 px-1 ${
+                              isMe ? "mr-1" : "ml-8"
+                            }`}
+                          >
                             {formatTime(msg.created_at)}
                           </span>
                         </div>
@@ -461,9 +562,9 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
                     autoSize={{ minRows: 1, maxRows: 4 }}
                     className="flex-1 py-2.5 px-3 rounded-lg border-slate-300 bg-slate-50 focus:bg-white focus:border-blue-500 resize-none text-sm"
                     value={messageText}
-                    onChange={e => setMessageText(e.target.value)}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
+                    onChange={(e) => setMessageText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
                         e.preventDefault();
                         handleSendMessage();
                       }
@@ -482,7 +583,6 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
                 </div>
               </div>
             </div>
-
           </div>
         </div>
       ) : null}
