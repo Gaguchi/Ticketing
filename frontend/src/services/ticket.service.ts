@@ -15,6 +15,7 @@ import type {
   ToggleFollowResponse,
   TicketColumn,
   BoardColumn,
+  User,
 } from '../types/api';
 
 /**
@@ -65,6 +66,14 @@ class TicketService {
    */
   async getTicket(id: number): Promise<Ticket> {
     return apiService.get<Ticket>(API_ENDPOINTS.TICKET_DETAIL(id));
+  }
+
+  /**
+   * Get users who can be assigned to this ticket.
+   * Returns company admins if ticket has a company, otherwise project admins.
+   */
+  async getAssignableUsers(ticketId: number): Promise<User[]> {
+    return apiService.get<User[]>(API_ENDPOINTS.TICKET_ASSIGNABLE_USERS(ticketId));
   }
 
   /**

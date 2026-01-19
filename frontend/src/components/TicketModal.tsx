@@ -60,6 +60,7 @@ import type {
   TicketImportance,
   User,
   Project,
+  BoardColumn,
 } from "../types/api";
 
 const { Option } = Select;
@@ -72,6 +73,7 @@ interface TicketModalProps {
   mode?: "create" | "edit";
   columnId?: number;
   onSuccess?: (ticket: Ticket) => void;
+  boardColumns?: BoardColumn[]; // For Jira-style status dropdown
 }
 
 const getTypeIcon = (type?: string) => {
@@ -111,6 +113,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
   mode = "edit",
   columnId,
   onSuccess,
+  boardColumns = [],
 }) => {
   const isCreateMode = mode === "create";
 
@@ -119,6 +122,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
   const [description, setDescription] = useState(ticket?.description || "");
   const [ticketType, setTicketType] = useState(ticket?.type || "task");
   const [selectedColumn, setSelectedColumn] = useState(ticket?.column || columnId || 1);
+  const [selectedStatusKey, setSelectedStatusKey] = useState<string | null>(ticket?.ticket_status_key || null);
   const [priority, setPriority] = useState(ticket?.priority_id || 2); // Default: Normal
   const [urgency, _setUrgency] = useState<TicketUrgency>((ticket?.urgency as TicketUrgency) || "normal");
   const [importance, _setImportance] = useState<TicketImportance>((ticket?.importance as TicketImportance) || "normal");
@@ -138,10 +142,10 @@ export const TicketModal: React.FC<TicketModalProps> = ({
   const [availableProjects, setAvailableProjects] = useState<Project[]>([]);
   const [projectColumns, setProjectColumns] = useState<any[]>([]);
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
+  const [assignableUsers, setAssignableUsers] = useState<User[]>([]); // Admins who can be assigned
+  const [loadingAssignableUsers, setLoadingAssignableUsers] = useState(false);
   const [companies, setCompanies] = useState<any[]>([]);
   const [loadingCompanies, setLoadingCompanies] = useState(false);
-  const [admins, setAdmins] = useState<any[]>([]);
-  const [_loadingAdmins, setLoadingAdmins] = useState(false);
 
   // Subtask & Links state
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
@@ -186,6 +190,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
   useEffect(() => {
     if (open) {
       if (availableProjects.length === 0) projectService.getAllProjects().then(setAvailableProjects).catch(console.error);
+      // Load all users for reference (e.g., reporter display)
       if (availableUsers.length === 0) userService.getAllUsers().then(setAvailableUsers).catch(console.error);
 
       const projectData = localStorage.getItem("currentProject");
@@ -200,6 +205,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
       setDescription(ticket.description || "");
       setTicketType(ticket.type || "task");
       setSelectedColumn(ticket.column || 1);
+      setSelectedStatusKey(ticket.ticket_status_key || null);
       setPriority(ticket.priority_id || 3);
       setSelectedProjectId(ticket.project || null);
       setSelectedCompanyId(ticket.company || null);
@@ -213,6 +219,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
       setDescription("");
       setAssignees([]);
       setDueDate(null);
+      setSelectedStatusKey(null);
       setIsEditingDescription(true); // Default to edit for new tickets
     }
   }, [open, ticket, isCreateMode]);
@@ -223,16 +230,31 @@ export const TicketModal: React.FC<TicketModalProps> = ({
       projectService.getProjectColumns(selectedProjectId).then(setProjectColumns).catch(console.error);
       setLoadingCompanies(true);
       companyService.getAllCompanies(selectedProjectId).then(setCompanies).finally(() => setLoadingCompanies(false));
+    }
+  }, [open, selectedProjectId]);
 
-      // Load admins/users for assignment
+  // 3.5. Load assignable users from backend (handles company/project logic server-side)
+  useEffect(() => {
+    if (open && ticket?.id && !isCreateMode) {
+      // For existing tickets, use the backend endpoint that handles the logic
+      setLoadingAssignableUsers(true);
+      ticketService.getAssignableUsers(ticket.id)
+        .then(setAssignableUsers)
+        .catch(console.error)
+        .finally(() => setLoadingAssignableUsers(false));
+    } else if (open && selectedProjectId && isCreateMode) {
+      // For new tickets, load project admins (company can be selected later)
+      setLoadingAssignableUsers(true);
       const fetchPromise = selectedCompanyId
         ? companyService.getCompanyAdmins(selectedCompanyId)
         : projectService.getProjectAdmins(selectedProjectId);
-
-      setLoadingAdmins(true);
-      fetchPromise.then(setAdmins).finally(() => setLoadingAdmins(false));
+      
+      fetchPromise
+        .then(setAssignableUsers)
+        .catch(console.error)
+        .finally(() => setLoadingAssignableUsers(false));
     }
-  }, [open, selectedProjectId, selectedCompanyId]);
+  }, [open, ticket?.id, ticket?.company, selectedProjectId, selectedCompanyId, isCreateMode]);
 
   // 4. Load Subtasks & Links
   useEffect(() => {
@@ -462,7 +484,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                   </div>
                 </div>
 
-                {/* Assignees */}
+                {/* Assignees - Only project admins, or company admins if company is attached */}
                 <div className="meta-item">
                   <span className="meta-label">Assignees</span>
                   <div className="meta-value">
@@ -473,51 +495,132 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                         setAssignees(ids);
                         if (ticket?.id) {
                           try {
-                            await ticketService.updateTicket(ticket.id, { assignee_ids: ids });
+                            const updatedTicket = await ticketService.updateTicket(ticket.id, { assignee_ids: ids });
                             message.success('Assignees updated');
-                            onSuccess?.({ ...ticket, assignee_ids: ids } as any);
+                            // Build assignees array from assignableUsers for Kanban display
+                            const assigneesArray = assignableUsers.filter(u => ids.includes(u.id));
+                            onSuccess?.({ ...ticket, ...updatedTicket, assignees: assigneesArray } as Ticket);
                           } catch (e) { message.error('Failed to update assignees'); }
                         }
                       }}
-                      placeholder="Assign..."
+                      placeholder={ticket?.company ? "Company admins..." : "Project admins..."}
                       style={{ minWidth: 100, maxWidth: 200 }}
                       variant="borderless"
                       size="small"
                       maxTagCount={1}
                       maxTagPlaceholder={(omitted) => `+${omitted.length}`}
-                    >
-                      {admins.map(u => (
-                        <Option key={u.id} value={u.id}>{u.username}</Option>
-                      ))}
-                    </Select>
+                      loading={loadingAssignableUsers}
+                      optionFilterProp="label"
+                      options={(() => {
+                        // Build options from assignableUsers, but also include current ticket assignees
+                        // to prevent showing IDs when data is loading
+                        const optionsMap = new Map<number, { value: number; label: string }>();
+                        
+                        // Add current ticket assignees first (so they display correctly during loading)
+                        ticket?.assignees?.forEach(a => {
+                          optionsMap.set(a.id, { 
+                            value: a.id, 
+                            label: a.first_name ? `${a.first_name} ${a.last_name || ''}`.trim() : a.username 
+                          });
+                        });
+                        
+                        // Add/overwrite with assignable users
+                        assignableUsers.forEach(u => {
+                          optionsMap.set(u.id, { 
+                            value: u.id, 
+                            label: u.first_name ? `${u.first_name} ${u.last_name || ''}`.trim() : u.username 
+                          });
+                        });
+                        
+                        return Array.from(optionsMap.values());
+                      })()}
+                    />
                   </div>
                 </div>
 
-                {/* Status */}
+                {/* Status - Use board columns if available, else fall back to legacy columns */}
                 <div className="meta-item">
                   <span className="meta-label">Status</span>
                   <div className="meta-value">
-                    <Select
-                      value={selectedColumn}
-                      onChange={async (c) => {
-                        setSelectedColumn(c);
-                        if (ticket?.id) {
-                          try {
-                            await ticketService.updateTicket(ticket.id, { column: c });
-                            message.success('Status updated');
-                            onSuccess?.({ ...ticket, column: c } as Ticket);
-                          } catch (e) { message.error('Failed to update status'); }
-                        }
-                      }}
-                      style={{ width: 120 }}
-                      size="small"
-                      variant="borderless"
-                      className="status-select"
-                    >
-                      {projectColumns.map(col => (
-                        <Option key={col.id} value={col.id}>{col.name}</Option>
-                      ))}
-                    </Select>
+                    {boardColumns.length > 0 ? (
+                      // Board column-based status - show column names (To Do, In Progress, Review, Done)
+                      <Select
+                        value={(() => {
+                          // Find which board column contains the current status
+                          const currentColumn = boardColumns.find(bc => 
+                            bc.statuses.some(s => s.key === selectedStatusKey)
+                          );
+                          return currentColumn?.id;
+                        })()}
+                        onChange={async (columnId: number) => {
+                          const targetColumn = boardColumns.find(bc => bc.id === columnId);
+                          if (!targetColumn || targetColumn.statuses.length === 0) return;
+                          
+                          // Use the first status of the target column
+                          const targetStatus = targetColumn.statuses[0];
+                          setSelectedStatusKey(targetStatus.key);
+                          
+                          if (ticket?.id) {
+                            try {
+                              const updatedTicket = await ticketService.updateTicket(ticket.id, { ticket_status_key: targetStatus.key });
+                              message.success('Status updated');
+                              onSuccess?.({ 
+                                ...ticket, 
+                                ...updatedTicket,
+                                ticket_status_key: targetStatus.key,
+                                ticket_status_name: targetStatus.name,
+                                ticket_status_category: targetStatus.category,
+                                ticket_status_color: targetStatus.category_color,
+                              } as Ticket);
+                            } catch (e) { message.error('Failed to update status'); }
+                          }
+                        }}
+                        style={{ width: 140 }}
+                        size="small"
+                        variant="borderless"
+                        className="status-select"
+                        popupMatchSelectWidth={false}
+                      >
+                        {/* Show board column names - the actual project workflow states */}
+                        {boardColumns.map(bc => (
+                          <Option key={bc.id} value={bc.id}>
+                            <span style={{ 
+                              padding: '2px 6px', 
+                              borderRadius: '3px', 
+                              backgroundColor: bc.statuses[0]?.category_color || '#e0e0e0',
+                              color: '#fff',
+                              fontSize: '11px',
+                              fontWeight: 500,
+                            }}>
+                              {bc.name}
+                            </span>
+                          </Option>
+                        ))}
+                      </Select>
+                    ) : (
+                      // Legacy column system fallback
+                      <Select
+                        value={selectedColumn}
+                        onChange={async (c) => {
+                          setSelectedColumn(c);
+                          if (ticket?.id) {
+                            try {
+                              const updatedTicket = await ticketService.updateTicket(ticket.id, { column: c });
+                              message.success('Status updated');
+                              onSuccess?.({ ...ticket, ...updatedTicket } as Ticket);
+                            } catch (e) { message.error('Failed to update status'); }
+                          }
+                        }}
+                        style={{ width: 120 }}
+                        size="small"
+                        variant="borderless"
+                        className="status-select"
+                      >
+                        {projectColumns.map(col => (
+                          <Option key={col.id} value={col.id}>{col.name}</Option>
+                        ))}
+                      </Select>
+                    )}
                   </div>
                 </div>
 

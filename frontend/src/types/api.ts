@@ -382,6 +382,7 @@ export interface UpdateTicketData {
   tag_names?: string[];
   due_date?: string | null;
   start_date?: string | null;
+  ticket_status_key?: string | null; // Jira-style status key
 }
 
 export interface TicketFilterParams extends PaginationParams {

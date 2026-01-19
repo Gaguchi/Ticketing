@@ -1873,6 +1873,43 @@ class TicketViewSet(viewsets.ModelViewSet):
         
         return Response(combined)
 
+    @action(detail=True, methods=['get'], url_path='assignable-users')
+    def assignable_users(self, request, pk=None):
+        """
+        Get users who can be assigned to this ticket.
+        
+        Logic:
+        - If ticket has a company attached: return company admins only
+        - Otherwise: return project admins (users with admin/superadmin role)
+        
+        GET /api/tickets/tickets/{id}/assignable-users/
+        """
+        ticket = self.get_object()
+        
+        if ticket.company:
+            # Company is attached - only company admins can be assigned
+            users = ticket.company.admins.all()
+        else:
+            # No company - project admins can be assigned
+            admin_roles = UserRole.objects.filter(
+                project=ticket.project,
+                role__in=['admin', 'superadmin']
+            ).select_related('user')
+            users = [role.user for role in admin_roles]
+            
+            # Also include project lead
+            if ticket.project and ticket.project.lead_username:
+                try:
+                    lead_user = User.objects.get(username=ticket.project.lead_username)
+                    if lead_user not in users:
+                        users.append(lead_user)
+                except User.DoesNotExist:
+                    pass
+        
+        from .serializers import UserSimpleSerializer
+        serializer = UserSimpleSerializer(users, many=True)
+        return Response(serializer.data)
+
     @action(detail=True, methods=['post'])
     def move_to_column(self, request, pk=None):
         """Move ticket to a different column with proper positioning"""

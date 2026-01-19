@@ -208,7 +208,8 @@ class ChatService {
       );
       return room;
     } catch (error: any) {
-      if (error?.response?.status === 404) {
+      // Handle 404 - no chat room exists yet (this is expected for new tickets)
+      if (error?.status === 404) {
         return null;
       }
       throw error;

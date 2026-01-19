@@ -892,8 +892,10 @@ const Tickets: React.FC = () => {
   );
 
   const handleTicketModalSuccess = useCallback((updatedTicket: Ticket) => {
+    if (!updatedTicket) return;
+    
+    // Update the tickets list
     setTickets((prev) => {
-      if (!updatedTicket) return prev;
       const existing = prev.some((t) => t.id === updatedTicket.id);
       if (updatedTicket.is_archived) {
         return prev.filter((t) => t.id !== updatedTicket.id);
@@ -905,6 +907,14 @@ const Tickets: React.FC = () => {
         );
       }
       return [updatedTicket, ...prev];
+    });
+    
+    // Also update selectedTicket so the modal reflects changes immediately
+    setSelectedTicket((prev) => {
+      if (prev && prev.id === updatedTicket.id) {
+        return { ...prev, ...updatedTicket };
+      }
+      return prev;
     });
   }, []);
 
@@ -1097,6 +1107,7 @@ const Tickets: React.FC = () => {
         onClose={() => setSelectedTicket(null)}
         ticket={selectedTicket}
         onSuccess={handleTicketModalSuccess}
+        boardColumns={boardColumns}
       />
 
       {/* Create Ticket Modal */}

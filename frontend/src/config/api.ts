@@ -37,6 +37,7 @@ export const API_ENDPOINTS = {
   TICKET_FOLLOW: (id: number) => api(`/tickets/${id}/toggle_follow/`),
   TICKET_ARCHIVE: (id: number) => api(`/tickets/${id}/archive/`),
   TICKET_RESTORE: (id: number) => api(`/tickets/${id}/restore/`),
+  TICKET_ASSIGNABLE_USERS: (id: number) => api(`/tickets/${id}/assignable-users/`),
   TICKET_TRIGGER_ARCHIVE: api('/tickets/trigger-archive/'),
   TICKET_REORDER: api('/tickets/reorder_tickets/'),
 
