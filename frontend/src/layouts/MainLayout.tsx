@@ -96,7 +96,7 @@ const MainLayout: React.FC = () => {
         const rooms = await chatService.getRooms(selectedProject.id);
         const totalUnread = rooms.reduce(
           (sum, room) => sum + room.unread_count,
-          0
+          0,
         );
         setUnreadChatCount(totalUnread);
       } catch (error) {
@@ -123,7 +123,7 @@ const MainLayout: React.FC = () => {
         chatService.getRooms(selectedProject.id).then((rooms) => {
           const totalUnread = rooms.reduce(
             (sum, room) => sum + room.unread_count,
-            0
+            0,
           );
           setUnreadChatCount(totalUnread);
         });
@@ -156,7 +156,7 @@ const MainLayout: React.FC = () => {
       chatService.getRooms(selectedProject.id).then((rooms) => {
         const totalUnread = rooms.reduce(
           (sum, room) => sum + room.unread_count,
-          0
+          0,
         );
         setUnreadChatCount(totalUnread);
       });
@@ -447,7 +447,7 @@ const MainLayout: React.FC = () => {
                   value={selectedProject?.id}
                   onChange={(value) => {
                     const project = availableProjects.find(
-                      (p) => p.id === value
+                      (p) => p.id === value,
                     );
                     if (project) {
                       setSelectedProject(project);

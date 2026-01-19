@@ -13,7 +13,7 @@ import {
   Divider,
   Tooltip,
   Drawer,
-  Typography
+  Typography,
 } from "antd";
 import {
   ShareAltOutlined,
@@ -78,20 +78,25 @@ interface TicketModalProps {
 
 const getTypeIcon = (type?: string) => {
   switch (type) {
-    case "task": return { icon: faCheckSquare, color: "#4bade8" };
-    case "bug": return { icon: faBug, color: "#e5493a" };
-    case "story": return { icon: faBookmark, color: "#63ba3c" };
-    case "epic": return { icon: faBolt, color: "#904ee2" };
-    default: return { icon: faCheckSquare, color: "#4bade8" };
+    case "task":
+      return { icon: faCheckSquare, color: "#4bade8" };
+    case "bug":
+      return { icon: faBug, color: "#e5493a" };
+    case "story":
+      return { icon: faBookmark, color: "#63ba3c" };
+    case "epic":
+      return { icon: faBolt, color: "#904ee2" };
+    default:
+      return { icon: faCheckSquare, color: "#4bade8" };
   }
 };
 
 // Priority labels matching PriorityIcons.tsx
 const PRIORITY_LABELS: Record<number, string> = {
-  1: 'Backlog',
-  2: 'Normal',
-  3: 'High',
-  4: 'Urgent',
+  1: "Backlog",
+  2: "Normal",
+  3: "High",
+  4: "Urgent",
 };
 
 // Quill editor modules configuration
@@ -121,16 +126,34 @@ export const TicketModal: React.FC<TicketModalProps> = ({
   const [title, setTitle] = useState(ticket?.name || "");
   const [description, setDescription] = useState(ticket?.description || "");
   const [ticketType, setTicketType] = useState(ticket?.type || "task");
-  const [selectedColumn, setSelectedColumn] = useState(ticket?.column || columnId || 1);
-  const [selectedStatusKey, setSelectedStatusKey] = useState<string | null>(ticket?.ticket_status_key || null);
+  const [selectedColumn, setSelectedColumn] = useState(
+    ticket?.column || columnId || 1,
+  );
+  const [selectedStatusKey, setSelectedStatusKey] = useState<string | null>(
+    ticket?.ticket_status_key || null,
+  );
   const [priority, setPriority] = useState(ticket?.priority_id || 2); // Default: Normal
-  const [urgency, _setUrgency] = useState<TicketUrgency>((ticket?.urgency as TicketUrgency) || "normal");
-  const [importance, _setImportance] = useState<TicketImportance>((ticket?.importance as TicketImportance) || "normal");
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(ticket?.project || null);
-  const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(ticket?.company || null);
-  const [assignees, setAssignees] = useState<number[]>(ticket?.assignees?.map((a: any) => a.id) || []);
-  const [dueDate, setDueDate] = useState<dayjs.Dayjs | null>(ticket?.due_date ? dayjs(ticket.due_date) : null);
-  const [startDate, setStartDate] = useState<dayjs.Dayjs | null>(ticket?.start_date ? dayjs(ticket.start_date) : null);
+  const [urgency, _setUrgency] = useState<TicketUrgency>(
+    (ticket?.urgency as TicketUrgency) || "normal",
+  );
+  const [importance, _setImportance] = useState<TicketImportance>(
+    (ticket?.importance as TicketImportance) || "normal",
+  );
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(
+    ticket?.project || null,
+  );
+  const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(
+    ticket?.company || null,
+  );
+  const [assignees, setAssignees] = useState<number[]>(
+    ticket?.assignees?.map((a: any) => a.id) || [],
+  );
+  const [dueDate, setDueDate] = useState<dayjs.Dayjs | null>(
+    ticket?.due_date ? dayjs(ticket.due_date) : null,
+  );
+  const [startDate, setStartDate] = useState<dayjs.Dayjs | null>(
+    ticket?.start_date ? dayjs(ticket.start_date) : null,
+  );
 
   // UI State
   const [_saving, setSaving] = useState(false);
@@ -154,8 +177,12 @@ export const TicketModal: React.FC<TicketModalProps> = ({
   const [linkedItems, setLinkedItems] = useState<IssueLink[]>([]);
   const [addingLink, setAddingLink] = useState(false);
   const [newLinkType, setNewLinkType] = useState("");
-  const [selectedTargetTicket, setSelectedTargetTicket] = useState<number | null>(null);
-  const [ticketSearchResults, setTicketSearchResults] = useState<LinkedTicket[]>([]);
+  const [selectedTargetTicket, setSelectedTargetTicket] = useState<
+    number | null
+  >(null);
+  const [ticketSearchResults, setTicketSearchResults] = useState<
+    LinkedTicket[]
+  >([]);
   const [_searchingTickets, setSearchingTickets] = useState(false);
   const [_archiveActionLoading, setArchiveActionLoading] = useState(false);
 
@@ -171,8 +198,11 @@ export const TicketModal: React.FC<TicketModalProps> = ({
       message.success("Ticket moved to archive");
       onSuccess?.(updatedTicket);
       onClose();
-    } catch (e) { message.error("Failed to archive"); }
-    finally { setArchiveActionLoading(false); }
+    } catch (e) {
+      message.error("Failed to archive");
+    } finally {
+      setArchiveActionLoading(false);
+    }
   };
 
   const handleRestoreTicket = async () => {
@@ -182,16 +212,24 @@ export const TicketModal: React.FC<TicketModalProps> = ({
       const updatedTicket = await ticketService.restoreTicket(ticket.id);
       message.success("Ticket restored");
       onSuccess?.(updatedTicket);
-    } catch (e) { message.error("Failed to restore"); }
-    finally { setArchiveActionLoading(false); }
+    } catch (e) {
+      message.error("Failed to restore");
+    } finally {
+      setArchiveActionLoading(false);
+    }
   };
 
   // 1. Init Data
   useEffect(() => {
     if (open) {
-      if (availableProjects.length === 0) projectService.getAllProjects().then(setAvailableProjects).catch(console.error);
+      if (availableProjects.length === 0)
+        projectService
+          .getAllProjects()
+          .then(setAvailableProjects)
+          .catch(console.error);
       // Load all users for reference (e.g., reporter display)
-      if (availableUsers.length === 0) userService.getAllUsers().then(setAvailableUsers).catch(console.error);
+      if (availableUsers.length === 0)
+        userService.getAllUsers().then(setAvailableUsers).catch(console.error);
 
       const projectData = localStorage.getItem("currentProject");
       if (projectData) setCurrentProject(JSON.parse(projectData));
@@ -227,9 +265,15 @@ export const TicketModal: React.FC<TicketModalProps> = ({
   // 3. Load Project Data
   useEffect(() => {
     if (open && selectedProjectId) {
-      projectService.getProjectColumns(selectedProjectId).then(setProjectColumns).catch(console.error);
+      projectService
+        .getProjectColumns(selectedProjectId)
+        .then(setProjectColumns)
+        .catch(console.error);
       setLoadingCompanies(true);
-      companyService.getAllCompanies(selectedProjectId).then(setCompanies).finally(() => setLoadingCompanies(false));
+      companyService
+        .getAllCompanies(selectedProjectId)
+        .then(setCompanies)
+        .finally(() => setLoadingCompanies(false));
     }
   }, [open, selectedProjectId]);
 
@@ -238,7 +282,8 @@ export const TicketModal: React.FC<TicketModalProps> = ({
     if (open && ticket?.id && !isCreateMode) {
       // For existing tickets, use the backend endpoint that handles the logic
       setLoadingAssignableUsers(true);
-      ticketService.getAssignableUsers(ticket.id)
+      ticketService
+        .getAssignableUsers(ticket.id)
         .then(setAssignableUsers)
         .catch(console.error)
         .finally(() => setLoadingAssignableUsers(false));
@@ -248,19 +293,32 @@ export const TicketModal: React.FC<TicketModalProps> = ({
       const fetchPromise = selectedCompanyId
         ? companyService.getCompanyAdmins(selectedCompanyId)
         : projectService.getProjectAdmins(selectedProjectId);
-      
+
       fetchPromise
         .then(setAssignableUsers)
         .catch(console.error)
         .finally(() => setLoadingAssignableUsers(false));
     }
-  }, [open, ticket?.id, ticket?.company, selectedProjectId, selectedCompanyId, isCreateMode]);
+  }, [
+    open,
+    ticket?.id,
+    ticket?.company,
+    selectedProjectId,
+    selectedCompanyId,
+    isCreateMode,
+  ]);
 
   // 4. Load Subtasks & Links
   useEffect(() => {
     if (open && ticket?.id && !isCreateMode) {
-      subtaskService.getSubtasks(ticket.id).then(setSubtasks).catch(console.error);
-      linkedItemService.getLinkedItems(ticket.id).then(setLinkedItems).catch(console.error);
+      subtaskService
+        .getSubtasks(ticket.id)
+        .then(setSubtasks)
+        .catch(console.error);
+      linkedItemService
+        .getLinkedItems(ticket.id)
+        .then(setLinkedItems)
+        .catch(console.error);
     } else {
       setSubtasks([]);
       setLinkedItems([]);
@@ -270,7 +328,10 @@ export const TicketModal: React.FC<TicketModalProps> = ({
   // --- Handlers ---
 
   const handleSave = async () => {
-    if (!title.trim()) { message.error("Title required"); return; }
+    if (!title.trim()) {
+      message.error("Title required");
+      return;
+    }
     setSaving(true);
     try {
       const ticketData: CreateTicketData = {
@@ -278,9 +339,12 @@ export const TicketModal: React.FC<TicketModalProps> = ({
         description,
         type: ticketType,
         priority_id: priority,
-        urgency, importance,
+        urgency,
+        importance,
         column: selectedColumn,
-        project: selectedProjectId || (isCreateMode ? currentProject?.id : ticket?.project),
+        project:
+          selectedProjectId ||
+          (isCreateMode ? currentProject?.id : ticket?.project),
         company: selectedCompanyId || undefined,
         due_date: dueDate ? dueDate.format("YYYY-MM-DD") : null,
         start_date: startDate ? startDate.format("YYYY-MM-DD") : null,
@@ -288,7 +352,8 @@ export const TicketModal: React.FC<TicketModalProps> = ({
       };
 
       let savedTicket: Ticket;
-      if (isCreateMode) savedTicket = await ticketService.createTicket(ticketData);
+      if (isCreateMode)
+        savedTicket = await ticketService.createTicket(ticketData);
       else if (ticket) {
         savedTicket = await ticketService.updateTicket(ticket.id, ticketData);
         message.success("Saved");
@@ -297,29 +362,40 @@ export const TicketModal: React.FC<TicketModalProps> = ({
       onSuccess?.(savedTicket);
       if (isCreateMode) onClose();
       setIsEditingDescription(false);
-    } catch (e) { message.error("Failed to save"); }
-    finally { setSaving(false); }
+    } catch (e) {
+      message.error("Failed to save");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleAddSubtask = async () => {
     if (!newSubtaskTitle.trim() || !ticket?.id) return;
     setAddingSubtask(true);
     try {
-      const s = await subtaskService.createSubtask({ ticket: ticket.id, title: newSubtaskTitle.trim() });
+      const s = await subtaskService.createSubtask({
+        ticket: ticket.id,
+        title: newSubtaskTitle.trim(),
+      });
       setSubtasks([...subtasks, s]);
       setNewSubtaskTitle("");
-    } catch (e) { message.error("Failed to add subtask"); }
-    finally { setAddingSubtask(false); }
+    } catch (e) {
+      message.error("Failed to add subtask");
+    } finally {
+      setAddingSubtask(false);
+    }
   };
 
   const handleToggleSubtask = async (id: number, checked: boolean) => {
     await subtaskService.toggleComplete(id, checked);
-    setSubtasks(subtasks.map(s => s.id === id ? { ...s, is_completed: checked } : s));
+    setSubtasks(
+      subtasks.map((s) => (s.id === id ? { ...s, is_completed: checked } : s)),
+    );
   };
 
   const handleDeleteSubtask = async (id: number) => {
     await subtaskService.deleteSubtask(id);
-    setSubtasks(subtasks.filter(s => s.id !== id));
+    setSubtasks(subtasks.filter((s) => s.id !== id));
   };
 
   const handleSearchTickets = async (val: string) => {
@@ -327,8 +403,10 @@ export const TicketModal: React.FC<TicketModalProps> = ({
     setSearchingTickets(true);
     try {
       const res = await linkedItemService.searchTickets(val, ticket?.project);
-      setTicketSearchResults(res.filter(t => t.id !== ticket?.id));
-    } finally { setSearchingTickets(false); }
+      setTicketSearchResults(res.filter((t) => t.id !== ticket?.id));
+    } finally {
+      setSearchingTickets(false);
+    }
   };
 
   const handleAddLink = async () => {
@@ -336,18 +414,23 @@ export const TicketModal: React.FC<TicketModalProps> = ({
     setAddingLink(true);
     try {
       const l = await linkedItemService.createLink({
-        source_ticket_id: ticket.id, target_ticket_id: selectedTargetTicket, link_type: newLinkType
+        source_ticket_id: ticket.id,
+        target_ticket_id: selectedTargetTicket,
+        link_type: newLinkType,
       });
       setLinkedItems([...linkedItems, l]);
       setAddingLink(false);
       setSelectedTargetTicket(null);
-    } catch (e) { message.error("Failed to link"); }
-    finally { setAddingLink(false); }
+    } catch (e) {
+      message.error("Failed to link");
+    } finally {
+      setAddingLink(false);
+    }
   };
 
   const handleDeleteLink = async (id: number) => {
     await linkedItemService.deleteLink(id);
-    setLinkedItems(linkedItems.filter(l => l.id !== id));
+    setLinkedItems(linkedItems.filter((l) => l.id !== id));
   };
 
   if (!isCreateMode && !ticket) return null;
@@ -371,56 +454,113 @@ export const TicketModal: React.FC<TicketModalProps> = ({
             <Space size={12}>
               {/* Type Icon (Subtle) */}
               <Dropdown
-                trigger={['click']}
+                trigger={["click"]}
                 menu={{
                   items: [
                     {
-                      key: "task", label: "Task", icon: <FontAwesomeIcon icon={faCheckSquare} color="#4bade8" />, onClick: async () => {
+                      key: "task",
+                      label: "Task",
+                      icon: (
+                        <FontAwesomeIcon icon={faCheckSquare} color="#4bade8" />
+                      ),
+                      onClick: async () => {
                         setTicketType("task");
                         if (ticket?.id) {
-                          try { await ticketService.updateTicket(ticket.id, { type: "task" }); message.success('Type updated'); onSuccess?.({ ...ticket, type: "task" } as Ticket); }
-                          catch (e) { message.error('Failed to update type'); }
+                          try {
+                            await ticketService.updateTicket(ticket.id, {
+                              type: "task",
+                            });
+                            message.success("Type updated");
+                            onSuccess?.({ ...ticket, type: "task" } as Ticket);
+                          } catch (e) {
+                            message.error("Failed to update type");
+                          }
                         }
-                      }
+                      },
                     },
                     {
-                      key: "bug", label: "Bug", icon: <FontAwesomeIcon icon={faBug} color="#e5493a" />, onClick: async () => {
+                      key: "bug",
+                      label: "Bug",
+                      icon: <FontAwesomeIcon icon={faBug} color="#e5493a" />,
+                      onClick: async () => {
                         setTicketType("bug");
                         if (ticket?.id) {
-                          try { await ticketService.updateTicket(ticket.id, { type: "bug" }); message.success('Type updated'); onSuccess?.({ ...ticket, type: "bug" } as Ticket); }
-                          catch (e) { message.error('Failed to update type'); }
+                          try {
+                            await ticketService.updateTicket(ticket.id, {
+                              type: "bug",
+                            });
+                            message.success("Type updated");
+                            onSuccess?.({ ...ticket, type: "bug" } as Ticket);
+                          } catch (e) {
+                            message.error("Failed to update type");
+                          }
                         }
-                      }
+                      },
                     },
                     {
-                      key: "story", label: "Story", icon: <FontAwesomeIcon icon={faBookmark} color="#63ba3c" />, onClick: async () => {
+                      key: "story",
+                      label: "Story",
+                      icon: (
+                        <FontAwesomeIcon icon={faBookmark} color="#63ba3c" />
+                      ),
+                      onClick: async () => {
                         setTicketType("story");
                         if (ticket?.id) {
-                          try { await ticketService.updateTicket(ticket.id, { type: "story" }); message.success('Type updated'); onSuccess?.({ ...ticket, type: "story" } as Ticket); }
-                          catch (e) { message.error('Failed to update type'); }
+                          try {
+                            await ticketService.updateTicket(ticket.id, {
+                              type: "story",
+                            });
+                            message.success("Type updated");
+                            onSuccess?.({ ...ticket, type: "story" } as Ticket);
+                          } catch (e) {
+                            message.error("Failed to update type");
+                          }
                         }
-                      }
+                      },
                     },
                     {
-                      key: "epic", label: "Epic", icon: <FontAwesomeIcon icon={faBolt} color="#904ee2" />, onClick: async () => {
+                      key: "epic",
+                      label: "Epic",
+                      icon: <FontAwesomeIcon icon={faBolt} color="#904ee2" />,
+                      onClick: async () => {
                         setTicketType("epic");
                         if (ticket?.id) {
-                          try { await ticketService.updateTicket(ticket.id, { type: "epic" }); message.success('Type updated'); onSuccess?.({ ...ticket, type: "epic" } as Ticket); }
-                          catch (e) { message.error('Failed to update type'); }
+                          try {
+                            await ticketService.updateTicket(ticket.id, {
+                              type: "epic",
+                            });
+                            message.success("Type updated");
+                            onSuccess?.({ ...ticket, type: "epic" } as Ticket);
+                          } catch (e) {
+                            message.error("Failed to update type");
+                          }
                         }
-                      }
+                      },
                     },
-                  ]
+                  ],
                 }}
               >
-                <div className="type-icon-wrapper" style={{ cursor: 'pointer', padding: '4px 8px', borderRadius: 4 }}>
-                  <FontAwesomeIcon icon={typeInfo.icon} style={{ color: typeInfo.color, fontSize: 16 }} />
+                <div
+                  className="type-icon-wrapper"
+                  style={{
+                    cursor: "pointer",
+                    padding: "4px 8px",
+                    borderRadius: 4,
+                  }}
+                >
+                  <FontAwesomeIcon
+                    icon={typeInfo.icon}
+                    style={{ color: typeInfo.color, fontSize: 16 }}
+                  />
                 </div>
               </Dropdown>
 
               {/* Breadcrumbs */}
               <Text type="secondary" style={{ fontSize: 13 }}>
-                {currentProject?.name} / <Text strong style={{ color: '#172b4d' }}>{ticket?.ticket_key || "NEW"}</Text>
+                {currentProject?.name} /{" "}
+                <Text strong style={{ color: "#172b4d" }}>
+                  {ticket?.ticket_key || "NEW"}
+                </Text>
               </Text>
             </Space>
           </div>
@@ -430,17 +570,29 @@ export const TicketModal: React.FC<TicketModalProps> = ({
               {!isCreateMode && (
                 <>
                   <Tooltip title="View History">
-                    <Button type="text" icon={<HistoryOutlined />} onClick={() => setHistoryOpen(true)} />
+                    <Button
+                      type="text"
+                      icon={<HistoryOutlined />}
+                      onClick={() => setHistoryOpen(true)}
+                    />
                   </Tooltip>
                   <Tooltip title="Share">
                     <Button type="text" icon={<ShareAltOutlined />} />
                   </Tooltip>
-                  <Dropdown menu={{
-                    items: [{
-                      key: 'archive', label: ticket?.is_archived ? "Restore" : "Archive",
-                      icon: <InboxOutlined />, onClick: ticket?.is_archived ? handleRestoreTicket : handleArchiveTicket
-                    }]
-                  }}>
+                  <Dropdown
+                    menu={{
+                      items: [
+                        {
+                          key: "archive",
+                          label: ticket?.is_archived ? "Restore" : "Archive",
+                          icon: <InboxOutlined />,
+                          onClick: ticket?.is_archived
+                            ? handleRestoreTicket
+                            : handleArchiveTicket,
+                        },
+                      ],
+                    }}
+                  >
                     <Button type="text" icon={<EllipsisOutlined />} />
                   </Dropdown>
                 </>
@@ -456,19 +608,17 @@ export const TicketModal: React.FC<TicketModalProps> = ({
           {/* LEFT PANEL: Content & Meta */}
           <div className="ticket-left-panel">
             <div className="left-panel-scroll">
-
               {/* 1. TITLE */}
               <div className="ticket-title-wrapper">
                 <Input.TextArea
                   value={title}
-                  onChange={e => setTitle(e.target.value)}
+                  onChange={(e) => setTitle(e.target.value)}
                   placeholder="Successfully created ticket title..."
                   autoSize={{ minRows: 1, maxRows: 2 }}
                   className="v3-ticket-title"
                   onBlur={handleSave} // Auto-save on blur
                 />
               </div>
-
               {/* 2. META INFO ROW (Consolidated) */}
               <div className="ticket-meta-row">
                 {/* Reporter */}
@@ -476,10 +626,18 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                   <span className="meta-label">Reporter</span>
                   <div className="meta-value">
                     <Space size={4}>
-                      <Avatar size="small" icon={<UserOutlined />} src={ticket?.reporter?.first_name ? undefined : null}>
+                      <Avatar
+                        size="small"
+                        icon={<UserOutlined />}
+                        src={ticket?.reporter?.first_name ? undefined : null}
+                      >
                         {ticket?.reporter?.first_name?.[0]}
                       </Avatar>
-                      <Text>{ticket?.reporter?.first_name || ticket?.reporter?.username || "Unknown"}</Text>
+                      <Text>
+                        {ticket?.reporter?.first_name ||
+                          ticket?.reporter?.username ||
+                          "Unknown"}
+                      </Text>
                     </Space>
                   </div>
                 </div>
@@ -495,15 +653,30 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                         setAssignees(ids);
                         if (ticket?.id) {
                           try {
-                            const updatedTicket = await ticketService.updateTicket(ticket.id, { assignee_ids: ids });
-                            message.success('Assignees updated');
+                            const updatedTicket =
+                              await ticketService.updateTicket(ticket.id, {
+                                assignee_ids: ids,
+                              });
+                            message.success("Assignees updated");
                             // Build assignees array from assignableUsers for Kanban display
-                            const assigneesArray = assignableUsers.filter(u => ids.includes(u.id));
-                            onSuccess?.({ ...ticket, ...updatedTicket, assignees: assigneesArray } as Ticket);
-                          } catch (e) { message.error('Failed to update assignees'); }
+                            const assigneesArray = assignableUsers.filter((u) =>
+                              ids.includes(u.id),
+                            );
+                            onSuccess?.({
+                              ...ticket,
+                              ...updatedTicket,
+                              assignees: assigneesArray,
+                            } as Ticket);
+                          } catch (e) {
+                            message.error("Failed to update assignees");
+                          }
                         }
                       }}
-                      placeholder={ticket?.company ? "Company admins..." : "Project admins..."}
+                      placeholder={
+                        ticket?.company
+                          ? "Company admins..."
+                          : "Project admins..."
+                      }
                       style={{ minWidth: 100, maxWidth: 200 }}
                       variant="borderless"
                       size="small"
@@ -514,24 +687,31 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                       options={(() => {
                         // Build options from assignableUsers, but also include current ticket assignees
                         // to prevent showing IDs when data is loading
-                        const optionsMap = new Map<number, { value: number; label: string }>();
-                        
+                        const optionsMap = new Map<
+                          number,
+                          { value: number; label: string }
+                        >();
+
                         // Add current ticket assignees first (so they display correctly during loading)
-                        ticket?.assignees?.forEach(a => {
-                          optionsMap.set(a.id, { 
-                            value: a.id, 
-                            label: a.first_name ? `${a.first_name} ${a.last_name || ''}`.trim() : a.username 
+                        ticket?.assignees?.forEach((a) => {
+                          optionsMap.set(a.id, {
+                            value: a.id,
+                            label: a.first_name
+                              ? `${a.first_name} ${a.last_name || ""}`.trim()
+                              : a.username,
                           });
                         });
-                        
+
                         // Add/overwrite with assignable users
-                        assignableUsers.forEach(u => {
-                          optionsMap.set(u.id, { 
-                            value: u.id, 
-                            label: u.first_name ? `${u.first_name} ${u.last_name || ''}`.trim() : u.username 
+                        assignableUsers.forEach((u) => {
+                          optionsMap.set(u.id, {
+                            value: u.id,
+                            label: u.first_name
+                              ? `${u.first_name} ${u.last_name || ""}`.trim()
+                              : u.username,
                           });
                         });
-                        
+
                         return Array.from(optionsMap.values());
                       })()}
                     />
@@ -547,32 +727,46 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                       <Select
                         value={(() => {
                           // Find which board column contains the current status
-                          const currentColumn = boardColumns.find(bc => 
-                            bc.statuses.some(s => s.key === selectedStatusKey)
+                          const currentColumn = boardColumns.find((bc) =>
+                            bc.statuses.some(
+                              (s) => s.key === selectedStatusKey,
+                            ),
                           );
                           return currentColumn?.id;
                         })()}
                         onChange={async (columnId: number) => {
-                          const targetColumn = boardColumns.find(bc => bc.id === columnId);
-                          if (!targetColumn || targetColumn.statuses.length === 0) return;
-                          
+                          const targetColumn = boardColumns.find(
+                            (bc) => bc.id === columnId,
+                          );
+                          if (
+                            !targetColumn ||
+                            targetColumn.statuses.length === 0
+                          )
+                            return;
+
                           // Use the first status of the target column
                           const targetStatus = targetColumn.statuses[0];
                           setSelectedStatusKey(targetStatus.key);
-                          
+
                           if (ticket?.id) {
                             try {
-                              const updatedTicket = await ticketService.updateTicket(ticket.id, { ticket_status_key: targetStatus.key });
-                              message.success('Status updated');
-                              onSuccess?.({ 
-                                ...ticket, 
+                              const updatedTicket =
+                                await ticketService.updateTicket(ticket.id, {
+                                  ticket_status_key: targetStatus.key,
+                                });
+                              message.success("Status updated");
+                              onSuccess?.({
+                                ...ticket,
                                 ...updatedTicket,
                                 ticket_status_key: targetStatus.key,
                                 ticket_status_name: targetStatus.name,
                                 ticket_status_category: targetStatus.category,
-                                ticket_status_color: targetStatus.category_color,
+                                ticket_status_color:
+                                  targetStatus.category_color,
                               } as Ticket);
-                            } catch (e) { message.error('Failed to update status'); }
+                            } catch (e) {
+                              message.error("Failed to update status");
+                            }
                           }
                         }}
                         style={{ width: 140 }}
@@ -582,16 +776,19 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                         popupMatchSelectWidth={false}
                       >
                         {/* Show board column names - the actual project workflow states */}
-                        {boardColumns.map(bc => (
+                        {boardColumns.map((bc) => (
                           <Option key={bc.id} value={bc.id}>
-                            <span style={{ 
-                              padding: '2px 6px', 
-                              borderRadius: '3px', 
-                              backgroundColor: bc.statuses[0]?.category_color || '#e0e0e0',
-                              color: '#fff',
-                              fontSize: '11px',
-                              fontWeight: 500,
-                            }}>
+                            <span
+                              style={{
+                                padding: "2px 6px",
+                                borderRadius: "3px",
+                                backgroundColor:
+                                  bc.statuses[0]?.category_color || "#e0e0e0",
+                                color: "#fff",
+                                fontSize: "11px",
+                                fontWeight: 500,
+                              }}
+                            >
                               {bc.name}
                             </span>
                           </Option>
@@ -605,10 +802,18 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                           setSelectedColumn(c);
                           if (ticket?.id) {
                             try {
-                              const updatedTicket = await ticketService.updateTicket(ticket.id, { column: c });
-                              message.success('Status updated');
-                              onSuccess?.({ ...ticket, ...updatedTicket } as Ticket);
-                            } catch (e) { message.error('Failed to update status'); }
+                              const updatedTicket =
+                                await ticketService.updateTicket(ticket.id, {
+                                  column: c,
+                                });
+                              message.success("Status updated");
+                              onSuccess?.({
+                                ...ticket,
+                                ...updatedTicket,
+                              } as Ticket);
+                            } catch (e) {
+                              message.error("Failed to update status");
+                            }
                           }
                         }}
                         style={{ width: 120 }}
@@ -616,8 +821,10 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                         variant="borderless"
                         className="status-select"
                       >
-                        {projectColumns.map(col => (
-                          <Option key={col.id} value={col.id}>{col.name}</Option>
+                        {projectColumns.map((col) => (
+                          <Option key={col.id} value={col.id}>
+                            {col.name}
+                          </Option>
                         ))}
                       </Select>
                     )}
@@ -634,10 +841,17 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                         setPriority(p);
                         if (ticket?.id) {
                           try {
-                            await ticketService.updateTicket(ticket.id, { priority_id: p });
-                            message.success('Priority updated');
-                            onSuccess?.({ ...ticket, priority_id: p } as Ticket);
-                          } catch (e) { message.error('Failed to update priority'); }
+                            await ticketService.updateTicket(ticket.id, {
+                              priority_id: p,
+                            });
+                            message.success("Priority updated");
+                            onSuccess?.({
+                              ...ticket,
+                              priority_id: p,
+                            } as Ticket);
+                          } catch (e) {
+                            message.error("Failed to update priority");
+                          }
                         }
                       }}
                       style={{ width: 120 }}
@@ -645,9 +859,11 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                       variant="borderless"
                       popupMatchSelectWidth={false}
                     >
-                      {[1, 2, 3, 4].map(p => (
+                      {[1, 2, 3, 4].map((p) => (
                         <Option key={p} value={p}>
-                          <Space size={4}>{getPriorityIcon(p)} {PRIORITY_LABELS[p]}</Space>
+                          <Space size={4}>
+                            {getPriorityIcon(p)} {PRIORITY_LABELS[p]}
+                          </Space>
                         </Option>
                       ))}
                     </Select>
@@ -664,10 +880,14 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                         setSelectedCompanyId(id);
                         if (ticket?.id) {
                           try {
-                            await ticketService.updateTicket(ticket.id, { company: id || null });
-                            message.success('Company updated');
+                            await ticketService.updateTicket(ticket.id, {
+                              company: id || null,
+                            });
+                            message.success("Company updated");
                             onSuccess?.({ ...ticket, company: id } as Ticket);
-                          } catch (e) { message.error('Failed to update company'); }
+                          } catch (e) {
+                            message.error("Failed to update company");
+                          }
                         }
                       }}
                       placeholder="None"
@@ -677,7 +897,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                       variant="borderless"
                       loading={loadingCompanies}
                     >
-                      {companies.map(c => (
+                      {companies.map((c) => (
                         <Option key={c.id} value={c.id}>
                           <Space>
                             {c.logo && <Avatar size={16} src={c.logo} />}
@@ -700,11 +920,16 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                         if (ticket?.id) {
                           try {
                             await ticketService.updateTicket(ticket.id, {
-                              due_date: date ? date.format("YYYY-MM-DD") : null
+                              due_date: date ? date.format("YYYY-MM-DD") : null,
                             });
-                            message.success('Due date updated');
-                            onSuccess?.({ ...ticket, due_date: date ? date.format("YYYY-MM-DD") : null } as Ticket);
-                          } catch (e) { message.error('Failed to update due date'); }
+                            message.success("Due date updated");
+                            onSuccess?.({
+                              ...ticket,
+                              due_date: date ? date.format("YYYY-MM-DD") : null,
+                            } as Ticket);
+                          } catch (e) {
+                            message.error("Failed to update due date");
+                          }
                         }
                       }}
                       variant="borderless"
@@ -715,16 +940,20 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                     />
                   </div>
                 </div>
-              </div> {/* End Meta Row */}
-
+              </div>{" "}
+              {/* End Meta Row */}
               <Divider style={{ margin: "24px 0" }} />
-
               {/* 3. DESCRIPTION */}
               <div className="ticket-description-section">
                 <div className="section-header-row">
                   <Text strong>Description</Text>
                   {!isEditingDescription && !isCreateMode && (
-                    <Button type="text" size="small" icon={<EditOutlined />} onClick={() => setIsEditingDescription(true)} />
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<EditOutlined />}
+                      onClick={() => setIsEditingDescription(true)}
+                    />
                   )}
                 </div>
 
@@ -736,10 +965,27 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                       onChange={setDescription}
                       modules={quillModules}
                     />
-                    <div className="editor-actions" style={{ marginTop: 8, textAlign: 'right' }}>
+                    <div
+                      className="editor-actions"
+                      style={{ marginTop: 8, textAlign: "right" }}
+                    >
                       <Space>
-                        <Button size="small" onClick={() => setIsEditingDescription(false)}>Cancel</Button>
-                        <Button size="small" type="primary" onClick={() => { handleSave(); setIsEditingDescription(false); }}>Save</Button>
+                        <Button
+                          size="small"
+                          onClick={() => setIsEditingDescription(false)}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          size="small"
+                          type="primary"
+                          onClick={() => {
+                            handleSave();
+                            setIsEditingDescription(false);
+                          }}
+                        >
+                          Save
+                        </Button>
                       </Space>
                     </div>
                   </div>
@@ -747,86 +993,153 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                   <div
                     className="description-view"
                     onClick={() => setIsEditingDescription(true)}
-                    dangerouslySetInnerHTML={{ __html: description || "<p class='placeholder'>Add a description...</p>" }}
+                    dangerouslySetInnerHTML={{
+                      __html:
+                        description ||
+                        "<p class='placeholder'>Add a description...</p>",
+                    }}
                   />
                 )}
               </div>
-
               <Divider style={{ margin: "24px 0" }} />
-
               {/* 4. SUBTASKS */}
               <div className="ticket-section">
                 <div style={{ marginBottom: 16 }}>
                   <Text strong>Subtasks</Text>
                 </div>
                 <div className="subtask-list">
-                  {subtasks.map(s => (
+                  {subtasks.map((s) => (
                     <div key={s.id} className="subtask-item">
-                      <Checkbox checked={s.is_complete} onChange={e => handleToggleSubtask(s.id, e.target.checked)} />
-                      <span style={{ textDecoration: s.is_complete ? 'line-through' : 'none', color: s.is_complete ? '#999' : 'inherit', flex: 1, marginLeft: 8 }}>
+                      <Checkbox
+                        checked={s.is_complete}
+                        onChange={(e) =>
+                          handleToggleSubtask(s.id, e.target.checked)
+                        }
+                      />
+                      <span
+                        style={{
+                          textDecoration: s.is_complete
+                            ? "line-through"
+                            : "none",
+                          color: s.is_complete ? "#999" : "inherit",
+                          flex: 1,
+                          marginLeft: 8,
+                        }}
+                      >
                         {s.title}
                       </span>
-                      <Button type="text" size="small" icon={<DeleteOutlined />} onClick={() => handleDeleteSubtask(s.id)} />
+                      <Button
+                        type="text"
+                        size="small"
+                        icon={<DeleteOutlined />}
+                        onClick={() => handleDeleteSubtask(s.id)}
+                      />
                     </div>
                   ))}
                   {addingSubtask ? (
                     <Input
-                      autoFocus value={newSubtaskTitle}
-                      onChange={e => setNewSubtaskTitle(e.target.value)}
+                      autoFocus
+                      value={newSubtaskTitle}
+                      onChange={(e) => setNewSubtaskTitle(e.target.value)}
                       onPressEnter={handleAddSubtask}
                       onBlur={() => !newSubtaskTitle && setAddingSubtask(false)}
                       placeholder="Enter subtask..."
                     />
                   ) : (
-                    <Button type="dashed" block size="small" icon={<PlusOutlined />} onClick={() => setAddingSubtask(true)} style={{ marginTop: 8 }}>
+                    <Button
+                      type="dashed"
+                      block
+                      size="small"
+                      icon={<PlusOutlined />}
+                      onClick={() => setAddingSubtask(true)}
+                      style={{ marginTop: 8 }}
+                    >
                       Add subtask
                     </Button>
                   )}
                 </div>
               </div>
-
               {/* 5. LINKS */}
               <div className="ticket-section" style={{ marginTop: 24 }}>
                 <div style={{ marginBottom: 16 }}>
                   <Text strong>Linked Issues</Text>
                 </div>
-                {linkedItems.map(l => (
+                {linkedItems.map((l) => (
                   <div key={l.id} className="linked-item-row">
                     <FontAwesomeIcon icon={faLink} color="#666" />
                     <Space style={{ marginLeft: 8 }}>
                       <Text code>{l.target_ticket?.ticket_key}</Text>
                       <Text>{l.target_ticket?.name}</Text>
-                      <Text type="secondary">({LINK_TYPES.find(t => t.value === l.link_type)?.label || l.link_type})</Text>
+                      <Text type="secondary">
+                        (
+                        {LINK_TYPES.find((t) => t.value === l.link_type)
+                          ?.label || l.link_type}
+                        )
+                      </Text>
                     </Space>
-                    <Button type="text" size="small" icon={<DeleteOutlined />} onClick={() => handleDeleteLink(l.id)} style={{ marginLeft: 'auto' }} />
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<DeleteOutlined />}
+                      onClick={() => handleDeleteLink(l.id)}
+                      style={{ marginLeft: "auto" }}
+                    />
                   </div>
                 ))}
                 {/* Link adding logic same as before, simplified for brevity in this turn */}
                 {!addingLink && (
-                  <Button type="dashed" block size="small" icon={<PlusOutlined />} onClick={() => setAddingLink(true)} style={{ marginTop: 8 }}>
+                  <Button
+                    type="dashed"
+                    block
+                    size="small"
+                    icon={<PlusOutlined />}
+                    onClick={() => setAddingLink(true)}
+                    style={{ marginTop: 8 }}
+                  >
                     Link issue
                   </Button>
                 )}
                 {addingLink && (
-                  <div className="add-link-form" style={{ marginTop: 8, display: 'flex', gap: 8 }}>
-                    <Select size="small" style={{ width: 120 }} value={newLinkType} onChange={setNewLinkType} placeholder="Type">
-                      {LINK_TYPES.map(lt => <Option key={lt.value} value={lt.value}>{lt.label}</Option>)}
+                  <div
+                    className="add-link-form"
+                    style={{ marginTop: 8, display: "flex", gap: 8 }}
+                  >
+                    <Select
+                      size="small"
+                      style={{ width: 120 }}
+                      value={newLinkType}
+                      onChange={setNewLinkType}
+                      placeholder="Type"
+                    >
+                      {LINK_TYPES.map((lt) => (
+                        <Option key={lt.value} value={lt.value}>
+                          {lt.label}
+                        </Option>
+                      ))}
                     </Select>
                     <Select
-                      size="small" showSearch
+                      size="small"
+                      showSearch
                       style={{ flex: 1 }}
                       placeholder="Search ticket..."
                       onSearch={handleSearchTickets}
                       onChange={setSelectedTargetTicket}
                     >
-                      {ticketSearchResults.map(t => <Option key={t.id} value={t.id}>{t.ticket_key} {t.name}</Option>)}
+                      {ticketSearchResults.map((t) => (
+                        <Option key={t.id} value={t.id}>
+                          {t.ticket_key} {t.name}
+                        </Option>
+                      ))}
                     </Select>
-                    <Button size="small" type="primary" onClick={handleAddLink}>Add</Button>
-                    <Button size="small" onClick={() => setAddingLink(false)}>X</Button>
+                    <Button size="small" type="primary" onClick={handleAddLink}>
+                      Add
+                    </Button>
+                    <Button size="small" onClick={() => setAddingLink(false)}>
+                      X
+                    </Button>
                   </div>
                 )}
               </div>
-
               <div style={{ height: 40 }} /> {/* Bottom padding */}
             </div>
           </div>
@@ -837,8 +1150,10 @@ export const TicketModal: React.FC<TicketModalProps> = ({
               <TicketChatPanel ticket={ticket} />
             ) : (
               <div className="chat-placeholder">
-                <InboxOutlined style={{ fontSize: 48, color: '#e0e0e0' }} />
-                <Text type="secondary" style={{ marginTop: 16 }}>Create ticket to start chat</Text>
+                <InboxOutlined style={{ fontSize: 48, color: "#e0e0e0" }} />
+                <Text type="secondary" style={{ marginTop: 16 }}>
+                  Create ticket to start chat
+                </Text>
               </div>
             )}
           </div>

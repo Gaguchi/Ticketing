@@ -5,6 +5,7 @@ Background task processing service using Celery with Redis broker.
 ## Purpose
 
 The Celery service handles asynchronous and scheduled background tasks:
+
 - **Auto-archiving tickets**: Tickets in Done status for > 24 hours
 - **Scheduled jobs**: Periodic maintenance tasks via celery-beat
 - **Async tasks**: Long-running operations offloaded from web requests
@@ -38,11 +39,13 @@ The Celery service handles asynchronous and scheduled background tasks:
 ## Components
 
 ### Celery Worker
+
 - Processes tasks from the Redis queue
 - Runs the actual task code (e.g., archiving tickets)
 - Can run multiple workers for parallel processing
 
 ### Celery Beat
+
 - Scheduler that triggers periodic tasks
 - Stores schedule in database (django-celery-beat)
 - Runs tasks at configured intervals
@@ -79,20 +82,20 @@ def archive_old_done_tickets():
     """
     Archives tickets that have been in a Done column for more than
     TICKET_ARCHIVE_AFTER_HOURS hours (default: 24).
-    
+
     Runs every hour via celery-beat.
     """
     hours = int(os.getenv('TICKET_ARCHIVE_AFTER_HOURS', 24))
     threshold = timezone.now() - timedelta(hours=hours)
-    
+
     done_columns = Column.objects.filter(is_done_column=True)
-    
+
     tickets = Ticket.objects.filter(
         column__in=done_columns,
         is_archived=False,
         updated_at__lt=threshold
     )
-    
+
     count = tickets.update(is_archived=True, archived_at=timezone.now())
     return f"Archived {count} tickets"
 ```
@@ -121,6 +124,7 @@ app.conf.beat_schedule = {
 ## Local Development
 
 ### Prerequisites
+
 - Redis running locally: `redis-server` or Docker
 - Backend dependencies installed
 
@@ -245,6 +249,7 @@ wait
    - Dockerfile: `Dockerfile`
 
 2. **Environment Variables:**
+
    ```bash
    # Database (same as backend)
    DB_HOST=ticketing-db
@@ -252,16 +257,16 @@ wait
    DB_NAME=ticketing
    DB_USER=postgres
    DB_PASSWORD=<password>
-   
+
    # Redis
    REDIS_HOST=ticketing-redis
    REDIS_PORT=6379
    CELERY_BROKER_URL=redis://ticketing-redis:6379/0
    CELERY_RESULT_BACKEND=redis://ticketing-redis:6379/0
-   
+
    # Task settings
    TICKET_ARCHIVE_AFTER_HOURS=24
-   
+
    # Django
    SECRET_KEY=<same-as-backend>
    DEBUG=False
@@ -278,6 +283,7 @@ wait
 ### Monitoring in Dokploy
 
 Check logs for:
+
 ```
 [INFO/MainProcess] celery@hostname ready.
 [INFO/MainProcess] Scheduler: Sending due task archive-old-done-tickets
@@ -286,13 +292,14 @@ Check logs for:
 
 ## Task Schedule
 
-| Task                      | Schedule    | Description                          |
-| ------------------------- | ----------- | ------------------------------------ |
-| `archive_old_done_tickets`| Every hour  | Archives tickets in Done > 24 hours  |
+| Task                       | Schedule   | Description                         |
+| -------------------------- | ---------- | ----------------------------------- |
+| `archive_old_done_tickets` | Every hour | Archives tickets in Done > 24 hours |
 
 ## Adding New Tasks
 
 1. **Define task in `backend/tickets/tasks.py`:**
+
    ```python
    @shared_task
    def send_notification_emails():
@@ -301,6 +308,7 @@ Check logs for:
    ```
 
 2. **Add to beat schedule in `backend/config/celery.py`:**
+
    ```python
    app.conf.beat_schedule = {
        'send-notifications': {

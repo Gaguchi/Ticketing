@@ -12,13 +12,13 @@ React 19 client portal for company users to view and create tickets.
 
 ## Key Differences from Frontend (Admin App)
 
-| Aspect        | Frontend (Admin)         | ServiceDesk (Client)       |
-| ------------- | ------------------------ | -------------------------- |
-| **Port**      | 5173                     | 3001                       |
-| **Styling**   | Pure Ant Design          | Tailwind CSS + Ant Design  |
-| **Users**     | IT staff, admins         | Company users (clients)    |
-| **Access**    | Full project management  | View/create own tickets    |
-| **Features**  | Kanban, reports, admin   | Simple ticket list/create  |
+| Aspect       | Frontend (Admin)        | ServiceDesk (Client)      |
+| ------------ | ----------------------- | ------------------------- |
+| **Port**     | 5173                    | 3001                      |
+| **Styling**  | Pure Ant Design         | Tailwind CSS + Ant Design |
+| **Users**    | IT staff, admins        | Company users (clients)   |
+| **Access**   | Full project management | View/create own tickets   |
+| **Features** | Kanban, reports, admin  | Simple ticket list/create |
 
 ## Directory Structure
 
@@ -70,7 +70,7 @@ The ServiceDesk uses Tailwind CSS for layout and custom styling, with Ant Design
   <header className="bg-white shadow-sm px-6 py-4">
     <h1 className="text-2xl font-semibold text-gray-900">My Tickets</h1>
   </header>
-  
+
   <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     {/* Ant Design for complex components */}
     <Table
@@ -83,25 +83,24 @@ The ServiceDesk uses Tailwind CSS for layout and custom styling, with Ant Design
 ```
 
 ### Tailwind Config (`tailwind.config.js`)
+
 ```javascript
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: [
-    "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
-  ],
+  content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
       colors: {
-        primary: '#1890ff',  // Match Ant Design primary
+        primary: "#1890ff", // Match Ant Design primary
       },
     },
   },
   plugins: [],
-}
+};
 ```
 
 ### CSS Setup (`src/index.css`)
+
 ```css
 @tailwind base;
 @tailwind components;
@@ -113,6 +112,7 @@ export default {
 ## Component Patterns
 
 ### Page with Tailwind Layout
+
 ```tsx
 const TicketList: React.FC = () => {
   const { user } = useApp();
@@ -123,7 +123,7 @@ const TicketList: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">My Tickets</h1>
-        <Button type="primary" onClick={() => navigate('/create')}>
+        <Button type="primary" onClick={() => navigate("/create")}>
           New Ticket
         </Button>
       </div>
@@ -142,10 +142,11 @@ const TicketList: React.FC = () => {
 ```
 
 ### Mixing Tailwind with Ant Design
+
 ```tsx
 // Card with Tailwind wrapper
 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-  {tickets.map(ticket => (
+  {tickets.map((ticket) => (
     <Card
       key={ticket.id}
       className="hover:shadow-lg transition-shadow cursor-pointer"
@@ -153,9 +154,7 @@ const TicketList: React.FC = () => {
     >
       <div className="flex items-start justify-between">
         <span className="text-lg font-medium">{ticket.name}</span>
-        <Tag color={priorityColors[ticket.priority_id]}>
-          {ticket.priority}
-        </Tag>
+        <Tag color={priorityColors[ticket.priority_id]}>{ticket.priority}</Tag>
       </div>
     </Card>
   ))}
@@ -167,13 +166,13 @@ const TicketList: React.FC = () => {
 Same pattern as frontend - uses apiService:
 
 ```tsx
-import apiService from '../services/api.service';
-import { API_ENDPOINTS } from '../config/api';
+import apiService from "../services/api.service";
+import { API_ENDPOINTS } from "../config/api";
 
 // Fetch user's tickets (filtered by company)
 const loadMyTickets = async () => {
   const response = await apiService.get(
-    `${API_ENDPOINTS.TICKETS}?company=${user?.company_id}`
+    `${API_ENDPOINTS.TICKETS}?company=${user?.company_id}`,
   );
   setTickets(response.data.results);
 };
@@ -212,14 +211,14 @@ npm run lint
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 3001,  // Different from frontend!
+    port: 3001, // Different from frontend!
     proxy: {
-      '/api': {
-        target: 'http://localhost:8000',
+      "/api": {
+        target: "http://localhost:8000",
         changeOrigin: true,
       },
-      '/ws': {
-        target: 'ws://localhost:8000',
+      "/ws": {
+        target: "ws://localhost:8000",
         ws: true,
       },
     },
@@ -241,6 +240,7 @@ VITE_APP_VERSION=1.0.0
 ## Dokploy Deployment
 
 ### Dockerfile
+
 ```dockerfile
 # Build stage
 FROM node:20-alpine AS builder
@@ -262,11 +262,13 @@ CMD ["nginx", "-g", "daemon off;"]
 ```
 
 ### Dokploy Configuration
+
 - **Build Path**: `/servicedesk`
 - **Internal Port**: 80
 - **Domain**: `desk.your-domain.com` or `support.your-domain.com`
 
 ### Build Arguments
+
 ```bash
 VITE_API_BASE_URL=https://api.your-domain.com
 VITE_WS_BASE_URL=wss://api.your-domain.com
@@ -276,6 +278,7 @@ VITE_APP_NAME=Service Desk
 ## Feature Scope (Client Portal)
 
 ### What users CAN do:
+
 - ✅ Log in with company credentials
 - ✅ View tickets for their company
 - ✅ Create new tickets
@@ -284,6 +287,7 @@ VITE_APP_NAME=Service Desk
 - ✅ View ticket status/progress
 
 ### What users CANNOT do:
+
 - ❌ Access admin panels
 - ❌ View other companies' tickets
 - ❌ Manage projects

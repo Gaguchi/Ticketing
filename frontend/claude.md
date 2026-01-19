@@ -61,6 +61,7 @@ frontend/
 ## Key Files
 
 ### AppContext (`src/contexts/AppContext.tsx`)
+
 Central state management combining auth and project selection:
 
 ```tsx
@@ -79,6 +80,7 @@ const { user, selectedProject, isAuthenticated } = useApp();
 ```
 
 ### API Service (`src/services/api.service.ts`)
+
 HTTP client with automatic token refresh:
 
 ```tsx
@@ -99,21 +101,22 @@ await apiService.delete(`${API_ENDPOINTS.TICKETS}${id}/`);
 ```
 
 ### API Endpoints (`src/config/api.ts`)
+
 All backend endpoint constants:
 
 ```tsx
 export const API_ENDPOINTS = {
   // Auth
-  LOGIN: '/api/tickets/auth/login/',
-  REFRESH: '/api/tickets/auth/refresh/',
-  
+  LOGIN: "/api/tickets/auth/login/",
+  REFRESH: "/api/tickets/auth/refresh/",
+
   // Core
-  TICKETS: '/api/tickets/tickets/',
-  PROJECTS: '/api/tickets/projects/',
-  COMPANIES: '/api/tickets/companies/',
-  COLUMNS: '/api/tickets/columns/',
-  TAGS: '/api/tickets/tags/',
-  
+  TICKETS: "/api/tickets/tickets/",
+  PROJECTS: "/api/tickets/projects/",
+  COMPANIES: "/api/tickets/companies/",
+  COLUMNS: "/api/tickets/columns/",
+  TAGS: "/api/tickets/tags/",
+
   // ... more
 };
 ```
@@ -121,11 +124,12 @@ export const API_ENDPOINTS = {
 ## Component Patterns
 
 ### Page Component Structure
+
 ```tsx
 // src/pages/TicketList.tsx
-import { useApp } from '../contexts/AppContext';
-import apiService from '../services/api.service';
-import { API_ENDPOINTS } from '../config/api';
+import { useApp } from "../contexts/AppContext";
+import apiService from "../services/api.service";
+import { API_ENDPOINTS } from "../config/api";
 
 const TicketList: React.FC = () => {
   const { selectedProject } = useApp();
@@ -142,7 +146,7 @@ const TicketList: React.FC = () => {
     setLoading(true);
     try {
       const response = await apiService.get(
-        `${API_ENDPOINTS.TICKETS}?project=${selectedProject?.id}`
+        `${API_ENDPOINTS.TICKETS}?project=${selectedProject?.id}`,
       );
       setTickets(response.data.results);
     } finally {
@@ -162,6 +166,7 @@ const TicketList: React.FC = () => {
 ```
 
 ### Ant Design Patterns
+
 ```tsx
 // Modal for destructive actions
 Modal.confirm({
@@ -200,17 +205,21 @@ const [form] = Form.useForm();
 ```
 
 ### Kanban Drag & Drop
+
 ```tsx
-import { DndContext, closestCenter } from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { DndContext, closestCenter } from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 
 <DndContext onDragEnd={handleDragEnd} collisionDetection={closestCenter}>
   <SortableContext items={tickets} strategy={verticalListSortingStrategy}>
-    {tickets.map(ticket => (
+    {tickets.map((ticket) => (
       <SortableTicketCard key={ticket.id} ticket={ticket} />
     ))}
   </SortableContext>
-</DndContext>
+</DndContext>;
 ```
 
 ## Routing (`src/App.tsx`)
@@ -258,12 +267,12 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/api': {
-        target: 'http://localhost:8000',
+      "/api": {
+        target: "http://localhost:8000",
         changeOrigin: true,
       },
-      '/ws': {
-        target: 'ws://localhost:8000',
+      "/ws": {
+        target: "ws://localhost:8000",
         ws: true,
       },
     },
@@ -288,12 +297,12 @@ VITE_APP_VERSION=1.0.0
 const wsUrl = `${import.meta.env.VITE_WS_BASE_URL}/ws/chat/${roomId}/`;
 const ws = new WebSocket(wsUrl);
 
-ws.onopen = () => console.log('Connected');
+ws.onopen = () => console.log("Connected");
 ws.onmessage = (event) => {
   const data = JSON.parse(event.data);
   // Handle message
 };
-ws.onclose = () => console.log('Disconnected');
+ws.onclose = () => console.log("Disconnected");
 ```
 
 ---
@@ -301,6 +310,7 @@ ws.onclose = () => console.log('Disconnected');
 ## Dokploy Deployment
 
 ### Dockerfile
+
 ```dockerfile
 # Build stage
 FROM node:20-alpine AS builder
@@ -322,11 +332,13 @@ CMD ["nginx", "-g", "daemon off;"]
 ```
 
 ### Dokploy Configuration
+
 - **Build Path**: `/frontend`
 - **Internal Port**: 80
 - **Domain**: `tickets.your-domain.com`
 
 ### Build Arguments (set in Dokploy)
+
 ```bash
 VITE_API_BASE_URL=https://api.your-domain.com
 VITE_WS_BASE_URL=wss://api.your-domain.com
@@ -335,17 +347,18 @@ VITE_APP_VERSION=1.0.0
 ```
 
 ### nginx.conf
+
 ```nginx
 server {
     listen 80;
     root /usr/share/nginx/html;
     index index.html;
-    
+
     # SPA routing - serve index.html for all routes
     location / {
         try_files $uri $uri/ /index.html;
     }
-    
+
     # Cache static assets
     location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
         expires 1y;

@@ -31,14 +31,14 @@ Multi-tenant Jira-style ticketing system with Django REST backend, two React fro
 
 ## Services
 
-| Service      | Directory      | Port | Tech Stack                           | Purpose                       |
-| ------------ | -------------- | ---- | ------------------------------------ | ----------------------------- |
-| Backend      | `backend/`     | 8000 | Django 5.1, DRF, Channels, Daphne    | REST API + WebSockets         |
-| Frontend     | `frontend/`    | 5173 | React 19, TypeScript, Ant Design     | Admin/IT staff interface      |
-| ServiceDesk  | `servicedesk/` | 3001 | React 19, TypeScript, Tailwind + Ant | Client portal                 |
-| Celery       | `celery/`      | -    | Celery, Redis                        | Background task processing    |
-| PostgreSQL   | -              | 5432 | PostgreSQL 16                        | Primary database              |
-| Redis        | -              | 6379 | Redis 7                              | Channels + Celery broker      |
+| Service     | Directory      | Port | Tech Stack                           | Purpose                    |
+| ----------- | -------------- | ---- | ------------------------------------ | -------------------------- |
+| Backend     | `backend/`     | 8000 | Django 5.1, DRF, Channels, Daphne    | REST API + WebSockets      |
+| Frontend    | `frontend/`    | 5173 | React 19, TypeScript, Ant Design     | Admin/IT staff interface   |
+| ServiceDesk | `servicedesk/` | 3001 | React 19, TypeScript, Tailwind + Ant | Client portal              |
+| Celery      | `celery/`      | -    | Celery, Redis                        | Background task processing |
+| PostgreSQL  | -              | 5432 | PostgreSQL 16                        | Primary database           |
+| Redis       | -              | 6379 | Redis 7                              | Channels + Celery broker   |
 
 ## Quick Start Commands
 
@@ -70,6 +70,7 @@ User ──has role in──> Project ──contains──> Tickets
 ```
 
 **Key Concepts:**
+
 - **Roles are PROJECT-SCOPED** via `UserRole(user, project, role)` - not global
 - **Company ≠ User role**: `Company.admins` = IT staff, `Company.users` = client employees
 - **Ticket types**: task, bug, story, epic
@@ -109,21 +110,22 @@ Ticketing/
 
 ## Important Files Reference
 
-| Purpose                  | File                                       |
-| ------------------------ | ------------------------------------------ |
-| Data models              | `backend/tickets/models.py`                |
-| API views                | `backend/tickets/views.py`                 |
-| Serializers              | `backend/tickets/serializers.py`          |
-| WebSocket consumers      | `backend/chat/consumers.py`                |
-| API endpoints (FE)       | `frontend/src/config/api.ts`               |
-| HTTP client              | `frontend/src/services/api.service.ts`     |
-| App state context        | `frontend/src/contexts/AppContext.tsx`     |
-| Celery tasks             | `backend/tickets/tasks.py`                 |
-| Django settings          | `backend/config/settings.py`               |
+| Purpose             | File                                   |
+| ------------------- | -------------------------------------- |
+| Data models         | `backend/tickets/models.py`            |
+| API views           | `backend/tickets/views.py`             |
+| Serializers         | `backend/tickets/serializers.py`       |
+| WebSocket consumers | `backend/chat/consumers.py`            |
+| API endpoints (FE)  | `frontend/src/config/api.ts`           |
+| HTTP client         | `frontend/src/services/api.service.ts` |
+| App state context   | `frontend/src/contexts/AppContext.tsx` |
+| Celery tasks        | `backend/tickets/tasks.py`             |
+| Django settings     | `backend/config/settings.py`           |
 
 ## Common Development Tasks
 
 ### Add new API endpoint
+
 1. Add model/fields to `backend/tickets/models.py`
 2. Create/update serializer in `backend/tickets/serializers.py`
 3. Add ViewSet/action in `backend/tickets/views.py`
@@ -131,12 +133,14 @@ Ticketing/
 5. Add endpoint constant to `frontend/src/config/api.ts`
 
 ### Add frontend page
+
 1. Create page in `frontend/src/pages/`
 2. Add route in `frontend/src/App.tsx`
 3. Use `useApp()` for auth/project context
 4. Use `apiService` for API calls
 
 ### Run database migrations
+
 ```bash
 cd backend
 python manage.py makemigrations
@@ -194,6 +198,7 @@ Traefik (Proxy/SSL) ─┬─► ticketing-frontend (Nginx, port 80)
 ### Key Environment Variables
 
 **Backend:**
+
 ```bash
 DB_HOST=ticketing-db
 DB_PASSWORD=<password>
@@ -206,12 +211,14 @@ TRUST_PROXY_HEADERS=True
 ```
 
 **Frontend Build Args:**
+
 ```bash
 VITE_API_BASE_URL=https://api.your-domain.com
 VITE_WS_BASE_URL=wss://api.your-domain.com
 ```
 
 **Celery:**
+
 ```bash
 CELERY_BROKER_URL=redis://ticketing-redis:6379/0
 TICKET_ARCHIVE_AFTER_HOURS=24

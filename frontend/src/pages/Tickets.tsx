@@ -92,7 +92,7 @@ const Tickets: React.FC = () => {
   }, [viewMode]);
   const [searchText, setSearchText] = useState("");
   const [filterStatus, setFilterStatus] = useState<string | undefined>(
-    undefined
+    undefined,
   );
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -131,7 +131,7 @@ const Tickets: React.FC = () => {
         debug.log(
           LogCategory.TICKET,
           LogLevel.INFO,
-          "Fetch already in progress, skipping"
+          "Fetch already in progress, skipping",
         );
         return;
       }
@@ -144,13 +144,13 @@ const Tickets: React.FC = () => {
           LogCategory.TICKET,
           LogLevel.INFO,
           "Loading data for project:",
-          selectedProject
+          selectedProject,
         );
 
         // OPTIMIZED: Single API call with view=kanban returns tickets + columns
         // This replaces 3 parallel API calls with 1, and uses minimal serializer
         const kanbanData = await ticketService.getKanbanData(
-          selectedProject.id
+          selectedProject.id,
         );
 
         debug.log(LogCategory.TICKET, LogLevel.INFO, "Kanban data loaded:", {
@@ -164,7 +164,7 @@ const Tickets: React.FC = () => {
           setBoardColumns(kanbanData.board_columns);
         } else if (!kanbanData.columns || kanbanData.columns.length === 0) {
           message.warning(
-            `Project "${selectedProject.name}" has no columns. Please set up columns first.`
+            `Project "${selectedProject.name}" has no columns. Please set up columns first.`,
           );
         }
 
@@ -173,7 +173,7 @@ const Tickets: React.FC = () => {
 
         // Track all existing ticket IDs
         receivedTicketIdsRef.current = new Set(
-          kanbanData.results.map((t) => t.id)
+          kanbanData.results.map((t) => t.id),
         );
       } catch (error: any) {
         console.error("Failed to fetch data:", error);
@@ -208,11 +208,11 @@ const Tickets: React.FC = () => {
         const ticketId = data.ticket_id || data.id;
         console.log(
           `[Tickets] WebSocket ticket_created: id=${ticketId}, data=`,
-          data
+          data,
         );
         if (receivedTicketIdsRef.current.has(ticketId)) {
           console.log(
-            `[Tickets] WebSocket: ticket ${ticketId} already in receivedTicketIdsRef, skipping`
+            `[Tickets] WebSocket: ticket ${ticketId} already in receivedTicketIdsRef, skipping`,
           );
           return;
         }
@@ -228,19 +228,19 @@ const Tickets: React.FC = () => {
           console.log(
             `[Tickets] WebSocket: adding ticket to state:`,
             newTicket.id,
-            newTicket.ticket_status_key
+            newTicket.ticket_status_key,
           );
 
           setTickets((prev) => {
             // Double-check it doesn't exist
             if (prev.some((t) => t.id === newTicket.id)) {
               console.log(
-                `[Tickets] WebSocket: ticket ${newTicket.id} already exists in prev, skipping`
+                `[Tickets] WebSocket: ticket ${newTicket.id} already exists in prev, skipping`,
               );
               return prev;
             }
             console.log(
-              `[Tickets] WebSocket: adding ticket ${newTicket.id} to state, prev length: ${prev.length}`
+              `[Tickets] WebSocket: adding ticket ${newTicket.id} to state, prev length: ${prev.length}`,
             );
             return [newTicket, ...prev];
           });
@@ -259,7 +259,7 @@ const Tickets: React.FC = () => {
             debug.log(
               LogCategory.TICKET,
               LogLevel.INFO,
-              `Skipping ticket ${data.id} refresh (handled optimistically)`
+              `Skipping ticket ${data.id} refresh (handled optimistically)`,
             );
             return;
           }
@@ -273,7 +273,7 @@ const Tickets: React.FC = () => {
         };
 
         setTickets((prev) =>
-          prev.map((t) => (t.id === data.id ? updatedTicket : t))
+          prev.map((t) => (t.id === data.id ? updatedTicket : t)),
         );
       } else if (type === "ticket_deleted") {
         // Remove ticket from list
@@ -308,7 +308,7 @@ const Tickets: React.FC = () => {
 
       // Also skip if any tickets have pending updates
       const hasPendingUpdates = Array.from(
-        recentTicketUpdatesRef.current.values()
+        recentTicketUpdatesRef.current.values(),
       ).some((timestamp) => Date.now() - timestamp < 10000);
       if (hasPendingUpdates) {
         return;
@@ -349,7 +349,7 @@ const Tickets: React.FC = () => {
     ticketId: number,
     newColumnId: number,
     order: number,
-    oldColumnId: number
+    oldColumnId: number,
   ) => {
     const ticket = tickets.find((t) => t.id === ticketId);
     const column = kanbanColumns.find((c) => c.id === newColumnId);
@@ -398,7 +398,7 @@ const Tickets: React.FC = () => {
           // The moved ticket
           if (t.id === ticketId) {
             console.log(
-              `[Tickets] Moving ticket ${ticketId}: column ${t.column} -> ${newColumnId}, order ${t.column_order} -> ${order}`
+              `[Tickets] Moving ticket ${ticketId}: column ${t.column} -> ${newColumnId}, order ${t.column_order} -> ${order}`,
             );
             return {
               ...t,
@@ -448,8 +448,8 @@ const Tickets: React.FC = () => {
                   column_name: previousColumnName,
                   column_order: previousOrder,
                 }
-              : t
-          )
+              : t,
+          ),
         );
       }
 
@@ -468,10 +468,10 @@ const Tickets: React.FC = () => {
     ticketId: number,
     statusKey: string,
     beforeTicketId?: number,
-    afterTicketId?: number
+    afterTicketId?: number,
   ) => {
     console.log(
-      `[Tickets] moveToStatus: ticketId=${ticketId}, status=${statusKey}, before=${beforeTicketId}, after=${afterTicketId}`
+      `[Tickets] moveToStatus: ticketId=${ticketId}, status=${statusKey}, before=${beforeTicketId}, after=${afterTicketId}`,
     );
 
     // Use functional update to get latest tickets state
@@ -494,19 +494,19 @@ const Tickets: React.FC = () => {
       // Calculate exact LexoRank locally - same algorithm as backend
       const newRank = rankBetween(
         beforeTicket?.rank || null,
-        afterTicket?.rank || null
+        afterTicket?.rank || null,
       );
 
       console.log(
-        `[Tickets] Calculated rank: before=${beforeTicket?.rank}, after=${afterTicket?.rank} => ${newRank}`
+        `[Tickets] Calculated rank: before=${beforeTicket?.rank}, after=${afterTicket?.rank} => ${newRank}`,
       );
 
       // Find the board column for this status to get the status metadata
       const targetColumn = boardColumns.find((bc) =>
-        bc.statuses.some((s) => s.key === statusKey)
+        bc.statuses.some((s) => s.key === statusKey),
       );
       const targetStatus = targetColumn?.statuses.find(
-        (s) => s.key === statusKey
+        (s) => s.key === statusKey,
       );
 
       // Determine if we're entering a "done" status
@@ -715,7 +715,7 @@ const Tickets: React.FC = () => {
             ticket.name.toLowerCase().includes(normalizedSearch) ||
             ticket.ticket_key?.toLowerCase().includes(normalizedSearch) ||
             ticket.tags_detail?.some((tag) =>
-              tag.name.toLowerCase().includes(normalizedSearch)
+              tag.name.toLowerCase().includes(normalizedSearch),
             );
           if (!matchesSearch) return false;
         }
@@ -757,7 +757,7 @@ const Tickets: React.FC = () => {
           ticket.name.toLowerCase().includes(normalizedSearch) ||
           ticket.ticket_key?.toLowerCase().includes(normalizedSearch) ||
           ticket.tags_detail?.some((tag) =>
-            tag.name.toLowerCase().includes(normalizedSearch)
+            tag.name.toLowerCase().includes(normalizedSearch),
           );
         if (!matchesSearch) return false;
       }
@@ -888,12 +888,12 @@ const Tickets: React.FC = () => {
         ),
       },
     ],
-    [handleRestoreTicket]
+    [handleRestoreTicket],
   );
 
   const handleTicketModalSuccess = useCallback((updatedTicket: Ticket) => {
     if (!updatedTicket) return;
-    
+
     // Update the tickets list
     setTickets((prev) => {
       const existing = prev.some((t) => t.id === updatedTicket.id);
@@ -903,12 +903,12 @@ const Tickets: React.FC = () => {
       if (existing) {
         // Merge the updated ticket to ensure all fields (including company_logo_url) are updated
         return prev.map((t) =>
-          t.id === updatedTicket.id ? { ...t, ...updatedTicket } : t
+          t.id === updatedTicket.id ? { ...t, ...updatedTicket } : t,
         );
       }
       return [updatedTicket, ...prev];
     });
-    
+
     // Also update selectedTicket so the modal reflects changes immediately
     setSelectedTicket((prev) => {
       if (prev && prev.id === updatedTicket.id) {
@@ -975,7 +975,12 @@ const Tickets: React.FC = () => {
             value={viewMode}
             onChange={(value) =>
               setViewMode(
-                value as "list" | "kanban" | "deadline" | "archive" | "calendar"
+                value as
+                  | "list"
+                  | "kanban"
+                  | "deadline"
+                  | "archive"
+                  | "calendar",
               )
             }
             options={[
@@ -1051,7 +1056,7 @@ const Tickets: React.FC = () => {
               console.log(
                 `[Tickets] onTicketCreated called with ticket:`,
                 ticket.id,
-                ticket.name
+                ticket.name,
               );
               // Add to received set FIRST to prevent WebSocket race condition
               receivedTicketIdsRef.current.add(ticket.id);
@@ -1059,7 +1064,7 @@ const Tickets: React.FC = () => {
                 // Check if ticket already exists to prevent duplicates
                 const exists = prev.some((t) => t.id === ticket.id);
                 console.log(
-                  `[Tickets] Ticket ${ticket.id} exists in prev: ${exists}, prev length: ${prev.length}`
+                  `[Tickets] Ticket ${ticket.id} exists in prev: ${exists}, prev length: ${prev.length}`,
                 );
                 if (exists) {
                   return prev;
@@ -1131,7 +1136,7 @@ const Tickets: React.FC = () => {
             // Check if ticket already exists (from WebSocket or previous add)
             if (prev.some((t) => t.id === newTicket.id)) {
               console.log(
-                `[Tickets] Ticket ${newTicket.id} already exists, skipping add`
+                `[Tickets] Ticket ${newTicket.id} already exists, skipping add`,
               );
               return prev;
             }

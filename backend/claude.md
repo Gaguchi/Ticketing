@@ -68,6 +68,7 @@ Comment         # Ticket comments with threading
 ```
 
 ### UserRole Roles
+
 ```python
 ROLE_CHOICES = [
     ('superadmin', 'Super Admin'),  # Full project control
@@ -80,6 +81,7 @@ ROLE_CHOICES = [
 ## API Patterns
 
 ### ViewSet Structure
+
 ```python
 # tickets/views.py
 class TicketViewSet(viewsets.ModelViewSet):
@@ -88,7 +90,7 @@ class TicketViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['status', 'priority_id', 'company', 'column']
-    
+
     @action(detail=True, methods=['post'])
     def archive(self, request, pk=None):
         """Custom action example"""
@@ -99,6 +101,7 @@ class TicketViewSet(viewsets.ModelViewSet):
 ```
 
 ### URL Patterns
+
 ```python
 # tickets/urls.py
 router = DefaultRouter()
@@ -109,6 +112,7 @@ router.register(r'companies', CompanyViewSet)
 ```
 
 ### Common API Endpoints
+
 ```
 GET    /api/tickets/tickets/           # List tickets
 POST   /api/tickets/tickets/           # Create ticket
@@ -128,6 +132,7 @@ POST   /api/tickets/auth/refresh/
 ## WebSocket Consumers
 
 ### Chat Consumer (`chat/consumers.py`)
+
 ```python
 # Connect: ws://host/ws/chat/{room_id}/
 class ChatConsumer(AsyncWebsocketConsumer):
@@ -139,6 +144,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
 ```
 
 ### WebSocket URLs
+
 ```
 ws://localhost:8000/ws/chat/{room_id}/
 ws://localhost:8000/ws/notifications/
@@ -148,6 +154,7 @@ ws://localhost:8000/ws/projects/{project_id}/tickets/
 ## Authentication
 
 ### JWT Auth (Production)
+
 ```python
 # Request
 POST /api/tickets/auth/login/
@@ -161,6 +168,7 @@ Authorization: Bearer eyJ...
 ```
 
 ### Dev Bypass (Development Only)
+
 ```http
 X-Super-Secret-Key: dev-super-secret-key-12345
 ```
@@ -251,6 +259,7 @@ def assign_creator_as_superadmin(sender, instance, created, **kwargs):
 ## Dokploy Deployment
 
 ### Dockerfile Build
+
 ```dockerfile
 FROM python:3.12-slim
 WORKDIR /app
@@ -261,6 +270,7 @@ CMD ["./entrypoint.sh"]
 ```
 
 ### entrypoint.sh
+
 ```bash
 #!/bin/bash
 python manage.py migrate --noinput
@@ -269,11 +279,13 @@ daphne -b 0.0.0.0 -p 8000 config.asgi:application
 ```
 
 ### Dokploy Configuration
+
 - **Build Path**: `/backend`
 - **Internal Port**: 8000
 - **Domain**: `api.your-domain.com` (HTTPS enabled)
 
 ### Production Environment Variables
+
 ```bash
 DEBUG=False
 SECRET_KEY=<generated-key>
