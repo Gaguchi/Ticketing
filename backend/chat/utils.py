@@ -176,3 +176,40 @@ def post_column_change_message(ticket, user: User, old_column: str, new_column: 
     """
     message = f"📊 Moved: {old_column} → {new_column}"
     return post_ticket_system_message(ticket, user, message)
+
+
+def post_due_date_change_message(ticket, user: User, old_date, new_date) -> ChatMessage | None:
+    """
+    Post a system message when a ticket's due date changes.
+    
+    Args:
+        ticket: The Ticket instance
+        user: The User who changed the due date
+        old_date: The previous due date (date/datetime/str or None)
+        new_date: The new due date (date/datetime/str or None)
+    
+    Returns:
+        The created ChatMessage, or None if no chat room exists
+    """
+    def format_date(d):
+        if d is None:
+            return "—"
+        # Handle both date objects and strings
+        if hasattr(d, 'strftime'):
+            return d.strftime("%b %d, %Y")
+        # Try parsing string
+        try:
+            from datetime import datetime
+            if isinstance(d, str):
+                # Handle ISO format strings
+                parsed = datetime.fromisoformat(d.replace('Z', '+00:00'))
+                return parsed.strftime("%b %d, %Y")
+        except (ValueError, TypeError):
+            pass
+        return str(d)
+    
+    old_formatted = format_date(old_date)
+    new_formatted = format_date(new_date)
+    
+    message = f"📅 Due date: {old_formatted} → {new_formatted}"
+    return post_ticket_system_message(ticket, user, message)

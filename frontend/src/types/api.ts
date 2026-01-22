@@ -283,6 +283,7 @@ export interface Ticket {
   column_name: string;
   column_order: number; // Position within column (legacy field, kept for backward compatibility)
   assignees: User[];
+  assignees_detail?: Array<{ id: number; username: string; first_name: string; last_name: string }>; // From KanbanTicketSerializer
   assignee_ids?: number[]; // Added to support list view response
   reporter: User;
   parent: number | null;

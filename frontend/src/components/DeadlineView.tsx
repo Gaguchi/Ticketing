@@ -53,18 +53,13 @@ const categorizeByDeadline = (tickets: Ticket[]) => {
   tomorrow.setDate(tomorrow.getDate() + 1);
   const endOfWeek = new Date(today);
   endOfWeek.setDate(endOfWeek.getDate() + (7 - today.getDay()));
-  const endOfNextWeek = new Date(endOfWeek);
-  endOfNextWeek.setDate(endOfNextWeek.getDate() + 7);
-  const twoWeeksFromNow = new Date(today);
-  twoWeeksFromNow.setDate(twoWeeksFromNow.getDate() + 14);
 
   const categories = {
     overdue: [] as Ticket[],
     dueToday: [] as Ticket[],
     dueThisWeek: [] as Ticket[],
-    dueNextWeek: [] as Ticket[],
+    dueNextWeekPlus: [] as Ticket[],
     noDeadline: [] as Ticket[],
-    dueOverTwoWeeks: [] as Ticket[],
     completed: [] as Ticket[],
   };
 
@@ -99,12 +94,9 @@ const categorizeByDeadline = (tickets: Ticket[]) => {
       categories.dueToday.push(ticket);
     } else if (dueDateOnly <= endOfWeek) {
       categories.dueThisWeek.push(ticket);
-    } else if (dueDateOnly <= endOfNextWeek) {
-      categories.dueNextWeek.push(ticket);
-    } else if (dueDateOnly <= twoWeeksFromNow) {
-      categories.dueOverTwoWeeks.push(ticket);
     } else {
-      categories.dueOverTwoWeeks.push(ticket);
+      // All tickets due after this week go into "Next Week +"
+      categories.dueNextWeekPlus.push(ticket);
     }
   });
 
@@ -362,11 +354,11 @@ export const DeadlineView: React.FC<DeadlineViewProps> = ({
       count: categorized.dueThisWeek.length,
     },
     {
-      key: "dueNextWeek",
-      title: "Due Next Week",
-      tickets: categorized.dueNextWeek,
+      key: "dueNextWeekPlus",
+      title: "Next Week +",
+      tickets: categorized.dueNextWeekPlus,
       color: "#4c9aff", // Even Lighter Blue
-      count: categorized.dueNextWeek.length,
+      count: categorized.dueNextWeekPlus.length,
     },
     {
       key: "noDeadline",
@@ -374,13 +366,6 @@ export const DeadlineView: React.FC<DeadlineViewProps> = ({
       tickets: categorized.noDeadline,
       color: "#5e6c84", // Slate Gray
       count: categorized.noDeadline.length,
-    },
-    {
-      key: "dueOverTwoWeeks",
-      title: "Due Over Two Weeks",
-      tickets: categorized.dueOverTwoWeeks,
-      color: "#42526e", // Darker Gray
-      count: categorized.dueOverTwoWeeks.length,
     },
     {
       key: "completed",

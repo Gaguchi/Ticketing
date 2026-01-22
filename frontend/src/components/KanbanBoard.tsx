@@ -22,6 +22,7 @@ import {
 } from "@dnd-kit/sortable";
 import { KanbanColumn } from "./KanbanColumn";
 import { TicketCard } from "./TicketCard";
+import { message } from "antd";
 import type { Ticket, TicketColumn, BoardColumn } from "../types/api";
 
 // Adapter type to support both old TicketColumn and new BoardColumn
@@ -422,6 +423,17 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       // Use the first status in the column (primary status)
       const targetStatusKey = destColumn.statusKeys[0];
 
+      // Check if moving to a "Done" column without due date
+      const ticket = ticketMap[activeTicketId];
+      const isDoneColumn = destColumn.name.toLowerCase().includes("done") ||
+        destColumn.name.toLowerCase().includes("completed");
+      if (isDoneColumn && !ticket?.due_date) {
+        message.warning("Please set a due date before closing this ticket");
+        setDragOverItems(null);
+        setPendingMoveTicketId(null);
+        return;
+      }
+
       // Use the FINAL drag state to determine positioning
       // This shows where the user actually dropped the ticket
       const finalDestTickets = finalItems?.[destContainer] || [];
@@ -512,6 +524,18 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
     const newColumnId = parseInt(destContainer.replace("column-", ""));
     const oldColumnId = parseInt(sourceContainer.replace("column-", ""));
+
+    // Check if moving to a "Done" column without due date (legacy system)
+    const destColumn = columnMap[destContainer];
+    const ticket = ticketMap[activeTicketId];
+    const isDoneColumn = destColumn?.name?.toLowerCase().includes("done") ||
+      destColumn?.name?.toLowerCase().includes("completed");
+    if (isDoneColumn && !ticket?.due_date) {
+      message.warning("Please set a due date before closing this ticket");
+      setDragOverItems(null);
+      setPendingMoveTicketId(null);
+      return;
+    }
 
     // Calculate drop position
     let dropPosition: number;

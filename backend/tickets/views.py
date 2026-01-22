@@ -1592,9 +1592,9 @@ class TicketViewSet(viewsets.ModelViewSet):
                 ticket.assignees.set(company_admins)
                 print(f"   👥 Auto-assigned to {company_admins.count()} company admin(s)")
         
-        # Create chat room for ticket (for servicedesk tickets)
-        # This enables direct communication between customer and IT support
-        if ticket.company and ticket.reporter:
+        # Create chat room for ALL tickets with a reporter
+        # This enables communication on any ticket, not just servicedesk ones
+        if ticket.reporter:
             from chat.models import ChatRoom
             chat_room, created = ChatRoom.get_or_create_for_ticket(ticket, created_by=user)
             if created:
@@ -1693,7 +1693,7 @@ class TicketViewSet(viewsets.ModelViewSet):
         changes = []
         
         # Import chat utilities for posting system messages
-        from chat.utils import post_status_change_message, post_assignment_change_message, post_column_change_message
+        from chat.utils import post_status_change_message, post_assignment_change_message, post_column_change_message, post_due_date_change_message
         
         # Simple fields mapping (field_name, display_name/value_getter)
         simple_checks = [
@@ -1710,6 +1710,10 @@ class TicketViewSet(viewsets.ModelViewSet):
                     old_value=str(old_state.get(field)) if old_state.get(field) is not None else None,
                     new_value=str(new_val) if new_val is not None else None
                 ))
+                
+                # Post chat message for due date changes
+                if field == 'due_date':
+                    post_due_date_change_message(new_instance, user, old_state.get('due_date'), new_val)
 
         # Description (special handling to avoid storing large text)
         if old_state.get('description') != new_instance.description:

@@ -657,9 +657,11 @@ class KanbanTicketSerializer(serializers.ModelSerializer):
     ~65% smaller payload than TicketListSerializer.
     """
     assignee_ids = serializers.SerializerMethodField()
+    assignees_detail = serializers.SerializerMethodField()
     project_key = serializers.CharField(source='project.key', read_only=True)
     project_number = serializers.IntegerField(read_only=True)
     ticket_key = serializers.CharField(read_only=True)
+    column_name = serializers.CharField(source='column.name', read_only=True)
     company_logo_url = serializers.SerializerMethodField()
     comments_count = serializers.IntegerField(read_only=True)
     
@@ -670,12 +672,14 @@ class KanbanTicketSerializer(serializers.ModelSerializer):
             'id', 'name', 'type', 'priority_id',
             'project_key', 'project_number', 'ticket_key',
             # Grouping (old + new systems)
-            'column', 'ticket_status_key',
+            'column', 'column_name', 'ticket_status_key',
             # LexoRank ordering
             'rank',
             # Display on card
             'company_logo_url', 'following', 'comments_count',
-            'assignee_ids', 'resolved_at', 'resolution_status', 'resolution_feedback',
+            'assignee_ids', 'assignees_detail', 'resolved_at', 'resolution_status', 'resolution_feedback',
+            # IMPORTANT: Include due_date for DeadlineView
+            'due_date',
         ]
         # Read ticket_status_key directly from foreign key
         extra_kwargs = {
@@ -697,6 +701,18 @@ class KanbanTicketSerializer(serializers.ModelSerializer):
     def get_assignee_ids(self, obj):
         # Use prefetched data
         return [assignee.id for assignee in obj.assignees.all()]
+    
+    def get_assignees_detail(self, obj):
+        """Return assignee details for TicketCard display"""
+        return [
+            {
+                'id': assignee.id,
+                'username': assignee.username,
+                'first_name': assignee.first_name,
+                'last_name': assignee.last_name,
+            }
+            for assignee in obj.assignees.all()
+        ]
 
 
 class ContactSerializer(serializers.ModelSerializer):

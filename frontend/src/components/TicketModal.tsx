@@ -744,6 +744,14 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                           )
                             return;
 
+                          // Check if moving to a "Done" column without due date
+                          const isDoneColumn = targetColumn.name.toLowerCase().includes("done") ||
+                            targetColumn.name.toLowerCase().includes("completed");
+                          if (isDoneColumn && !dueDate && !ticket?.due_date) {
+                            message.warning("Please set a due date before closing this ticket");
+                            return;
+                          }
+
                           // Use the first status of the target column
                           const targetStatus = targetColumn.statuses[0];
                           setSelectedStatusKey(targetStatus.key);
@@ -799,6 +807,15 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                       <Select
                         value={selectedColumn}
                         onChange={async (c) => {
+                          // Check if moving to a "Done" column without due date
+                          const targetColumn = projectColumns.find((col) => col.id === c);
+                          const isDoneColumn = targetColumn?.name?.toLowerCase().includes("done") ||
+                            targetColumn?.name?.toLowerCase().includes("completed");
+                          if (isDoneColumn && !dueDate && !ticket?.due_date) {
+                            message.warning("Please set a due date before closing this ticket");
+                            return;
+                          }
+
                           setSelectedColumn(c);
                           if (ticket?.id) {
                             try {

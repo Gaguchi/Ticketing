@@ -143,6 +143,11 @@ export const QuickTicketCreator: React.FC<QuickTicketCreatorProps> = ({
       return;
     }
 
+    if (!dueDate) {
+      message.warning("Please set a due date");
+      return;
+    }
+
     if (!selectedProject) {
       message.error("No project selected");
       return;

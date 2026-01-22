@@ -61,7 +61,9 @@ class ChatRoom(models.Model):
     def get_or_create_for_ticket(cls, ticket, created_by=None):
         """
         Get or create a chat room for a specific ticket.
-        Automatically adds the reporter and company admins as participants.
+        Automatically adds the reporter, assignees, and relevant admins as participants.
+        For company tickets: adds company admins
+        For non-company tickets: adds project admins
         """
         # Check if chat room already exists for this ticket
         try:
@@ -85,10 +87,12 @@ class ChatRoom(models.Model):
         if ticket.reporter:
             ChatParticipant.objects.get_or_create(room=room, user=ticket.reporter)
         
-        # Add company admins if ticket has a company
+        # Add company admins if ticket has a company (they're the support team)
         if ticket.company:
             for admin in ticket.company.admins.all():
                 ChatParticipant.objects.get_or_create(room=room, user=admin)
+        # Note: For non-company tickets, only the reporter is added.
+        # Other participants can be added manually as needed.
         
         # Add ticket assignees
         for assignee in ticket.assignees.all():

@@ -771,6 +771,8 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               <Form.Item
                 label="Due date"
                 name="dueDate"
+                required
+                rules={[{ required: true, message: "Due date is required" }]}
                 style={{ marginBottom: "10px" }}
               >
                 <DatePicker

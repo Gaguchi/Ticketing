@@ -1,9 +1,10 @@
 import React, { memo } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Avatar, Space, Tag } from "antd";
+import { Avatar, Space, Tag, Tooltip } from "antd";
 import {
   CheckCircleOutlined,
+  ClockCircleOutlined,
   EyeOutlined,
   MessageOutlined,
   UserOutlined,
@@ -61,6 +62,46 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
   onClick,
 }) => {
   const isResolved = !!ticket.resolved_at;
+
+  // Get assignees from either full object or detail format
+  const assigneesList = ticket.assignees || ticket.assignees_detail || [];
+
+  // Format due date for display
+  const formatDueDate = (dueDate: string | null | undefined) => {
+    if (!dueDate) return null;
+    const date = new Date(dueDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    
+    const isOverdue = dateOnly < today;
+    const isToday = dateOnly.getTime() === today.getTime();
+    const isTomorrow = dateOnly.getTime() === tomorrow.getTime();
+    
+    let text = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    let color = '#5e6c84';
+    let bgColor = '#f4f5f7';
+    
+    if (isOverdue) {
+      text = 'Overdue';
+      color = '#de350b';
+      bgColor = '#ffebe6';
+    } else if (isToday) {
+      text = 'Today';
+      color = '#ff8b00';
+      bgColor = '#fff4e6';
+    } else if (isTomorrow) {
+      text = 'Tomorrow';
+      color = '#ff991f';
+      bgColor = '#fffae6';
+    }
+    
+    return { text, color, bgColor };
+  };
+
+  const dueDateInfo = formatDueDate(ticket.due_date);
 
   const {
     setNodeRef,
@@ -177,6 +218,28 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
         >
           {ticket.name}
         </div>
+
+        {/* Due Date Display */}
+        {dueDateInfo && (
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "4px",
+              padding: "2px 6px",
+              borderRadius: "3px",
+              backgroundColor: dueDateInfo.bgColor,
+              color: dueDateInfo.color,
+              fontSize: "11px",
+              fontWeight: 500,
+              marginBottom: "8px",
+            }}
+          >
+            <ClockCircleOutlined style={{ fontSize: "10px" }} />
+            {dueDateInfo.text}
+          </div>
+        )}
+
         <div
           style={{
             display: "flex",
@@ -230,7 +293,7 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
           <div>
             <Space align="center" size={6}>
               {getPriorityIcon(ticket.priority_id ?? 3)}
-              {ticket.assignees && ticket.assignees.length > 0 && (
+              {assigneesList.length > 0 && (
                 <Avatar.Group
                   size={20}
                   max={{
@@ -242,13 +305,17 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
                     },
                   }}
                 >
-                  {ticket.assignees.map((user) => (
-                    <Avatar
-                      icon={<UserOutlined />}
+                  {assigneesList.map((user: any) => (
+                    <Tooltip
                       key={user.id}
-                      size={20}
-                      style={{ backgroundColor: "#0052cc" }}
-                    />
+                      title={user.first_name ? `${user.first_name} ${user.last_name}` : user.username}
+                    >
+                      <Avatar
+                        icon={<UserOutlined />}
+                        size={20}
+                        style={{ backgroundColor: "#0052cc" }}
+                      />
+                    </Tooltip>
                   ))}
                 </Avatar.Group>
               )}
