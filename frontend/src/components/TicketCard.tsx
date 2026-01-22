@@ -1,13 +1,15 @@
 import React, { memo } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Avatar, Space, Tag, Tooltip } from "antd";
+import { Avatar, Space, Tag, Tooltip, Popover, List, Input } from "antd";
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   EyeOutlined,
   MessageOutlined,
   UserOutlined,
+  UserAddOutlined,
+  SearchOutlined,
 } from "@ant-design/icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -17,7 +19,10 @@ import {
   faBolt,
 } from "@fortawesome/free-solid-svg-icons";
 import { getPriorityIcon } from "./PriorityIcons";
-import type { Ticket } from "../types/api";
+import type { Ticket, User } from "../types/api";
+import { useAuth } from "../contexts/AppContext";
+import { ticketService } from "../services/ticket.service";
+import { message, Button } from "antd";
 
 interface TicketCardProps {
   id: string;
@@ -61,10 +66,76 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
   dragOverlay,
   onClick,
 }) => {
+  const { user } = useAuth();
+  const [assigning, setAssigning] = React.useState(false);
+  
+  // Optimistic UI state - store full assignee objects to render immediately
+  const [optimisticAssignees, setOptimisticAssignees] = React.useState<User[] | null>(null);
+  const [searchText, setSearchText] = React.useState("");
+  const [popoverOpen, setPopoverOpen] = React.useState(false);
+
   const isResolved = !!ticket.resolved_at;
 
-  // Get assignees from either full object or detail format
-  const assigneesList = ticket.assignees || ticket.assignees_detail || [];
+  // Get assignees from optimistic state OR props
+  const assigneesList = optimisticAssignees || ticket.assignees || ticket.assignees_detail || [];
+
+  const [assignableUsers, setAssignableUsers] = React.useState<User[]>([]);
+  const [loadingUsers, setLoadingUsers] = React.useState(false);
+
+  // Load assignable users when popover opens
+  const handlePopoverOpenChange = async (open: boolean) => {
+    setPopoverOpen(open);
+    if (open && assignableUsers.length === 0) {
+      setLoadingUsers(true);
+      try {
+        const users = await ticketService.getAssignableUsers(ticket.id);
+        setAssignableUsers(users);
+      } catch (error) {
+        console.error("Failed to load assignable users", error);
+        message.error("Failed to load users");
+      } finally {
+        setLoadingUsers(false);
+      }
+    }
+  };
+
+  // Filter members for assignment dropdown
+  const filteredMembers = React.useMemo(() => {
+    if (!searchText) return assignableUsers;
+    const lower = searchText.toLowerCase();
+    return assignableUsers.filter(
+      (m) =>
+        m.username.toLowerCase().includes(lower) ||
+        m.first_name.toLowerCase().includes(lower) ||
+        m.last_name.toLowerCase().includes(lower)
+    );
+  }, [assignableUsers, searchText]);
+
+  const handleAssign = async (targetUser: User) => {
+    try {
+      setAssigning(true);
+      setPopoverOpen(false);
+      
+      // OPTIMISTIC UPDATE: Set local state immediately
+      // This ensures the UI reflects the change BEFORE the API returns
+      // preserving the avatar and removing "Unassigned" tag
+      setOptimisticAssignees([targetUser]);
+
+      await ticketService.updateTicket(ticket.id, {
+        assignee_ids: [targetUser.id]
+      });
+      
+      message.success(`Assigned to ${targetUser.first_name || targetUser.username}`);
+      // Trigger global update event to refresh lists/boards
+      window.dispatchEvent(new CustomEvent("ticketUpdate"));
+    } catch (error) {
+      console.error("Failed to assign ticket:", error);
+      message.error("Failed to assign ticket");
+      setOptimisticAssignees(null); // Revert on failure
+    } finally {
+      setAssigning(false);
+    }
+  };
 
   // Format due date for display
   const formatDueDate = (dueDate: string | null | undefined) => {
@@ -103,6 +174,9 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
 
   const dueDateInfo = formatDueDate(ticket.due_date);
 
+  // Check if ticket is unassigned
+  const isUnassigned = assigneesList.length === 0;
+
   const {
     setNodeRef,
     listeners,
@@ -129,8 +203,9 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
     touchAction: "manipulation",
     padding: "8px 10px",
     borderRadius: "3px",
-    backgroundColor: "#fff",
+    backgroundColor: isUnassigned ? "#fffbe6" : "#fff",
     marginBottom: "8px",
+    borderLeft: isUnassigned ? "3px solid #faad14" : undefined,
   };
 
   return (
@@ -147,11 +222,11 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
       }}
       onMouseEnter={(e) => {
         if (!isDragging) {
-          e.currentTarget.style.backgroundColor = "#f4f5f7";
+          e.currentTarget.style.backgroundColor = isUnassigned ? "#fff8e1" : "#f4f5f7";
         }
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.backgroundColor = "#fff";
+        e.currentTarget.style.backgroundColor = isUnassigned ? "#fffbe6" : "#fff";
       }}
     >
       <div>
@@ -293,7 +368,9 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
           <div>
             <Space align="center" size={6}>
               {getPriorityIcon(ticket.priority_id ?? 3)}
-              {assigneesList.length > 0 && (
+              
+              {/* Assignees or Assign Button */}
+              {assigneesList.length > 0 ? (
                 <Avatar.Group
                   size={20}
                   max={{
@@ -318,6 +395,82 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
                     </Tooltip>
                   ))}
                 </Avatar.Group>
+              ) : (
+                <Popover
+                  open={popoverOpen}
+                  onOpenChange={handlePopoverOpenChange}
+                  trigger="click"
+                  placement="bottomRight"
+                  content={
+                    <div style={{ width: 200 }}>
+                      <Input
+                        placeholder="Search..."
+                        prefix={<SearchOutlined />}
+                        value={searchText}
+                        onChange={(e) => setSearchText(e.target.value)}
+                        style={{ marginBottom: 6, fontSize: "12px" }}
+                        size="small"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <div style={{ maxHeight: 200, overflowY: "auto", minHeight: 50 }}>
+                        <List
+                          size="small"
+                          loading={loadingUsers}
+                          dataSource={filteredMembers}
+                          renderItem={(member: any) => (
+                            <List.Item
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAssign(member);
+                              }}
+                              style={{ cursor: "pointer", padding: "4px 8px" }}
+                              className="assignee-item"
+                            >
+                              <Space size={6}>
+                                <Avatar size={20} style={{ backgroundColor: "#1890ff", fontSize: "10px" }}>
+                                  {member.first_name?.[0] || member.username[0]}
+                                </Avatar>
+                                <span style={{ fontSize: "12px" }}>
+                                  {member.first_name || member.username} {member.last_name || ""}
+                                </span>
+                                {user?.id === member.id && (
+                                  <Tag style={{ marginLeft: "auto", fontSize: "10px", lineHeight: "18px" }}>Me</Tag>
+                                )}
+                              </Space>
+                            </List.Item>
+                          )}
+                        />
+                      </div>
+                      <style>{`
+                        .assignee-item:hover { background-color: #f5f5f5; }
+                      `}</style>
+                    </div>
+                  }
+                >
+                  <Tooltip title="Assign Ticket">
+                    <Button
+                      type="text"
+                      size="small"
+                      loading={assigning}
+                      onClick={(e) => {
+                          e.stopPropagation();
+                      }}
+                      icon={<UserAddOutlined />}
+                      style={{ 
+                        fontSize: "12px", 
+                        width: "22px",
+                        height: "22px", 
+                        padding: 0,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        borderRadius: "50%",
+                        color: "#faad14",
+                        border: "1px dashed #faad14"
+                      }}
+                    />
+                  </Tooltip>
+                </Popover>
               )}
             </Space>
           </div>

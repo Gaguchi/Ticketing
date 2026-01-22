@@ -1,11 +1,10 @@
 /**
  * Dashboard Page
- * Redesigned dashboard with company filter bar and new widget layout
+ * Customizable dashboard with drag-and-drop widgets using react-grid-layout
  */
 
-import React, { useState, useEffect, useCallback } from "react";
-import { Row, Col, Spin, message, Button, Empty } from "antd";
-import { ReloadOutlined } from "@ant-design/icons";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { Spin, message, Empty } from "antd";
 import { useProject, useAuth } from "../contexts/AppContext";
 import { TicketModal } from "../components/TicketModal";
 import { CreateTicketModal } from "../components/CreateTicketModal";
@@ -16,6 +15,9 @@ import {
   NewestTicketCards,
   TimelineActivityFeed,
   TeamWorkloadCards,
+  DashboardGrid,
+  DashboardWidget,
+  type WidgetConfig,
 } from "../components/dashboard";
 import dashboardService from "../services/dashboard.service";
 import type { Ticket } from "../types/api";
@@ -28,16 +30,9 @@ import type {
   KanbanSummary,
 } from "../types/dashboard";
 
-// Style for the hover highlight
-const hoverStyles = `
-  .hover-highlight:hover {
-    background-color: #fafafa !important;
-  }
-`;
-
 const Dashboard: React.FC = () => {
   const { selectedProject } = useProject();
-  const { user: _user } = useAuth();
+  const { user } = useAuth();
 
   // Data states
   const [companyHealth, setCompanyHealth] = useState<CompanyHealth[]>([]);
@@ -159,16 +154,90 @@ const Dashboard: React.FC = () => {
     setSelectedCompanyId(companyId);
   };
 
-  // Handle ticket creation success
-  const handleTicketCreated = () => {
-    fetchDashboardData();
-  };
-
   // Handle ticket update success
   const handleTicketUpdated = () => {
     setSelectedTicket(null);
     fetchDashboardData();
   };
+
+  // Define dashboard widgets with their default layouts
+  // Layout: 12-column grid, Attention Needed prominent on left, Newest Tickets on right
+  const widgets: WidgetConfig[] = useMemo(
+    () => [
+      {
+        i: "attention",
+        title: "Needs Attention",
+        component: (
+          <DashboardWidget title="Needs Attention" loading={loading}>
+            <AttentionNeededCards
+              data={attentionNeeded}
+              loading={loading}
+              onTicketClick={handleTicketClick}
+            />
+          </DashboardWidget>
+        ),
+        defaultLayout: { x: 0, y: 0, w: 8, h: 4, minW: 4, minH: 3 },
+      },
+      {
+        i: "newest",
+        title: "Newest Tickets",
+        component: (
+          <DashboardWidget title="Newest Tickets" loading={loading}>
+            <NewestTicketCards
+              tickets={newestTickets}
+              loading={loading}
+              onTicketClick={handleTicketClick}
+              maxCards={8}
+            />
+          </DashboardWidget>
+        ),
+        defaultLayout: { x: 8, y: 0, w: 4, h: 4, minW: 3, minH: 3 },
+      },
+      {
+        i: "activity",
+        title: "Activity Feed",
+        component: (
+          <DashboardWidget title="Activity Feed" loading={loading}>
+            <TimelineActivityFeed
+              activities={liveActivity}
+              loading={loading}
+              onTicketClick={handleTicketClick}
+            />
+          </DashboardWidget>
+        ),
+        defaultLayout: { x: 0, y: 4, w: 6, h: 3, minW: 4, minH: 2 },
+      },
+      {
+        i: "pipeline",
+        title: "Pipeline",
+        component: (
+          <DashboardWidget title="Pipeline" loading={loading}>
+            <KanbanPipeline data={kanbanSummary} loading={loading} />
+          </DashboardWidget>
+        ),
+        defaultLayout: { x: 6, y: 4, w: 3, h: 3, minW: 2, minH: 2 },
+      },
+      {
+        i: "workload",
+        title: "Team Workload",
+        component: (
+          <DashboardWidget title="Team Workload" loading={loading}>
+            <TeamWorkloadCards workloads={agentWorkload} loading={loading} />
+          </DashboardWidget>
+        ),
+        defaultLayout: { x: 9, y: 4, w: 3, h: 3, minW: 2, minH: 2 },
+      },
+    ],
+    [
+      loading,
+      attentionNeeded,
+      newestTickets,
+      liveActivity,
+      kanbanSummary,
+      agentWorkload,
+      handleTicketClick,
+    ]
+  );
 
   // No project selected
   if (!selectedProject) {
@@ -187,122 +256,42 @@ const Dashboard: React.FC = () => {
     );
   }
 
+  // Initial loading state
+  if (loading && companyHealth.length === 0) {
+    return (
+      <div
+        style={{
+          height: "100%",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: "#f4f5f7",
+        }}
+      >
+        <Spin size="large" />
+      </div>
+    );
+  }
+
   return (
     <>
-      <style>{hoverStyles}</style>
-
-      <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-        {/* Header */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "12px 20px",
-            borderBottom: "1px solid #e8e8e8",
-            backgroundColor: "#fff",
-          }}
-        >
-          <h1 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>
-            Dashboard
-          </h1>
-          <Button
-            icon={<ReloadOutlined spin={loading} />}
-            onClick={fetchDashboardData}
-            loading={loading}
-            size="small"
-          >
-            Refresh
-          </Button>
-        </div>
-
-        {/* Main Content */}
-        <div
-          style={{
-            flex: 1,
-            overflow: "auto",
-            padding: 20,
-            backgroundColor: "#f4f5f7",
-          }}
-        >
-          {loading && companyHealth.length === 0 ? (
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                height: "100%",
-              }}
-            >
-              <Spin size="large" />
-            </div>
-          ) : (
-            <>
-              {/* ROW 1: Company Filter Bar (Widget 1B) */}
-              <div style={{ marginBottom: 16 }}>
-                <CompanyFilterBar
-                  companies={companyHealth}
-                  selectedCompanyId={selectedCompanyId}
-                  totalTickets={totalTickets}
-                  onSelect={handleCompanySelect}
-                  loading={loading}
-                />
-              </div>
-
-              {/* ROW 2: Newest Tickets (4A) + Activity Feed (5B) - Fixed height 340px */}
-              <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-                <Col xs={24} lg={14}>
-                  <div style={{ height: 340 }}>
-                    <NewestTicketCards
-                      tickets={newestTickets}
-                      loading={loading}
-                      onTicketClick={handleTicketClick}
-                      maxCards={8}
-                    />
-                  </div>
-                </Col>
-                <Col xs={24} lg={10}>
-                  <div style={{ height: 340 }}>
-                    <TimelineActivityFeed
-                      activities={liveActivity}
-                      loading={loading}
-                      onTicketClick={handleTicketClick}
-                    />
-                  </div>
-                </Col>
-              </Row>
-
-              {/* ROW 3: Attention Needed (3A) 2/3 + Pipeline (2D) 1/3 - Fixed height 320px */}
-              <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-                <Col xs={24} lg={16}>
-                  <div style={{ height: 320 }}>
-                    <AttentionNeededCards
-                      data={attentionNeeded}
-                      loading={loading}
-                      onTicketClick={handleTicketClick}
-                    />
-                  </div>
-                </Col>
-                <Col xs={24} lg={8}>
-                  <div style={{ height: 320 }}>
-                    <KanbanPipeline data={kanbanSummary} loading={loading} />
-                  </div>
-                </Col>
-              </Row>
-
-              {/* ROW 4: Team Workload (6C) - 1/3 width */}
-              <Row gutter={[16, 16]}>
-                <Col xs={24} lg={8}>
-                  <TeamWorkloadCards
-                    workloads={agentWorkload}
-                    loading={loading}
-                  />
-                </Col>
-              </Row>
-            </>
-          )}
-        </div>
+      {/* Company Filter Header - Fixed position, not draggable */}
+      <div style={{ padding: "0 20px", marginBottom: 0, backgroundColor: "#fff" }}>
+        <CompanyFilterBar
+          companies={companyHealth}
+          selectedCompanyId={selectedCompanyId}
+          totalTickets={totalTickets}
+          onSelect={handleCompanySelect}
+          loading={loading}
+        />
       </div>
+
+      <DashboardGrid
+        widgets={widgets}
+        userId={user?.id}
+        loading={loading}
+        onRefresh={fetchDashboardData}
+      />
 
       {/* Edit Ticket Modal */}
       <TicketModal
@@ -318,7 +307,10 @@ const Dashboard: React.FC = () => {
         open={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         columnId={1}
-        onSuccess={handleTicketCreated}
+        onSuccess={() => {
+          fetchDashboardData();
+          setIsCreateModalOpen(false);
+        }}
       />
     </>
   );

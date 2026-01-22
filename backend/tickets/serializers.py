@@ -104,9 +104,21 @@ class UserSerializer(serializers.ModelSerializer):
 
 class UserSimpleSerializer(serializers.ModelSerializer):
     """Lightweight user serializer without company info to avoid circular references"""
+    administered_companies = serializers.SerializerMethodField()
+    is_it_admin = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name']
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'administered_companies', 'is_it_admin']
+
+    def get_administered_companies(self, obj):
+        """Companies where this user is an IT admin"""
+        companies = obj.administered_companies.all()
+        return [{'id': c.id, 'name': c.name} for c in companies]
+
+    def get_is_it_admin(self, obj):
+        """Check if user is an IT admin (superuser, staff, or company admin)"""
+        return obj.is_superuser or obj.is_staff or obj.administered_companies.exists()
 
 
 class CompanySerializer(serializers.ModelSerializer):
@@ -676,7 +688,7 @@ class KanbanTicketSerializer(serializers.ModelSerializer):
             # LexoRank ordering
             'rank',
             # Display on card
-            'company_logo_url', 'following', 'comments_count',
+            'company', 'company_logo_url', 'following', 'comments_count',
             'assignee_ids', 'assignees_detail', 'resolved_at', 'resolution_status', 'resolution_feedback',
             # IMPORTANT: Include due_date for DeadlineView
             'due_date',

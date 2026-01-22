@@ -18,3 +18,7 @@ export { default as AttentionNeededCards } from './AttentionNeededCards';
 export { default as NewestTicketCards } from './NewestTicketCards';
 export { default as TimelineActivityFeed } from './TimelineActivityFeed';
 export { default as TeamWorkloadCards } from './TeamWorkloadCards';
+
+// Grid layout components
+export { DashboardGrid, type WidgetConfig } from './DashboardGrid';
+export { DashboardWidget } from './DashboardWidget';

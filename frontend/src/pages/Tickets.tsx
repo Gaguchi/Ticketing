@@ -40,9 +40,12 @@ import { CalendarView } from "../components/CalendarView";
 import { getPriorityIcon } from "../components/PriorityIcons";
 import { TicketModal } from "../components/TicketModal";
 import { CreateTicketModal } from "../components/CreateTicketModal";
+import { CompanyFilterBar } from "../components/dashboard";
 import { useProject } from "../contexts/AppContext";
 import { ticketService, statusService } from "../services";
+import dashboardService from "../services/dashboard.service";
 import type { Ticket, TicketColumn, BoardColumn } from "../types/api";
+import type { CompanyHealth } from "../types/dashboard";
 import { debug, LogCategory, LogLevel } from "../utils/debug";
 import { rankBetween } from "../utils/lexorank";
 import "./Tickets.css";
@@ -105,6 +108,10 @@ const Tickets: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [archivedTickets, setArchivedTickets] = useState<Ticket[]>([]);
   const [archiveLoading, setArchiveLoading] = useState(false);
+
+  // Company filter state
+  const [companies, setCompanies] = useState<CompanyHealth[]>([]);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(null);
 
   const RECENT_UPDATE_WINDOW_MS = 10000; // Extended to handle slow backend responses
 
@@ -186,6 +193,23 @@ const Tickets: React.FC = () => {
 
     fetchData();
   }, [selectedProject?.id]); // Only depend on project ID
+
+  // Fetch company health data for filter
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      if (!selectedProject) {
+        setCompanies([]);
+        return;
+      }
+      try {
+        const healthData = await dashboardService.fetchCompanyHealth({ project: selectedProject.id });
+        setCompanies(healthData);
+      } catch (error) {
+        console.error("Failed to fetch companies:", error);
+      }
+    };
+    fetchCompanies();
+  }, [selectedProject?.id]);
 
   useEffect(() => {
     setArchivedTickets([]);
@@ -709,6 +733,11 @@ const Tickets: React.FC = () => {
     return tickets
       .filter((ticket) => !ticket.is_archived)
       .filter((ticket) => {
+        // Company filter
+        if (selectedCompanyId !== null) {
+          if (ticket.company !== selectedCompanyId) return false;
+        }
+
         // Search filter
         if (normalizedSearch) {
           const matchesSearch =
@@ -727,7 +756,7 @@ const Tickets: React.FC = () => {
 
         return true;
       });
-  }, [tickets, normalizedSearch, filterStatus]);
+  }, [tickets, normalizedSearch, filterStatus, selectedCompanyId]);
 
   const loadArchivedTickets = useCallback(async () => {
     if (!selectedProject) {
@@ -933,6 +962,16 @@ const Tickets: React.FC = () => {
       >
         <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
           <h1 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>Board</h1>
+          {/* Company Filter Pills */}
+          {companies.length > 0 && (
+            <CompanyFilterBar
+              companies={companies}
+              selectedCompanyId={selectedCompanyId}
+              totalTickets={tickets.filter(t => !t.is_archived).length}
+              onSelect={setSelectedCompanyId}
+              compact
+            />
+          )}
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <Input
               placeholder="Search"

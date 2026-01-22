@@ -3101,10 +3101,12 @@ def dashboard_attention_needed(request):
     GET /api/tickets/dashboard/attention-needed/
     Query params:
         - project: Filter by project ID (optional)
+        - company: Filter by company ID (optional)
         - limit: Max number of tickets (default 10)
     """
     user = request.user
     project_id = request.query_params.get('project')
+    company_id = request.query_params.get('company')
     limit = int(request.query_params.get('limit', 10))
     
     # Base queryset - tickets user can access
@@ -3127,6 +3129,10 @@ def dashboard_attention_needed(request):
         tickets_qs = Ticket.objects.filter(
             Q(company__admins=user) | Q(company__users=user) | Q(reporter=user) | Q(assignees=user) | Q(project__members=user)
         ).distinct()
+    
+    # Filter by company if specified
+    if company_id:
+        tickets_qs = tickets_qs.filter(company_id=company_id)
     
     # Exclude completed tickets
     tickets_qs = tickets_qs.exclude(
