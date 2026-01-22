@@ -107,6 +107,9 @@ class ApiService {
       if (!isAuthEndpoint && !isRetry) {
         // Check if it's a token error (try to parse response)
         const errorData = await response.clone().json().catch(() => ({}));
+
+        // 401 is almost always a token error. 
+        // 403 is only a token error if specifically stated (e.g. token_not_valid).
         const isTokenError = response.status === 401 ||
           errorData.code === 'token_not_valid' ||
           errorData.detail?.includes('token');
@@ -120,12 +123,22 @@ class ApiService {
             console.log('🔄 [ApiService] Retrying request after token refresh');
             return this.request<T>(url, options, true);
           }
+          // Refresh failed - logout
+          this.handleAuthFailure();
+          throw new Error('Unauthorized');
         }
       }
 
-      // Refresh failed or not applicable - logout
-      this.handleAuthFailure();
-      throw new Error('Unauthorized');
+      // If it's a 403 but NOT a token error (e.g. permission denied), DO NOT logout.
+      if (response.status === 403) {
+        throw new Error('Permission Denied');
+      }
+
+      // 401 (refresh failed or not applicable) - logout
+      if (response.status === 401) {
+        this.handleAuthFailure();
+        throw new Error('Unauthorized');
+      }
     }
 
     if (!response.ok) {

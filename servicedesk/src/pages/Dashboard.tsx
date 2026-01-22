@@ -1,12 +1,26 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { PageContainer } from "../components/layout";
-import { Spinner } from "../components/ui";
-import { TicketCard } from "../components/tickets";
 import { Ticket } from "../types";
 import apiService from "../services/api.service";
 import { API_ENDPOINTS } from "../config/api";
 import CreateTicketModal from "../components/CreateTicketModal";
 import ReviewModal from "../components/ReviewModal";
+import TicketChatPanel from "../components/TicketChatPanel";
+import { useWebSocketContext } from "../contexts/WebSocketContext";
+import {
+  formatDate,
+  getPriorityColor,
+  getPriorityLabel,
+  getStatusColor,
+} from "../utils/helpers";
+import {
+  SearchOutlined,
+  PlusOutlined,
+  UserOutlined,
+  CalendarOutlined,
+  MoreOutlined,
+} from "@ant-design/icons";
+import { Button, Avatar, Tooltip, Tag, Empty, Spin } from "antd";
 
 type FilterType = "all" | "open" | "resolved" | "archived";
 
@@ -24,15 +38,77 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterType>("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [error, setError] = useState("");
+  // const [error, setError] = useState(""); -- removed unused
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [ticketsNeedingReview, setTicketsNeedingReview] = useState<Ticket[]>(
-    []
-  );
+  const [ticketsNeedingReview, setTicketsNeedingReview] = useState<Ticket[]>([]);
+  const [selectedTicketId, setSelectedTicketId] = useState<number | null>(null);
+
+  // WebSocket context for real-time updates
+  const { connectTickets, disconnectTickets } = useWebSocketContext();
+    
+  // Track ticket IDs we've already processed to avoid duplicates
+  const processedTicketIdsRef = useRef<Set<number>>(new Set());
+
+  // Use the first project ID for websocket connection (simplified for now)
+  // In a real app we might want to handle multiple projects or get it from context
+  const [connectedProjectId, setConnectedProjectId] = useState<number | null>(null);
 
   useEffect(() => {
     fetchAllTickets();
   }, []);
+
+  // Connect to websocket when we identify a project from tickets
+  // This is a heuristic since Dashboard aggregates tickets
+  useEffect(() => {
+      if (tickets.length > 0 && !connectedProjectId) {
+          const project = tickets[0].project;
+          const pid = typeof project === 'number' ? project : project?.id;
+          if (pid) setConnectedProjectId(pid);
+      }
+  }, [tickets, connectedProjectId]);
+
+  useEffect(() => {
+    if (connectedProjectId) {
+        connectTickets(connectedProjectId);
+        return () => disconnectTickets();
+    }
+  }, [connectedProjectId]);
+
+  // Listen for real-time ticket updates via WebSocket
+  useEffect(() => {
+    const handleTicketUpdate = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { type, data, projectId } = customEvent.detail;
+
+      if (connectedProjectId && projectId !== connectedProjectId) return;
+
+      if (type === "ticket_created") {
+        const ticketId = data.id;
+        if (processedTicketIdsRef.current.has(ticketId)) return;
+        processedTicketIdsRef.current.add(ticketId);
+        setTickets((prev) => {
+          if (prev.some((t) => t.id === ticketId)) return prev;
+          return [data, ...prev];
+        });
+      } else if (type === "ticket_updated") {
+        setTickets((prev) =>
+          prev.map((t) => (t.id === data.id ? { ...t, ...data } : t))
+        );
+        // Also update selected ticket if it's the one updated
+        // (TicketChatPanel handles its own messages, but ticket metadata might change)
+      } else if (type === "ticket_deleted") {
+        setTickets((prev) => prev.filter((t) => t.id !== data.id));
+        processedTicketIdsRef.current.delete(data.id);
+        if (selectedTicketId === data.id) setSelectedTicketId(null);
+      }
+    };
+
+    window.addEventListener("ticketUpdate", handleTicketUpdate);
+    return () => {
+      window.removeEventListener("ticketUpdate", handleTicketUpdate);
+    };
+  }, [connectedProjectId, selectedTicketId]);
+
 
   const fetchAllTickets = async () => {
     try {
@@ -63,7 +139,7 @@ export default function Dashboard() {
       );
       setTicketsNeedingReview(needReview);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load tickets");
+      console.error(err instanceof Error ? err.message : "Failed to load tickets");
     } finally {
       setLoading(false);
     }
@@ -159,7 +235,7 @@ export default function Dashboard() {
     // Update the ticket in state to reflect it's been reviewed
     setTickets((prev) =>
       prev.map(
-        (t) => (t.id === ticketId ? { ...t, resolution_rating: 5 } : t) // Placeholder, actual rating comes from API
+        (t) => (t.id === ticketId ? { ...t, resolution_rating: 5 } : t) // Placeholder
       )
     );
     // Remove from pending reviews
@@ -167,13 +243,12 @@ export default function Dashboard() {
   };
 
   const handleAllReviewsComplete = () => {
-    // Refresh tickets to get updated data
     fetchAllTickets();
   };
 
   return (
     <PageContainer>
-      {/* Hero Banner - Prominent CTA */}
+      {/* Search & Header (Keeping similar to MyTickets design but adapted) */}
       <div className="bg-gradient-to-r from-brand-400/10 to-brand-400/5 border border-brand-400/20 rounded-md p-6 mb-6">
         <div className="flex items-center justify-between">
           <div>
@@ -184,152 +259,156 @@ export default function Dashboard() {
               Search your tickets or submit a new request
             </p>
           </div>
-          <button
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            size="large"
+            className="bg-brand-400 hover:bg-brand-500 border-none shadow-sm h-auto py-2.5 px-5"
             onClick={() => setIsCreateModalOpen(true)}
-            className="flex items-center gap-2 bg-brand-400 hover:bg-brand-500 text-white px-5 py-2.5 rounded-md font-medium transition-colors shadow-sm"
           >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-              />
-            </svg>
             Submit a Request
-          </button>
+          </Button>
         </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="mb-6">
-        <div className="relative">
-          <svg
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
-          </svg>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search tickets..."
-            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 bg-white"
-          />
-        </div>
-      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start h-[calc(100vh-250px)]">
+          {/* Left Column: Ticket List - Scrollable */}
+          <div className="lg:col-span-4 flex flex-col h-full">
+            {/* Search Bar */}
+            <div className="mb-4">
+                 <div className="relative">
+                     <SearchOutlined className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg" />
+                     <input 
+                         placeholder="Search tickets..." 
+                         className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 bg-white" 
+                         type="text" 
+                         value={searchQuery}
+                         onChange={(e) => setSearchQuery(e.target.value)}
+                     />
+                 </div>
+            </div>
 
-      {/* Filters */}
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-900">My Tickets</h2>
-        <div className="flex gap-1 bg-gray-100 p-1 rounded-md">
-          <button
-            onClick={() => setFilter("all")}
-            className={`px-3 py-1.5 text-sm font-medium rounded transition-colors ${
-              filter === "all"
-                ? "bg-white text-gray-900 shadow-sm"
-                : "text-gray-600 hover:text-gray-900"
-            }`}
-          >
-            All ({tickets.length})
-          </button>
-          <button
-            onClick={() => setFilter("open")}
-            className={`px-3 py-1.5 text-sm font-medium rounded transition-colors ${
-              filter === "open"
-                ? "bg-white text-gray-900 shadow-sm"
-                : "text-gray-600 hover:text-gray-900"
-            }`}
-          >
-            Open ({openCount})
-          </button>
-          <button
-            onClick={() => setFilter("resolved")}
-            className={`px-3 py-1.5 text-sm font-medium rounded transition-colors ${
-              filter === "resolved"
-                ? "bg-white text-gray-900 shadow-sm"
-                : "text-gray-600 hover:text-gray-900"
-            }`}
-          >
-            Resolved ({resolvedCount})
-          </button>
-          <button
-            onClick={() => setFilter("archived")}
-            className={`px-3 py-1.5 text-sm font-medium rounded transition-colors ${
-              filter === "archived"
-                ? "bg-white text-gray-900 shadow-sm"
-                : "text-gray-600 hover:text-gray-900"
-            }`}
-          >
-            Archived ({archivedTickets.length})
-          </button>
-        </div>
-      </div>
+            {/* Filters */}
+            <div className="mb-4 flex items-center justify-between overflow-x-auto pb-2">
+                <div className="flex gap-1">
+                    <button 
+                        onClick={() => setFilter("all")}
+                        className={`px-3 py-1 text-xs font-medium rounded-full transition-colors whitespace-nowrap ${filter === 'all' ? 'bg-gray-200 text-gray-900' : 'text-gray-500 hover:bg-gray-100'}`}
+                    >
+                        All
+                    </button>
+                    <button 
+                        onClick={() => setFilter("open")}
+                        className={`px-3 py-1 text-xs font-medium rounded-full transition-colors whitespace-nowrap ${filter === 'open' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-100'}`}
+                    >
+                        Open ({openCount})
+                    </button>
+                    <button 
+                        onClick={() => setFilter("resolved")}
+                        className={`px-3 py-1 text-xs font-medium rounded-full transition-colors whitespace-nowrap ${filter === 'resolved' ? 'bg-green-100 text-green-700' : 'text-gray-500 hover:bg-gray-100'}`}
+                    >
+                        Resolved ({resolvedCount})
+                    </button>
+                     <button 
+                        onClick={() => setFilter("archived")}
+                        className={`px-3 py-1 text-xs font-medium rounded-full transition-colors whitespace-nowrap ${filter === 'archived' ? 'bg-gray-200 text-gray-700' : 'text-gray-500 hover:bg-gray-100'}`}
+                    >
+                        Archived
+                    </button>
+                </div>
+            </div>
 
-      {/* Error State */}
-      {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-md mb-4">
-          <p className="text-sm text-red-600">{error}</p>
-        </div>
-      )}
+             {/* List Content */}
+             <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-3 pb-4">
+                {loading ? (
+                    <div className="flex justify-center py-10">
+                        <Spin />
+                    </div>
+                ) : filteredTickets.length === 0 ? (
+                    <div className="text-center py-10 bg-white rounded-md border border-gray-100">
+                        <Empty description="No tickets found" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                    </div>
+                ) : (
+                    filteredTickets.map(ticket => {
+                        const isActive = selectedTicketId === ticket.id;
+                        const activeCardStyles = isActive 
+                            ? "border-l-brand-600 ring-2 ring-brand-400/20 bg-brand-50 shadow-card-hover" 
+                            : "border-l-brand-400 bg-white shadow-card hover:shadow-card-hover";
+                        
+                        const displayStatus = ticket.ticket_status_name || ticket.status; 
+                        
+                        return (
+                            <div 
+                                key={ticket.id}
+                                onClick={() => setSelectedTicketId(ticket.id)}
+                                className={`rounded-md p-5 transition-all duration-200 cursor-pointer border-l-4 ${activeCardStyles}`}
+                            >
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span 
+                                        className="text-xs font-bold uppercase tracking-wide px-2 py-0.5 rounded"
+                                        style={{ 
+                                            backgroundColor: getStatusColor(displayStatus) + '20', 
+                                            color: getStatusColor(displayStatus)
+                                        }}
+                                    >
+                                        {displayStatus}
+                                    </span>
+                                    <span className="text-xs text-gray-400 font-mono">#{ticket.ticket_key || ticket.id}</span>
+                                    <Tag 
+                                        color={getPriorityColor(ticket.priority_id)} 
+                                        className="ml-auto text-[10px] m-0 border-0 font-medium"
+                                    >
+                                        {getPriorityLabel(ticket.priority_id)}
+                                    </Tag>
+                                    {isActive && <span className="flex h-2 w-2 rounded-full bg-brand-500 ml-2"></span>}
+                                </div>
 
-      {/* Loading State */}
-      {loading && (
-        <div className="flex items-center justify-center py-12">
-          <Spinner size="lg" />
-        </div>
-      )}
+                                <h3 className={`text-base font-semibold mb-3 line-clamp-2 ${isActive ? 'text-brand-900' : 'text-gray-900'}`}>
+                                    {ticket.name}
+                                </h3>
 
-      {/* Empty State */}
-      {!loading && filteredTickets.length === 0 && (
-        <div className="text-center py-12">
-          <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-brand-400/10 flex items-center justify-center">
-            <svg
-              className="w-7 h-7 text-brand-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-              />
-            </svg>
+                                <div className="flex items-center justify-between pt-3 border-t border-gray-100/50">
+                                    <div className="flex items-center gap-3">
+                                        <Tooltip title={ticket.assignees?.length ? `Assigned to ${ticket.assignees[0].first_name}` : 'Unassigned'}>
+                                            {ticket.assignees && ticket.assignees.length > 0 ? (
+                                                <Avatar size="small" className="bg-blue-100 text-blue-600 border border-white shadow-sm">
+                                                    {ticket.assignees[0].first_name?.[0] || ticket.assignees[0].username[0]}
+                                                </Avatar>
+                                            ) : (
+                                                <Avatar size="small" icon={<UserOutlined />} className="bg-gray-200" />
+                                            )}
+                                        </Tooltip>
+                                        <div className="flex items-center gap-1 text-xs text-gray-500">
+                                            <CalendarOutlined />
+                                            <span>{formatDate(ticket.created_at)}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })
+                )}
+             </div>
           </div>
-          <h3 className="text-base font-medium text-gray-900 mb-1">
-            {searchQuery ? "No tickets found" : "No tickets yet"}
-          </h3>
-          <p className="text-sm text-gray-500 mb-4">
-            {searchQuery
-              ? "Try a different search term"
-              : 'Use the "Submit a Request" button above to create your first ticket'}
-          </p>
-        </div>
-      )}
 
-      {/* Ticket List */}
-      {!loading && filteredTickets.length > 0 && (
-        <div className="space-y-3">
-          {filteredTickets.map((ticket) => (
-            <TicketCard key={ticket.id} ticket={ticket} />
-          ))}
-        </div>
-      )}
+          {/* Right Column: Chat Panel */}
+          <div className="lg:col-span-8 h-full sticky top-0">
+             {selectedTicketId ? (
+                 <div className="h-full">
+                     <TicketChatPanel ticketId={selectedTicketId} />
+                 </div>
+             ) : (
+                 <div className="h-full flex items-center justify-center text-gray-400 border-2 border-dashed border-gray-200 rounded-md bg-white">
+                     <div className="text-center">
+                         <div className="mx-auto w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mb-3">
+                             <MoreOutlined className="text-xl" />
+                         </div>
+                         <p className="font-medium">Select a ticket to view conversation</p>
+                     </div>
+                 </div>
+             )}
+          </div>
+      </div>
 
       {/* Create Ticket Modal */}
       <CreateTicketModal
@@ -338,7 +417,7 @@ export default function Dashboard() {
         onSubmit={handleCreateTicket}
       />
 
-      {/* Review Modal - pops up for tickets needing review */}
+      {/* Review Modal */}
       <ReviewModal
         tickets={ticketsNeedingReview}
         onReviewComplete={handleReviewComplete}
