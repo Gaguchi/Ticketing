@@ -137,7 +137,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
           display: "flex",
           flexDirection: "column",
           flex: 1,
-          overflowY: "auto",
+          overflow: "visible",
           padding: "4px 8px 8px",
         }}
       >

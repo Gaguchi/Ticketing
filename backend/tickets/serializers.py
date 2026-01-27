@@ -104,21 +104,9 @@ class UserSerializer(serializers.ModelSerializer):
 
 class UserSimpleSerializer(serializers.ModelSerializer):
     """Lightweight user serializer without company info to avoid circular references"""
-    administered_companies = serializers.SerializerMethodField()
-    is_it_admin = serializers.SerializerMethodField()
-
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'administered_companies', 'is_it_admin']
-
-    def get_administered_companies(self, obj):
-        """Companies where this user is an IT admin"""
-        companies = obj.administered_companies.all()
-        return [{'id': c.id, 'name': c.name} for c in companies]
-
-    def get_is_it_admin(self, obj):
-        """Check if user is an IT admin (superuser, staff, or company admin)"""
-        return obj.is_superuser or obj.is_staff or obj.administered_companies.exists()
+        fields = ['id', 'username', 'email', 'first_name', 'last_name']
 
 
 class CompanySerializer(serializers.ModelSerializer):
@@ -669,11 +657,9 @@ class KanbanTicketSerializer(serializers.ModelSerializer):
     ~65% smaller payload than TicketListSerializer.
     """
     assignee_ids = serializers.SerializerMethodField()
-    assignees_detail = serializers.SerializerMethodField()
     project_key = serializers.CharField(source='project.key', read_only=True)
     project_number = serializers.IntegerField(read_only=True)
     ticket_key = serializers.CharField(read_only=True)
-    column_name = serializers.CharField(source='column.name', read_only=True)
     company_logo_url = serializers.SerializerMethodField()
     comments_count = serializers.IntegerField(read_only=True)
     
@@ -684,14 +670,12 @@ class KanbanTicketSerializer(serializers.ModelSerializer):
             'id', 'name', 'type', 'priority_id',
             'project_key', 'project_number', 'ticket_key',
             # Grouping (old + new systems)
-            'column', 'column_name', 'ticket_status_key',
+            'column', 'ticket_status_key',
             # LexoRank ordering
             'rank',
             # Display on card
-            'company', 'company_logo_url', 'following', 'comments_count',
-            'assignee_ids', 'assignees_detail', 'resolved_at', 'resolution_status', 'resolution_feedback',
-            # IMPORTANT: Include due_date for DeadlineView
-            'due_date',
+            'company_logo_url', 'following', 'comments_count',
+            'assignee_ids', 'resolved_at', 'resolution_status', 'resolution_feedback',
         ]
         # Read ticket_status_key directly from foreign key
         extra_kwargs = {
@@ -713,18 +697,6 @@ class KanbanTicketSerializer(serializers.ModelSerializer):
     def get_assignee_ids(self, obj):
         # Use prefetched data
         return [assignee.id for assignee in obj.assignees.all()]
-    
-    def get_assignees_detail(self, obj):
-        """Return assignee details for TicketCard display"""
-        return [
-            {
-                'id': assignee.id,
-                'username': assignee.username,
-                'first_name': assignee.first_name,
-                'last_name': assignee.last_name,
-            }
-            for assignee in obj.assignees.all()
-        ]
 
 
 class ContactSerializer(serializers.ModelSerializer):

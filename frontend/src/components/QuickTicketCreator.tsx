@@ -8,7 +8,7 @@ import {
   faBookmark,
   faBolt,
 } from "@fortawesome/free-solid-svg-icons";
-import { Dayjs } from "dayjs";
+import dayjs, { Dayjs } from "dayjs";
 import { useProject } from "../contexts/AppContext";
 import { ticketService, userService } from "../services";
 import type { Ticket, User, TicketType } from "../types/api";
@@ -47,17 +47,18 @@ export const QuickTicketCreator: React.FC<QuickTicketCreatorProps> = ({
   const [summary, setSummary] = useState("");
   const [ticketType, setTicketType] = useState<TicketType>("task");
   const [assignee, setAssignee] = useState<number | undefined>(undefined);
-  const [dueDate, setDueDate] = useState<Dayjs | null>(null);
+  // Default due date is 2 days from today
+  const [dueDate, setDueDate] = useState<Dayjs | null>(dayjs().add(2, "day"));
   const [isCreating, setIsCreating] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [showTypePicker, setShowTypePicker] = useState(false);
   const [showAssigneePicker, setShowAssigneePicker] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
 
   const textareaRef = useRef<any>(null);
   const typePickerRef = useRef<HTMLDivElement>(null);
   const assigneePickerRef = useRef<HTMLDivElement>(null);
-  const datePickerRef = useRef<HTMLDivElement>(null);
+  const datePickerContainerRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const { selectedProject } = useProject();
@@ -102,11 +103,6 @@ export const QuickTicketCreator: React.FC<QuickTicketCreatorProps> = ({
         setShowAssigneePicker(false);
       }
 
-      // Close date picker
-      if (datePickerRef.current && !datePickerRef.current.contains(target)) {
-        setShowDatePicker(false);
-      }
-
       // Close entire component when clicking outside
       // BUT exclude clicks on the pickers themselves or Ant Design dropdowns
       if (containerRef.current && !containerRef.current.contains(target)) {
@@ -140,11 +136,6 @@ export const QuickTicketCreator: React.FC<QuickTicketCreatorProps> = ({
 
     if (!summary.trim()) {
       message.warning("Please enter a summary");
-      return;
-    }
-
-    if (!dueDate) {
-      message.warning("Please set a due date");
       return;
     }
 
@@ -196,7 +187,8 @@ export const QuickTicketCreator: React.FC<QuickTicketCreatorProps> = ({
       setSummary("");
       setTicketType("task");
       setAssignee(undefined);
-      setDueDate(null);
+      // Reset due date to 2 days from today
+      setDueDate(dayjs().add(2, "day"));
 
       console.log(
         `[QuickTicketCreator] Calling onSuccess with ticket:`,
@@ -223,7 +215,8 @@ export const QuickTicketCreator: React.FC<QuickTicketCreatorProps> = ({
       setSummary("");
       setTicketType("task");
       setAssignee(undefined);
-      setDueDate(null);
+      // Reset due date to 2 days from today
+      setDueDate(dayjs().add(2, "day"));
     }
   };
 
@@ -249,127 +242,122 @@ export const QuickTicketCreator: React.FC<QuickTicketCreatorProps> = ({
 
           <div className="quick-ticket-actions">
             <div className="quick-ticket-pickers">
-              {/* Type Picker */}
-              <div className="quick-ticket-picker" ref={typePickerRef}>
-                <Tooltip title="Change type">
-                  <button
-                    type="button"
-                    className="quick-ticket-picker-btn"
-                    onClick={() => setShowTypePicker(!showTypePicker)}
-                    disabled={isCreating}
-                  >
-                    <FontAwesomeIcon
-                      icon={typeConfig.icon}
-                      style={{ color: typeConfig.color }}
-                    />
-                    <span className="quick-ticket-type-label">
-                      {typeConfig.label}
-                    </span>
-                    <span className="quick-ticket-dropdown-icon">▼</span>
-                  </button>
-                </Tooltip>
+              {/* Type Picker Group */}
+              <div className="quick-ticket-type-group">
+                <div className="quick-ticket-picker" ref={typePickerRef}>
+                  <Tooltip title="Change type">
+                    <button
+                      type="button"
+                      className="quick-ticket-picker-btn"
+                      onClick={() => setShowTypePicker(!showTypePicker)}
+                      disabled={isCreating}
+                    >
+                      <FontAwesomeIcon
+                        icon={typeConfig.icon}
+                        style={{ color: typeConfig.color }}
+                      />
+                      <span className="quick-ticket-dropdown-icon">▼</span>
+                    </button>
+                  </Tooltip>
 
-                {showTypePicker && (
-                  <div className="quick-ticket-dropdown">
-                    {(["task", "bug", "story", "epic"] as TicketType[]).map(
-                      (type) => {
-                        const config = getTypeConfig(type);
-                        return (
-                          <div
-                            key={type}
-                            className={`quick-ticket-dropdown-item ${
-                              type === ticketType ? "active" : ""
-                            }`}
-                            onClick={() => {
-                              setTicketType(type);
-                              setShowTypePicker(false);
-                            }}
-                          >
-                            <FontAwesomeIcon
-                              icon={config.icon}
-                              style={{ color: config.color }}
-                            />
-                            <span>{config.label}</span>
-                          </div>
-                        );
-                      }
-                    )}
-                  </div>
-                )}
+                  {showTypePicker && (
+                    <div className="quick-ticket-dropdown">
+                      {(["task", "bug", "story", "epic"] as TicketType[]).map(
+                        (type) => {
+                          const config = getTypeConfig(type);
+                          return (
+                            <div
+                              key={type}
+                              className={`quick-ticket-dropdown-item ${
+                                type === ticketType ? "active" : ""
+                              }`}
+                              onClick={() => {
+                                setTicketType(type);
+                                setShowTypePicker(false);
+                              }}
+                            >
+                              <FontAwesomeIcon
+                                icon={config.icon}
+                                style={{ color: config.color }}
+                              />
+                              <span>{config.label}</span>
+                            </div>
+                          );
+                        }
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {/* Due Date Picker */}
-              <div className="quick-ticket-picker" ref={datePickerRef}>
-                <Tooltip title="Set due date">
-                  <button
-                    type="button"
-                    className="quick-ticket-icon-btn"
-                    onClick={() => setShowDatePicker(!showDatePicker)}
-                    disabled={isCreating}
-                  >
-                    <CalendarOutlined />
-                  </button>
-                </Tooltip>
+              <div className="quick-ticket-divider" />
 
-                {showDatePicker && (
-                  <div
-                    className="quick-ticket-dropdown quick-ticket-date-dropdown"
-                    ref={datePickerRef}
-                  >
+              {/* Meta Group (Assignee & Date) */}
+              <div className="quick-ticket-meta-group">
+                {/* Assignee Picker */}
+                <div className="quick-ticket-picker" ref={assigneePickerRef}>
+                  <Tooltip title="Assign to">
+                    <button
+                      type="button"
+                      className="quick-ticket-icon-btn"
+                      onClick={() => setShowAssigneePicker(!showAssigneePicker)}
+                      disabled={isCreating}
+                    >
+                      {selectedUser ? (
+                        <Avatar size="small">
+                          {selectedUser.username.charAt(0).toUpperCase()}
+                        </Avatar>
+                      ) : (
+                        <UserOutlined />
+                      )}
+                    </button>
+                  </Tooltip>
+
+                  {showAssigneePicker && (
+                    <div className="quick-ticket-dropdown quick-ticket-assignee-dropdown">
+                      {users.map((user) => (
+                        <div
+                          key={user.id}
+                          className={`quick-ticket-dropdown-item ${
+                            assignee === user.id ? "active" : ""
+                          }`}
+                          onClick={() => {
+                            setAssignee(user.id);
+                            setShowAssigneePicker(false);
+                          }}
+                        >
+                          <Avatar size="small">
+                            {user.username.charAt(0).toUpperCase()}
+                          </Avatar>
+                          <span>{user.username}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Due Date Picker */}
+                <div className="quick-ticket-picker quick-ticket-date-picker" ref={datePickerContainerRef}>
+                  <Tooltip title={dueDate ? `Due: ${dueDate.format("MMM DD, YYYY")}` : "Set due date"}>
                     <DatePicker
                       value={dueDate}
                       onChange={(date) => {
-                        setDueDate(date);
-                        setShowDatePicker(false);
+                        setDueDate(date || dayjs().add(2, "day"));
+                        setDatePickerOpen(false);
                       }}
-                      format="MMM DD, YYYY"
-                      open={true}
-                      showToday={false}
+                      open={datePickerOpen}
+                      onOpenChange={setDatePickerOpen}
+                      format="MMM DD"
+                      allowClear={false}
+                      disabled={isCreating}
+                      suffixIcon={<CalendarOutlined />}
+                      getPopupContainer={() => containerRef.current || document.body}
+                      className="quick-ticket-datepicker-input"
+                      popupClassName="quick-ticket-datepicker-popup"
+                      placement="bottomLeft"
                     />
-                  </div>
-                )}
-              </div>
-
-              {/* Assignee Picker */}
-              <div className="quick-ticket-picker" ref={assigneePickerRef}>
-                <Tooltip title="Assign to">
-                  <button
-                    type="button"
-                    className="quick-ticket-icon-btn"
-                    onClick={() => setShowAssigneePicker(!showAssigneePicker)}
-                    disabled={isCreating}
-                  >
-                    {selectedUser ? (
-                      <Avatar size="small">
-                        {selectedUser.username.charAt(0).toUpperCase()}
-                      </Avatar>
-                    ) : (
-                      <UserOutlined />
-                    )}
-                  </button>
-                </Tooltip>
-
-                {showAssigneePicker && (
-                  <div className="quick-ticket-dropdown quick-ticket-assignee-dropdown">
-                    {users.map((user) => (
-                      <div
-                        key={user.id}
-                        className={`quick-ticket-dropdown-item ${
-                          assignee === user.id ? "active" : ""
-                        }`}
-                        onClick={() => {
-                          setAssignee(user.id);
-                          setShowAssigneePicker(false);
-                        }}
-                      >
-                        <Avatar size="small">
-                          {user.username.charAt(0).toUpperCase()}
-                        </Avatar>
-                        <span>{user.username}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                  </Tooltip>
+                </div>
               </div>
             </div>
 
@@ -380,7 +368,6 @@ export const QuickTicketCreator: React.FC<QuickTicketCreatorProps> = ({
               disabled={!summary.trim() || isCreating}
             >
               <span className="quick-ticket-submit-icon">⏎</span>
-              <span className="quick-ticket-submit-text">Create</span>
             </button>
           </div>
         </div>
