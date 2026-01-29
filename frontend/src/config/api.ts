@@ -129,6 +129,12 @@ export const API_ENDPOINTS = {
   KPI_MY_TICKETS: api('/kpi/my-tickets/'),
   KPI_MY_ACTIVE: api('/kpi/my-active/'),
   KPI_PROJECT_TRENDS: api('/kpi/project-trends/'),
+  KPI_AVAILABLE_INDICATORS: api('/kpi/available-indicators/'),
+  KPI_CONFIG: api('/kpi/config/'),
+  KPI_CONFIG_SAVE: api('/kpi/config/save/'),
+  KPI_SCOREBOARD: api('/kpi/scoreboard/'),
+  KPI_SCOREBOARD_MEMBERS: api('/kpi/scoreboard-members/'),
+  KPI_MY_SCORE: api('/kpi/my-score/'),
 
   // User Reviews (Admin reviews of users - hidden from reviewed users)
   USER_REVIEWS: api('/user-reviews/'),

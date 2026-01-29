@@ -1599,3 +1599,74 @@ class UserReview(models.Model):
         ticket_info = f" (Ticket: {self.ticket.ticket_key})" if self.ticket else ""
         return f"Review of {self.user.username} by {self.reviewer.username}{ticket_info} - {self.rating}★"
 
+
+class KPIConfig(models.Model):
+    """
+    Per-project KPI configuration. One config per project.
+    Only superadmins can create/edit.
+    """
+    project = models.OneToOneField(
+        'Project',
+        on_delete=models.CASCADE,
+        related_name='kpi_config',
+        help_text='Project this KPI configuration belongs to'
+    )
+    name = models.CharField(
+        max_length=255,
+        default='Default KPI Configuration'
+    )
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='created_kpi_configs'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'KPI Configuration'
+        verbose_name_plural = 'KPI Configurations'
+
+    def __str__(self):
+        return f"{self.name} ({self.project.name})"
+
+
+class KPIIndicator(models.Model):
+    """
+    An indicator within a KPI configuration, with a weight.
+    """
+    config = models.ForeignKey(
+        KPIConfig,
+        on_delete=models.CASCADE,
+        related_name='indicators'
+    )
+    metric_key = models.CharField(
+        max_length=50,
+        help_text='Key matching AVAILABLE_INDICATORS in kpi_constants.py'
+    )
+    weight = models.PositiveIntegerField(
+        default=10,
+        validators=[MinValueValidator(1), MaxValueValidator(100)],
+        help_text='Point weight for this indicator (1-100)'
+    )
+    is_active = models.BooleanField(default=True)
+    order = models.PositiveIntegerField(default=0)
+    threshold_green = models.FloatField(
+        null=True, blank=True,
+        help_text='Raw value that scores 100%. E.g. 20 tickets resolved.'
+    )
+    threshold_red = models.FloatField(
+        null=True, blank=True,
+        help_text='Raw value that scores 0%. E.g. 0 tickets resolved.'
+    )
+
+    class Meta:
+        unique_together = ['config', 'metric_key']
+        ordering = ['order']
+        verbose_name = 'KPI Indicator'
+        verbose_name_plural = 'KPI Indicators'
+
+    def __str__(self):
+        return f"{self.metric_key} (weight={self.weight})"
+

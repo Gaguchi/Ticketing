@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir:*)",
+      "Bash(findstr:*)",
+      "Bash(python manage.py makemigrations:*)",
+      "Bash(python manage.py:*)",
+      "Bash(npx tsc:*)",
+      "Bash(python -c:*)",
+      "WebSearch",
+      "WebFetch(domain:performance-objectives.com)",
+      "WebFetch(domain:bscdesigner.com)",
+      "Bash(npm run build:*)"
+    ]
+  }
+}

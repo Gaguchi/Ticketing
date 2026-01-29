@@ -26,23 +26,17 @@ export interface UserMetrics {
   /** Average time from created → done (hours) */
   avg_resolution_hours: number | null;
 
-  /** Tickets past due date */
-  overdue_count: number;
-
-  /** % of resolutions accepted on first try */
-  acceptance_rate: number | null;
-
   /** Average customer satisfaction rating (1-5) */
   avg_customer_rating: number | null;
 
-  /** Currently assigned open tickets */
-  active_tickets: number;
+  /** Average time to first assignee response (hours) */
+  avg_first_response_hours: number | null;
 
-  /** Average admin rating (only visible to managers/superadmins) */
-  avg_admin_rating?: number | null;
+  /** % of resolved tickets completed before due date */
+  sla_compliance_rate: number | null;
 
-  /** Total admin reviews received (only visible to managers/superadmins) */
-  total_admin_reviews?: number;
+  /** % of resolved tickets that were reopened */
+  reopen_rate: number | null;
 
   // Additional fields for my-metrics endpoint
   project_id?: number;
@@ -237,12 +231,19 @@ export interface MyResolvedTicket {
   status: TicketStatus | null;
   created_at: string | null;
   done_at: string | null;
+  due_date: string | null;
   /** Time from created → done in hours */
   resolution_hours: number | null;
   /** Customer satisfaction rating (1-5) */
   customer_rating: number | null;
   /** accepted, rejected, pending */
   resolution_status: string | null;
+  /** Whether ticket was done before due date */
+  sla_met: boolean | null;
+  /** Whether ticket was reopened after being marked done */
+  was_reopened: boolean;
+  /** Time from creation to first assignee comment in hours */
+  first_response_hours: number | null;
 }
 
 export interface MyResolvedTicketsResponse {
@@ -271,6 +272,8 @@ export interface MyActiveTicket {
   days_until_due: number | null;
   /** Whether ticket is past due date */
   is_overdue: boolean;
+  /** Hours since last activity on ticket */
+  stale_hours: number | null;
 }
 
 export interface MyActiveTicketsResponse {
@@ -290,3 +293,121 @@ export interface ProjectTrendPoint {
 }
 
 export type ProjectTrends = ProjectTrendPoint[];
+
+// ============================================================================
+// KPI Builder Types
+// ============================================================================
+
+export interface IndicatorConfigMeta {
+  type: 'target' | 'sla' | 'min_rating' | 'min_percent' | 'max_count' | 'max_capacity' | 'max_percent';
+  label: string;
+  input_label: string;
+  question: string;
+  default_value: number;
+  min: number;
+  max?: number;
+  step: number;
+  presets?: number[];
+}
+
+export interface AvailableIndicator {
+  key: string;
+  name: string;
+  description: string;
+  formula: string;
+  higher_is_better: boolean;
+  unit: string;
+  config: IndicatorConfigMeta;
+}
+
+export interface KPIIndicatorConfig {
+  id?: number;
+  metric_key: string;
+  metric_name?: string;
+  metric_description?: string;
+  weight: number;
+  is_active: boolean;
+  order: number;
+  threshold_green: number | null;
+  threshold_red: number | null;
+}
+
+export interface KPIConfig {
+  id: number;
+  project: number;
+  project_name: string;
+  name: string;
+  created_by: number | null;
+  created_at: string;
+  updated_at: string;
+  indicators: KPIIndicatorConfig[];
+}
+
+export interface KPIConfigSavePayload {
+  name: string;
+  project: number;
+  indicators: {
+    metric_key: string;
+    weight: number;
+    is_active: boolean;
+    threshold_green: number | null;
+    threshold_red: number | null;
+  }[];
+}
+
+export interface IndicatorScore {
+  metric_key: string;
+  raw_value: number | null;
+  normalized: number;
+  weight: number;
+  weighted_score: number;
+}
+
+export interface UserKPIScore {
+  user_id: number;
+  username: string;
+  first_name: string;
+  last_name: string;
+  total_score: number;
+  score_percentage: number;
+  rank: number;
+  indicators: IndicatorScore[];
+}
+
+export interface ScoreboardResponse {
+  config_name: string;
+  total_weight: number;
+  team_size: number;
+  active_indicators: {
+    metric_key: string;
+    name: string;
+    weight: number;
+    higher_is_better: boolean;
+  }[];
+  scores: UserKPIScore[];
+}
+
+// ============================================================================
+// Personal Score (donut chart data)
+// ============================================================================
+
+export interface PersonalIndicatorScore {
+  metric_key: string;
+  name: string;
+  description: string;
+  formula: string;
+  higher_is_better: boolean;
+  unit: string;
+  weight: number;
+  raw_value: number | null;
+  normalized: number;
+  weighted_score: number;
+  color: string;
+}
+
+export interface PersonalScoreResponse {
+  total_score: number;
+  total_weight: number;
+  score_percentage: number;
+  indicators: PersonalIndicatorScore[];
+}

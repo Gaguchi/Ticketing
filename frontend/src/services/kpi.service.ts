@@ -178,6 +178,89 @@ export async function fetchProjectTrends(projectId: number, days?: number, userI
 }
 
 // ============================================================================
+// KPI Builder Functions
+// ============================================================================
+
+import type {
+  AvailableIndicator,
+  KPIConfig,
+  KPIConfigSavePayload,
+  ScoreboardResponse,
+  PersonalScoreResponse,
+} from '../types/kpi';
+
+/**
+ * Fetch all available KPI indicator definitions.
+ */
+export async function fetchAvailableIndicators(): Promise<AvailableIndicator[]> {
+  return apiService.get<AvailableIndicator[]>(API_ENDPOINTS.KPI_AVAILABLE_INDICATORS);
+}
+
+/**
+ * Fetch the KPI configuration for a project.
+ */
+export async function fetchKPIConfig(projectId: number): Promise<KPIConfig> {
+  return apiService.get<KPIConfig>(`${API_ENDPOINTS.KPI_CONFIG}?project=${projectId}`);
+}
+
+/**
+ * Save (create or update) a KPI configuration for a project.
+ */
+export async function saveKPIConfig(payload: KPIConfigSavePayload): Promise<KPIConfig> {
+  return apiService.post<KPIConfig>(API_ENDPOINTS.KPI_CONFIG_SAVE, payload);
+}
+
+/**
+ * Fetch the current user's personal KPI score with per-indicator breakdown.
+ */
+export async function fetchMyScore(
+  projectId: number,
+  dateFrom?: string,
+  dateTo?: string,
+  userId?: number,
+): Promise<PersonalScoreResponse> {
+  let url = `${API_ENDPOINTS.KPI_MY_SCORE}?project=${projectId}`;
+  if (dateFrom) url += `&date_from=${dateFrom}`;
+  if (dateTo) url += `&date_to=${dateTo}`;
+  if (userId) url += `&user_id=${userId}`;
+  return apiService.get<PersonalScoreResponse>(url);
+}
+
+export interface ScoreboardMember {
+  id: number;
+  username: string;
+  first_name: string;
+  last_name: string;
+  role: string;
+}
+
+/**
+ * Fetch list of superadmin/admin users for the user selector dropdown.
+ * Superadmin/manager only.
+ */
+export async function fetchScoreboardMembers(
+  projectId: number,
+): Promise<ScoreboardMember[]> {
+  return apiService.get<ScoreboardMember[]>(
+    `${API_ENDPOINTS.KPI_SCOREBOARD_MEMBERS}?project=${projectId}`
+  );
+}
+
+/**
+ * Fetch the KPI scoreboard for a project.
+ */
+export async function fetchScoreboard(
+  projectId: number,
+  dateFrom?: string,
+  dateTo?: string,
+): Promise<ScoreboardResponse> {
+  let url = `${API_ENDPOINTS.KPI_SCOREBOARD}?project=${projectId}`;
+  if (dateFrom) url += `&date_from=${dateFrom}`;
+  if (dateTo) url += `&date_to=${dateTo}`;
+  return apiService.get<ScoreboardResponse>(url);
+}
+
+// ============================================================================
 // Export all as default object for convenient importing
 // ============================================================================
 
@@ -197,6 +280,14 @@ const kpiService = {
   deleteUserReview,
   fetchPendingReviewPrompts,
   fetchProjectTrends,
+
+  // KPI Builder
+  fetchAvailableIndicators,
+  fetchKPIConfig,
+  saveKPIConfig,
+  fetchScoreboard,
+  fetchMyScore,
+  fetchScoreboardMembers,
 };
 
 export default kpiService;

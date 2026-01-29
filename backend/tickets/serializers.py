@@ -5,8 +5,9 @@ from .models import (
     Ticket, Project, Column, Comment, Attachment,
     Tag, Contact, TagContact, UserTag, TicketTag, IssueLink, Company, UserRole, TicketSubtask,
     Notification, ProjectInvitation, TicketPosition, TicketHistory, Status, BoardColumn, ResolutionFeedback,
-    UserReview
+    UserReview, KPIConfig, KPIIndicator
 )
+from .kpi_constants import AVAILABLE_INDICATORS
 
 
 class StatusSerializer(serializers.ModelSerializer):
@@ -1229,3 +1230,56 @@ class UserReviewCreateSerializer(serializers.ModelSerializer):
         validated_data['reviewer'] = request.user
         return super().create(validated_data)
 
+
+# ============================================================================
+# KPI Config Serializers
+# ============================================================================
+
+class KPIIndicatorSerializer(serializers.ModelSerializer):
+    metric_name = serializers.SerializerMethodField()
+    metric_description = serializers.SerializerMethodField()
+
+    class Meta:
+        model = KPIIndicator
+        fields = ['id', 'metric_key', 'metric_name', 'metric_description', 'weight', 'is_active', 'order', 'threshold_green', 'threshold_red']
+
+    def get_metric_name(self, obj):
+        indicator = AVAILABLE_INDICATORS.get(obj.metric_key, {})
+        return indicator.get('name', obj.metric_key)
+
+    def get_metric_description(self, obj):
+        indicator = AVAILABLE_INDICATORS.get(obj.metric_key, {})
+        return indicator.get('description', '')
+
+
+class KPIConfigSerializer(serializers.ModelSerializer):
+    indicators = KPIIndicatorSerializer(many=True, read_only=True)
+    project_name = serializers.CharField(source='project.name', read_only=True)
+
+    class Meta:
+        model = KPIConfig
+        fields = ['id', 'project', 'project_name', 'name', 'created_by', 'created_at', 'updated_at', 'indicators']
+        read_only_fields = ['created_by', 'created_at', 'updated_at']
+
+
+class KPIConfigCreateUpdateSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=255, default='Default KPI Configuration')
+    project = serializers.IntegerField()
+    indicators = serializers.ListField(child=serializers.DictField())
+
+    def validate_indicators(self, value):
+        for item in value:
+            key = item.get('metric_key')
+            if key not in AVAILABLE_INDICATORS:
+                raise serializers.ValidationError(f"Unknown metric key: {key}")
+            weight = item.get('weight', 10)
+            if not isinstance(weight, int) or weight < 1 or weight > 100:
+                raise serializers.ValidationError(f"Weight for {key} must be 1-100")
+            # threshold_green holds the single config value (target, SLA, min, max, etc.)
+            t_green = item.get('threshold_green')
+            if t_green is not None:
+                if not isinstance(t_green, (int, float)) or t_green < 0:
+                    raise serializers.ValidationError(
+                        f"Invalid threshold value for {key}"
+                    )
+        return value

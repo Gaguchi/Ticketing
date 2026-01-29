@@ -21,6 +21,7 @@ const CompanyDetail = lazy(() => import("./pages/CompanyDetail"));
 const Users = lazy(() => import("./pages/Users"));
 const Settings = lazy(() => import("./pages/Settings"));
 const KPI = lazy(() => import("./pages/KPI"));
+const KPIDemoPage = lazy(() => import("./pages/KPIDemoPage"));
 const AcceptInvitationPage = lazy(() => import("./pages/AcceptInvitationPage"));
 
 // Loading fallback component
@@ -73,6 +74,7 @@ function App() {
                     <Route path="companies/:id" element={<CompanyDetail />} />
                     <Route path="users" element={<Users />} />
                     <Route path="kpi" element={<KPI />} />
+                    <Route path="kpi-demo" element={<KPIDemoPage />} />
                     <Route path="settings" element={<Settings />} />
                   </Route>
 

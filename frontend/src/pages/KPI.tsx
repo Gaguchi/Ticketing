@@ -1,12 +1,12 @@
 /**
  * KPI (Key Performance Indicators) Page
- * 
- * Shows personal performance metrics for the current user:
- * - Tickets completed and resolution times
- * - Average customer rating
- * - Acceptance rate
- * - List of completed tickets with details
+ *
+ * Tabbed layout:
+ * - My Performance: interactive donut chart + indicator summary + drill-down
+ * - KPI Builder: configure indicators and weights (superadmin only)
+ * - Scoreboard: team scores based on weighted indicators (superadmin + manager)
  */
+
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
@@ -14,9 +14,7 @@ import {
   Col,
   Card,
   Spin,
-  message,
   Statistic,
-  Progress,
   Table,
   Tag,
   Button,
@@ -26,31 +24,39 @@ import {
   Tooltip,
   Rate,
   Space,
+  Tabs,
+  Alert,
+  Select,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
-  TrophyOutlined,
-  ClockCircleOutlined,
   CheckCircleOutlined,
   ReloadOutlined,
   BarChartOutlined,
-  StarFilled,
-  LikeOutlined,
+  SettingOutlined,
+  TeamOutlined,
+  UserOutlined,
 } from '@ant-design/icons';
 import { useProject } from '../contexts/AppContext';
-import { useNavigate } from 'react-router-dom';
 import kpiService from '../services/kpi.service';
 import type {
   UserMetrics,
   MyResolvedTicket,
+  PersonalScoreResponse,
+  PersonalIndicatorScore,
 } from '../types/kpi';
+import type { ScoreboardMember } from '../services/kpi.service';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
+import KPIBuilder from '../components/kpi/KPIBuilder';
+import KPIScoreboard from '../components/kpi/KPIScoreboard';
+import NightingaleChart from '../components/kpi/NightingaleChart';
+import IndicatorSummaryList from '../components/kpi/IndicatorSummaryList';
+import IndicatorDrillDown from '../components/kpi/IndicatorDrillDown';
 
 dayjs.extend(relativeTime);
 
 const { Title, Text } = Typography;
-const { RangePicker } = DatePicker;
 
 // ============================================================================
 // Helpers
@@ -76,306 +82,368 @@ function getPriorityFromId(priorityId: number | null | undefined): { name: strin
 }
 
 // ============================================================================
-// Main Component
+// Fallback Stats (Professional Minimalist)
 // ============================================================================
 
-const KPIPage: React.FC = () => {
+const FallbackStats: React.FC<{
+  myMetrics: UserMetrics | null;
+  resolvedTickets: MyResolvedTicket[];
+}> = ({ myMetrics, resolvedTickets }) => {
+  const totalResolved = resolvedTickets.length;
+  const avgResolution = myMetrics?.avg_resolution_hours;
+  const rating = myMetrics?.avg_customer_rating;
+  const slaCompliance = myMetrics?.sla_compliance_rate;
+
+  return (
+    <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+      <Col xs={24} sm={6}>
+        <Card size="small" style={{ height: '100%', borderTop: '2px solid #3498DB' }}>
+            <Statistic
+                title={<Text type="secondary">Tickets Resolved</Text>}
+                value={myMetrics?.tickets_resolved ?? totalResolved}
+                valueStyle={{ fontWeight: 600 }}
+            />
+        </Card>
+      </Col>
+      <Col xs={24} sm={6}>
+         <Card size="small" style={{ height: '100%', borderTop: '2px solid #9B59B6' }}>
+            <Statistic
+                title={<Text type="secondary">Avg Resolution</Text>}
+                value={formatResolutionTime(avgResolution ?? undefined)}
+                valueStyle={{ fontWeight: 600 }}
+            />
+        </Card>
+      </Col>
+      <Col xs={24} sm={6}>
+         <Card size="small" style={{ height: '100%', borderTop: '2px solid #F39C12' }}>
+            <Statistic
+                title={<Text type="secondary">Customer Rating</Text>}
+                value={rating ? rating.toFixed(1) : '-'}
+                suffix={rating ? "/ 5" : ""}
+                valueStyle={{ fontWeight: 600 }}
+            />
+        </Card>
+      </Col>
+       <Col xs={24} sm={6}>
+         <Card size="small" style={{ height: '100%', borderTop: '2px solid #27AE60' }}>
+            <Statistic
+                title={<Text type="secondary">SLA Compliance</Text>}
+                value={slaCompliance ? slaCompliance.toFixed(0) : '-'}
+                suffix={slaCompliance ? "%" : ""}
+                valueStyle={{ fontWeight: 600 }}
+            />
+        </Card>
+      </Col>
+    </Row>
+  );
+};
+
+// ============================================================================
+// My Performance Component
+// ============================================================================
+
+interface MyPerformanceProps {
+  userRole: string | null;
+}
+
+const MyPerformance: React.FC<MyPerformanceProps> = ({ userRole }) => {
   const { selectedProject } = useProject();
-  const navigate = useNavigate();
-  
-  // Data states
+  const [loading, setLoading] = useState(true);
+  const [tableLoading, setTableLoading] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState<dayjs.Dayjs>(dayjs());
+
+  // User selector (superadmin/manager only)
+  const isManagerOrAbove = userRole === 'superadmin' || userRole === 'manager';
+  const [teamMembers, setTeamMembers] = useState<ScoreboardMember[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState<number | undefined>(undefined);
+
+  // KPI Data
+  const [scoreData, setScoreData] = useState<PersonalScoreResponse | null>(null);
+  const [hasConfig, setHasConfig] = useState<boolean | null>(null);
+  const [activeSegment, setActiveSegment] = useState<string | null>(null);
+  const [selectedIndicator, setSelectedIndicator] = useState<PersonalIndicatorScore | null>(null);
+
+  // Fallback / History Data
   const [myMetrics, setMyMetrics] = useState<UserMetrics | null>(null);
   const [resolvedTickets, setResolvedTickets] = useState<MyResolvedTicket[]>([]);
-  
-  // UI states
-  const [loading, setLoading] = useState(false);
-  const [tableLoading, setTableLoading] = useState(false);
-  
-  // Default to last 30 days
-  const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null]>([
-    dayjs().subtract(30, 'day'),
-    dayjs(),
-  ]);
-  
-  // Fetch data
-  const fetchData = useCallback(async () => {
+
+  // Fetch team members for the user selector
+  useEffect(() => {
+    if (!selectedProject || !isManagerOrAbove) return;
+    kpiService.fetchScoreboardMembers(selectedProject.id)
+      .then(setTeamMembers)
+      .catch(() => setTeamMembers([]));
+  }, [selectedProject, isManagerOrAbove]);
+
+  const fetchScoreData = useCallback(async () => {
     if (!selectedProject) return;
-    
-    setLoading(true);
-    setTableLoading(true);
-    
-    const params = {
-      project: selectedProject.id,
-      date_from: dateRange[0]?.format('YYYY-MM-DD'),
-      date_to: dateRange[1]?.format('YYYY-MM-DD'),
-    };
-    
     try {
-      // Fetch my metrics
-      const metricsData = await kpiService.fetchMyMetrics(params);
-      setMyMetrics(Array.isArray(metricsData) ? metricsData[0] : metricsData);
-      
-      // Fetch my resolved tickets
-      const resolvedResp = await kpiService.fetchMyResolvedTickets(
-        selectedProject.id,
-        params.date_from,
-        params.date_to,
-        50 // Get more tickets
-      );
-      setResolvedTickets(resolvedResp.results || []);
-    } catch (error: any) {
-      console.error('Error fetching KPI data:', error);
-      message.error('Failed to load KPI data');
+      setLoading(true);
+      const start = selectedMonth.startOf('month').format('YYYY-MM-DD');
+      const end = selectedMonth.endOf('month').format('YYYY-MM-DD');
+
+      // 1. Fetch KPI Score (Nightingale)
+      try {
+        const score = await kpiService.fetchMyScore(selectedProject.id, start, end, selectedUserId);
+        setScoreData(score);
+        setHasConfig(true);
+      } catch (err: any) {
+        if (err.response?.status === 404) {
+          setHasConfig(false); // No config found
+        } else {
+          console.error("Failed to fetch score", err);
+        }
+      }
+
+      // 2. Fetch Basic Metrics (Fallback)
+      const metricsRes = await kpiService.fetchMyMetrics({
+        project: selectedProject.id,
+        date_from: start,
+        date_to: end,
+      });
+      // Handle potential array return
+      const metrics = Array.isArray(metricsRes) ? metricsRes[0] : metricsRes;
+      setMyMetrics(metrics || null);
+
+    } catch (error) {
+      console.error('Error fetching performance data:', error);
+      // message.error('Failed to load performance data'); // Optional: don't spam errors on standard views
     } finally {
       setLoading(false);
-      setTableLoading(false);
     }
-  }, [selectedProject, dateRange]);
-  
+  }, [selectedProject, selectedMonth, selectedUserId]);
+
+  const fetchResolvedTickets = useCallback(async () => {
+    if (!selectedProject) return;
+    try {
+        setTableLoading(true);
+        const start = selectedMonth.startOf('month').format('YYYY-MM-DD');
+        const end = selectedMonth.endOf('month').format('YYYY-MM-DD');
+        
+        const response = await kpiService.fetchMyResolvedTickets(
+            selectedProject.id,
+            start,
+            end, 
+            50 
+        );
+        setResolvedTickets(response.results);
+    } catch (error) {
+        console.error("Failed to fetch resolved tickets", error);
+    } finally {
+        setTableLoading(false);
+    }
+  }, [selectedProject, selectedMonth]);
+
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-  
-  // Table columns for resolved tickets
+    if (selectedProject) {
+      fetchScoreData();
+      fetchResolvedTickets();
+    }
+  }, [fetchScoreData, fetchResolvedTickets]);
+
+
+  const handleSegmentClick = (indicator: PersonalIndicatorScore | null) => {
+    if (!indicator) {
+        setActiveSegment(null);
+        setSelectedIndicator(null);
+        return;
+    }
+    // Toggle if clicking same
+    if (activeSegment === indicator.metric_key) {
+        setActiveSegment(null);
+        setSelectedIndicator(null);
+    } else {
+        setActiveSegment(indicator.metric_key);
+        setSelectedIndicator(indicator);
+    }
+  };
+
+  const handleDrillDownClose = () => {
+    setActiveSegment(null);
+    setSelectedIndicator(null);
+  };
+
   const resolvedColumns: ColumnsType<MyResolvedTicket> = [
     {
       title: 'Ticket',
-      key: 'ticket',
-      width: 300,
-      render: (_, record) => (
-        <div>
-          <Button 
-            type="link" 
-            style={{ padding: 0, height: 'auto' }}
-            onClick={() => navigate(`/tickets/${record.ticket_id}`)}
-          >
-            <Text strong>{record.key}</Text>
-          </Button>
-          <div>
-            <Text type="secondary" ellipsis style={{ maxWidth: 250 }}>
-              {record.name}
-            </Text>
-          </div>
-        </div>
-      ),
+      dataIndex: 'key',
+      key: 'key',
+      width: 100,
+      render: (key) => <Tag>{key}</Tag>,
+    },
+    {
+      title: 'Title',
+      dataIndex: 'name',
+      key: 'name',
+      render: (text) => <Text strong>{text}</Text>,
     },
     {
       title: 'Priority',
+      dataIndex: 'priority',
       key: 'priority',
       width: 100,
-      render: (_, record) => {
-        const priority = record.priority || getPriorityFromId((record as any).priority_id);
-        return (
-          <Tag color={priority.color} style={{ margin: 0 }}>
-            {priority.name}
-          </Tag>
-        );
+      render: (p) => {
+        const { name, color } = getPriorityFromId(p?.id);
+        return <Tag color={color}>{name}</Tag>;
       },
     },
     {
-      title: 'Resolution Time',
+      title: 'Time',
       dataIndex: 'resolution_hours',
       key: 'resolution_hours',
-      width: 140,
-      sorter: (a, b) => (a.resolution_hours || 0) - (b.resolution_hours || 0),
-      render: (hours: number | null) => (
-        <Space>
-          <ClockCircleOutlined style={{ color: '#722ed1' }} />
-          <Text>{formatResolutionTime(hours)}</Text>
-        </Space>
-      ),
+      width: 120,
+      render: (h) => formatResolutionTime(h),
     },
     {
-      title: 'Completed',
-      dataIndex: 'done_at',
+      title: 'Resolved',
+      dataIndex: 'done_at', // Definition says 'done_at' or 'resolved_at'? Definition says 'done_at'.
       key: 'done_at',
       width: 150,
-      sorter: (a, b) => {
-        if (!a.done_at) return 1;
-        if (!b.done_at) return -1;
-        return dayjs(b.done_at).unix() - dayjs(a.done_at).unix();
-      },
-      defaultSortOrder: 'ascend',
-      render: (date: string | null) => (
-        <Tooltip title={date ? dayjs(date).format('MMM D, YYYY h:mm A') : '-'}>
-          <Text type="secondary">
-            {date ? dayjs(date).fromNow() : '-'}
-          </Text>
+      render: (d) => (
+        <Tooltip title={dayjs(d).format('YYYY-MM-DD HH:mm')}>
+          {dayjs(d).fromNow()}
         </Tooltip>
       ),
     },
     {
-      title: 'Rating',
-      dataIndex: 'customer_rating',
-      key: 'customer_rating',
-      width: 130,
-      render: (rating: number | null) => (
-        rating ? (
-          <Rate disabled value={rating} style={{ fontSize: 14 }} />
-        ) : (
-          <Text type="secondary">-</Text>
-        )
-      ),
-    },
-    {
-      title: 'Status',
-      dataIndex: 'resolution_status',
-      key: 'resolution_status',
-      width: 100,
-      render: (status: string | null) => {
-        if (!status) return <Text type="secondary">-</Text>;
-        const color = status === 'accepted' ? 'green' : status === 'rejected' ? 'red' : 'orange';
-        return <Tag color={color}>{status}</Tag>;
-      },
-    },
+        title: 'Rating',
+        dataIndex: 'customer_rating',
+        key: 'customer_rating',
+        width: 120,
+        render: (r) => r ? <Rate disabled allowHalf defaultValue={r} style={{ fontSize: 12 }} /> : <Text type="secondary">-</Text>
+    }
   ];
-  
-  // Redirect if no project
-  if (!selectedProject) {
-    return (
-      <div style={{ padding: 24, textAlign: 'center' }}>
-        <Empty description="Please select a project to view KPI data" />
-      </div>
-    );
-  }
-  
-  // Calculate quick stats from resolved tickets
-  const totalResolved = resolvedTickets.length;
-  const ticketsWithTime = resolvedTickets.filter(t => t.resolution_hours != null);
-  const avgResolutionTime = ticketsWithTime.length > 0
-    ? ticketsWithTime.reduce((sum, t) => sum + (t.resolution_hours || 0), 0) / ticketsWithTime.length
-    : null;
-  const ticketsWithRating = resolvedTickets.filter(t => t.customer_rating);
-  const avgRating = ticketsWithRating.length > 0
-    ? ticketsWithRating.reduce((sum, t) => sum + (t.customer_rating || 0), 0) / ticketsWithRating.length
-    : null;
-  const acceptedCount = resolvedTickets.filter(t => t.resolution_status === 'accepted').length;
-  const reviewedCount = resolvedTickets.filter(t => t.resolution_status === 'accepted' || t.resolution_status === 'rejected').length;
-  const acceptanceRate = reviewedCount > 0 ? (acceptedCount / reviewedCount) * 100 : null;
-  
+
+  // Helper vars for drilldown
+  const dateFrom = selectedMonth.startOf('month').format('YYYY-MM-DD');
+  const dateTo = selectedMonth.endOf('month').format('YYYY-MM-DD');
+
   return (
-    <div style={{ padding: 24 }}>
-      {/* Header */}
-      <Row justify="space-between" align="middle" style={{ marginBottom: 24 }}>
-        <Col>
-          <Title level={3} style={{ margin: 0 }}>
-            <BarChartOutlined style={{ marginRight: 8 }} />
-            My Performance
-          </Title>
-          <Text type="secondary">{selectedProject.name} ({selectedProject.key})</Text>
-        </Col>
-        <Col>
-          <Space size="middle">
-            <RangePicker
-              value={dateRange}
-              onChange={(dates) => setDateRange(dates as [dayjs.Dayjs | null, dayjs.Dayjs | null])}
-              disabledDate={(current) => current && current > dayjs().endOf('day')}
-              presets={[
-                { label: 'Last 7 Days', value: [dayjs().subtract(7, 'day'), dayjs()] },
-                { label: 'Last 30 Days', value: [dayjs().subtract(30, 'day'), dayjs()] },
-                { label: 'Last 90 Days', value: [dayjs().subtract(90, 'day'), dayjs()] },
-                { label: 'This Month', value: [dayjs().startOf('month'), dayjs()] },
-                { label: 'Last Month', value: [dayjs().subtract(1, 'month').startOf('month'), dayjs().subtract(1, 'month').endOf('month')] },
-              ]}
+    <div style={{ animation: 'fadeIn 0.5s ease' }}>
+        {/* Filters & Actions */}
+        <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
+            {isManagerOrAbove && teamMembers.length > 0 && (
+              <Select
+                value={selectedUserId ?? 'me'}
+                onChange={(val) => setSelectedUserId(val === 'me' ? undefined : val as number)}
+                style={{ minWidth: 200 }}
+                suffixIcon={<UserOutlined />}
+              >
+                <Select.Option value="me">My Performance</Select.Option>
+                {teamMembers.map((m) => (
+                  <Select.Option key={m.id} value={m.id}>
+                    {m.first_name || m.last_name
+                      ? `${m.first_name} ${m.last_name}`.trim()
+                      : m.username}
+                    {' '}
+                    <Text type="secondary" style={{ fontSize: 11 }}>({m.role})</Text>
+                  </Select.Option>
+                ))}
+              </Select>
+            )}
+            <DatePicker
+                picker="month"
+                value={selectedMonth}
+                onChange={(date) => { if (date) setSelectedMonth(date); }}
+                allowClear={false}
+                disabledDate={(current) => current && current > dayjs().endOf('month')}
             />
-            <Button icon={<ReloadOutlined />} onClick={fetchData} loading={loading}>
-              Refresh
-            </Button>
-          </Space>
-        </Col>
-      </Row>
-      
+            <Button
+                icon={<ReloadOutlined />}
+                onClick={() => { fetchScoreData(); fetchResolvedTickets(); }}
+            />
+        </div>
+
       <Spin spinning={loading}>
-        {/* Stats Cards */}
-        <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-          {/* Tickets Completed */}
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
-                title="Tickets Completed"
-                value={myMetrics?.tickets_resolved ?? totalResolved}
-                prefix={<CheckCircleOutlined style={{ color: '#52c41a' }} />}
-                valueStyle={{ color: '#52c41a', fontSize: 32 }}
-              />
-            </Card>
-          </Col>
-          
-          {/* Average Resolution Time */}
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
-                title="Avg Resolution Time"
-                value={formatResolutionTime(myMetrics?.avg_resolution_hours ?? avgResolutionTime)}
-                prefix={<ClockCircleOutlined style={{ color: '#722ed1' }} />}
-                valueStyle={{ color: '#722ed1', fontSize: 32 }}
-              />
-            </Card>
-          </Col>
-          
-          {/* Customer Rating */}
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <div>
-                <Text type="secondary">Customer Rating</Text>
-                <div style={{ marginTop: 8 }}>
-                  {(myMetrics?.avg_customer_rating ?? avgRating) ? (
-                    <Space align="center">
-                      <StarFilled style={{ color: '#faad14', fontSize: 28 }} />
-                      <Text strong style={{ fontSize: 32, color: '#faad14' }}>
-                        {(myMetrics?.avg_customer_rating ?? avgRating)?.toFixed(1)}
-                      </Text>
-                      <Text type="secondary" style={{ fontSize: 14 }}>/ 5</Text>
-                    </Space>
-                  ) : (
-                    <Text type="secondary" style={{ fontSize: 18 }}>No ratings yet</Text>
-                  )}
-                </div>
+        {/* Nightingale Chart + Breakdowns */}
+        {hasConfig && scoreData && scoreData.indicators.length > 0 ? (
+          <>
+            <Row gutter={[24, 24]} style={{ marginBottom: 24, alignItems: 'stretch' }}>
+              {/* Chart Column */}
+              <Col xs={24} lg={10} xl={9}>
+                <Card bordered={false} style={{ height: '100%', borderRadius: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
+                    <div style={{ textAlign: 'center', marginBottom: 24 }}>
+                        <Title level={4} style={{ marginBottom: 0 }}>Performance Score</Title>
+                        <Text type="secondary">Weighted KPI metrics</Text>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                        <NightingaleChart
+                            indicators={scoreData.indicators}
+                            totalScore={scoreData.total_score}
+                            totalWeight={scoreData.total_weight}
+                            scorePercentage={scoreData.score_percentage}
+                            activeSegment={activeSegment}
+                            onSegmentClick={handleSegmentClick}
+                            size={320}
+                        />
+                    </div>
+                </Card>
+              </Col>
+
+              {/* Indicator summary list */}
+              <Col xs={24} lg={14} xl={15}>
+                 <Card bordered={false} style={{ height: '100%', borderRadius: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                        <Title level={4} style={{ margin: 0 }}>Metrics Breakdown</Title>
+                        {selectedIndicator && (
+                            <Button size="small" onClick={() => handleSegmentClick(null)}>
+                                Close Details
+                            </Button>
+                        )}
+                    </div>
+                    
+                    <IndicatorSummaryList
+                        indicators={scoreData.indicators}
+                        activeSegment={activeSegment}
+                        onSelect={handleSegmentClick}
+                    />
+
+                    {selectedIndicator && (
+                         <Alert message="Scroll down to see detailed drill-down analysis" type="info" showIcon style={{ marginTop: 16 }} />
+                    )}
+                 </Card>
+              </Col>
+            </Row>
+
+            {/* Drill-down panel */}
+            {selectedIndicator && (
+              <div style={{ marginBottom: 24, animation: 'fadeIn 0.3s ease' }}>
+                <IndicatorDrillDown
+                  indicator={selectedIndicator}
+                  projectId={selectedProject!.id}
+                  dateFrom={dateFrom}
+                  dateTo={dateTo}
+                  onClose={handleDrillDownClose}
+                />
               </div>
-            </Card>
-          </Col>
-          
-          {/* Acceptance Rate */}
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <div>
-                <Text type="secondary">Acceptance Rate</Text>
-                <div style={{ marginTop: 8 }}>
-                  {(myMetrics?.acceptance_rate ?? acceptanceRate) !== null ? (
-                    <Space direction="vertical" style={{ width: '100%' }}>
-                      <Space align="center">
-                        <LikeOutlined style={{ color: '#52c41a', fontSize: 24 }} />
-                        <Text strong style={{ fontSize: 28 }}>
-                          {(myMetrics?.acceptance_rate ?? acceptanceRate)?.toFixed(0)}%
-                        </Text>
-                      </Space>
-                      <Progress 
-                        percent={myMetrics?.acceptance_rate ?? acceptanceRate ?? 0} 
-                        showInfo={false}
-                        strokeColor={
-                          (myMetrics?.acceptance_rate ?? acceptanceRate ?? 0) >= 80 ? '#52c41a' :
-                          (myMetrics?.acceptance_rate ?? acceptanceRate ?? 0) >= 60 ? '#faad14' : '#ff4d4f'
-                        }
-                        size="small"
-                      />
-                    </Space>
-                  ) : (
-                    <Text type="secondary" style={{ fontSize: 18 }}>No reviews yet</Text>
-                  )}
-                </div>
-              </div>
-            </Card>
-          </Col>
-        </Row>
-        
+            )}
+          </>
+        ) : hasConfig === false ? (
+          <>
+            <Alert
+              message="KPI not configured"
+              description="Project config required."
+              type="info"
+              showIcon
+              style={{ marginBottom: 20 }}
+            />
+            <FallbackStats myMetrics={myMetrics} resolvedTickets={resolvedTickets} />
+          </>
+        ) : (
+             <FallbackStats myMetrics={myMetrics} resolvedTickets={resolvedTickets} />
+        )}
+
         {/* Completed Tickets Table */}
-        <Card 
+        <Card
           title={
             <Space>
-              <TrophyOutlined style={{ color: '#faad14' }} />
-              <span>Completed Tickets</span>
-              <Tag>{resolvedTickets.length}</Tag>
+                <CheckCircleOutlined style={{ color: '#52c41a' }} />
+                <span>Resolved Tickets History</span>
             </Space>
           }
+          bordered={false}
+          style={{ borderRadius: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}
+          extra={<Tag>{resolvedTickets.length} tickets in range</Tag>}
         >
           <Table
             columns={resolvedColumns}
@@ -383,22 +451,105 @@ const KPIPage: React.FC = () => {
             rowKey="ticket_id"
             loading={tableLoading}
             pagination={{
-              pageSize: 10,
+              pageSize: 5,
               showSizeChanger: true,
-              showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} tickets`,
+              pageSizeOptions: ['5', '10', '20', '50']
             }}
-            locale={{
-              emptyText: (
-                <Empty 
-                  image={Empty.PRESENTED_IMAGE_SIMPLE}
-                  description="No completed tickets in this period"
-                />
-              ),
-            }}
-            scroll={{ x: 900 }}
+            size="middle"
           />
         </Card>
       </Spin>
+    </div>
+  );
+};
+
+
+// ============================================================================
+// Main KPI Page with Tabs
+// ============================================================================
+
+const KPIPage: React.FC = () => {
+  const { selectedProject } = useProject();
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!selectedProject) {
+      setUserRole(null);
+      return;
+    }
+
+    const fetchRole = async () => {
+      try {
+        const metricsData = await kpiService.fetchMyMetrics({
+          project: selectedProject.id,
+        });
+        const data = Array.isArray(metricsData) ? metricsData[0] : metricsData;
+        setUserRole((data as any)?.role ?? null);
+      } catch {
+        setUserRole(null);
+      }
+    };
+
+    fetchRole();
+  }, [selectedProject?.id]);
+
+  if (!selectedProject) {
+    return (
+      <div style={{ padding: 24, textAlign: 'center' }}>
+        <Empty description="Please select a project to view KPI data" />
+      </div>
+    );
+  }
+
+  const isSuperadmin = userRole === 'superadmin';
+  const isManagerOrAbove = userRole === 'superadmin' || userRole === 'manager';
+
+  const tabItems = [
+    {
+      key: 'performance',
+      label: (
+        <span>
+          <BarChartOutlined />
+          Performance
+        </span>
+      ),
+      children: <MyPerformance userRole={userRole} />,
+    },
+  ];
+
+  if (isSuperadmin) {
+    tabItems.push({
+      key: 'builder',
+      label: (
+        <span>
+          <SettingOutlined />
+          KPI Builder
+        </span>
+      ),
+      children: <KPIBuilder />,
+    });
+  }
+
+  if (isManagerOrAbove) {
+    tabItems.push({
+      key: 'scoreboard',
+      label: (
+        <span>
+          <TeamOutlined />
+          Scoreboard
+        </span>
+      ),
+      children: <KPIScoreboard />,
+    });
+  }
+
+  return (
+    <div style={{ padding: 24 }}>
+      <Title level={3} style={{ marginBottom: 16 }}>
+        <BarChartOutlined style={{ marginRight: 8 }} />
+        KPI
+      </Title>
+      <Tabs items={tabItems} defaultActiveKey="performance" />
     </div>
   );
 };
