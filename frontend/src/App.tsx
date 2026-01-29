@@ -26,7 +26,14 @@ const AcceptInvitationPage = lazy(() => import("./pages/AcceptInvitationPage"));
 
 // Loading fallback component
 const PageLoader = () => (
-  <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
+  <div
+    style={{
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      height: "100vh",
+    }}
+  >
     <Spin size="large" />
   </div>
 );

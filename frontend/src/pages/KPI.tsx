@@ -7,8 +7,7 @@
  * - Scoreboard: team scores based on weighted indicators (superadmin + manager)
  */
 
-
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Row,
   Col,
@@ -27,8 +26,8 @@ import {
   Tabs,
   Alert,
   Select,
-} from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+} from "antd";
+import type { ColumnsType } from "antd/es/table";
 import {
   CheckCircleOutlined,
   ReloadOutlined,
@@ -36,23 +35,23 @@ import {
   SettingOutlined,
   TeamOutlined,
   UserOutlined,
-} from '@ant-design/icons';
-import { useProject } from '../contexts/AppContext';
-import kpiService from '../services/kpi.service';
+} from "@ant-design/icons";
+import { useProject } from "../contexts/AppContext";
+import kpiService from "../services/kpi.service";
 import type {
   UserMetrics,
   MyResolvedTicket,
   PersonalScoreResponse,
   PersonalIndicatorScore,
-} from '../types/kpi';
-import type { ScoreboardMember } from '../services/kpi.service';
-import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
-import KPIBuilder from '../components/kpi/KPIBuilder';
-import KPIScoreboard from '../components/kpi/KPIScoreboard';
-import NightingaleChart from '../components/kpi/NightingaleChart';
-import IndicatorSummaryList from '../components/kpi/IndicatorSummaryList';
-import IndicatorDrillDown from '../components/kpi/IndicatorDrillDown';
+} from "../types/kpi";
+import type { ScoreboardMember } from "../services/kpi.service";
+import dayjs from "dayjs";
+import relativeTime from "dayjs/plugin/relativeTime";
+import KPIBuilder from "../components/kpi/KPIBuilder";
+import KPIScoreboard from "../components/kpi/KPIScoreboard";
+import NightingaleChart from "../components/kpi/NightingaleChart";
+import IndicatorSummaryList from "../components/kpi/IndicatorSummaryList";
+import IndicatorDrillDown from "../components/kpi/IndicatorDrillDown";
 
 dayjs.extend(relativeTime);
 
@@ -63,7 +62,7 @@ const { Title, Text } = Typography;
 // ============================================================================
 
 function formatResolutionTime(hours: number | null | undefined): string {
-  if (hours === null || hours === undefined) return '-';
+  if (hours === null || hours === undefined) return "-";
   if (hours < 1) return `${Math.round(hours * 60)} min`;
   if (hours < 24) return `${hours.toFixed(1)} hours`;
   const days = hours / 24;
@@ -71,13 +70,21 @@ function formatResolutionTime(hours: number | null | undefined): string {
   return `${(days / 7).toFixed(1)} weeks`;
 }
 
-function getPriorityFromId(priorityId: number | null | undefined): { name: string; color: string } {
+function getPriorityFromId(priorityId: number | null | undefined): {
+  name: string;
+  color: string;
+} {
   switch (priorityId) {
-    case 4: return { name: 'Critical', color: '#ff4d4f' };
-    case 3: return { name: 'High', color: '#fa8c16' };
-    case 2: return { name: 'Medium', color: '#faad14' };
-    case 1: return { name: 'Low', color: '#52c41a' };
-    default: return { name: 'Unknown', color: '#8c8c8c' };
+    case 4:
+      return { name: "Critical", color: "#ff4d4f" };
+    case 3:
+      return { name: "High", color: "#fa8c16" };
+    case 2:
+      return { name: "Medium", color: "#faad14" };
+    case 1:
+      return { name: "Low", color: "#52c41a" };
+    default:
+      return { name: "Unknown", color: "#8c8c8c" };
   }
 }
 
@@ -97,41 +104,53 @@ const FallbackStats: React.FC<{
   return (
     <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
       <Col xs={24} sm={6}>
-        <Card size="small" style={{ height: '100%', borderTop: '2px solid #3498DB' }}>
-            <Statistic
-                title={<Text type="secondary">Tickets Resolved</Text>}
-                value={myMetrics?.tickets_resolved ?? totalResolved}
-                valueStyle={{ fontWeight: 600 }}
-            />
+        <Card
+          size="small"
+          style={{ height: "100%", borderTop: "2px solid #3498DB" }}
+        >
+          <Statistic
+            title={<Text type="secondary">Tickets Resolved</Text>}
+            value={myMetrics?.tickets_resolved ?? totalResolved}
+            valueStyle={{ fontWeight: 600 }}
+          />
         </Card>
       </Col>
       <Col xs={24} sm={6}>
-         <Card size="small" style={{ height: '100%', borderTop: '2px solid #9B59B6' }}>
-            <Statistic
-                title={<Text type="secondary">Avg Resolution</Text>}
-                value={formatResolutionTime(avgResolution ?? undefined)}
-                valueStyle={{ fontWeight: 600 }}
-            />
+        <Card
+          size="small"
+          style={{ height: "100%", borderTop: "2px solid #9B59B6" }}
+        >
+          <Statistic
+            title={<Text type="secondary">Avg Resolution</Text>}
+            value={formatResolutionTime(avgResolution ?? undefined)}
+            valueStyle={{ fontWeight: 600 }}
+          />
         </Card>
       </Col>
       <Col xs={24} sm={6}>
-         <Card size="small" style={{ height: '100%', borderTop: '2px solid #F39C12' }}>
-            <Statistic
-                title={<Text type="secondary">Customer Rating</Text>}
-                value={rating ? rating.toFixed(1) : '-'}
-                suffix={rating ? "/ 5" : ""}
-                valueStyle={{ fontWeight: 600 }}
-            />
+        <Card
+          size="small"
+          style={{ height: "100%", borderTop: "2px solid #F39C12" }}
+        >
+          <Statistic
+            title={<Text type="secondary">Customer Rating</Text>}
+            value={rating ? rating.toFixed(1) : "-"}
+            suffix={rating ? "/ 5" : ""}
+            valueStyle={{ fontWeight: 600 }}
+          />
         </Card>
       </Col>
-       <Col xs={24} sm={6}>
-         <Card size="small" style={{ height: '100%', borderTop: '2px solid #27AE60' }}>
-            <Statistic
-                title={<Text type="secondary">SLA Compliance</Text>}
-                value={slaCompliance ? slaCompliance.toFixed(0) : '-'}
-                suffix={slaCompliance ? "%" : ""}
-                valueStyle={{ fontWeight: 600 }}
-            />
+      <Col xs={24} sm={6}>
+        <Card
+          size="small"
+          style={{ height: "100%", borderTop: "2px solid #27AE60" }}
+        >
+          <Statistic
+            title={<Text type="secondary">SLA Compliance</Text>}
+            value={slaCompliance ? slaCompliance.toFixed(0) : "-"}
+            suffix={slaCompliance ? "%" : ""}
+            valueStyle={{ fontWeight: 600 }}
+          />
         </Card>
       </Col>
     </Row>
@@ -153,24 +172,32 @@ const MyPerformance: React.FC<MyPerformanceProps> = ({ userRole }) => {
   const [selectedMonth, setSelectedMonth] = useState<dayjs.Dayjs>(dayjs());
 
   // User selector (superadmin/manager only)
-  const isManagerOrAbove = userRole === 'superadmin' || userRole === 'manager';
+  const isManagerOrAbove = userRole === "superadmin" || userRole === "manager";
   const [teamMembers, setTeamMembers] = useState<ScoreboardMember[]>([]);
-  const [selectedUserId, setSelectedUserId] = useState<number | undefined>(undefined);
+  const [selectedUserId, setSelectedUserId] = useState<number | undefined>(
+    undefined,
+  );
 
   // KPI Data
-  const [scoreData, setScoreData] = useState<PersonalScoreResponse | null>(null);
+  const [scoreData, setScoreData] = useState<PersonalScoreResponse | null>(
+    null,
+  );
   const [hasConfig, setHasConfig] = useState<boolean | null>(null);
   const [activeSegment, setActiveSegment] = useState<string | null>(null);
-  const [selectedIndicator, setSelectedIndicator] = useState<PersonalIndicatorScore | null>(null);
+  const [selectedIndicator, setSelectedIndicator] =
+    useState<PersonalIndicatorScore | null>(null);
 
   // Fallback / History Data
   const [myMetrics, setMyMetrics] = useState<UserMetrics | null>(null);
-  const [resolvedTickets, setResolvedTickets] = useState<MyResolvedTicket[]>([]);
+  const [resolvedTickets, setResolvedTickets] = useState<MyResolvedTicket[]>(
+    [],
+  );
 
   // Fetch team members for the user selector
   useEffect(() => {
     if (!selectedProject || !isManagerOrAbove) return;
-    kpiService.fetchScoreboardMembers(selectedProject.id)
+    kpiService
+      .fetchScoreboardMembers(selectedProject.id)
       .then(setTeamMembers)
       .catch(() => setTeamMembers([]));
   }, [selectedProject, isManagerOrAbove]);
@@ -179,12 +206,17 @@ const MyPerformance: React.FC<MyPerformanceProps> = ({ userRole }) => {
     if (!selectedProject) return;
     try {
       setLoading(true);
-      const start = selectedMonth.startOf('month').format('YYYY-MM-DD');
-      const end = selectedMonth.endOf('month').format('YYYY-MM-DD');
+      const start = selectedMonth.startOf("month").format("YYYY-MM-DD");
+      const end = selectedMonth.endOf("month").format("YYYY-MM-DD");
 
       // 1. Fetch KPI Score (Nightingale)
       try {
-        const score = await kpiService.fetchMyScore(selectedProject.id, start, end, selectedUserId);
+        const score = await kpiService.fetchMyScore(
+          selectedProject.id,
+          start,
+          end,
+          selectedUserId,
+        );
         setScoreData(score);
         setHasConfig(true);
       } catch (err: any) {
@@ -204,9 +236,8 @@ const MyPerformance: React.FC<MyPerformanceProps> = ({ userRole }) => {
       // Handle potential array return
       const metrics = Array.isArray(metricsRes) ? metricsRes[0] : metricsRes;
       setMyMetrics(metrics || null);
-
     } catch (error) {
-      console.error('Error fetching performance data:', error);
+      console.error("Error fetching performance data:", error);
       // message.error('Failed to load performance data'); // Optional: don't spam errors on standard views
     } finally {
       setLoading(false);
@@ -216,21 +247,21 @@ const MyPerformance: React.FC<MyPerformanceProps> = ({ userRole }) => {
   const fetchResolvedTickets = useCallback(async () => {
     if (!selectedProject) return;
     try {
-        setTableLoading(true);
-        const start = selectedMonth.startOf('month').format('YYYY-MM-DD');
-        const end = selectedMonth.endOf('month').format('YYYY-MM-DD');
-        
-        const response = await kpiService.fetchMyResolvedTickets(
-            selectedProject.id,
-            start,
-            end, 
-            50 
-        );
-        setResolvedTickets(response.results);
+      setTableLoading(true);
+      const start = selectedMonth.startOf("month").format("YYYY-MM-DD");
+      const end = selectedMonth.endOf("month").format("YYYY-MM-DD");
+
+      const response = await kpiService.fetchMyResolvedTickets(
+        selectedProject.id,
+        start,
+        end,
+        50,
+      );
+      setResolvedTickets(response.results);
     } catch (error) {
-        console.error("Failed to fetch resolved tickets", error);
+      console.error("Failed to fetch resolved tickets", error);
     } finally {
-        setTableLoading(false);
+      setTableLoading(false);
     }
   }, [selectedProject, selectedMonth]);
 
@@ -241,20 +272,19 @@ const MyPerformance: React.FC<MyPerformanceProps> = ({ userRole }) => {
     }
   }, [fetchScoreData, fetchResolvedTickets]);
 
-
   const handleSegmentClick = (indicator: PersonalIndicatorScore | null) => {
     if (!indicator) {
-        setActiveSegment(null);
-        setSelectedIndicator(null);
-        return;
+      setActiveSegment(null);
+      setSelectedIndicator(null);
+      return;
     }
     // Toggle if clicking same
     if (activeSegment === indicator.metric_key) {
-        setActiveSegment(null);
-        setSelectedIndicator(null);
+      setActiveSegment(null);
+      setSelectedIndicator(null);
     } else {
-        setActiveSegment(indicator.metric_key);
-        setSelectedIndicator(indicator);
+      setActiveSegment(indicator.metric_key);
+      setSelectedIndicator(indicator);
     }
   };
 
@@ -265,22 +295,22 @@ const MyPerformance: React.FC<MyPerformanceProps> = ({ userRole }) => {
 
   const resolvedColumns: ColumnsType<MyResolvedTicket> = [
     {
-      title: 'Ticket',
-      dataIndex: 'key',
-      key: 'key',
+      title: "Ticket",
+      dataIndex: "key",
+      key: "key",
       width: 100,
       render: (key) => <Tag>{key}</Tag>,
     },
     {
-      title: 'Title',
-      dataIndex: 'name',
-      key: 'name',
+      title: "Title",
+      dataIndex: "name",
+      key: "name",
       render: (text) => <Text strong>{text}</Text>,
     },
     {
-      title: 'Priority',
-      dataIndex: 'priority',
-      key: 'priority',
+      title: "Priority",
+      dataIndex: "priority",
+      key: "priority",
       width: 100,
       render: (p) => {
         const { name, color } = getPriorityFromId(p?.id);
@@ -288,126 +318,191 @@ const MyPerformance: React.FC<MyPerformanceProps> = ({ userRole }) => {
       },
     },
     {
-      title: 'Time',
-      dataIndex: 'resolution_hours',
-      key: 'resolution_hours',
+      title: "Time",
+      dataIndex: "resolution_hours",
+      key: "resolution_hours",
       width: 120,
       render: (h) => formatResolutionTime(h),
     },
     {
-      title: 'Resolved',
-      dataIndex: 'done_at', // Definition says 'done_at' or 'resolved_at'? Definition says 'done_at'.
-      key: 'done_at',
+      title: "Resolved",
+      dataIndex: "done_at", // Definition says 'done_at' or 'resolved_at'? Definition says 'done_at'.
+      key: "done_at",
       width: 150,
       render: (d) => (
-        <Tooltip title={dayjs(d).format('YYYY-MM-DD HH:mm')}>
+        <Tooltip title={dayjs(d).format("YYYY-MM-DD HH:mm")}>
           {dayjs(d).fromNow()}
         </Tooltip>
       ),
     },
     {
-        title: 'Rating',
-        dataIndex: 'customer_rating',
-        key: 'customer_rating',
-        width: 120,
-        render: (r) => r ? <Rate disabled allowHalf defaultValue={r} style={{ fontSize: 12 }} /> : <Text type="secondary">-</Text>
-    }
+      title: "Rating",
+      dataIndex: "customer_rating",
+      key: "customer_rating",
+      width: 120,
+      render: (r) =>
+        r ? (
+          <Rate disabled allowHalf defaultValue={r} style={{ fontSize: 12 }} />
+        ) : (
+          <Text type="secondary">-</Text>
+        ),
+    },
   ];
 
   // Helper vars for drilldown
-  const dateFrom = selectedMonth.startOf('month').format('YYYY-MM-DD');
-  const dateTo = selectedMonth.endOf('month').format('YYYY-MM-DD');
+  const dateFrom = selectedMonth.startOf("month").format("YYYY-MM-DD");
+  const dateTo = selectedMonth.endOf("month").format("YYYY-MM-DD");
 
   return (
-    <div style={{ animation: 'fadeIn 0.5s ease' }}>
-        {/* Filters & Actions */}
-        <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
-            {isManagerOrAbove && teamMembers.length > 0 && (
-              <Select
-                value={selectedUserId ?? 'me'}
-                onChange={(val) => setSelectedUserId(val === 'me' ? undefined : val as number)}
-                style={{ minWidth: 200 }}
-                suffixIcon={<UserOutlined />}
-              >
-                <Select.Option value="me">My Performance</Select.Option>
-                {teamMembers.map((m) => (
-                  <Select.Option key={m.id} value={m.id}>
-                    {m.first_name || m.last_name
-                      ? `${m.first_name} ${m.last_name}`.trim()
-                      : m.username}
-                    {' '}
-                    <Text type="secondary" style={{ fontSize: 11 }}>({m.role})</Text>
-                  </Select.Option>
-                ))}
-              </Select>
-            )}
-            <DatePicker
-                picker="month"
-                value={selectedMonth}
-                onChange={(date) => { if (date) setSelectedMonth(date); }}
-                allowClear={false}
-                disabledDate={(current) => current && current > dayjs().endOf('month')}
-            />
-            <Button
-                icon={<ReloadOutlined />}
-                onClick={() => { fetchScoreData(); fetchResolvedTickets(); }}
-            />
-        </div>
+    <div style={{ animation: "fadeIn 0.5s ease" }}>
+      {/* Filters & Actions */}
+      <div
+        style={{
+          marginBottom: 24,
+          display: "flex",
+          justifyContent: "flex-end",
+          gap: 12,
+          flexWrap: "wrap",
+        }}
+      >
+        {isManagerOrAbove && teamMembers.length > 0 && (
+          <Select
+            value={selectedUserId ?? "me"}
+            onChange={(val) =>
+              setSelectedUserId(val === "me" ? undefined : (val as number))
+            }
+            style={{ minWidth: 200 }}
+            suffixIcon={<UserOutlined />}
+          >
+            <Select.Option value="me">My Performance</Select.Option>
+            {teamMembers.map((m) => (
+              <Select.Option key={m.id} value={m.id}>
+                {m.first_name || m.last_name
+                  ? `${m.first_name} ${m.last_name}`.trim()
+                  : m.username}{" "}
+                <Text type="secondary" style={{ fontSize: 11 }}>
+                  ({m.role})
+                </Text>
+              </Select.Option>
+            ))}
+          </Select>
+        )}
+        <DatePicker
+          picker="month"
+          value={selectedMonth}
+          onChange={(date) => {
+            if (date) setSelectedMonth(date);
+          }}
+          allowClear={false}
+          disabledDate={(current) =>
+            current && current > dayjs().endOf("month")
+          }
+        />
+        <Button
+          icon={<ReloadOutlined />}
+          onClick={() => {
+            fetchScoreData();
+            fetchResolvedTickets();
+          }}
+        />
+      </div>
 
       <Spin spinning={loading}>
         {/* Nightingale Chart + Breakdowns */}
         {hasConfig && scoreData && scoreData.indicators.length > 0 ? (
           <>
-            <Row gutter={[24, 24]} style={{ marginBottom: 24, alignItems: 'stretch' }}>
+            <Row
+              gutter={[24, 24]}
+              style={{ marginBottom: 24, alignItems: "stretch" }}
+            >
               {/* Chart Column */}
               <Col xs={24} lg={10} xl={9}>
-                <Card bordered={false} style={{ height: '100%', borderRadius: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
-                    <div style={{ textAlign: 'center', marginBottom: 24 }}>
-                        <Title level={4} style={{ marginBottom: 0 }}>Performance Score</Title>
-                        <Text type="secondary">Weighted KPI metrics</Text>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                        <NightingaleChart
-                            indicators={scoreData.indicators}
-                            totalScore={scoreData.total_score}
-                            totalWeight={scoreData.total_weight}
-                            scorePercentage={scoreData.score_percentage}
-                            activeSegment={activeSegment}
-                            onSegmentClick={handleSegmentClick}
-                            size={320}
-                        />
-                    </div>
+                <Card
+                  bordered={false}
+                  style={{
+                    height: "100%",
+                    borderRadius: 12,
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.03)",
+                  }}
+                >
+                  <div style={{ textAlign: "center", marginBottom: 24 }}>
+                    <Title level={4} style={{ marginBottom: 0 }}>
+                      Performance Score
+                    </Title>
+                    <Text type="secondary">Weighted KPI metrics</Text>
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "center",
+                      alignItems: "center",
+                    }}
+                  >
+                    <NightingaleChart
+                      indicators={scoreData.indicators}
+                      totalScore={scoreData.total_score}
+                      totalWeight={scoreData.total_weight}
+                      scorePercentage={scoreData.score_percentage}
+                      activeSegment={activeSegment}
+                      onSegmentClick={handleSegmentClick}
+                      size={320}
+                    />
+                  </div>
                 </Card>
               </Col>
 
               {/* Indicator summary list */}
               <Col xs={24} lg={14} xl={15}>
-                 <Card bordered={false} style={{ height: '100%', borderRadius: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                        <Title level={4} style={{ margin: 0 }}>Metrics Breakdown</Title>
-                        {selectedIndicator && (
-                            <Button size="small" onClick={() => handleSegmentClick(null)}>
-                                Close Details
-                            </Button>
-                        )}
-                    </div>
-                    
-                    <IndicatorSummaryList
-                        indicators={scoreData.indicators}
-                        activeSegment={activeSegment}
-                        onSelect={handleSegmentClick}
-                    />
-
+                <Card
+                  bordered={false}
+                  style={{
+                    height: "100%",
+                    borderRadius: 12,
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.03)",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginBottom: 16,
+                    }}
+                  >
+                    <Title level={4} style={{ margin: 0 }}>
+                      Metrics Breakdown
+                    </Title>
                     {selectedIndicator && (
-                         <Alert message="Scroll down to see detailed drill-down analysis" type="info" showIcon style={{ marginTop: 16 }} />
+                      <Button
+                        size="small"
+                        onClick={() => handleSegmentClick(null)}
+                      >
+                        Close Details
+                      </Button>
                     )}
-                 </Card>
+                  </div>
+
+                  <IndicatorSummaryList
+                    indicators={scoreData.indicators}
+                    activeSegment={activeSegment}
+                    onSelect={handleSegmentClick}
+                  />
+
+                  {selectedIndicator && (
+                    <Alert
+                      message="Scroll down to see detailed drill-down analysis"
+                      type="info"
+                      showIcon
+                      style={{ marginTop: 16 }}
+                    />
+                  )}
+                </Card>
               </Col>
             </Row>
 
             {/* Drill-down panel */}
             {selectedIndicator && (
-              <div style={{ marginBottom: 24, animation: 'fadeIn 0.3s ease' }}>
+              <div style={{ marginBottom: 24, animation: "fadeIn 0.3s ease" }}>
                 <IndicatorDrillDown
                   indicator={selectedIndicator}
                   projectId={selectedProject!.id}
@@ -427,22 +522,28 @@ const MyPerformance: React.FC<MyPerformanceProps> = ({ userRole }) => {
               showIcon
               style={{ marginBottom: 20 }}
             />
-            <FallbackStats myMetrics={myMetrics} resolvedTickets={resolvedTickets} />
+            <FallbackStats
+              myMetrics={myMetrics}
+              resolvedTickets={resolvedTickets}
+            />
           </>
         ) : (
-             <FallbackStats myMetrics={myMetrics} resolvedTickets={resolvedTickets} />
+          <FallbackStats
+            myMetrics={myMetrics}
+            resolvedTickets={resolvedTickets}
+          />
         )}
 
         {/* Completed Tickets Table */}
         <Card
           title={
             <Space>
-                <CheckCircleOutlined style={{ color: '#52c41a' }} />
-                <span>Resolved Tickets History</span>
+              <CheckCircleOutlined style={{ color: "#52c41a" }} />
+              <span>Resolved Tickets History</span>
             </Space>
           }
           bordered={false}
-          style={{ borderRadius: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}
+          style={{ borderRadius: 12, boxShadow: "0 4px 12px rgba(0,0,0,0.03)" }}
           extra={<Tag>{resolvedTickets.length} tickets in range</Tag>}
         >
           <Table
@@ -453,7 +554,7 @@ const MyPerformance: React.FC<MyPerformanceProps> = ({ userRole }) => {
             pagination={{
               pageSize: 5,
               showSizeChanger: true,
-              pageSizeOptions: ['5', '10', '20', '50']
+              pageSizeOptions: ["5", "10", "20", "50"],
             }}
             size="middle"
           />
@@ -462,7 +563,6 @@ const MyPerformance: React.FC<MyPerformanceProps> = ({ userRole }) => {
     </div>
   );
 };
-
 
 // ============================================================================
 // Main KPI Page with Tabs
@@ -495,18 +595,18 @@ const KPIPage: React.FC = () => {
 
   if (!selectedProject) {
     return (
-      <div style={{ padding: 24, textAlign: 'center' }}>
+      <div style={{ padding: 24, textAlign: "center" }}>
         <Empty description="Please select a project to view KPI data" />
       </div>
     );
   }
 
-  const isSuperadmin = userRole === 'superadmin';
-  const isManagerOrAbove = userRole === 'superadmin' || userRole === 'manager';
+  const isSuperadmin = userRole === "superadmin";
+  const isManagerOrAbove = userRole === "superadmin" || userRole === "manager";
 
   const tabItems = [
     {
-      key: 'performance',
+      key: "performance",
       label: (
         <span>
           <BarChartOutlined />
@@ -519,7 +619,7 @@ const KPIPage: React.FC = () => {
 
   if (isSuperadmin) {
     tabItems.push({
-      key: 'builder',
+      key: "builder",
       label: (
         <span>
           <SettingOutlined />
@@ -532,7 +632,7 @@ const KPIPage: React.FC = () => {
 
   if (isManagerOrAbove) {
     tabItems.push({
-      key: 'scoreboard',
+      key: "scoreboard",
       label: (
         <span>
           <TeamOutlined />
