@@ -219,6 +219,11 @@ const Tickets: React.FC = () => {
   useEffect(() => {
     const handleTicketUpdate = async (event: Event) => {
       const customEvent = event as CustomEvent;
+      if (!customEvent.detail) {
+        // Event dispatched without detail (e.g. from optimistic UI updates in TicketCard)
+        // The UI is already updated optimistically, so no action needed
+        return;
+      }
       const { type, data, projectId } = customEvent.detail;
 
       // Only update if it's for the current project
