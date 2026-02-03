@@ -89,6 +89,11 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
   const [optimisticDueDate, setOptimisticDueDate] = React.useState<string | null | undefined>(undefined);
   const [updatingDate, setUpdatingDate] = React.useState(false);
 
+  // Quick priority selector state
+  const [priorityPopoverOpen, setPriorityPopoverOpen] = React.useState(false);
+  const [optimisticPriority, setOptimisticPriority] = React.useState<number | undefined>(undefined);
+  const [updatingPriority, setUpdatingPriority] = React.useState(false);
+
   // Load assignable users when popover opens
   const handlePopoverOpenChange = async (open: boolean) => {
     setPopoverOpen(open);
@@ -162,6 +167,35 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
       setUpdatingDate(false);
     }
   };
+
+  // Handle quick priority change
+  const priorityOptions = [
+    { id: 4, label: "Urgent", color: "#BC271A" },
+    { id: 3, label: "High", color: "#DB833C" },
+    { id: 2, label: "Normal", color: "#F2AE3D" },
+    { id: 1, label: "Backlog", color: "#7C8697" },
+  ];
+
+  const handlePriorityChange = async (priorityId: number) => {
+    const previousPriority = ticket.priority_id;
+    try {
+      setUpdatingPriority(true);
+      setPriorityPopoverOpen(false);
+      setOptimisticPriority(priorityId);
+      await ticketService.updateTicket(ticket.id, { priority_id: priorityId });
+      const label = priorityOptions.find((p) => p.id === priorityId)?.label;
+      message.success(`Priority set to ${label}`);
+      window.dispatchEvent(new CustomEvent("ticketUpdate"));
+    } catch (error) {
+      console.error("Failed to update priority:", error);
+      message.error("Failed to update priority");
+      setOptimisticPriority(undefined);
+    } finally {
+      setUpdatingPriority(false);
+    }
+  };
+
+  const effectivePriority = optimisticPriority !== undefined ? optimisticPriority : (ticket.priority_id ?? 3);
 
   // Format due date for display
   const formatDueDate = (dueDate: string | null | undefined) => {
@@ -321,27 +355,6 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
           {ticket.name}
         </div>
 
-        {/* Due Date Display */}
-        {dueDateInfo && (
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "4px",
-              padding: "2px 6px",
-              borderRadius: "3px",
-              backgroundColor: dueDateInfo.bgColor,
-              color: dueDateInfo.color,
-              fontSize: "11px",
-              fontWeight: 500,
-              marginBottom: "8px",
-            }}
-          >
-            <ClockCircleOutlined style={{ fontSize: "10px" }} />
-            {dueDateInfo.text}
-          </div>
-        )}
-
         <div
           style={{
             display: "flex",
@@ -394,33 +407,80 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
           </div>
           <div>
             <Space align="center" size={6}>
-              {getPriorityIcon(ticket.priority_id ?? 3)}
+              {/* Quick Priority Selector */}
+              <Popover
+                open={priorityPopoverOpen}
+                onOpenChange={(open) => setPriorityPopoverOpen(open)}
+                trigger="click"
+                placement="bottomRight"
+                content={
+                  <div style={{ width: 140 }} onClick={(e) => e.stopPropagation()}>
+                    <List
+                      size="small"
+                      dataSource={priorityOptions}
+                      renderItem={(item) => (
+                        <List.Item
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePriorityChange(item.id);
+                          }}
+                          style={{
+                            cursor: "pointer",
+                            padding: "4px 8px",
+                            backgroundColor: item.id === effectivePriority ? "#f0f0f0" : undefined,
+                          }}
+                          className="assignee-item"
+                        >
+                          <Space size={6} align="center">
+                            {getPriorityIcon(item.id)}
+                            <span style={{ fontSize: "12px" }}>{item.label}</span>
+                          </Space>
+                        </List.Item>
+                      )}
+                    />
+                  </div>
+                }
+              >
+                <Tooltip title={priorityOptions.find((p) => p.id === effectivePriority)?.label || "Priority"}>
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    style={{ cursor: "pointer", display: "inline-flex", alignItems: "center" }}
+                  >
+                    {getPriorityIcon(effectivePriority)}
+                  </div>
+                </Tooltip>
+              </Popover>
 
               {/* Quick Date Selector */}
               <div style={{ position: "relative", display: "inline-flex" }}>
                 <Tooltip title={effectiveDueDate ? `Due: ${dayjs(effectiveDueDate).format("MMM D, YYYY")}` : "Set due date"}>
-                  <Button
-                    type="text"
-                    size="small"
-                    loading={updatingDate}
+                  <div
                     onClick={(e) => {
                       e.stopPropagation();
                       setDatePopoverOpen(true);
                     }}
-                    icon={<CalendarOutlined />}
                     style={{
-                      fontSize: "12px",
-                      width: "22px",
-                      height: "22px",
-                      padding: 0,
-                      display: "flex",
+                      display: "inline-flex",
                       alignItems: "center",
-                      justifyContent: "center",
-                      borderRadius: "50%",
-                      color: effectiveDueDate ? "#1890ff" : "#8c8c8c",
-                      border: effectiveDueDate ? "1px solid #1890ff" : "1px dashed #d9d9d9",
+                      gap: "3px",
+                      padding: "1px 6px",
+                      borderRadius: "3px",
+                      backgroundColor: dueDateInfo?.bgColor || "#f4f5f7",
+                      color: dueDateInfo?.color || "#8c8c8c",
+                      fontSize: "11px",
+                      fontWeight: 500,
+                      cursor: "pointer",
+                      lineHeight: "20px",
+                      border: dueDateInfo ? "none" : "1px dashed #d9d9d9",
                     }}
-                  />
+                  >
+                    {dueDateInfo ? (
+                      <ClockCircleOutlined style={{ fontSize: "10px" }} />
+                    ) : (
+                      <CalendarOutlined style={{ fontSize: "10px" }} />
+                    )}
+                    {dueDateInfo ? dueDateInfo.text : "Date"}
+                  </div>
                 </Tooltip>
                 {datePopoverOpen && (
                   <div
