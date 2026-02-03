@@ -32,6 +32,7 @@ interface TicketCardProps {
   disabled?: boolean;
   dragOverlay?: boolean;
   onClick?: (ticket: Ticket) => void;
+  onTicketUpdate?: (ticketId: number, fields: Partial<Ticket>) => void;
 }
 
 const getTypeIcon = (type?: string) => {
@@ -61,38 +62,164 @@ const formatTicketId = (ticket: Ticket) => {
   return `${key}-${num}`;
 };
 
+const priorityOptions = [
+  { id: 4, label: "Urgent", color: "#BC271A" },
+  { id: 3, label: "High", color: "#DB833C" },
+  { id: 2, label: "Normal", color: "#F2AE3D" },
+  { id: 1, label: "Backlog", color: "#7C8697" },
+];
+
+// Format due date for display
+const formatDueDate = (dueDate: string | null | undefined) => {
+  if (!dueDate) return null;
+  const date = new Date(dueDate);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+  const isOverdue = dateOnly < today;
+  const isToday = dateOnly.getTime() === today.getTime();
+  const isTomorrow = dateOnly.getTime() === tomorrow.getTime();
+
+  let text = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  let color = '#5e6c84';
+  let bgColor = '#f4f5f7';
+
+  if (isOverdue) {
+    text = 'Overdue';
+    color = '#de350b';
+    bgColor = '#ffebe6';
+  } else if (isToday) {
+    text = 'Today';
+    color = '#ff8b00';
+    bgColor = '#fff4e6';
+  } else if (isTomorrow) {
+    text = 'Tomorrow';
+    color = '#ff991f';
+    bgColor = '#fffae6';
+  }
+
+  return { text, color, bgColor };
+};
+
+// Lightweight drag overlay — no hooks, no interactive elements, just a static visual clone
+const DragOverlayCard: React.FC<{ ticket: Ticket }> = ({ ticket }) => {
+  const assigneesList = ticket.assignees || ticket.assignees_detail || [];
+  const isUnassigned = assigneesList.length === 0;
+  const dueDateInfo = formatDueDate(ticket.due_date);
+  const currentPriority = ticket.priority_id ?? 3;
+
+  return (
+    <div
+      style={{
+        boxShadow: "0 4px 8px rgba(9,30,66,0.25)",
+        cursor: "grabbing",
+        padding: "8px 10px",
+        borderRadius: "3px",
+        backgroundColor: isUnassigned ? "#fffbe6" : "#fff",
+        marginBottom: "8px",
+        borderLeft: isUnassigned ? "3px solid #faad14" : undefined,
+      }}
+    >
+      <div
+        style={{
+          fontSize: "14px",
+          fontWeight: 400,
+          color: "#172b4d",
+          marginBottom: "8px",
+          lineHeight: "20px",
+        }}
+      >
+        {ticket.name}
+      </div>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          color: "#5e6c84",
+          fontSize: "12px",
+        }}
+      >
+        <Space align="center" size={8}>
+          <Space size={4} align="center">
+            {ticket.company_logo_url ? (
+              <Avatar src={ticket.company_logo_url} size={16} style={{ objectFit: "contain", flexShrink: 0 }} />
+            ) : (
+              <FontAwesomeIcon icon={getTypeIcon(ticket.type).icon} style={{ fontSize: "14px", color: getTypeIcon(ticket.type).color }} />
+            )}
+            <span style={{ fontSize: "12px", color: "#5e6c84", fontWeight: 500 }}>{formatTicketId(ticket)}</span>
+          </Space>
+        </Space>
+        <Space align="center" size={6}>
+          {getPriorityIcon(currentPriority)}
+          <span style={{
+            display: "inline-flex", alignItems: "center", gap: "3px",
+            padding: "1px 6px", borderRadius: "3px",
+            backgroundColor: dueDateInfo?.bgColor || "#f4f5f7",
+            color: dueDateInfo?.color || "#8c8c8c",
+            fontSize: "11px", fontWeight: 500, lineHeight: "20px",
+            border: dueDateInfo ? "none" : "1px dashed #d9d9d9",
+          }}>
+            {dueDateInfo ? (
+              <ClockCircleOutlined style={{ fontSize: "10px" }} />
+            ) : (
+              <CalendarOutlined style={{ fontSize: "10px" }} />
+            )}
+            {dueDateInfo ? dueDateInfo.text : "Date"}
+          </span>
+          {assigneesList.length > 0 ? (
+            <Avatar.Group size={20} max={{ count: 2, style: { color: "#fff", backgroundColor: "#dfe1e6", fontSize: "11px" } }}>
+              {assigneesList.map((u: any) => (
+                <Avatar key={u.id} icon={<UserOutlined />} size={20} style={{ backgroundColor: "#0052cc" }} />
+              ))}
+            </Avatar.Group>
+          ) : (
+            <div style={{
+              fontSize: "12px", width: "22px", height: "22px",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              borderRadius: "50%", color: "#faad14", border: "1px dashed #faad14",
+            }}>
+              <UserAddOutlined />
+            </div>
+          )}
+        </Space>
+      </div>
+    </div>
+  );
+};
+
 const TicketCardComponent: React.FC<TicketCardProps> = ({
   id,
   ticket,
   disabled,
   dragOverlay,
   onClick,
+  onTicketUpdate,
 }) => {
   const { user } = useAuth();
   const [assigning, setAssigning] = React.useState(false);
-  
-  // Optimistic UI state - store full assignee objects to render immediately
-  const [optimisticAssignees, setOptimisticAssignees] = React.useState<User[] | null>(null);
   const [searchText, setSearchText] = React.useState("");
   const [popoverOpen, setPopoverOpen] = React.useState(false);
-
-  const isResolved = !!ticket.resolved_at;
-
-  // Get assignees from optimistic state OR props
-  const assigneesList = optimisticAssignees || ticket.assignees || ticket.assignees_detail || [];
 
   const [assignableUsers, setAssignableUsers] = React.useState<User[]>([]);
   const [loadingUsers, setLoadingUsers] = React.useState(false);
 
-  // Quick date selector state
   const [datePopoverOpen, setDatePopoverOpen] = React.useState(false);
-  const [optimisticDueDate, setOptimisticDueDate] = React.useState<string | null | undefined>(undefined);
   const [updatingDate, setUpdatingDate] = React.useState(false);
 
-  // Quick priority selector state
   const [priorityPopoverOpen, setPriorityPopoverOpen] = React.useState(false);
-  const [optimisticPriority, setOptimisticPriority] = React.useState<number | undefined>(undefined);
-  const [updatingPriority, setUpdatingPriority] = React.useState(false);
+
+  const isResolved = !!ticket.resolved_at;
+
+  // All display values come directly from ticket props (parent-managed state)
+  const assigneesList = ticket.assignees || ticket.assignees_detail || [];
+  const currentPriority = ticket.priority_id ?? 3;
+  const currentDueDate = ticket.due_date;
+  const dueDateInfo = formatDueDate(currentDueDate);
+  const isUnassigned = assigneesList.length === 0;
 
   // Load assignable users when popover opens
   const handlePopoverOpenChange = async (open: boolean) => {
@@ -127,116 +254,68 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
     try {
       setAssigning(true);
       setPopoverOpen(false);
-      
-      // OPTIMISTIC UPDATE: Set local state immediately
-      // This ensures the UI reflects the change BEFORE the API returns
-      // preserving the avatar and removing "Unassigned" tag
-      setOptimisticAssignees([targetUser]);
 
-      await ticketService.updateTicket(ticket.id, {
+      // Optimistic update via parent state (survives remounts)
+      onTicketUpdate?.(ticket.id, { assignees: [targetUser] as any });
+
+      const updated = await ticketService.updateTicket(ticket.id, {
         assignee_ids: [targetUser.id]
       });
-      
+
+      // Only merge assignee fields from response — never positional fields (rank, status, column)
+      // which may have been changed by a concurrent drag operation
+      onTicketUpdate?.(ticket.id, { assignees: updated.assignees, assignee_ids: updated.assignee_ids });
       message.success(`Assigned to ${targetUser.first_name || targetUser.username}`);
-      // Trigger global update event to refresh lists/boards
-      window.dispatchEvent(new CustomEvent("ticketUpdate"));
     } catch (error) {
       console.error("Failed to assign ticket:", error);
       message.error("Failed to assign ticket");
-      setOptimisticAssignees(null); // Revert on failure
+      // Revert
+      onTicketUpdate?.(ticket.id, { assignees: ticket.assignees } as any);
     } finally {
       setAssigning(false);
     }
   };
 
-  // Handle quick date change
   const handleDateChange = async (date: dayjs.Dayjs | null) => {
     const dateString = date ? date.format("YYYY-MM-DD") : null;
     try {
       setUpdatingDate(true);
       setDatePopoverOpen(false);
-      setOptimisticDueDate(dateString);
-      await ticketService.updateTicket(ticket.id, { due_date: dateString });
+
+      // Optimistic update via parent
+      onTicketUpdate?.(ticket.id, { due_date: dateString });
+
+      const updated = await ticketService.updateTicket(ticket.id, { due_date: dateString });
+      // Only merge the due_date field — not positional fields that may be stale
+      onTicketUpdate?.(ticket.id, { due_date: updated.due_date });
       message.success(dateString ? `Due date set to ${date!.format("MMM D")}` : "Due date cleared");
-      window.dispatchEvent(new CustomEvent("ticketUpdate"));
     } catch (error) {
       console.error("Failed to update due date:", error);
       message.error("Failed to update due date");
-      setOptimisticDueDate(undefined);
+      onTicketUpdate?.(ticket.id, { due_date: ticket.due_date });
     } finally {
       setUpdatingDate(false);
     }
   };
 
-  // Handle quick priority change
-  const priorityOptions = [
-    { id: 4, label: "Urgent", color: "#BC271A" },
-    { id: 3, label: "High", color: "#DB833C" },
-    { id: 2, label: "Normal", color: "#F2AE3D" },
-    { id: 1, label: "Backlog", color: "#7C8697" },
-  ];
-
   const handlePriorityChange = async (priorityId: number) => {
-    const previousPriority = ticket.priority_id;
     try {
-      setUpdatingPriority(true);
       setPriorityPopoverOpen(false);
-      setOptimisticPriority(priorityId);
-      await ticketService.updateTicket(ticket.id, { priority_id: priorityId });
+
+      // Optimistic update via parent
+      onTicketUpdate?.(ticket.id, { priority_id: priorityId });
+
+      const updated = await ticketService.updateTicket(ticket.id, { priority_id: priorityId });
+      // Only merge the priority field — not positional fields that may be stale
+      onTicketUpdate?.(ticket.id, { priority_id: updated.priority_id });
       const label = priorityOptions.find((p) => p.id === priorityId)?.label;
       message.success(`Priority set to ${label}`);
-      window.dispatchEvent(new CustomEvent("ticketUpdate"));
     } catch (error) {
       console.error("Failed to update priority:", error);
       message.error("Failed to update priority");
-      setOptimisticPriority(undefined);
-    } finally {
-      setUpdatingPriority(false);
+      onTicketUpdate?.(ticket.id, { priority_id: ticket.priority_id });
     }
   };
-
-  const effectivePriority = optimisticPriority !== undefined ? optimisticPriority : (ticket.priority_id ?? 3);
-
-  // Format due date for display
-  const formatDueDate = (dueDate: string | null | undefined) => {
-    if (!dueDate) return null;
-    const date = new Date(dueDate);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-    
-    const isOverdue = dateOnly < today;
-    const isToday = dateOnly.getTime() === today.getTime();
-    const isTomorrow = dateOnly.getTime() === tomorrow.getTime();
-    
-    let text = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    let color = '#5e6c84';
-    let bgColor = '#f4f5f7';
-    
-    if (isOverdue) {
-      text = 'Overdue';
-      color = '#de350b';
-      bgColor = '#ffebe6';
-    } else if (isToday) {
-      text = 'Today';
-      color = '#ff8b00';
-      bgColor = '#fff4e6';
-    } else if (isTomorrow) {
-      text = 'Tomorrow';
-      color = '#ff991f';
-      bgColor = '#fffae6';
-    }
-    
-    return { text, color, bgColor };
-  };
-
-  const effectiveDueDate = optimisticDueDate !== undefined ? optimisticDueDate : ticket.due_date;
-  const dueDateInfo = formatDueDate(effectiveDueDate);
-
-  // Check if ticket is unassigned
-  const isUnassigned = assigneesList.length === 0;
 
   const {
     setNodeRef,
@@ -291,7 +370,6 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
       }}
     >
       <div>
-        {/* Resolved indicator */}
         {/* Expanded Resolution Workflow Statuses */}
         {ticket.resolution_status === "rejected" && (
           <div style={{ marginBottom: "6px" }}>
@@ -427,7 +505,7 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
                           style={{
                             cursor: "pointer",
                             padding: "4px 8px",
-                            backgroundColor: item.id === effectivePriority ? "#f0f0f0" : undefined,
+                            backgroundColor: item.id === currentPriority ? "#f0f0f0" : undefined,
                           }}
                           className="assignee-item"
                         >
@@ -441,19 +519,19 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
                   </div>
                 }
               >
-                <Tooltip title={priorityOptions.find((p) => p.id === effectivePriority)?.label || "Priority"}>
+                <Tooltip title={priorityOptions.find((p) => p.id === currentPriority)?.label || "Priority"}>
                   <div
                     onClick={(e) => e.stopPropagation()}
                     style={{ cursor: "pointer", display: "inline-flex", alignItems: "center" }}
                   >
-                    {getPriorityIcon(effectivePriority)}
+                    {getPriorityIcon(currentPriority)}
                   </div>
                 </Tooltip>
               </Popover>
 
               {/* Quick Date Selector */}
               <div style={{ position: "relative", display: "inline-flex" }}>
-                <Tooltip title={effectiveDueDate ? `Due: ${dayjs(effectiveDueDate).format("MMM D, YYYY")}` : "Set due date"}>
+                <Tooltip title={currentDueDate ? `Due: ${dayjs(currentDueDate).format("MMM D, YYYY")}` : "Set due date"}>
                   <div
                     onClick={(e) => {
                       e.stopPropagation();
@@ -490,7 +568,7 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
                     <DatePicker
                       autoFocus
                       open
-                      value={effectiveDueDate ? dayjs(effectiveDueDate) : null}
+                      value={currentDueDate ? dayjs(currentDueDate) : null}
                       onChange={(date) => {
                         handleDateChange(date);
                         setDatePopoverOpen(false);
@@ -502,7 +580,7 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
                       style={{ position: "absolute", visibility: "hidden", width: 0, height: 0 }}
                       allowClear={false}
                       renderExtraFooter={() =>
-                        effectiveDueDate ? (
+                        currentDueDate ? (
                           <Button
                             type="text"
                             size="small"
@@ -610,10 +688,10 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
                           e.stopPropagation();
                       }}
                       icon={<UserAddOutlined />}
-                      style={{ 
-                        fontSize: "12px", 
+                      style={{
+                        fontSize: "12px",
                         width: "22px",
-                        height: "22px", 
+                        height: "22px",
                         padding: 0,
                         display: "flex",
                         alignItems: "center",
@@ -639,9 +717,22 @@ export const TicketCard = memo(TicketCardComponent, (prev, next) => {
     prev.id === next.id &&
     prev.disabled === next.disabled &&
     prev.dragOverlay === next.dragOverlay &&
-    prev.ticket === next.ticket &&
-    prev.onClick === next.onClick
+    prev.ticket.priority_id === next.ticket.priority_id &&
+    prev.ticket.due_date === next.ticket.due_date &&
+    prev.ticket.assignees === next.ticket.assignees &&
+    prev.ticket.name === next.ticket.name &&
+    prev.ticket.rank === next.ticket.rank &&
+    prev.ticket.ticket_status_key === next.ticket.ticket_status_key &&
+    prev.ticket.resolved_at === next.ticket.resolved_at &&
+    prev.ticket.resolution_status === next.ticket.resolution_status &&
+    prev.ticket.resolution_feedback === next.ticket.resolution_feedback &&
+    prev.ticket.comments_count === next.ticket.comments_count &&
+    prev.ticket.following === next.ticket.following &&
+    prev.onClick === next.onClick &&
+    prev.onTicketUpdate === next.onTicketUpdate
   );
 });
 
 TicketCard.displayName = "TicketCard";
+
+export { DragOverlayCard };

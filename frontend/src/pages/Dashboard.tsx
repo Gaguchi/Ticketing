@@ -47,9 +47,7 @@ const Dashboard: React.FC = () => {
 
   // UI states
   const [loading, setLoading] = useState(false);
-  const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(
-    null
-  );
+  const [selectedCompanyIds, setSelectedCompanyIds] = useState<number[]>([]);
 
   // Modal states
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
@@ -73,7 +71,8 @@ const Dashboard: React.FC = () => {
     setLoading(true);
     try {
       const projectId = selectedProject.id;
-      const companyFilter = selectedCompanyId || undefined;
+      // Pass single company filter to API if exactly one selected, otherwise fetch all
+      const companyFilter = selectedCompanyIds.length === 1 ? selectedCompanyIds[0] : undefined;
 
       // Fetch all data in parallel
       const [
@@ -119,7 +118,7 @@ const Dashboard: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [selectedProject?.id, selectedCompanyId]);
+  }, [selectedProject?.id, selectedCompanyIds]);
 
   // Fetch data on mount and project change
   useEffect(() => {
@@ -160,8 +159,10 @@ const Dashboard: React.FC = () => {
   };
 
   // Handle company filter selection
-  const handleCompanySelect = (companyId: number | null) => {
-    setSelectedCompanyId(companyId);
+  const handleCompanyToggle = (companyId: number) => {
+    setSelectedCompanyIds((prev) =>
+      prev.includes(companyId) ? prev.filter((c) => c !== companyId) : [...prev, companyId]
+    );
   };
 
   // Handle ticket update success
@@ -289,9 +290,10 @@ const Dashboard: React.FC = () => {
       <div style={{ padding: "0 20px", marginBottom: 0, backgroundColor: "#fff" }}>
         <CompanyFilterBar
           companies={companyHealth}
-          selectedCompanyId={selectedCompanyId}
+          selectedCompanyIds={selectedCompanyIds}
           totalTickets={totalTickets}
-          onSelect={handleCompanySelect}
+          onToggle={handleCompanyToggle}
+          onClearAll={() => setSelectedCompanyIds([])}
           loading={loading}
         />
       </div>

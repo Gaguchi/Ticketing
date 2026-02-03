@@ -12,9 +12,10 @@ import type { CompanyHealth } from "../../types/dashboard";
 
 interface Props {
   companies: CompanyHealth[];
-  selectedCompanyId: number | null;
+  selectedCompanyIds: number[];
   totalTickets?: number;
-  onSelect: (companyId: number | null) => void;
+  onToggle: (companyId: number) => void;
+  onClearAll: () => void;
   loading?: boolean;
   /** Compact mode for embedding in page headers */
   compact?: boolean;
@@ -22,13 +23,14 @@ interface Props {
 
 const CompanyFilterBar: React.FC<Props> = ({
   companies,
-  selectedCompanyId,
+  selectedCompanyIds,
   totalTickets = 0,
-  onSelect,
+  onToggle,
+  onClearAll,
   loading: _loading = false,
   compact = false,
 }) => {
-  const isAllSelected = selectedCompanyId === null;
+  const isAllSelected = selectedCompanyIds.length === 0;
 
   // Compact pill style
   if (compact) {
@@ -43,12 +45,12 @@ const CompanyFilterBar: React.FC<Props> = ({
       >
         {/* All option */}
         <Tag
-          onClick={() => onSelect(null)}
+          onClick={() => onClearAll()}
           style={{
             cursor: "pointer",
             margin: 0,
             padding: "4px 12px",
-            borderRadius: 16,
+            borderRadius: 4,
             backgroundColor: isAllSelected ? "#1890ff" : "#fafafa",
             color: isAllSelected ? "#fff" : "#595959",
             border: isAllSelected ? "1px solid #1890ff" : "1px solid #d9d9d9",
@@ -62,7 +64,7 @@ const CompanyFilterBar: React.FC<Props> = ({
 
         {/* Company pills */}
         {companies.map((company) => {
-          const isSelected = selectedCompanyId === company.id;
+          const isSelected = selectedCompanyIds.includes(company.id);
           const hasIssues = company.overdue_count > 0;
 
           return (
@@ -86,13 +88,13 @@ const CompanyFilterBar: React.FC<Props> = ({
                 color="#ff4d4f"
               >
                 <Tag
-                  onClick={() => onSelect(company.id)}
+                  onClick={() => onToggle(company.id)}
                   style={{
                     cursor: "pointer",
                     margin: 0,
                     padding: "4px 10px",
                     paddingLeft: company.logo_url ? 4 : 10,
-                    borderRadius: 16,
+                    borderRadius: 4,
                     backgroundColor: isSelected ? "#1890ff" : "#fafafa",
                     color: isSelected ? "#fff" : "#595959",
                     border: isSelected ? "1px solid #1890ff" : "1px solid #d9d9d9",
@@ -152,7 +154,7 @@ const CompanyFilterBar: React.FC<Props> = ({
       {/* All Tickets Card */}
       <Tooltip title="View all tickets">
         <div
-          onClick={() => onSelect(null)}
+          onClick={() => onClearAll()}
           style={{
             display: "flex",
             alignItems: "center",
@@ -207,7 +209,7 @@ const CompanyFilterBar: React.FC<Props> = ({
 
       {/* Company Cards */}
       {companies.map((company) => {
-        const isSelected = selectedCompanyId === company.id;
+        const isSelected = selectedCompanyIds.includes(company.id);
         const hasIssues =
           company.overdue_count > 0 || company.unassigned_count > 0;
 
@@ -238,7 +240,7 @@ const CompanyFilterBar: React.FC<Props> = ({
               offset={[-6, 6]}
             >
               <div
-                onClick={() => onSelect(company.id)}
+                onClick={() => onToggle(company.id)}
                 style={{
                   display: "flex",
                   alignItems: "center",

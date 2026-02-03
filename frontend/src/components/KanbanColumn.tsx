@@ -50,6 +50,7 @@ interface KanbanColumnProps {
   dragOverlay?: boolean;
   onTicketClick?: (ticket: Ticket) => void;
   onTicketCreated?: (ticket: Ticket) => void;
+  onTicketUpdate?: (ticketId: number, fields: Partial<Ticket>) => void;
 }
 
 export const KanbanColumn: React.FC<KanbanColumnProps> = ({
@@ -63,6 +64,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
   dragOverlay,
   onTicketClick,
   onTicketCreated,
+  onTicketUpdate,
 }) => {
   const [showQuickCreate, setShowQuickCreate] = useState(false);
 
@@ -137,32 +139,44 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
           display: "flex",
           flexDirection: "column",
           flex: 1,
-          overflow: "visible",
+          overflow: "hidden",
           padding: "4px 8px 8px",
+          minHeight: 0,
         }}
       >
-        <SortableContext items={items} strategy={verticalListSortingStrategy}>
-          {items.map((item) => {
-            const ticket = ticketMap[item];
-            if (!ticket) return null;
-            return (
-              <TicketCard
-                id={item}
-                key={item}
-                ticket={ticket}
-                disabled={isSortingContainer}
-                onClick={onTicketClick}
-              />
-            );
-          })}
-        </SortableContext>
+        {/* Scrollable ticket list */}
+        <div
+          className="kanban-column__scroll"
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            minHeight: 0,
+          }}
+        >
+          <SortableContext items={items} strategy={verticalListSortingStrategy}>
+            {items.map((item) => {
+              const ticket = ticketMap[item];
+              if (!ticket) return null;
+              return (
+                <TicketCard
+                  id={item}
+                  key={item}
+                  ticket={ticket}
+                  disabled={isSortingContainer}
+                  onClick={onTicketClick}
+                  onTicketUpdate={onTicketUpdate}
+                />
+              );
+            })}
+          </SortableContext>
 
-        {/* Bottom drop zone for dropping below all tickets */}
-        <ColumnBottomDropZone columnId={id} />
+          {/* Bottom drop zone for dropping below all tickets */}
+          <ColumnBottomDropZone columnId={id} />
+        </div>
 
-        {/* Quick Ticket Creator or Create Button */}
+        {/* Quick Ticket Creator or Create Button - pinned at bottom */}
         {showQuickCreate ? (
-          <div>
+          <div style={{ flexShrink: 0 }}>
             <QuickTicketCreator
               columnId={columnId}
               statusKey={statusKey}
@@ -205,6 +219,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
               color: "#5e6c84",
               justifyContent: "flex-start",
               fontWeight: 400,
+              flexShrink: 0,
             }}
           >
             Create

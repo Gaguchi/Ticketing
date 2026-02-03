@@ -190,6 +190,10 @@ def ticket_saved(sender, instance, created, **kwargs):
         'company_logo_url': instance.company.logo.url if instance.company and instance.company.logo else None,
         'reporter': instance.reporter_id,
         'assignee_ids': assignee_ids,
+        'assignees': [
+            {'id': a.id, 'username': a.username, 'first_name': a.first_name, 'last_name': a.last_name}
+            for a in assignees_list
+        ],
         'tag_names': tag_names,
         'comments_count': comments_count,
         'due_date': instance.due_date.isoformat() if instance.due_date else None,

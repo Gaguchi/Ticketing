@@ -111,7 +111,7 @@ const Tickets: React.FC = () => {
 
   // Company filter state
   const [companies, setCompanies] = useState<CompanyHealth[]>([]);
-  const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(null);
+  const [selectedCompanyIds, setSelectedCompanyIds] = useState<number[]>([]);
 
   const RECENT_UPDATE_WINDOW_MS = 10000; // Extended to handle slow backend responses
 
@@ -295,14 +295,19 @@ const Tickets: React.FC = () => {
           recentTicketUpdatesRef.current.delete(data.id);
         }
 
-        // Use complete data from WebSocket instead of fetching
-        const updatedTicket = {
-          ...data,
-          ticket_key: data.ticket_key || `${selectedProject.key}-${data.id}`,
-        };
-
+        // Merge WebSocket data into existing ticket instead of replacing
+        // This preserves fields that WebSocket may not include (e.g. full assignee objects)
         setTickets((prev) =>
-          prev.map((t) => (t.id === data.id ? updatedTicket : t)),
+          prev.map((t) => {
+            if (t.id !== data.id) return t;
+            return {
+              ...t,
+              ...data,
+              ticket_key: data.ticket_key || t.ticket_key,
+              // Preserve full assignee objects if WebSocket only sends IDs
+              assignees: data.assignees || t.assignees,
+            };
+          }),
         );
       } else if (type === "ticket_deleted") {
         // Remove ticket from list
@@ -739,8 +744,8 @@ const Tickets: React.FC = () => {
       .filter((ticket) => !ticket.is_archived)
       .filter((ticket) => {
         // Company filter
-        if (selectedCompanyId !== null) {
-          if (ticket.company !== selectedCompanyId) return false;
+        if (selectedCompanyIds.length > 0) {
+          if (!selectedCompanyIds.includes(ticket.company as number)) return false;
         }
 
         // Search filter
@@ -761,7 +766,7 @@ const Tickets: React.FC = () => {
 
         return true;
       });
-  }, [tickets, normalizedSearch, filterStatus, selectedCompanyId]);
+  }, [tickets, normalizedSearch, filterStatus, selectedCompanyIds]);
 
   const loadArchivedTickets = useCallback(async () => {
     if (!selectedProject) {
@@ -925,6 +930,15 @@ const Tickets: React.FC = () => {
     [handleRestoreTicket],
   );
 
+  // Handle quick updates from TicketCard (assignee, priority, due date changes)
+  // This lifts optimistic state to the parent so it survives drag operations
+  const handleTicketQuickUpdate = useCallback((ticketId: number, fields: Partial<Ticket>) => {
+    recentTicketUpdatesRef.current.set(ticketId, Date.now());
+    setTickets((prev) =>
+      prev.map((t) => t.id === ticketId ? { ...t, ...fields } : t)
+    );
+  }, []);
+
   const handleTicketModalSuccess = useCallback((updatedTicket: Ticket) => {
     if (!updatedTicket) return;
 
@@ -971,9 +985,12 @@ const Tickets: React.FC = () => {
           {companies.length > 0 && (
             <CompanyFilterBar
               companies={companies}
-              selectedCompanyId={selectedCompanyId}
+              selectedCompanyIds={selectedCompanyIds}
               totalTickets={tickets.filter(t => !t.is_archived).length}
-              onSelect={setSelectedCompanyId}
+              onToggle={(id) => setSelectedCompanyIds((prev) =>
+                prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
+              )}
+              onClearAll={() => setSelectedCompanyIds([])}
               compact
             />
           )}
@@ -1096,6 +1113,7 @@ const Tickets: React.FC = () => {
             onTicketClick={handleTicketClick}
             onTicketMove={handleTicketMove}
             onTicketMoveToStatus={handleTicketMoveToStatus}
+            onTicketUpdate={handleTicketQuickUpdate}
             onTicketCreated={(ticket) => {
               console.log(
                 `[Tickets] onTicketCreated called with ticket:`,

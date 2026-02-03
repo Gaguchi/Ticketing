@@ -21,7 +21,7 @@ import {
   horizontalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { KanbanColumn } from "./KanbanColumn";
-import { TicketCard } from "./TicketCard";
+import { TicketCard, DragOverlayCard } from "./TicketCard";
 import { message } from "antd";
 import type { Ticket, TicketColumn, BoardColumn } from "../types/api";
 
@@ -56,6 +56,7 @@ interface KanbanBoardProps {
     afterTicketId?: number
   ) => void;
   onTicketCreated?: (ticket: Ticket) => void;
+  onTicketUpdate?: (ticketId: number, fields: Partial<Ticket>) => void;
 }
 
 export const KanbanBoard: React.FC<KanbanBoardProps> = ({
@@ -66,6 +67,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   onTicketMove,
   onTicketMoveToStatus,
   onTicketCreated,
+  onTicketUpdate,
 }) => {
   // Determine which mode we're in
   const useNewStatusSystem = Boolean(boardColumns && boardColumns.length > 0);
@@ -612,6 +614,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                   onTicketClick={onTicketClick}
                   columnId={column.numericId}
                   onTicketCreated={onTicketCreated}
+                  onTicketUpdate={onTicketUpdate}
                   statusKey={column.statusKeys[0]} // Primary status for this column
                 />
               );
@@ -659,7 +662,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
         <DragOverlay>
           {activeTicket ? (
-            <TicketCard id={activeId!} ticket={activeTicket} dragOverlay />
+            <DragOverlayCard ticket={activeTicket} />
           ) : null}
         </DragOverlay>
       </DndContext>
