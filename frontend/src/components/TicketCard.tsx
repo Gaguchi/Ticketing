@@ -1,8 +1,9 @@
 import React, { memo } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Avatar, Space, Tag, Tooltip, Popover, List, Input } from "antd";
+import { Avatar, Space, Tag, Tooltip, Popover, List, Input, DatePicker } from "antd";
 import {
+  CalendarOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
   EyeOutlined,
@@ -11,6 +12,7 @@ import {
   UserAddOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
+import dayjs from "dayjs";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCheckSquare,
@@ -82,6 +84,11 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
   const [assignableUsers, setAssignableUsers] = React.useState<User[]>([]);
   const [loadingUsers, setLoadingUsers] = React.useState(false);
 
+  // Quick date selector state
+  const [datePopoverOpen, setDatePopoverOpen] = React.useState(false);
+  const [optimisticDueDate, setOptimisticDueDate] = React.useState<string | null | undefined>(undefined);
+  const [updatingDate, setUpdatingDate] = React.useState(false);
+
   // Load assignable users when popover opens
   const handlePopoverOpenChange = async (open: boolean) => {
     setPopoverOpen(open);
@@ -137,6 +144,25 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
     }
   };
 
+  // Handle quick date change
+  const handleDateChange = async (date: dayjs.Dayjs | null) => {
+    const dateString = date ? date.format("YYYY-MM-DD") : null;
+    try {
+      setUpdatingDate(true);
+      setDatePopoverOpen(false);
+      setOptimisticDueDate(dateString);
+      await ticketService.updateTicket(ticket.id, { due_date: dateString });
+      message.success(dateString ? `Due date set to ${date!.format("MMM D")}` : "Due date cleared");
+      window.dispatchEvent(new CustomEvent("ticketUpdate"));
+    } catch (error) {
+      console.error("Failed to update due date:", error);
+      message.error("Failed to update due date");
+      setOptimisticDueDate(undefined);
+    } finally {
+      setUpdatingDate(false);
+    }
+  };
+
   // Format due date for display
   const formatDueDate = (dueDate: string | null | undefined) => {
     if (!dueDate) return null;
@@ -172,7 +198,8 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
     return { text, color, bgColor };
   };
 
-  const dueDateInfo = formatDueDate(ticket.due_date);
+  const effectiveDueDate = optimisticDueDate !== undefined ? optimisticDueDate : ticket.due_date;
+  const dueDateInfo = formatDueDate(effectiveDueDate);
 
   // Check if ticket is unassigned
   const isUnassigned = assigneesList.length === 0;
@@ -368,7 +395,74 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
           <div>
             <Space align="center" size={6}>
               {getPriorityIcon(ticket.priority_id ?? 3)}
-              
+
+              {/* Quick Date Selector */}
+              <div style={{ position: "relative", display: "inline-flex" }}>
+                <Tooltip title={effectiveDueDate ? `Due: ${dayjs(effectiveDueDate).format("MMM D, YYYY")}` : "Set due date"}>
+                  <Button
+                    type="text"
+                    size="small"
+                    loading={updatingDate}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDatePopoverOpen(true);
+                    }}
+                    icon={<CalendarOutlined />}
+                    style={{
+                      fontSize: "12px",
+                      width: "22px",
+                      height: "22px",
+                      padding: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderRadius: "50%",
+                      color: effectiveDueDate ? "#1890ff" : "#8c8c8c",
+                      border: effectiveDueDate ? "1px solid #1890ff" : "1px dashed #d9d9d9",
+                    }}
+                  />
+                </Tooltip>
+                {datePopoverOpen && (
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    style={{ position: "absolute", top: 0, right: 0, zIndex: 10 }}
+                  >
+                    <DatePicker
+                      autoFocus
+                      open
+                      value={effectiveDueDate ? dayjs(effectiveDueDate) : null}
+                      onChange={(date) => {
+                        handleDateChange(date);
+                        setDatePopoverOpen(false);
+                      }}
+                      onOpenChange={(open) => {
+                        if (!open) setDatePopoverOpen(false);
+                      }}
+                      size="small"
+                      style={{ position: "absolute", visibility: "hidden", width: 0, height: 0 }}
+                      allowClear={false}
+                      renderExtraFooter={() =>
+                        effectiveDueDate ? (
+                          <Button
+                            type="text"
+                            size="small"
+                            danger
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDateChange(null);
+                              setDatePopoverOpen(false);
+                            }}
+                            style={{ width: "100%", fontSize: "12px" }}
+                          >
+                            Clear date
+                          </Button>
+                        ) : null
+                      }
+                    />
+                  </div>
+                )}
+              </div>
+
               {/* Assignees or Assign Button */}
               {assigneesList.length > 0 ? (
                 <Avatar.Group

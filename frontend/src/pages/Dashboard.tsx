@@ -3,7 +3,7 @@
  * Customizable dashboard with drag-and-drop widgets using react-grid-layout
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Spin, message, Empty } from "antd";
 import { useProject, useAuth } from "../contexts/AppContext";
 import { TicketModal } from "../components/TicketModal";
@@ -126,15 +126,25 @@ const Dashboard: React.FC = () => {
     fetchDashboardData();
   }, [fetchDashboardData]);
 
-  // Listen for WebSocket ticket updates
+  // Listen for WebSocket ticket updates (debounced to prevent request flooding)
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     const handleTicketUpdate = () => {
-      // Debounce refresh on ticket updates
-      fetchDashboardData();
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+      debounceTimerRef.current = setTimeout(() => {
+        fetchDashboardData();
+      }, 2000);
     };
 
     window.addEventListener("ticketUpdate", handleTicketUpdate);
-    return () => window.removeEventListener("ticketUpdate", handleTicketUpdate);
+    return () => {
+      window.removeEventListener("ticketUpdate", handleTicketUpdate);
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
   }, [fetchDashboardData]);
 
   // Handle ticket click - open modal

@@ -85,44 +85,47 @@ export function useCompaniesStats({
     if (!enabled || companyIds.length === 0) return;
 
     setLoading(true);
-    
+
     // Set all companies to loading
     const newLoadingMap = new Map<number, boolean>();
     companyIds.forEach((id) => newLoadingMap.set(id, true));
     setLoadingMap(newLoadingMap);
 
-    const newStatsMap = new Map<number, CompanyStats>();
+    try {
+      // Single bulk request instead of N individual requests
+      let url = API_ENDPOINTS.COMPANY_BULK_STATS;
+      if (projectId) {
+        url += `?project=${projectId}`;
+      }
 
-    // Fetch stats in parallel (with a small batch limit to avoid overwhelming the server)
-    const batchSize = 5;
-    for (let i = 0; i < companyIds.length; i += batchSize) {
-      const batch = companyIds.slice(i, i + batchSize);
-      
-      await Promise.all(
-        batch.map(async (companyId) => {
-          try {
-            let url = API_ENDPOINTS.COMPANY_STATS(companyId);
-            if (projectId) {
-              url += `?project=${projectId}`;
-            }
-            const data = await apiService.get<CompanyStats>(url);
-            newStatsMap.set(companyId, data);
-          } catch {
-            // Silently fail for individual company stats
-            console.warn(`Failed to fetch stats for company ${companyId}`);
-          } finally {
-            setLoadingMap((prev) => {
-              const updated = new Map(prev);
-              updated.set(companyId, false);
-              return updated;
-            });
-          }
-        })
-      );
+      const data = await apiService.get<
+        Array<CompanyStats & { company_id: number }>
+      >(url);
+
+      const newStatsMap = new Map<number, CompanyStats>();
+      for (const item of data) {
+        newStatsMap.set(item.company_id, {
+          open_tickets: item.open_tickets,
+          urgent_tickets: item.urgent_tickets,
+          overdue_tickets: item.overdue_tickets,
+          resolved_this_month: item.resolved_this_month,
+          total_tickets: item.total_tickets,
+          user_count: item.user_count,
+          admin_count: item.admin_count,
+          health_status: item.health_status,
+          last_activity: item.last_activity,
+        });
+      }
+      setStatsMap(newStatsMap);
+    } catch {
+      console.warn("Failed to fetch bulk company stats");
+    } finally {
+      // Clear all loading states
+      const clearedMap = new Map<number, boolean>();
+      companyIds.forEach((id) => clearedMap.set(id, false));
+      setLoadingMap(clearedMap);
+      setLoading(false);
     }
-
-    setStatsMap(newStatsMap);
-    setLoading(false);
   }, [companyIds, projectId, enabled]);
 
   useEffect(() => {

@@ -7,7 +7,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
 from django.db import models
-from django.db.models import Q
+from django.db.models import Q, Count, Case, When, Value, IntegerField, Max, Subquery, OuterRef
 from django.utils import timezone
 from datetime import timedelta
 from django_filters.rest_framework import DjangoFilterBackend
@@ -611,11 +611,129 @@ class CompanyViewSet(viewsets.ModelViewSet):
             'last_activity': last_activity.isoformat() if last_activity else None,
         })
     
+    @action(detail=False, methods=['get'], url_path='bulk-stats')
+    def bulk_stats(self, request):
+        """
+        Get stats for ALL companies in one request (replaces N individual /stats/ calls).
+
+        GET /api/tickets/companies/bulk-stats/?project=X
+
+        Returns a list of company stats objects, each containing:
+        {
+            "company_id": 1,
+            "open_tickets": 12,
+            "urgent_tickets": 3,
+            "overdue_tickets": 2,
+            "resolved_this_month": 45,
+            "total_tickets": 57,
+            "user_count": 5,
+            "admin_count": 2,
+            "health_status": "critical",
+            "last_activity": "2025-12-02T14:30:00Z"
+        }
+        """
+        project_id = request.query_params.get('project')
+
+        # Get companies using the existing queryset logic (respects permissions)
+        companies = self.get_queryset()
+
+        now = timezone.now()
+        today = now.date()
+        first_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+        # Build ticket filters
+        base_ticket_filter = Q(tickets__is_archived=False)
+        if project_id:
+            base_ticket_filter &= Q(tickets__project_id=project_id)
+
+        done_filter = (
+            Q(tickets__column__name__icontains='done') |
+            Q(tickets__column__name__icontains='complete')
+        )
+        not_done_filter = ~Q(tickets__column__name__icontains='done') & ~Q(tickets__column__name__icontains='complete')
+
+        # Single annotated query for all companies
+        companies_with_stats = companies.annotate(
+            # Open tickets (not archived, not in done/complete columns)
+            open_tickets=Count(
+                'tickets',
+                filter=base_ticket_filter & not_done_filter,
+                distinct=True
+            ),
+            # Urgent tickets (priority >= 4, not done)
+            urgent_tickets=Count(
+                'tickets',
+                filter=base_ticket_filter & Q(tickets__priority_id__gte=4) & not_done_filter,
+                distinct=True
+            ),
+            # Overdue tickets (due_date < today, not done)
+            overdue_tickets=Count(
+                'tickets',
+                filter=base_ticket_filter & Q(tickets__due_date__lt=today) & not_done_filter,
+                distinct=True
+            ),
+            # Resolved this month (in done/complete columns, updated this month)
+            resolved_this_month=Count(
+                'tickets',
+                filter=base_ticket_filter & done_filter & Q(tickets__updated_at__gte=first_of_month),
+                distinct=True
+            ),
+            # Total tickets (including archived) for this project
+            total_tickets=Count(
+                'tickets',
+                filter=Q(tickets__project_id=project_id) if project_id else Q(),
+                distinct=True
+            ),
+            # Critical tickets (priority 5 if exists, or 4 as highest)
+            critical_tickets=Count(
+                'tickets',
+                filter=base_ticket_filter & Q(tickets__priority_id=5) & not_done_filter,
+                distinct=True
+            ),
+            # User and admin counts
+            user_count_val=Count('users', distinct=True),
+            admin_count_val=Count('admins', distinct=True),
+            # Last activity
+            last_activity_dt=Max(
+                'tickets__updated_at',
+                filter=base_ticket_filter
+            ),
+        )
+
+        results = []
+        for company in companies_with_stats:
+            # Calculate health status
+            if company.critical_tickets > 0 or company.overdue_tickets > 3:
+                health_status = 'critical'
+            elif company.overdue_tickets > 0 or company.urgent_tickets > 0:
+                health_status = 'attention'
+            elif company.last_activity_dt and (now - company.last_activity_dt).days > 30:
+                health_status = 'inactive'
+            elif company.open_tickets == 0 and not company.last_activity_dt:
+                health_status = 'inactive'
+            else:
+                health_status = 'healthy'
+
+            results.append({
+                'company_id': company.id,
+                'open_tickets': company.open_tickets,
+                'urgent_tickets': company.urgent_tickets,
+                'overdue_tickets': company.overdue_tickets,
+                'resolved_this_month': company.resolved_this_month,
+                'total_tickets': company.total_tickets,
+                'user_count': company.user_count_val,
+                'admin_count': company.admin_count_val,
+                'health_status': health_status,
+                'last_activity': company.last_activity_dt.isoformat() if company.last_activity_dt else None,
+            })
+
+        return Response(results)
+
     @action(detail=True, methods=['get'], url_path='monthly-report')
     def monthly_report(self, request, pk=None):
         """
         Generate a monthly report for a company showing productivity and satisfaction metrics.
-        
+
         GET /api/tickets/companies/{id}/monthly-report/
         Query params:
             - month: Month number 1-12 (default: current month)
@@ -3043,50 +3161,70 @@ def dashboard_company_health(request):
             Q(admins=user) | Q(users=user)
         ).distinct()
     
+    # Build base ticket filter
+    ticket_filter = Q(tickets__is_archived=False)
+    if project_id:
+        ticket_filter &= Q(tickets__project_id=project_id)
+
+    today = timezone.now().date()
+    not_done = ~Q(tickets__column__name__icontains='done') & ~Q(tickets__column__name__icontains='complete')
+
+    # Single annotated query for all companies
+    companies_annotated = companies.annotate(
+        total_tickets=Count('tickets', filter=ticket_filter, distinct=True),
+        overdue_count=Count(
+            'tickets',
+            filter=ticket_filter & Q(tickets__due_date__lt=today) & not_done,
+            distinct=True
+        ),
+        unassigned_count=Count(
+            'tickets',
+            filter=ticket_filter & Q(tickets__assignees=None),
+            distinct=True
+        ),
+    )
+
+    # Batch query: tickets grouped by (company, column) for status breakdown
+    status_base = Q(is_archived=False)
+    if project_id:
+        status_base &= Q(project_id=project_id)
+    company_ids = list(companies.values_list('id', flat=True))
+
+    status_counts = (
+        Ticket.objects.filter(status_base, company_id__in=company_ids)
+        .values('company_id', 'column__name')
+        .annotate(count=Count('id'))
+    )
+    status_map = {}  # {company_id: {column_name: count}}
+    for row in status_counts:
+        cid = row['company_id']
+        col = row['column__name'] or 'No Column'
+        status_map.setdefault(cid, {})[col] = row['count']
+
+    # Batch query: tickets grouped by (company, priority) for priority breakdown
+    priority_counts = (
+        Ticket.objects.filter(status_base, company_id__in=company_ids)
+        .values('company_id', 'priority_id')
+        .annotate(count=Count('id'))
+    )
+    priority_map = {}  # {company_id: {priority_name: count}}
+    for row in priority_counts:
+        cid = row['company_id']
+        pname = PRIORITY_NAMES.get(row['priority_id'], 'Unknown')
+        priority_map.setdefault(cid, {})[pname] = row['count']
+
     company_data = []
-    for company in companies:
-        # Get tickets for this company
-        tickets_qs = Ticket.objects.filter(company=company)
-        if project_id:
-            tickets_qs = tickets_qs.filter(project_id=project_id)
-        
-        # Count by status (using column names as status)
-        tickets_by_status = {}
-        for ticket in tickets_qs.select_related('column'):
-            column_name = ticket.column.name if ticket.column else 'No Column'
-            tickets_by_status[column_name] = tickets_by_status.get(column_name, 0) + 1
-        
-        # Count priority levels (using priority_id field)
-        tickets_by_priority = {}
-        for ticket in tickets_qs:
-            priority_name = PRIORITY_NAMES.get(ticket.priority_id, 'Unknown')
-            tickets_by_priority[priority_name] = tickets_by_priority.get(priority_name, 0) + 1
-        
-        # Get overdue tickets (due_date in the past, not in Done column)
-        overdue_count = tickets_qs.filter(
-            due_date__lt=timezone.now().date()
-        ).exclude(
-            column__name__icontains='done'
-        ).exclude(
-            column__name__icontains='complete'
-        ).count()
-        
-        # Get unassigned tickets (no assignees)
-        unassigned_count = 0
-        for ticket in tickets_qs.prefetch_related('assignees'):
-            if not ticket.assignees.exists():
-                unassigned_count += 1
-        
+    for company in companies_annotated:
         company_data.append({
             'id': company.id,
             'name': company.name,
             'logo_url': request.build_absolute_uri(company.logo.url) if company.logo else None,
             'logo_thumbnail_url': request.build_absolute_uri(company.logo_thumbnail.url) if company.logo_thumbnail else None,
-            'total_tickets': tickets_qs.count(),
-            'tickets_by_status': tickets_by_status,
-            'tickets_by_priority': tickets_by_priority,
-            'overdue_count': overdue_count,
-            'unassigned_count': unassigned_count,
+            'total_tickets': company.total_tickets,
+            'tickets_by_status': status_map.get(company.id, {}),
+            'tickets_by_priority': priority_map.get(company.id, {}),
+            'overdue_count': company.overdue_count,
+            'unassigned_count': company.unassigned_count,
         })
     
     return Response(company_data)

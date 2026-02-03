@@ -85,6 +85,7 @@ export const API_ENDPOINTS = {
   COMPANIES: api('/companies/'),
   COMPANY_DETAIL: (id: number) => api(`/companies/${id}/`),
   COMPANY_STATS: (id: number) => api(`/companies/${id}/stats/`),
+  COMPANY_BULK_STATS: api('/companies/bulk-stats/'),
   COMPANY_ADMINS: (id: number) => api(`/companies/${id}/admins/`),
   COMPANY_ASSIGN_ADMIN: (id: number) => api(`/companies/${id}/assign_admin/`),
   COMPANY_REMOVE_ADMIN: (id: number) => api(`/companies/${id}/remove_admin/`),
