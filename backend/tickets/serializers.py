@@ -651,6 +651,13 @@ class TicketListSerializer(serializers.ModelSerializer):
         return [tag.name for tag in obj.tags.all()]
 
 
+class KanbanAssigneeSerializer(serializers.ModelSerializer):
+    """Minimal user serializer for kanban card assignee display."""
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'first_name', 'last_name']
+
+
 class KanbanTicketSerializer(serializers.ModelSerializer):
     """
     Super lightweight serializer for Kanban board view.
@@ -658,12 +665,13 @@ class KanbanTicketSerializer(serializers.ModelSerializer):
     ~65% smaller payload than TicketListSerializer.
     """
     assignee_ids = serializers.SerializerMethodField()
+    assignees = KanbanAssigneeSerializer(many=True, read_only=True)
     project_key = serializers.CharField(source='project.key', read_only=True)
     project_number = serializers.IntegerField(read_only=True)
     ticket_key = serializers.CharField(read_only=True)
     company_logo_url = serializers.SerializerMethodField()
     comments_count = serializers.IntegerField(read_only=True)
-    
+
     class Meta:
         model = Ticket
         fields = [
@@ -677,7 +685,7 @@ class KanbanTicketSerializer(serializers.ModelSerializer):
             # Display on card
             'due_date',
             'company_logo_url', 'following', 'comments_count',
-            'assignee_ids', 'resolved_at', 'resolution_status', 'resolution_feedback',
+            'assignee_ids', 'assignees', 'resolved_at', 'resolution_status', 'resolution_feedback',
         ]
         # Read ticket_status_key directly from foreign key
         extra_kwargs = {
