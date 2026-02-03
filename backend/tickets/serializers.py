@@ -675,6 +675,7 @@ class KanbanTicketSerializer(serializers.ModelSerializer):
             # LexoRank ordering
             'rank',
             # Display on card
+            'due_date',
             'company_logo_url', 'following', 'comments_count',
             'assignee_ids', 'resolved_at', 'resolution_status', 'resolution_feedback',
         ]
