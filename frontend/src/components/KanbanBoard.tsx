@@ -21,7 +21,7 @@ import {
   horizontalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { KanbanColumn } from "./KanbanColumn";
-import { TicketCard, DragOverlayCard } from "./TicketCard";
+import { DragOverlayCard } from "./TicketCard";
 import { message } from "antd";
 import type { Ticket, TicketColumn, BoardColumn } from "../types/api";
 

@@ -8,7 +8,7 @@ Write-Host "Starting Ticketing System..." -ForegroundColor Green
 if (-not $CeleryOnly) {
     # Start Backend
     Write-Host "Starting Backend (Django)..." -ForegroundColor Cyan
-    Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd backend; if (Test-Path 'venv/Scripts/Activate.ps1') { . ./venv/Scripts/Activate.ps1 } else { Write-Warning 'Virtual environment not found at backend/venv' }; python manage.py runserver"
+    Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd backend; if (Test-Path 'venv/Scripts/Activate.ps1') { . ./venv/Scripts/Activate.ps1 } else { Write-Warning 'Virtual environment not found at backend/venv' }; python manage.py runserver 8002"
 
     # Start Frontend
     Write-Host "Starting Frontend (Vite)..." -ForegroundColor Cyan
@@ -37,8 +37,8 @@ Write-Host ""
 Write-Host "All services launch commands issued." -ForegroundColor Green
 
 if (-not $CeleryOnly) {
-    Write-Host "Backend: http://localhost:8000"
-    Write-Host "Frontend: http://localhost:5173"
+    Write-Host "Backend: http://localhost:8002"
+    Write-Host "Frontend: http://localhost:5178"
     Write-Host "Servicedesk: http://localhost:3001"
 }
 

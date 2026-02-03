@@ -208,7 +208,7 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
   const [loadingUsers, setLoadingUsers] = React.useState(false);
 
   const [datePopoverOpen, setDatePopoverOpen] = React.useState(false);
-  const [updatingDate, setUpdatingDate] = React.useState(false);
+  const [_updatingDate, setUpdatingDate] = React.useState(false);
 
   const [priorityPopoverOpen, setPriorityPopoverOpen] = React.useState(false);
 

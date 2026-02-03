@@ -12,7 +12,7 @@ Multi-tenant Jira-style ticketing system with Django REST backend, two React fro
 │   ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌───────────┐   │
 │   │  Frontend   │    │ ServiceDesk │    │   Backend   │    │   Celery  │   │
 │   │  (Admin)    │    │  (Client)   │    │  (API)      │    │  (Tasks)  │   │
-│   │  Port 5173  │    │  Port 3001  │    │  Port 8000  │    │           │   │
+│   │  Port 5178  │    │  Port 3001  │    │  Port 8002  │    │           │   │
 │   └──────┬──────┘    └──────┬──────┘    └──────┬──────┘    └─────┬─────┘   │
 │          │                  │                  │                  │         │
 │          └──────────────────┼──────────────────┼──────────────────┘         │
@@ -33,8 +33,8 @@ Multi-tenant Jira-style ticketing system with Django REST backend, two React fro
 
 | Service     | Directory      | Port | Tech Stack                           | Purpose                    |
 | ----------- | -------------- | ---- | ------------------------------------ | -------------------------- |
-| Backend     | `backend/`     | 8000 | Django 5.1, DRF, Channels, Daphne    | REST API + WebSockets      |
-| Frontend    | `frontend/`    | 5173 | React 19, TypeScript, Ant Design     | Admin/IT staff interface   |
+| Backend     | `backend/`     | 8002 | Django 5.1, DRF, Channels, Daphne    | REST API + WebSockets      |
+| Frontend    | `frontend/`    | 5178 | React 19, TypeScript, Ant Design     | Admin/IT staff interface   |
 | ServiceDesk | `servicedesk/` | 3001 | React 19, TypeScript, Tailwind + Ant | Client portal              |
 | Celery      | `celery/`      | -    | Celery, Redis                        | Background task processing |
 | PostgreSQL  | -              | 5432 | PostgreSQL 16                        | Primary database           |
@@ -53,8 +53,8 @@ Multi-tenant Jira-style ticketing system with Django REST backend, two React fro
 .\start.ps1 -CeleryOnly
 
 # Individual services
-cd backend; python manage.py runserver      # Backend: localhost:8000
-cd frontend; npm run dev                     # Main app: localhost:5173
+cd backend; python manage.py runserver 8002  # Backend: localhost:8002
+cd frontend; npm run dev                     # Main app: localhost:5178
 cd servicedesk; npm run dev                  # Service desk: localhost:3001
 
 # Database reset (DESTROYS ALL DATA)
@@ -158,7 +158,7 @@ The system deploys to Dokploy with the following services:
 ```
 Traefik (Proxy/SSL) ─┬─► ticketing-frontend (Nginx, port 80)
                      ├─► ticketing-servicedesk (Nginx, port 80)
-                     ├─► ticketing-backend (Daphne, port 8000)
+                     ├─► ticketing-backend (Daphne, port 8002)
                      └─► ticketing-celery (Worker + Beat)
                               │
                      ┌───────┴────────┐
@@ -246,3 +246,5 @@ TICKET_ARCHIVE_AFTER_HOURS=24
 - WebSockets: `docs/QUICKSTART_WEBSOCKETS.md`
 - Chat System: `docs/CHAT_SYSTEM.md`
 - Security: `docs/SECURITY.md`
+
+See `E:\Work\WebDev\PORTS.md` for the full port registry.
