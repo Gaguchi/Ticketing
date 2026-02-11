@@ -130,14 +130,14 @@
   position: relative;
 }
 
-/* For Meta Group pickers, we want global context */
+/* For Meta Group pickers, keep relative for upward dropdown positioning */
 .quick-ticket-meta-group .quick-ticket-picker {
-  position: static;
+  position: relative;
 }
 
 .quick-ticket-dropdown {
   position: absolute;
-  top: calc(100% + 4px);
+  bottom: calc(100% + 4px);
   left: 0;
   background: #ffffff;
   z-index: 1000;
@@ -195,7 +195,7 @@
 
 .quick-ticket-assignee-dropdown {
   position: absolute;
-  top: calc(100% + 4px);
+  bottom: calc(100% + 4px);
   left: 0;
   /* Align to container left */
   right: auto;
@@ -298,7 +298,7 @@
 @keyframes quickTicketDropdownIn {
   from {
     opacity: 0;
-    transform: translateY(-4px);
+    transform: translateY(4px);
   }
 
   to {
@@ -364,12 +364,6 @@
 /* Date picker popup styling */
 .quick-ticket-datepicker-popup {
   z-index: 9999 !important;
-  left: 0 !important;
-  top: 100% !important;
-  margin-top: 4px !important;
-  position: absolute !important;
-  width: 100% !important;
-  box-sizing: border-box !important;
 }
 
 .quick-ticket-datepicker-popup .ant-picker-panel-container {

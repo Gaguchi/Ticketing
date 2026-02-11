@@ -836,6 +836,53 @@ class CompanyViewSet(viewsets.ModelViewSet):
             avg_resolution_hours - prev_avg_resolution_hours, 1
         )
 
+        # ============ TICKET DETAILS ============
+
+        # All tickets created or resolved during the month
+        tickets_this_month = base_qs.filter(
+            Q(created_at__gte=month_start, created_at__lte=month_end) |
+            Q(done_at__gte=month_start, done_at__lte=month_end)
+        ).select_related(
+            'reporter', 'ticket_status', 'project'
+        ).prefetch_related(
+            'assignees'
+        ).distinct().order_by('-created_at')
+
+        tickets_list = []
+        for t in tickets_this_month:
+            solve_time = None
+            if t.done_at and t.created_at:
+                delta = t.done_at - t.created_at
+                solve_time = round(delta.total_seconds() / 3600, 1)
+
+            tickets_list.append({
+                'id': t.id,
+                'ticket_key': t.ticket_key,
+                'name': t.name,
+                'type': t.type,
+                'priority_id': t.priority_id,
+                'reporter': {
+                    'id': t.reporter.id,
+                    'username': t.reporter.username,
+                    'first_name': t.reporter.first_name,
+                    'last_name': t.reporter.last_name,
+                } if t.reporter else None,
+                'assignees': [
+                    {
+                        'id': a.id,
+                        'username': a.username,
+                        'first_name': a.first_name,
+                        'last_name': a.last_name,
+                    } for a in t.assignees.all()
+                ],
+                'status_name': t.ticket_status.name if t.ticket_status else t.get_status_display(),
+                'status_category': t.ticket_status.category if t.ticket_status else None,
+                'created_at': t.created_at.isoformat(),
+                'done_at': t.done_at.isoformat() if t.done_at else None,
+                'due_date': t.due_date.isoformat() if t.due_date else None,
+                'solve_time_hours': solve_time,
+            })
+
         # ============ BUILD RESPONSE ============
 
         return {
@@ -870,6 +917,7 @@ class CompanyViewSet(viewsets.ModelViewSet):
                 'prev_avg_resolution_hours': prev_avg_resolution_hours,
                 'resolution_change_hours': resolution_change_hours,
             },
+            'tickets': tickets_list,
         }
 
     @action(detail=True, methods=['get'], url_path='monthly-report')

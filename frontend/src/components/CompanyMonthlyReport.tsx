@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
     Select,
     Spin,
@@ -12,6 +12,7 @@ import {
     Input,
     message,
     Segmented,
+    Table,
 } from 'antd';
 import {
     SendOutlined,
@@ -19,11 +20,28 @@ import {
     FallOutlined,
     SettingOutlined,
     EyeOutlined,
+    DownloadOutlined,
 } from '@ant-design/icons';
 import { apiService } from '../services';
 import { API_ENDPOINTS } from '../config/api';
 
 const { Option } = Select;
+
+interface ReportTicket {
+    id: number;
+    ticket_key: string;
+    name: string;
+    type: string;
+    priority_id: number;
+    reporter: { id: number; username: string; first_name: string; last_name: string } | null;
+    assignees: { id: number; username: string; first_name: string; last_name: string }[];
+    status_name: string;
+    status_category: string | null;
+    created_at: string;
+    done_at: string | null;
+    due_date: string | null;
+    solve_time_hours: number | null;
+}
 
 interface MonthlyReportData {
     period: { month: number; year: number; month_name: string };
@@ -35,6 +53,7 @@ interface MonthlyReportData {
         resolved_change: number; resolved_change_pct: number;
         prev_avg_resolution_hours: number; resolution_change_hours: number;
     };
+    tickets: ReportTicket[];
 }
 
 interface CompanyMonthlyReportProps {
@@ -230,6 +249,9 @@ export const CompanyMonthlyReport: React.FC<CompanyMonthlyReportProps> = ({
 
     const [previewOpen, setPreviewOpen] = useState(false);
     const [previewVariant, setPreviewVariant] = useState<EmailVariant>('ledger');
+    const [downloading, setDownloading] = useState(false);
+
+    const reportRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const fetchReport = async () => {
@@ -303,6 +325,31 @@ export const CompanyMonthlyReport: React.FC<CompanyMonthlyReportProps> = ({
         }
     };
 
+    const handleDownloadPdf = async () => {
+        if (!reportRef.current || !report) return;
+        setDownloading(true);
+        try {
+            const html2pdf = (await import('html2pdf.js')).default;
+            const filename = `${report.company.name.replace(/\s+/g, '_')}_Report_${report.period.month_name}_${report.period.year}.pdf`;
+            await html2pdf()
+                .set({
+                    margin: [10, 10, 10, 10],
+                    filename,
+                    image: { type: 'jpeg', quality: 0.95 },
+                    html2canvas: { scale: 2, useCORS: true, logging: false },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                    pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+                })
+                .from(reportRef.current)
+                .save();
+        } catch (err) {
+            message.error('Failed to generate PDF');
+            console.error(err);
+        } finally {
+            setDownloading(false);
+        }
+    };
+
     const years = [now.getFullYear(), now.getFullYear() - 1, now.getFullYear() - 2];
     const on = (key: MetricKey) => enabledMetrics[key];
 
@@ -342,6 +389,9 @@ export const CompanyMonthlyReport: React.FC<CompanyMonthlyReportProps> = ({
                     <Select value={selectedYear} onChange={setSelectedYear} style={{ width: 76 }} size="small">
                         {years.map(y => <Option key={y} value={y}>{y}</Option>)}
                     </Select>
+                    <Button size="small" icon={<DownloadOutlined />} onClick={handleDownloadPdf} loading={downloading}>
+                        PDF
+                    </Button>
                     <Button size="small" icon={<EyeOutlined />} onClick={() => setPreviewOpen(true)}>
                         Preview
                     </Button>
@@ -388,81 +438,157 @@ export const CompanyMonthlyReport: React.FC<CompanyMonthlyReportProps> = ({
                 </div>
             )}
 
-            {/* ── Compact metric grid ── */}
-            {(anyOverview || anyPerf || anyTrends) ? (
-                <div>
-                    {anyOverview && (
-                        <>
-                            <SectionLabel>Volume</SectionLabel>
-                            <MetricGrid>
-                                {on('submitted') && <Metric label="Submitted" value={overview.submitted} />}
-                                {on('resolved') && (
-                                    <Metric
-                                        label="Resolved"
-                                        value={overview.resolved}
-                                        change={trends.resolved_change !== 0 ? `${trends.resolved_change > 0 ? '+' : ''}${trends.resolved_change_pct}%` : undefined}
-                                        good={trends.resolved_change > 0}
-                                    />
-                                )}
-                                {on('open') && <Metric label="Open" value={overview.open} />}
-                                {on('overdue') && <Metric label="Overdue" value={overview.overdue} warn={overview.overdue > 0} muted={overview.overdue === 0} />}
-                            </MetricGrid>
-                        </>
-                    )}
-                    {anyPerf && (
-                        <>
-                            <SectionLabel>Quality</SectionLabel>
-                            <MetricGrid>
-                                {on('avg_resolution') && (
-                                    <Metric
-                                        label="Avg resolution"
-                                        value={formatHours(performance.avg_resolution_hours)}
-                                        change={trends.resolution_change_hours !== 0
-                                            ? `${Math.abs(trends.resolution_change_hours) < 1 ? '< 1h' : formatHours(Math.abs(trends.resolution_change_hours))} ${trends.resolution_change_hours < 0 ? 'faster' : 'slower'}`
-                                            : undefined}
-                                        good={trends.resolution_change_hours < 0}
-                                    />
-                                )}
-                                {on('on_time') && <Metric label="On-time" value={`${performance.on_time_pct}%`} warn={performance.on_time_pct < 60} />}
-                                {on('satisfaction') && (
-                                    <Metric
-                                        label="Satisfaction"
-                                        value={performance.satisfaction !== null ? `${performance.satisfaction.toFixed(1)}/5` : '\u2014'}
-                                        muted={performance.satisfaction === null}
-                                    />
-                                )}
-                            </MetricGrid>
-                        </>
-                    )}
-                    {anyTrends && (
-                        <>
-                            <SectionLabel>vs {prevLabel}</SectionLabel>
-                            <MetricGrid>
-                                {on('trend_resolved') && (
-                                    <Metric
-                                        label="Prev resolved"
-                                        value={trends.prev_resolved}
-                                        change={trends.resolved_change !== 0 ? `${trends.resolved_change > 0 ? '+' : ''}${trends.resolved_change} now` : undefined}
-                                        good={trends.resolved_change > 0}
-                                        muted
-                                    />
-                                )}
-                                {on('trend_speed') && (
-                                    <Metric
-                                        label="Prev resolution"
-                                        value={formatHours(trends.prev_avg_resolution_hours)}
-                                        change={trends.resolution_change_hours !== 0 ? `${formatHours(Math.abs(trends.resolution_change_hours))} ${trends.resolution_change_hours < 0 ? 'faster' : 'slower'}` : undefined}
-                                        good={trends.resolution_change_hours < 0}
-                                        muted
-                                    />
-                                )}
-                            </MetricGrid>
-                        </>
-                    )}
-                </div>
-            ) : (
-                <Empty description="All metrics hidden" style={{ padding: 20 }} />
-            )}
+            {/* ── Report content (wrapped in ref for PDF export) ── */}
+            <div ref={reportRef}>
+                {/* ── Compact metric grid ── */}
+                {(anyOverview || anyPerf || anyTrends) ? (
+                    <div>
+                        {anyOverview && (
+                            <>
+                                <SectionLabel>Volume</SectionLabel>
+                                <MetricGrid>
+                                    {on('submitted') && <Metric label="Submitted" value={overview.submitted} />}
+                                    {on('resolved') && (
+                                        <Metric
+                                            label="Resolved"
+                                            value={overview.resolved}
+                                            change={trends.resolved_change !== 0 ? `${trends.resolved_change > 0 ? '+' : ''}${trends.resolved_change_pct}%` : undefined}
+                                            good={trends.resolved_change > 0}
+                                        />
+                                    )}
+                                    {on('open') && <Metric label="Open" value={overview.open} />}
+                                    {on('overdue') && <Metric label="Overdue" value={overview.overdue} warn={overview.overdue > 0} muted={overview.overdue === 0} />}
+                                </MetricGrid>
+                            </>
+                        )}
+                        {anyPerf && (
+                            <>
+                                <SectionLabel>Quality</SectionLabel>
+                                <MetricGrid>
+                                    {on('avg_resolution') && (
+                                        <Metric
+                                            label="Avg resolution"
+                                            value={formatHours(performance.avg_resolution_hours)}
+                                            change={trends.resolution_change_hours !== 0
+                                                ? `${Math.abs(trends.resolution_change_hours) < 1 ? '< 1h' : formatHours(Math.abs(trends.resolution_change_hours))} ${trends.resolution_change_hours < 0 ? 'faster' : 'slower'}`
+                                                : undefined}
+                                            good={trends.resolution_change_hours < 0}
+                                        />
+                                    )}
+                                    {on('on_time') && <Metric label="On-time" value={`${performance.on_time_pct}%`} warn={performance.on_time_pct < 60} />}
+                                    {on('satisfaction') && (
+                                        <Metric
+                                            label="Satisfaction"
+                                            value={performance.satisfaction !== null ? `${performance.satisfaction.toFixed(1)}/5` : '\u2014'}
+                                            muted={performance.satisfaction === null}
+                                        />
+                                    )}
+                                </MetricGrid>
+                            </>
+                        )}
+                        {anyTrends && (
+                            <>
+                                <SectionLabel>vs {prevLabel}</SectionLabel>
+                                <MetricGrid>
+                                    {on('trend_resolved') && (
+                                        <Metric
+                                            label="Prev resolved"
+                                            value={trends.prev_resolved}
+                                            change={trends.resolved_change !== 0 ? `${trends.resolved_change > 0 ? '+' : ''}${trends.resolved_change} now` : undefined}
+                                            good={trends.resolved_change > 0}
+                                            muted
+                                        />
+                                    )}
+                                    {on('trend_speed') && (
+                                        <Metric
+                                            label="Prev resolution"
+                                            value={formatHours(trends.prev_avg_resolution_hours)}
+                                            change={trends.resolution_change_hours !== 0 ? `${formatHours(Math.abs(trends.resolution_change_hours))} ${trends.resolution_change_hours < 0 ? 'faster' : 'slower'}` : undefined}
+                                            good={trends.resolution_change_hours < 0}
+                                            muted
+                                        />
+                                    )}
+                                </MetricGrid>
+                            </>
+                        )}
+                    </div>
+                ) : (
+                    <Empty description="All metrics hidden" style={{ padding: 20 }} />
+                )}
+
+                {/* ── Ticket detail table ── */}
+                {report.tickets && report.tickets.length > 0 && (
+                    <>
+                        <SectionLabel>Ticket Details ({report.tickets.length})</SectionLabel>
+                        <Table
+                            dataSource={report.tickets}
+                            rowKey="id"
+                            size="small"
+                            pagination={report.tickets.length > 20 ? { pageSize: 20, size: 'small' } : false}
+                            scroll={{ x: 700 }}
+                            columns={[
+                                {
+                                    title: 'Ticket',
+                                    dataIndex: 'name',
+                                    key: 'name',
+                                    width: 220,
+                                    render: (_: string, record: ReportTicket) => (
+                                        <div>
+                                            <span style={{ color: '#0052cc', fontWeight: 500, marginRight: 6, fontSize: 12 }}>
+                                                {record.ticket_key}
+                                            </span>
+                                            <span style={{ fontSize: 13, color: '#1e293b' }}>{record.name}</span>
+                                        </div>
+                                    ),
+                                },
+                                {
+                                    title: 'Reporter',
+                                    dataIndex: 'reporter',
+                                    key: 'reporter',
+                                    width: 120,
+                                    render: (reporter: ReportTicket['reporter']) =>
+                                        reporter
+                                            ? `${reporter.first_name || ''} ${reporter.last_name || ''}`.trim() || reporter.username
+                                            : '\u2014',
+                                },
+                                {
+                                    title: 'Assignees',
+                                    dataIndex: 'assignees',
+                                    key: 'assignees',
+                                    width: 140,
+                                    render: (assignees: ReportTicket['assignees']) =>
+                                        assignees.length > 0
+                                            ? assignees.map(a =>
+                                                `${a.first_name || ''} ${a.last_name || ''}`.trim() || a.username
+                                              ).join(', ')
+                                            : '\u2014',
+                                },
+                                {
+                                    title: 'Status',
+                                    dataIndex: 'status_name',
+                                    key: 'status_name',
+                                    width: 110,
+                                    render: (status: string, record: ReportTicket) => {
+                                        const colorMap: Record<string, string> = {
+                                            todo: 'default',
+                                            in_progress: 'processing',
+                                            done: 'success',
+                                        };
+                                        return <Tag color={colorMap[record.status_category || ''] || 'default'}>{status}</Tag>;
+                                    },
+                                },
+                                {
+                                    title: 'Solve Time',
+                                    dataIndex: 'solve_time_hours',
+                                    key: 'solve_time_hours',
+                                    width: 100,
+                                    render: (hours: number | null) => hours !== null ? formatHours(hours) : '\u2014',
+                                },
+                            ]}
+                        />
+                    </>
+                )}
+            </div>
 
             {/* ── Send modal ── */}
             <Modal
