@@ -848,6 +848,8 @@ class CompanyViewSet(viewsets.ModelViewSet):
             'assignees'
         ).distinct().order_by('-created_at')
 
+        priority_map = dict(Ticket.PRIORITY_CHOICES)
+
         tickets_list = []
         for t in tickets_this_month:
             solve_time = None
@@ -855,12 +857,20 @@ class CompanyViewSet(viewsets.ModelViewSet):
                 delta = t.done_at - t.created_at
                 solve_time = round(delta.total_seconds() / 3600, 1)
 
+            # SLA: on-time if completed on or before due date
+            on_time = None
+            if t.done_at and t.due_date:
+                on_time = t.done_at.date() <= t.due_date
+
             tickets_list.append({
                 'id': t.id,
                 'ticket_key': t.ticket_key,
                 'name': t.name,
                 'type': t.type,
+                'type_label': t.get_type_display(),
                 'priority_id': t.priority_id,
+                'priority_label': priority_map.get(t.priority_id, 'Unknown'),
+                'project_name': t.project.name if t.project else None,
                 'reporter': {
                     'id': t.reporter.id,
                     'username': t.reporter.username,
@@ -880,7 +890,11 @@ class CompanyViewSet(viewsets.ModelViewSet):
                 'created_at': t.created_at.isoformat(),
                 'done_at': t.done_at.isoformat() if t.done_at else None,
                 'due_date': t.due_date.isoformat() if t.due_date else None,
+                'created_at_display': t.created_at.strftime('%b %d, %Y') if t.created_at else None,
+                'done_at_display': t.done_at.strftime('%b %d, %Y') if t.done_at else None,
+                'due_date_display': t.due_date.strftime('%b %d, %Y') if t.due_date else None,
                 'solve_time_hours': solve_time,
+                'on_time': on_time,
             })
 
         # ============ BUILD RESPONSE ============
