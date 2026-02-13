@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
     Select,
     Spin,
@@ -84,6 +84,18 @@ const ALL_METRICS = [
 
 type MetricKey = typeof ALL_METRICS[number]['key'];
 
+/* ── Domain-motivated palette ── */
+/* Ink & paper: printed report feel. Blue: boardroom authority. Teal: operational status. */
+const INK = '#0f172a';
+const INK_SECONDARY = '#334155';
+const INK_MUTED = '#64748b';
+const INK_FAINT = '#94a3b8';
+const RULE = '#e2e8f0';
+const SURFACE = '#f8fafc';
+const SURFACE_INSET = '#f1f5f9';
+const BRAND = '#1e40af';
+const BRAND_LIGHT = '#eff6ff';
+
 const formatHours = (hours: number): string => {
     if (!hours || hours === 0) return '0 h';
     if (hours < 1) return '< 1 h';
@@ -99,13 +111,12 @@ const formatPersonName = (person: { first_name: string; last_name: string; usern
     return full || person.username;
 };
 
-const PRIORITY_COLORS: Record<number, { bg: string; text: string }> = {
-    1: { bg: '#e8f5e9', text: '#2e7d32' },
-    2: { bg: '#e3f2fd', text: '#1565c0' },
-    3: { bg: '#fff3e0', text: '#e65100' },
-    4: { bg: '#fce4ec', text: '#c62828' },
+const PRIORITY_STYLES: Record<number, { bg: string; text: string; border: string }> = {
+    1: { bg: '#ecfdf5', text: '#065f46', border: '#a7f3d0' },
+    2: { bg: '#eff6ff', text: '#1e40af', border: '#bfdbfe' },
+    3: { bg: '#fff7ed', text: '#9a3412', border: '#fed7aa' },
+    4: { bg: '#fef2f2', text: '#991b1b', border: '#fecaca' },
 };
-
 
 export const CompanyMonthlyReport: React.FC<CompanyMonthlyReportProps> = ({
     companyId,
@@ -127,8 +138,6 @@ export const CompanyMonthlyReport: React.FC<CompanyMonthlyReportProps> = ({
     const [recipientEmail, setRecipientEmail] = useState('');
     const [sending, setSending] = useState(false);
     const [downloading, setDownloading] = useState(false);
-
-    const reportRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const fetchReport = async () => {
@@ -190,22 +199,503 @@ export const CompanyMonthlyReport: React.FC<CompanyMonthlyReportProps> = ({
     };
 
     const handleDownloadPdf = async () => {
-        if (!reportRef.current || !report) return;
+        if (!report) return;
         setDownloading(true);
         try {
-            const html2pdf = (await import('html2pdf.js')).default;
+            const jsPDFModule = await import('jspdf');
+            const autoTableModule = await import('jspdf-autotable');
+            const JsPDF = (jsPDFModule as any).jsPDF || (jsPDFModule as any).default;
+            const autoTable = (autoTableModule as any).default;
+
+            const doc = new JsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
             const filename = `${report.company.name.replace(/\s+/g, '_')}_Report_${report.period.month_name}_${report.period.year}.pdf`;
-            await html2pdf()
-                .set({
-                    margin: [8, 8, 8, 8],
-                    filename,
-                    image: { type: 'jpeg', quality: 0.98 },
-                    html2canvas: { scale: 2, useCORS: true, logging: false },
-                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
-                    pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
-                })
-                .from(reportRef.current)
-                .save();
+
+            /* ── Compute values from report state ── */
+            const { overview, performance, trends } = report;
+            const isOn = (key: MetricKey) => enabledMetrics[key];
+            const hasOverview = isOn('submitted') || isOn('resolved') || isOn('open') || isOn('overdue');
+            const hasPerf = isOn('avg_resolution') || isOn('on_time') || isOn('satisfaction');
+            const hasTrends = isOn('trend_resolved') || isOn('trend_speed');
+            const resolvedTix = report.tickets.filter(t => t.done_at);
+            const avgSolve = resolvedTix.length > 0
+                ? resolvedTix.reduce((sum, t) => sum + (t.solve_time_hours || 0), 0) / resolvedTix.length
+                : 0;
+            const onTimeCt = report.tickets.filter(t => t.on_time === true).length;
+            const withDueCt = report.tickets.filter(t => t.on_time !== null).length;
+            const prevLbl = `${MONTHS[trends.prev_month - 1]?.slice(0, 3)} ${trends.prev_year}`;
+
+            /* ── Layout constants (A4 = 210 x 297mm) ── */
+            const pageW = 210, pageH = 297;
+            const mL = 15, mR = 15, mT = 12, mB = 15;
+            const cW = pageW - mL - mR;
+            let y = mT;
+
+            /* ── Helpers ── */
+            const rgb = (h: string): [number, number, number] => {
+                const v = h.replace('#', '');
+                return [parseInt(v.slice(0, 2), 16), parseInt(v.slice(2, 4), 16), parseInt(v.slice(4, 6), 16)];
+            };
+            const checkPage = (needed: number) => {
+                if (y + needed > pageH - mB) { doc.addPage(); y = mT; }
+            };
+            const pdfName = (p: { first_name: string; last_name: string; username: string } | null): string => {
+                if (!p) return '-';
+                const full = `${p.first_name || ''} ${p.last_name || ''}`.trim();
+                return full || p.username;
+            };
+
+            /* ═══════════════════════════════════════════
+               1. ACCENT BAR
+               ═══════════════════════════════════════════ */
+            doc.setFillColor(...rgb(BRAND));
+            doc.rect(0, 0, pageW, 1.5, 'F');
+
+            /* ═══════════════════════════════════════════
+               2. DOCUMENT HEADER
+               ═══════════════════════════════════════════ */
+            // Subtitle
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(7.5);
+            doc.setTextColor(...rgb(BRAND));
+            doc.text('MONTHLY SERVICE REPORT', mL, y + 3);
+
+            // Company name
+            doc.setFontSize(20);
+            doc.setTextColor(...rgb(INK));
+            doc.text(report.company.name, mL, y + 12);
+
+            // Period
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(10);
+            doc.setTextColor(...rgb(INK_MUTED));
+            doc.text(`${report.period.month_name} ${report.period.year}`, mL, y + 18);
+
+            // Generated date (right-aligned)
+            const genDate = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            doc.setFontSize(7);
+            doc.setTextColor(...rgb(INK_FAINT));
+            doc.text(`Generated ${genDate}`, mL + cW, y + 4, { align: 'right' });
+
+            y += 22;
+
+            // Divider
+            doc.setDrawColor(...rgb(RULE));
+            doc.setLineWidth(0.3);
+            doc.line(mL, y, mL + cW, y);
+            y += 8;
+
+            /* ═══════════════════════════════════════════
+               3. KEY FIGURES STRIP
+               ═══════════════════════════════════════════ */
+            if (hasOverview) {
+                const figures: { value: string; label: string; color: [number, number, number]; extra?: string; extraColor?: [number, number, number] }[] = [];
+                if (isOn('submitted')) figures.push({ value: String(overview.submitted), label: 'SUBMITTED', color: rgb(BRAND) });
+                if (isOn('resolved')) {
+                    let extra: string | undefined;
+                    let extraColor: [number, number, number] | undefined;
+                    if (trends.resolved_change !== 0) {
+                        extra = `${trends.resolved_change > 0 ? '+' : ''}${trends.resolved_change_pct}%`;
+                        extraColor = trends.resolved_change > 0 ? rgb('#059669') : rgb('#dc2626');
+                    }
+                    figures.push({ value: String(overview.resolved), label: 'RESOLVED', color: rgb('#065f46'), extra, extraColor });
+                }
+                if (isOn('open')) figures.push({ value: String(overview.open), label: 'OPEN', color: rgb('#92400e') });
+                if (isOn('overdue')) figures.push({ value: String(overview.overdue), label: 'OVERDUE', color: overview.overdue > 0 ? rgb('#991b1b') : rgb(INK_FAINT) });
+
+                if (figures.length > 0) {
+                    const stripH = 17;
+                    const cellW = cW / figures.length;
+
+                    // Strip background + border
+                    doc.setFillColor(...rgb(SURFACE));
+                    doc.roundedRect(mL, y, cW, stripH, 1.5, 1.5, 'F');
+                    doc.setDrawColor(...rgb(RULE));
+                    doc.setLineWidth(0.2);
+                    doc.roundedRect(mL, y, cW, stripH, 1.5, 1.5, 'S');
+
+                    figures.forEach((fig, i) => {
+                        const cx = mL + cellW * i + 6;
+
+                        // Large number
+                        doc.setFont('helvetica', 'bold');
+                        doc.setFontSize(16);
+                        doc.setTextColor(...fig.color);
+                        doc.text(fig.value, cx, y + 8);
+
+                        // Trend badge
+                        if (fig.extra && fig.extraColor) {
+                            const valW = doc.getTextWidth(fig.value);
+                            doc.setFontSize(6.5);
+                            doc.setTextColor(...fig.extraColor);
+                            doc.text(fig.extra, cx + valW + 2, y + 8);
+                        }
+
+                        // Label
+                        doc.setFont('helvetica', 'normal');
+                        doc.setFontSize(6);
+                        doc.setTextColor(...rgb(INK_MUTED));
+                        doc.text(fig.label, cx, y + 13);
+
+                        // Cell divider
+                        if (i < figures.length - 1) {
+                            doc.setDrawColor(...rgb(RULE));
+                            doc.setLineWidth(0.2);
+                            doc.line(mL + cellW * (i + 1), y + 2.5, mL + cellW * (i + 1), y + stripH - 2.5);
+                        }
+                    });
+
+                    y += stripH + 8;
+                }
+            }
+
+            /* ── Section title helper ── */
+            const drawSectionTitle = (title: string) => {
+                checkPage(20);
+                doc.setFillColor(...rgb(BRAND));
+                doc.rect(mL, y, 1, 4, 'F');
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(7.5);
+                doc.setTextColor(...rgb(INK));
+                doc.text(title.toUpperCase(), mL + 3, y + 3);
+                y += 8;
+            };
+
+            /* ═══════════════════════════════════════════
+               4. PERFORMANCE SECTION
+               ═══════════════════════════════════════════ */
+            if (hasPerf) {
+                drawSectionTitle('Performance');
+
+                const cards: { title: string; value: string; valueColor: [number, number, number]; sub?: string; subColor?: [number, number, number]; barPct?: number; barColor?: string; barLabel?: string }[] = [];
+
+                if (isOn('avg_resolution')) {
+                    const sub = trends.resolution_change_hours !== 0
+                        ? `${formatHours(Math.abs(trends.resolution_change_hours))} ${trends.resolution_change_hours < 0 ? 'faster' : 'slower'} vs ${prevLbl}`
+                        : undefined;
+                    cards.push({
+                        title: 'AVG RESOLUTION TIME',
+                        value: formatHours(performance.avg_resolution_hours),
+                        valueColor: rgb(INK),
+                        sub,
+                        subColor: trends.resolution_change_hours < 0 ? rgb('#059669') : rgb('#dc2626'),
+                    });
+                }
+                if (isOn('on_time')) {
+                    cards.push({
+                        title: 'ON-TIME COMPLETION',
+                        value: `${performance.on_time_pct}%`,
+                        valueColor: performance.on_time_pct >= 80 ? rgb('#065f46') : performance.on_time_pct >= 60 ? rgb('#92400e') : rgb('#991b1b'),
+                        barPct: performance.on_time_pct,
+                        barColor: performance.on_time_pct >= 80 ? '#059669' : performance.on_time_pct >= 60 ? '#d97706' : '#dc2626',
+                        barLabel: withDueCt > 0 ? `${onTimeCt}/${withDueCt}` : undefined,
+                    });
+                }
+                if (isOn('satisfaction')) {
+                    const val = performance.satisfaction !== null ? `${performance.satisfaction.toFixed(1)} / 5` : '-';
+                    cards.push({
+                        title: 'SATISFACTION',
+                        value: val,
+                        valueColor: rgb(INK),
+                        barPct: performance.satisfaction !== null ? (performance.satisfaction / 5) * 100 : undefined,
+                        barColor: performance.satisfaction !== null
+                            ? (performance.satisfaction >= 4 ? '#059669' : performance.satisfaction >= 3 ? '#d97706' : '#dc2626')
+                            : undefined,
+                    });
+                }
+
+                if (cards.length > 0) {
+                    const gap = 4;
+                    const cardW = (cW - (cards.length - 1) * gap) / cards.length;
+                    const cardH = 23;
+                    checkPage(cardH + 4);
+
+                    cards.forEach((card, i) => {
+                        const cx = mL + i * (cardW + gap);
+
+                        // Card border
+                        doc.setDrawColor(...rgb(RULE));
+                        doc.setLineWidth(0.2);
+                        doc.roundedRect(cx, y, cardW, cardH, 1.5, 1.5, 'S');
+
+                        // Title
+                        doc.setFont('helvetica', 'normal');
+                        doc.setFontSize(6);
+                        doc.setTextColor(...rgb(INK_MUTED));
+                        doc.text(card.title, cx + 5, y + 5.5);
+
+                        // Value
+                        doc.setFont('helvetica', 'bold');
+                        doc.setFontSize(14);
+                        doc.setTextColor(...card.valueColor);
+                        doc.text(card.value, cx + 5, y + 13.5);
+
+                        // Progress bar
+                        if (card.barPct !== undefined && card.barColor) {
+                            const barY = y + 17;
+                            const barW = cardW - 18;
+                            const barH = 2;
+
+                            // Track
+                            doc.setFillColor(...rgb(SURFACE_INSET));
+                            doc.roundedRect(cx + 5, barY, barW, barH, 1, 1, 'F');
+
+                            // Fill
+                            const fillW = barW * Math.min(card.barPct, 100) / 100;
+                            if (fillW > 0) {
+                                doc.setFillColor(...rgb(card.barColor));
+                                doc.roundedRect(cx + 5, barY, fillW, barH, 1, 1, 'F');
+                            }
+
+                            // Label
+                            if (card.barLabel) {
+                                doc.setFontSize(5.5);
+                                doc.setFont('helvetica', 'normal');
+                                doc.setTextColor(...rgb(INK_FAINT));
+                                doc.text(card.barLabel, cx + 5 + barW + 2, barY + 1.6);
+                            }
+                        }
+
+                        // Sub text (for resolution change - only if no bar)
+                        if (card.sub && card.subColor && card.barPct === undefined) {
+                            doc.setFontSize(6.5);
+                            doc.setFont('helvetica', 'normal');
+                            doc.setTextColor(...card.subColor);
+                            doc.text(card.sub, cx + 5, y + 19);
+                        }
+                    });
+
+                    y += cardH + 8;
+                }
+            }
+
+            /* ═══════════════════════════════════════════
+               5. MONTH-OVER-MONTH
+               ═══════════════════════════════════════════ */
+            if (hasTrends) {
+                drawSectionTitle('Month-over-Month');
+
+                const tCards: { title: string; prev: string; cur: string; badge?: string; badgeColor?: [number, number, number]; badgeBg?: string; vsLabel: string }[] = [];
+
+                if (isOn('trend_resolved')) {
+                    let badge: string | undefined, badgeColor: [number, number, number] | undefined, badgeBg: string | undefined;
+                    if (trends.resolved_change !== 0) {
+                        badge = `${trends.resolved_change > 0 ? '+' : ''}${trends.resolved_change}`;
+                        badgeColor = trends.resolved_change > 0 ? rgb('#059669') : rgb('#dc2626');
+                        badgeBg = trends.resolved_change > 0 ? '#ecfdf5' : '#fef2f2';
+                    }
+                    tCards.push({ title: 'RESOLVED TICKETS', prev: String(trends.prev_resolved), cur: String(overview.resolved), badge, badgeColor, badgeBg, vsLabel: `vs ${MONTHS[trends.prev_month - 1]} ${trends.prev_year}` });
+                }
+                if (isOn('trend_speed')) {
+                    let badge: string | undefined, badgeColor: [number, number, number] | undefined, badgeBg: string | undefined;
+                    if (trends.resolution_change_hours !== 0) {
+                        badge = trends.resolution_change_hours < 0 ? 'Faster' : 'Slower';
+                        badgeColor = trends.resolution_change_hours < 0 ? rgb('#059669') : rgb('#dc2626');
+                        badgeBg = trends.resolution_change_hours < 0 ? '#ecfdf5' : '#fef2f2';
+                    }
+                    tCards.push({ title: 'RESOLUTION SPEED', prev: formatHours(trends.prev_avg_resolution_hours), cur: formatHours(performance.avg_resolution_hours), badge, badgeColor, badgeBg, vsLabel: `vs ${MONTHS[trends.prev_month - 1]} ${trends.prev_year}` });
+                }
+
+                if (tCards.length > 0) {
+                    const gap = 4;
+                    const cardW = (cW - (tCards.length - 1) * gap) / tCards.length;
+                    const cardH = 19;
+                    checkPage(cardH + 4);
+
+                    tCards.forEach((card, i) => {
+                        const cx = mL + i * (cardW + gap);
+
+                        doc.setDrawColor(...rgb(RULE));
+                        doc.setLineWidth(0.2);
+                        doc.roundedRect(cx, y, cardW, cardH, 1.5, 1.5, 'S');
+
+                        // Title
+                        doc.setFont('helvetica', 'normal');
+                        doc.setFontSize(6);
+                        doc.setTextColor(...rgb(INK_MUTED));
+                        doc.text(card.title, cx + 5, y + 5.5);
+
+                        // Prev > Current
+                        let tx = cx + 5;
+                        doc.setFont('helvetica', 'normal');
+                        doc.setFontSize(10);
+                        doc.setTextColor(...rgb(INK_FAINT));
+                        doc.text(card.prev, tx, y + 12.5);
+                        tx += doc.getTextWidth(card.prev) + 2;
+
+                        doc.setFontSize(7);
+                        doc.text('>', tx, y + 12.5);
+                        tx += doc.getTextWidth('>') + 2;
+
+                        doc.setFont('helvetica', 'bold');
+                        doc.setFontSize(12);
+                        doc.setTextColor(...rgb(INK));
+                        doc.text(card.cur, tx, y + 12.5);
+                        tx += doc.getTextWidth(card.cur) + 3;
+
+                        // Change badge
+                        if (card.badge && card.badgeColor && card.badgeBg) {
+                            doc.setFontSize(6.5);
+                            doc.setFont('helvetica', 'bold');
+                            const badgeW = doc.getTextWidth(card.badge) + 4;
+                            doc.setFillColor(...rgb(card.badgeBg));
+                            doc.roundedRect(tx, y + 8.5, badgeW, 5, 1, 1, 'F');
+                            doc.setTextColor(...card.badgeColor);
+                            doc.text(card.badge, tx + 2, y + 12);
+                        }
+
+                        // vs label
+                        doc.setFont('helvetica', 'normal');
+                        doc.setFontSize(5.5);
+                        doc.setTextColor(...rgb(INK_FAINT));
+                        doc.text(card.vsLabel, cx + 5, y + 16.5);
+                    });
+
+                    y += cardH + 8;
+                }
+            }
+
+            /* ═══════════════════════════════════════════
+               6. TICKET DETAILS TABLE
+               ═══════════════════════════════════════════ */
+            if (report.tickets && report.tickets.length > 0) {
+                drawSectionTitle(`Ticket Details  (${report.tickets.length})`);
+
+                const tableBody = report.tickets.map((ticket, idx) => [
+                    String(idx + 1),
+                    `${ticket.ticket_key}  ${ticket.name}`,
+                    ticket.priority_label,
+                    pdfName(ticket.reporter),
+                    ticket.assignees.length > 0 ? ticket.assignees.map(a => pdfName(a)).join(', ') : '-',
+                    ticket.created_at_display || '-',
+                    ticket.done_at_display || '-',
+                    ticket.solve_time_hours !== null ? formatHours(ticket.solve_time_hours) : '-',
+                    ticket.on_time === true ? 'ON TIME' : ticket.on_time === false ? 'LATE' : '-',
+                ]);
+
+                autoTable(doc, {
+                    startY: y,
+                    margin: { left: mL, right: mR },
+                    head: [['#', 'Ticket', 'Priority', 'Reporter', 'Assignee', 'Created', 'Done', 'Time', 'SLA']],
+                    body: tableBody,
+                    styles: {
+                        fontSize: 7,
+                        cellPadding: { top: 2, bottom: 2, left: 2.5, right: 2.5 },
+                        textColor: rgb(INK_SECONDARY),
+                        lineWidth: 0,
+                        overflow: 'ellipsize' as any,
+                    },
+                    headStyles: {
+                        fillColor: rgb('#1e293b'),
+                        textColor: rgb('#cbd5e1'),
+                        fontSize: 6.5,
+                        fontStyle: 'bold',
+                        cellPadding: { top: 2.5, bottom: 2.5, left: 2.5, right: 2.5 },
+                    },
+                    alternateRowStyles: {
+                        fillColor: rgb(SURFACE),
+                    },
+                    columnStyles: {
+                        0: { cellWidth: 7, halign: 'center', textColor: rgb(INK_FAINT), fontSize: 6.5 },
+                        1: { cellWidth: 'auto' },
+                        2: { cellWidth: 16 },
+                        3: { cellWidth: 20 },
+                        4: { cellWidth: 20 },
+                        5: { cellWidth: 16, textColor: rgb(INK_MUTED) },
+                        6: { cellWidth: 16, textColor: rgb(INK_MUTED) },
+                        7: { cellWidth: 14, halign: 'right', fontStyle: 'bold' },
+                        8: { cellWidth: 16, halign: 'center' },
+                    },
+                    didParseCell: (data: any) => {
+                        // SLA cell coloring
+                        if (data.section === 'body' && data.column.index === 8) {
+                            const val = data.cell.raw;
+                            if (val === 'ON TIME') {
+                                data.cell.styles.textColor = rgb('#059669');
+                                data.cell.styles.fontStyle = 'bold';
+                                data.cell.styles.fontSize = 6;
+                            } else if (val === 'LATE') {
+                                data.cell.styles.textColor = rgb('#dc2626');
+                                data.cell.styles.fontStyle = 'bold';
+                                data.cell.styles.fontSize = 6;
+                            } else {
+                                data.cell.styles.textColor = rgb('#cbd5e1');
+                            }
+                        }
+                        // Ticket column - darker text
+                        if (data.section === 'body' && data.column.index === 1) {
+                            data.cell.styles.textColor = rgb(INK);
+                        }
+                        // Priority coloring
+                        if (data.section === 'body' && data.column.index === 2) {
+                            const val = (data.cell.raw || '').toString().toLowerCase();
+                            if (val.includes('critical') || val.includes('highest')) {
+                                data.cell.styles.textColor = rgb('#991b1b');
+                            } else if (val.includes('high')) {
+                                data.cell.styles.textColor = rgb('#9a3412');
+                            } else if (val.includes('medium') || val.includes('normal')) {
+                                data.cell.styles.textColor = rgb('#1e40af');
+                            } else if (val.includes('low')) {
+                                data.cell.styles.textColor = rgb('#065f46');
+                            }
+                        }
+                    },
+                    tableLineColor: rgb(RULE),
+                    tableLineWidth: 0.15,
+                });
+
+                y = (doc as any).lastAutoTable.finalY + 8;
+            }
+
+            /* ═══════════════════════════════════════════
+               7. DOCUMENT FOOTER
+               ═══════════════════════════════════════════ */
+            checkPage(18);
+
+            doc.setDrawColor(...rgb(RULE));
+            doc.setLineWidth(0.3);
+            doc.line(mL, y, mL + cW, y);
+            y += 6;
+
+            // Footer summary stats
+            const footerStats: { label: string; value: string; color: [number, number, number] }[] = [
+                { label: 'TOTAL', value: String(report.tickets.length), color: rgb(INK) },
+                { label: 'RESOLVED', value: String(resolvedTix.length), color: rgb('#059669') },
+                { label: 'AVG TIME', value: formatHours(avgSolve), color: rgb(INK) },
+            ];
+            if (withDueCt > 0) {
+                footerStats.push({ label: 'SLA RATE', value: `${Math.round(onTimeCt / withDueCt * 100)}%`, color: rgb(INK) });
+            }
+
+            let fx = mL;
+            footerStats.forEach((stat) => {
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(5.5);
+                doc.setTextColor(...rgb(INK_FAINT));
+                doc.text(stat.label, fx, y);
+
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(10);
+                doc.setTextColor(...stat.color);
+                doc.text(stat.value, fx, y + 5.5);
+
+                fx += 28;
+            });
+
+            // Right-aligned company & date
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(6);
+            doc.setTextColor(...rgb(INK_FAINT));
+            doc.text(
+                `${report.company.name}  |  ${report.period.month_name} ${report.period.year}`,
+                mL + cW, y, { align: 'right' },
+            );
+            doc.text(
+                `Generated ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`,
+                mL + cW, y + 4, { align: 'right' },
+            );
+
+            /* ── Save ── */
+            doc.save(filename);
         } catch (err) {
             message.error('Failed to generate PDF');
             console.error(err);
@@ -219,9 +709,9 @@ export const CompanyMonthlyReport: React.FC<CompanyMonthlyReportProps> = ({
 
     if (loading) {
         return (
-            <div style={{ textAlign: 'center', padding: 60 }}>
+            <div style={{ textAlign: 'center', padding: 80 }}>
                 <Spin size="large" />
-                <div style={{ marginTop: 12, color: '#94a3b8', fontSize: 13 }}>Loading report...</div>
+                <div style={{ marginTop: 16, color: INK_MUTED, fontSize: 13, fontWeight: 500 }}>Generating report...</div>
             </div>
         );
     }
@@ -230,7 +720,7 @@ export const CompanyMonthlyReport: React.FC<CompanyMonthlyReportProps> = ({
     if (!report) return <Empty description="No data for this period" />;
 
     const { overview, performance, trends } = report;
-    const prevLabel = `${MONTHS[trends.prev_month - 1]} ${trends.prev_year}`;
+    const prevLabel = `${MONTHS[trends.prev_month - 1]?.slice(0, 3)} ${trends.prev_year}`;
     const anyOverview = on('submitted') || on('resolved') || on('open') || on('overdue');
     const anyPerf = on('avg_resolution') || on('on_time') || on('satisfaction');
     const anyTrends = on('trend_resolved') || on('trend_speed');
@@ -242,40 +732,61 @@ export const CompanyMonthlyReport: React.FC<CompanyMonthlyReportProps> = ({
     const onTimeCount = report.tickets.filter(t => t.on_time === true).length;
     const withDueCount = report.tickets.filter(t => t.on_time !== null).length;
 
-    const th: React.CSSProperties = {
+    /* ── Section header ── */
+    const SectionTitle = ({ children }: { children: React.ReactNode }) => (
+        <div style={{
+            display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16,
+        }}>
+            <div style={{ width: 3, height: 16, background: BRAND, borderRadius: 1 }} />
+            <span style={{
+                fontSize: 11, fontWeight: 700, color: INK,
+                textTransform: 'uppercase', letterSpacing: '0.08em',
+            }}>
+                {children}
+            </span>
+        </div>
+    );
+
+    /* ── Table styles ── */
+    const thStyle: React.CSSProperties = {
         padding: '8px 10px',
         fontSize: 10,
-        fontWeight: 700,
-        color: '#64748b',
+        fontWeight: 600,
+        color: '#cbd5e1',
         textTransform: 'uppercase',
         letterSpacing: '0.05em',
-        borderBottom: '2px solid #e2e8f0',
         textAlign: 'left',
         whiteSpace: 'nowrap',
+        borderBottom: 'none',
     };
-    const td: React.CSSProperties = {
+    const tdStyle: React.CSSProperties = {
         padding: '7px 10px',
-        fontSize: 12,
-        color: '#334155',
-        borderBottom: '1px solid #f1f5f9',
-        verticalAlign: 'top',
+        fontSize: 11,
+        color: INK_SECONDARY,
+        borderBottom: `1px solid ${SURFACE_INSET}`,
+        verticalAlign: 'middle',
     };
 
     return (
         <div>
-            {/* ── Toolbar ── */}
+            {/* ── Toolbar (outside print area) ── */}
             <div style={{
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                marginBottom: 12, flexWrap: 'wrap', gap: 6,
+                marginBottom: 16, flexWrap: 'wrap', gap: 8,
             }}>
-                <span style={{ fontSize: 14, fontWeight: 600, color: '#1e293b' }}>
-                    {report.period.month_name} {report.period.year}
-                </span>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: INK }}>
+                        {report.period.month_name} {report.period.year}
+                    </span>
+                    <span style={{ fontSize: 12, color: INK_FAINT }}>
+                        {report.company.name}
+                    </span>
+                </div>
                 <Space size={6}>
-                    <Select value={selectedMonth} onChange={setSelectedMonth} style={{ width: 110 }} size="small">
+                    <Select value={selectedMonth} onChange={setSelectedMonth} style={{ width: 120 }} size="small">
                         {MONTHS.map((m, i) => <Option key={i + 1} value={i + 1}>{m}</Option>)}
                     </Select>
-                    <Select value={selectedYear} onChange={setSelectedYear} style={{ width: 76 }} size="small">
+                    <Select value={selectedYear} onChange={setSelectedYear} style={{ width: 80 }} size="small">
                         {years.map(y => <Option key={y} value={y}>{y}</Option>)}
                     </Select>
                     <Button size="small" icon={<DownloadOutlined />} onClick={handleDownloadPdf} loading={downloading}>
@@ -301,8 +812,8 @@ export const CompanyMonthlyReport: React.FC<CompanyMonthlyReportProps> = ({
 
             {showSettings && (
                 <div style={{
-                    background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 4,
-                    padding: '8px 12px', marginBottom: 12, display: 'flex', flexWrap: 'wrap', gap: '2px 16px',
+                    background: SURFACE, border: `1px solid ${RULE}`, borderRadius: 6,
+                    padding: '10px 14px', marginBottom: 16, display: 'flex', flexWrap: 'wrap', gap: '4px 16px',
                 }}>
                     {ALL_METRICS.map(m => (
                         <Checkbox key={m.key} checked={enabledMetrics[m.key]} onChange={() => toggle(m.key)} style={{ fontSize: 12 }}>
@@ -312,305 +823,478 @@ export const CompanyMonthlyReport: React.FC<CompanyMonthlyReportProps> = ({
                 </div>
             )}
 
-            {/* ── A4 Paper presentation ── */}
+            {/* ── A4 Paper ── */}
             <div style={{
-                background: '#e8ecf1',
+                background: '#dfe3e8',
                 borderRadius: 8,
-                padding: '32px 40px',
+                padding: '28px 36px',
                 margin: '0 -12px',
             }}>
               <div
-                ref={reportRef}
                 style={{
                     background: '#fff',
-                    padding: '40px 48px',
-                    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
                     maxWidth: 1100,
                     margin: '0 auto',
-                    boxShadow: '0 2px 12px rgba(0,0,0,0.10), 0 0 0 1px rgba(0,0,0,0.04)',
                     borderRadius: 2,
-                    minHeight: 600,
+                    overflow: 'hidden',
+                    /* Surface color shift: white paper on gray desk */
                 }}
               >
+                {/* ── Accent rule: 2px solid brand ── */}
+                <div style={{ height: 2, background: BRAND }} />
 
-                {/* Report Header */}
-                <div style={{ borderBottom: '3px solid #1e293b', paddingBottom: 20, marginBottom: 24 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div style={{ padding: '36px 44px 32px' }}>
+
+                    {/* ── Document Header ── */}
+                    <div style={{
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+                        paddingBottom: 20, marginBottom: 24,
+                        borderBottom: `1px solid ${RULE}`,
+                    }}>
                         <div>
-                            <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 4 }}>
+                            <div style={{
+                                fontSize: 10, fontWeight: 600, color: BRAND,
+                                textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 4,
+                            }}>
                                 Monthly Service Report
                             </div>
-                            <div style={{ fontSize: 24, fontWeight: 700, color: '#0f172a', lineHeight: 1.2 }}>
+                            <div style={{
+                                fontSize: 26, fontWeight: 800, color: INK,
+                                lineHeight: 1.15, letterSpacing: '-0.015em',
+                            }}>
                                 {report.company.name}
                             </div>
-                            <div style={{ fontSize: 15, color: '#475569', marginTop: 4 }}>
+                            <div style={{ fontSize: 14, color: INK_MUTED, marginTop: 4, fontWeight: 500 }}>
                                 {report.period.month_name} {report.period.year}
                             </div>
                         </div>
-                        <div style={{ textAlign: 'right' }}>
+                        <div style={{ textAlign: 'right', paddingTop: 2 }}>
                             {report.company.logo_url && (
                                 <img
                                     src={report.company.logo_url}
                                     alt=""
-                                    style={{ maxHeight: 48, maxWidth: 120, objectFit: 'contain', marginBottom: 4 }}
+                                    style={{ maxHeight: 44, maxWidth: 110, objectFit: 'contain', marginBottom: 6 }}
                                 />
                             )}
-                            <div style={{ fontSize: 10, color: '#94a3b8' }}>
+                            <div style={{ fontSize: 10, color: INK_FAINT, lineHeight: 1.5 }}>
                                 Generated {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                             </div>
                         </div>
                     </div>
-                </div>
 
-                {/* Executive Summary */}
-                {(anyOverview || anyPerf || anyTrends) && (
-                    <div style={{ marginBottom: 28 }}>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 14 }}>
-                            Executive Summary
-                        </div>
-
-                        {anyOverview && (
-                            <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
-                                {on('submitted') && (
-                                    <div style={{ flex: 1, background: '#f0f9ff', borderRadius: 6, padding: '12px 16px', borderLeft: '3px solid #3b82f6' }}>
-                                        <div style={{ fontSize: 22, fontWeight: 700, color: '#1e40af' }}>{overview.submitted}</div>
-                                        <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>Submitted</div>
-                                    </div>
-                                )}
-                                {on('resolved') && (
-                                    <div style={{ flex: 1, background: '#f0fdf4', borderRadius: 6, padding: '12px 16px', borderLeft: '3px solid #16a34a' }}>
-                                        <div style={{ fontSize: 22, fontWeight: 700, color: '#166534' }}>
-                                            {overview.resolved}
-                                            {trends.resolved_change !== 0 && (
-                                                <span style={{ fontSize: 11, fontWeight: 600, color: trends.resolved_change > 0 ? '#16a34a' : '#dc2626', marginLeft: 6 }}>
-                                                    {trends.resolved_change > 0 ? <RiseOutlined /> : <FallOutlined />}
-                                                    {' '}{trends.resolved_change > 0 ? '+' : ''}{trends.resolved_change_pct}%
-                                                </span>
-                                            )}
-                                        </div>
-                                        <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>Resolved</div>
-                                    </div>
-                                )}
-                                {on('open') && (
-                                    <div style={{ flex: 1, background: '#fffbeb', borderRadius: 6, padding: '12px 16px', borderLeft: '3px solid #f59e0b' }}>
-                                        <div style={{ fontSize: 22, fontWeight: 700, color: '#92400e' }}>{overview.open}</div>
-                                        <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>Open</div>
-                                    </div>
-                                )}
-                                {on('overdue') && (
+                    {/* ── Key Figures Strip (dense) ── */}
+                    {/* Compact horizontal strip — like a financial report "at a glance" row */}
+                    {anyOverview && (
+                        <div style={{
+                            display: 'flex', marginBottom: 24,
+                            background: SURFACE, border: `1px solid ${RULE}`, borderRadius: 6,
+                            overflow: 'hidden',
+                        }}>
+                            {on('submitted') && (
+                                <div style={{ flex: 1, padding: '14px 20px', borderRight: `1px solid ${RULE}` }}>
                                     <div style={{
-                                        flex: 1, borderRadius: 6, padding: '12px 16px',
-                                        background: overview.overdue > 0 ? '#fef2f2' : '#f8fafc',
-                                        borderLeft: `3px solid ${overview.overdue > 0 ? '#ef4444' : '#cbd5e1'}`,
+                                        fontSize: 24, fontWeight: 800, color: BRAND, lineHeight: 1,
+                                        fontVariantNumeric: 'tabular-nums',
                                     }}>
-                                        <div style={{ fontSize: 22, fontWeight: 700, color: overview.overdue > 0 ? '#991b1b' : '#94a3b8' }}>{overview.overdue}</div>
-                                        <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>Overdue</div>
+                                        {overview.submitted}
                                     </div>
-                                )}
-                            </div>
-                        )}
+                                    <div style={{ fontSize: 10, color: INK_MUTED, marginTop: 4, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                                        Submitted
+                                    </div>
+                                </div>
+                            )}
+                            {on('resolved') && (
+                                <div style={{ flex: 1, padding: '14px 20px', borderRight: `1px solid ${RULE}` }}>
+                                    <div style={{
+                                        fontSize: 24, fontWeight: 800, color: '#065f46', lineHeight: 1,
+                                        fontVariantNumeric: 'tabular-nums',
+                                        display: 'flex', alignItems: 'center', gap: 6,
+                                    }}>
+                                        {overview.resolved}
+                                        {trends.resolved_change !== 0 && (
+                                            <span style={{
+                                                fontSize: 10, fontWeight: 600,
+                                                color: trends.resolved_change > 0 ? '#059669' : '#dc2626',
+                                                display: 'inline-flex', alignItems: 'center', gap: 2,
+                                            }}>
+                                                {trends.resolved_change > 0 ? '\u25B2' : '\u25BC'}
+                                                {Math.abs(trends.resolved_change_pct)}%
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div style={{ fontSize: 10, color: INK_MUTED, marginTop: 4, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                                        Resolved
+                                    </div>
+                                </div>
+                            )}
+                            {on('open') && (
+                                <div style={{ flex: 1, padding: '14px 20px', borderRight: `1px solid ${RULE}` }}>
+                                    <div style={{
+                                        fontSize: 24, fontWeight: 800, color: '#92400e', lineHeight: 1,
+                                        fontVariantNumeric: 'tabular-nums',
+                                    }}>
+                                        {overview.open}
+                                    </div>
+                                    <div style={{ fontSize: 10, color: INK_MUTED, marginTop: 4, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                                        Open
+                                    </div>
+                                </div>
+                            )}
+                            {on('overdue') && (
+                                <div style={{ flex: 1, padding: '14px 20px' }}>
+                                    <div style={{
+                                        fontSize: 24, fontWeight: 800, lineHeight: 1,
+                                        fontVariantNumeric: 'tabular-nums',
+                                        color: overview.overdue > 0 ? '#991b1b' : INK_FAINT,
+                                    }}>
+                                        {overview.overdue}
+                                    </div>
+                                    <div style={{ fontSize: 10, color: INK_MUTED, marginTop: 4, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                                        Overdue
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
 
-                        {anyPerf && (
-                            <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+                    {/* ── Performance Metrics (spacious — each card has unique layout) ── */}
+                    {anyPerf && (
+                        <div style={{ marginBottom: 24 }}>
+                            <SectionTitle>Performance</SectionTitle>
+                            <div style={{ display: 'flex', gap: 12 }}>
                                 {on('avg_resolution') && (
-                                    <div style={{ flex: 1, background: '#f8fafc', borderRadius: 6, padding: '12px 16px', border: '1px solid #e2e8f0' }}>
-                                        <div style={{ fontSize: 18, fontWeight: 700, color: '#1e293b' }}>
+                                    <div style={{
+                                        flex: 1, padding: '16px 20px',
+                                        background: '#fff', border: `1px solid ${RULE}`, borderRadius: 6,
+                                    }}>
+                                        <div style={{ fontSize: 10, color: INK_MUTED, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>
+                                            Avg Resolution Time
+                                        </div>
+                                        <div style={{ fontSize: 22, fontWeight: 800, color: INK, lineHeight: 1 }}>
                                             {formatHours(performance.avg_resolution_hours)}
                                         </div>
-                                        <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>Avg Resolution Time</div>
                                         {trends.resolution_change_hours !== 0 && (
-                                            <div style={{ fontSize: 10, fontWeight: 600, marginTop: 3, color: trends.resolution_change_hours < 0 ? '#16a34a' : '#dc2626' }}>
-                                                {trends.resolution_change_hours < 0 ? <RiseOutlined /> : <FallOutlined />}
-                                                {' '}{formatHours(Math.abs(trends.resolution_change_hours))} {trends.resolution_change_hours < 0 ? 'faster' : 'slower'} vs {prevLabel}
+                                            <div style={{
+                                                marginTop: 8, fontSize: 11, fontWeight: 500,
+                                                color: trends.resolution_change_hours < 0 ? '#059669' : '#dc2626',
+                                                display: 'flex', alignItems: 'center', gap: 4,
+                                            }}>
+                                                {trends.resolution_change_hours < 0
+                                                    ? <RiseOutlined style={{ fontSize: 10 }} />
+                                                    : <FallOutlined style={{ fontSize: 10 }} />}
+                                                {formatHours(Math.abs(trends.resolution_change_hours))}
+                                                {' '}{trends.resolution_change_hours < 0 ? 'faster' : 'slower'} vs {prevLabel}
                                             </div>
                                         )}
                                     </div>
                                 )}
                                 {on('on_time') && (
-                                    <div style={{ flex: 1, background: '#f8fafc', borderRadius: 6, padding: '12px 16px', border: '1px solid #e2e8f0' }}>
-                                        <div style={{ fontSize: 18, fontWeight: 700, color: performance.on_time_pct >= 80 ? '#166534' : performance.on_time_pct >= 60 ? '#92400e' : '#991b1b' }}>
+                                    <div style={{
+                                        flex: 1, padding: '16px 20px',
+                                        background: '#fff', border: `1px solid ${RULE}`, borderRadius: 6,
+                                    }}>
+                                        <div style={{ fontSize: 10, color: INK_MUTED, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>
+                                            On-Time Completion
+                                        </div>
+                                        <div style={{
+                                            fontSize: 22, fontWeight: 800, lineHeight: 1,
+                                            color: performance.on_time_pct >= 80 ? '#065f46' : performance.on_time_pct >= 60 ? '#92400e' : '#991b1b',
+                                        }}>
                                             {performance.on_time_pct}%
                                         </div>
-                                        <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>On-Time Completion</div>
+                                        {/* SLA compliance bar — the signature element */}
+                                        <div style={{
+                                            marginTop: 8, display: 'flex', alignItems: 'center', gap: 8,
+                                        }}>
+                                            <div style={{
+                                                flex: 1, height: 6, borderRadius: 3,
+                                                background: SURFACE_INSET, overflow: 'hidden',
+                                            }}>
+                                                <div style={{
+                                                    height: '100%', borderRadius: 3,
+                                                    width: `${Math.min(performance.on_time_pct, 100)}%`,
+                                                    background: performance.on_time_pct >= 80 ? '#059669' : performance.on_time_pct >= 60 ? '#d97706' : '#dc2626',
+                                                }} />
+                                            </div>
+                                            {withDueCount > 0 && (
+                                                <span style={{ fontSize: 10, color: INK_FAINT, whiteSpace: 'nowrap' }}>
+                                                    {onTimeCount}/{withDueCount}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                 )}
                                 {on('satisfaction') && (
-                                    <div style={{ flex: 1, background: '#f8fafc', borderRadius: 6, padding: '12px 16px', border: '1px solid #e2e8f0' }}>
-                                        <div style={{ fontSize: 18, fontWeight: 700, color: '#1e293b' }}>
-                                            {performance.satisfaction !== null ? `${performance.satisfaction.toFixed(1)} / 5` : '\u2014'}
+                                    <div style={{
+                                        flex: 1, padding: '16px 20px',
+                                        background: '#fff', border: `1px solid ${RULE}`, borderRadius: 6,
+                                    }}>
+                                        <div style={{ fontSize: 10, color: INK_MUTED, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>
+                                            Satisfaction
                                         </div>
-                                        <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>Satisfaction Score</div>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {anyTrends && (
-                            <div style={{ display: 'flex', gap: 12 }}>
-                                {on('trend_resolved') && (
-                                    <div style={{ flex: 1, background: '#f8fafc', borderRadius: 6, padding: '10px 16px', border: '1px solid #e2e8f0' }}>
-                                        <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Resolved vs {prevLabel}</div>
-                                        <span style={{ fontSize: 16, color: '#94a3b8' }}>{trends.prev_resolved}</span>
-                                        <span style={{ fontSize: 13, color: '#94a3b8', margin: '0 6px' }}>&rarr;</span>
-                                        <span style={{ fontSize: 16, fontWeight: 700, color: '#166534' }}>{overview.resolved}</span>
-                                        {trends.resolved_change !== 0 && (
-                                            <span style={{ fontSize: 11, fontWeight: 600, color: trends.resolved_change > 0 ? '#16a34a' : '#dc2626', marginLeft: 8 }}>
-                                                ({trends.resolved_change > 0 ? '+' : ''}{trends.resolved_change})
-                                            </span>
+                                        <div style={{ fontSize: 22, fontWeight: 800, color: INK, lineHeight: 1 }}>
+                                            {performance.satisfaction !== null ? `${performance.satisfaction.toFixed(1)}` : '\u2014'}
+                                            {performance.satisfaction !== null && (
+                                                <span style={{ fontSize: 13, fontWeight: 500, color: INK_FAINT }}> / 5</span>
+                                            )}
+                                        </div>
+                                        {performance.satisfaction !== null && (
+                                            <div style={{
+                                                marginTop: 8, height: 6, borderRadius: 3,
+                                                background: SURFACE_INSET, overflow: 'hidden',
+                                            }}>
+                                                <div style={{
+                                                    height: '100%', borderRadius: 3,
+                                                    width: `${Math.min((performance.satisfaction / 5) * 100, 100)}%`,
+                                                    background: performance.satisfaction >= 4 ? '#059669' : performance.satisfaction >= 3 ? '#d97706' : '#dc2626',
+                                                }} />
+                                            </div>
                                         )}
                                     </div>
                                 )}
-                                {on('trend_speed') && (
-                                    <div style={{ flex: 1, background: '#f8fafc', borderRadius: 6, padding: '10px 16px', border: '1px solid #e2e8f0' }}>
-                                        <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Resolution Speed vs {prevLabel}</div>
-                                        <span style={{ fontSize: 16, color: '#94a3b8' }}>{formatHours(trends.prev_avg_resolution_hours)}</span>
-                                        <span style={{ fontSize: 13, color: '#94a3b8', margin: '0 6px' }}>&rarr;</span>
-                                        <span style={{ fontSize: 16, fontWeight: 700, color: '#166534' }}>{formatHours(performance.avg_resolution_hours)}</span>
-                                    </div>
-                                )}
                             </div>
-                        )}
-                    </div>
-                )}
-
-                {/* Detailed Ticket Table */}
-                {report.tickets && report.tickets.length > 0 && (
-                    <div>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
-                            Ticket Details
-                            <span style={{ fontSize: 11, fontWeight: 500, color: '#94a3b8', textTransform: 'none', letterSpacing: 0, marginLeft: 8 }}>
-                                {report.tickets.length} ticket{report.tickets.length !== 1 ? 's' : ''}
-                            </span>
                         </div>
+                    )}
 
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-                            <thead>
-                                <tr style={{ background: '#f8fafc' }}>
-                                    <th style={{ ...th, width: 30 }}>#</th>
-                                    <th style={{ ...th, minWidth: 180 }}>Ticket</th>
-                                    <th style={{ ...th, width: 60 }}>Type</th>
-                                    <th style={{ ...th, width: 70 }}>Priority</th>
-                                    <th style={{ ...th, width: 120 }}>Reported By</th>
-                                    <th style={{ ...th, width: 120 }}>Assigned To</th>
-                                    <th style={{ ...th, width: 85 }}>Created</th>
-                                    <th style={{ ...th, width: 85 }}>Completed</th>
-                                    <th style={{ ...th, width: 80, textAlign: 'right' }}>Resolution</th>
-                                    <th style={{ ...th, width: 55, textAlign: 'center' }}>SLA</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {report.tickets.map((ticket, idx) => {
-                                    const pColor = PRIORITY_COLORS[ticket.priority_id] || { bg: '#f1f5f9', text: '#475569' };
-                                    return (
-                                        <tr key={ticket.id} style={{ background: idx % 2 === 0 ? '#fff' : '#fafbfc' }}>
-                                            <td style={{ ...td, color: '#94a3b8', fontSize: 11 }}>{idx + 1}</td>
-                                            <td style={td}>
-                                                <span style={{ color: '#0052cc', fontWeight: 600, fontSize: 11, marginRight: 6 }}>
-                                                    {ticket.ticket_key}
-                                                </span>
-                                                <span style={{ color: '#1e293b' }}>{ticket.name}</span>
-                                            </td>
-                                            <td style={td}>
-                                                <span style={{
-                                                    fontSize: 10, fontWeight: 600, color: '#475569',
-                                                    background: '#f1f5f9', padding: '2px 6px', borderRadius: 3,
-                                                    textTransform: 'capitalize',
-                                                }}>
-                                                    {ticket.type_label || ticket.type}
-                                                </span>
-                                            </td>
-                                            <td style={td}>
+                    {/* ── Month-over-Month (compact comparison) ── */}
+                    {anyTrends && (
+                        <div style={{ marginBottom: 24 }}>
+                            <SectionTitle>Month-over-Month</SectionTitle>
+                            <div style={{ display: 'flex', gap: 12 }}>
+                                {on('trend_resolved') && (
+                                    <div style={{
+                                        flex: 1, padding: '14px 20px',
+                                        border: `1px solid ${RULE}`, borderRadius: 6,
+                                    }}>
+                                        <div style={{ fontSize: 10, color: INK_MUTED, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 10 }}>
+                                            Resolved Tickets
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                                            <span style={{ fontSize: 16, fontWeight: 600, color: INK_FAINT, fontVariantNumeric: 'tabular-nums' }}>
+                                                {trends.prev_resolved}
+                                            </span>
+                                            <span style={{ fontSize: 11, color: INK_FAINT }}>{'\u2192'}</span>
+                                            <span style={{ fontSize: 18, fontWeight: 800, color: INK, fontVariantNumeric: 'tabular-nums' }}>
+                                                {overview.resolved}
+                                            </span>
+                                            {trends.resolved_change !== 0 && (
                                                 <span style={{
                                                     fontSize: 10, fontWeight: 600,
-                                                    color: pColor.text, background: pColor.bg,
-                                                    padding: '2px 6px', borderRadius: 3,
+                                                    color: trends.resolved_change > 0 ? '#059669' : '#dc2626',
+                                                    background: trends.resolved_change > 0 ? '#ecfdf5' : '#fef2f2',
+                                                    padding: '1px 6px', borderRadius: 8,
                                                 }}>
-                                                    {ticket.priority_label}
+                                                    {trends.resolved_change > 0 ? '+' : ''}{trends.resolved_change}
                                                 </span>
-                                            </td>
-                                            <td style={{ ...td, fontSize: 11 }}>
-                                                {formatPersonName(ticket.reporter)}
-                                            </td>
-                                            <td style={{ ...td, fontSize: 11 }}>
-                                                {ticket.assignees.length > 0
-                                                    ? ticket.assignees.map(a => formatPersonName(a)).join(', ')
-                                                    : '\u2014'}
-                                            </td>
-                                            <td style={{ ...td, fontSize: 11, whiteSpace: 'nowrap' }}>
-                                                {ticket.created_at_display || '\u2014'}
-                                            </td>
-                                            <td style={{ ...td, fontSize: 11, whiteSpace: 'nowrap' }}>
-                                                {ticket.done_at_display || '\u2014'}
-                                            </td>
-                                            <td style={{ ...td, textAlign: 'right', fontWeight: 600, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-                                                {ticket.solve_time_hours !== null ? formatHours(ticket.solve_time_hours) : '\u2014'}
-                                            </td>
-                                            <td style={{ ...td, textAlign: 'center' }}>
-                                                {ticket.on_time === true && (
-                                                    <span style={{ fontSize: 10, fontWeight: 700, color: '#16a34a', background: '#f0fdf4', padding: '2px 6px', borderRadius: 3 }}>
-                                                        ON TIME
-                                                    </span>
-                                                )}
-                                                {ticket.on_time === false && (
-                                                    <span style={{ fontSize: 10, fontWeight: 700, color: '#dc2626', background: '#fef2f2', padding: '2px 6px', borderRadius: 3 }}>
-                                                        LATE
-                                                    </span>
-                                                )}
-                                                {ticket.on_time === null && (
-                                                    <span style={{ fontSize: 10, color: '#cbd5e1' }}>\u2014</span>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-
-                        {/* Summary Footer */}
-                        <div style={{
-                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                            marginTop: 16, padding: '12px 16px',
-                            background: '#f8fafc', borderRadius: 6, border: '1px solid #e2e8f0',
-                        }}>
-                            <div style={{ display: 'flex', gap: 24 }}>
-                                <div>
-                                    <span style={{ fontSize: 11, color: '#64748b' }}>Total Tickets: </span>
-                                    <span style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>{report.tickets.length}</span>
-                                </div>
-                                <div>
-                                    <span style={{ fontSize: 11, color: '#64748b' }}>Resolved: </span>
-                                    <span style={{ fontSize: 13, fontWeight: 700, color: '#166534' }}>{resolvedTickets.length}</span>
-                                </div>
-                                <div>
-                                    <span style={{ fontSize: 11, color: '#64748b' }}>Avg Resolution: </span>
-                                    <span style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>{formatHours(avgSolveTime)}</span>
-                                </div>
-                                {withDueCount > 0 && (
-                                    <div>
-                                        <span style={{ fontSize: 11, color: '#64748b' }}>On-Time: </span>
-                                        <span style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>
-                                            {onTimeCount}/{withDueCount} ({Math.round(onTimeCount / withDueCount * 100)}%)
-                                        </span>
+                                            )}
+                                        </div>
+                                        <div style={{ fontSize: 10, color: INK_FAINT, marginTop: 4 }}>
+                                            vs {MONTHS[trends.prev_month - 1]} {trends.prev_year}
+                                        </div>
+                                    </div>
+                                )}
+                                {on('trend_speed') && (
+                                    <div style={{
+                                        flex: 1, padding: '14px 20px',
+                                        border: `1px solid ${RULE}`, borderRadius: 6,
+                                    }}>
+                                        <div style={{ fontSize: 10, color: INK_MUTED, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 10 }}>
+                                            Resolution Speed
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                                            <span style={{ fontSize: 16, fontWeight: 600, color: INK_FAINT, fontVariantNumeric: 'tabular-nums' }}>
+                                                {formatHours(trends.prev_avg_resolution_hours)}
+                                            </span>
+                                            <span style={{ fontSize: 11, color: INK_FAINT }}>{'\u2192'}</span>
+                                            <span style={{ fontSize: 18, fontWeight: 800, color: INK, fontVariantNumeric: 'tabular-nums' }}>
+                                                {formatHours(performance.avg_resolution_hours)}
+                                            </span>
+                                            {trends.resolution_change_hours !== 0 && (
+                                                <span style={{
+                                                    fontSize: 10, fontWeight: 600,
+                                                    color: trends.resolution_change_hours < 0 ? '#059669' : '#dc2626',
+                                                    background: trends.resolution_change_hours < 0 ? '#ecfdf5' : '#fef2f2',
+                                                    padding: '1px 6px', borderRadius: 8,
+                                                }}>
+                                                    {trends.resolution_change_hours < 0 ? 'Faster' : 'Slower'}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div style={{ fontSize: 10, color: INK_FAINT, marginTop: 4 }}>
+                                            vs {MONTHS[trends.prev_month - 1]} {trends.prev_year}
+                                        </div>
                                     </div>
                                 )}
                             </div>
-                            <div style={{ fontSize: 10, color: '#94a3b8' }}>
-                                Report generated {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} at{' '}
-                                {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                    )}
+
+                    {/* ── Ticket Details Table (dense) ── */}
+                    {report.tickets && report.tickets.length > 0 && (
+                        <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                                <div style={{ width: 3, height: 16, background: BRAND, borderRadius: 1 }} />
+                                <span style={{
+                                    fontSize: 11, fontWeight: 700, color: INK,
+                                    textTransform: 'uppercase', letterSpacing: '0.08em',
+                                }}>
+                                    Ticket Details
+                                </span>
+                                <span style={{
+                                    fontSize: 10, fontWeight: 600, color: BRAND,
+                                    background: BRAND_LIGHT, padding: '1px 8px', borderRadius: 8,
+                                }}>
+                                    {report.tickets.length}
+                                </span>
+                            </div>
+
+                            <div style={{ border: `1px solid ${RULE}`, borderRadius: 6, overflow: 'hidden' }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                    <thead>
+                                        <tr style={{ background: '#1e293b' }}>
+                                            <th style={{ ...thStyle, width: 28, textAlign: 'center' }}>#</th>
+                                            <th style={{ ...thStyle, minWidth: 120 }}>Ticket</th>
+                                            <th style={{ ...thStyle, width: 68 }}>Priority</th>
+                                            <th style={{ ...thStyle, width: 100 }}>Reporter</th>
+                                            <th style={{ ...thStyle, width: 100 }}>Assignee</th>
+                                            <th style={{ ...thStyle, width: 76 }}>Created</th>
+                                            <th style={{ ...thStyle, width: 76 }}>Done</th>
+                                            <th style={{ ...thStyle, width: 72, textAlign: 'right' }}>Time</th>
+                                            <th style={{ ...thStyle, width: 72, textAlign: 'center' }}>SLA</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {report.tickets.map((ticket, idx) => {
+                                            const p = PRIORITY_STYLES[ticket.priority_id] || { bg: SURFACE_INSET, text: INK_MUTED, border: RULE };
+                                            return (
+                                                <tr key={ticket.id} style={{ background: idx % 2 === 0 ? '#fff' : SURFACE }}>
+                                                    <td style={{ ...tdStyle, color: INK_FAINT, fontSize: 10, fontWeight: 600, textAlign: 'center' }}>
+                                                        {idx + 1}
+                                                    </td>
+                                                    <td style={tdStyle}>
+                                                        <span style={{
+                                                            color: BRAND, fontWeight: 700, fontSize: 10,
+                                                            marginRight: 5,
+                                                            fontFamily: "'SF Mono', 'Fira Code', 'Consolas', monospace",
+                                                        }}>
+                                                            {ticket.ticket_key}
+                                                        </span>
+                                                        <span style={{ color: INK, fontWeight: 500, fontSize: 11 }}>
+                                                            {ticket.name}
+                                                        </span>
+                                                    </td>
+                                                    <td style={tdStyle}>
+                                                        <span style={{
+                                                            fontSize: 9, fontWeight: 600,
+                                                            color: p.text, background: p.bg,
+                                                            padding: '2px 6px', borderRadius: 3,
+                                                            border: `1px solid ${p.border}`,
+                                                        }}>
+                                                            {ticket.priority_label}
+                                                        </span>
+                                                    </td>
+                                                    <td style={{ ...tdStyle, fontSize: 10.5 }}>
+                                                        {formatPersonName(ticket.reporter)}
+                                                    </td>
+                                                    <td style={{ ...tdStyle, fontSize: 10.5 }}>
+                                                        {ticket.assignees.length > 0
+                                                            ? ticket.assignees.map(a => formatPersonName(a)).join(', ')
+                                                            : '\u2014'}
+                                                    </td>
+                                                    <td style={{ ...tdStyle, fontSize: 10.5, whiteSpace: 'nowrap', color: INK_MUTED }}>
+                                                        {ticket.created_at_display || '\u2014'}
+                                                    </td>
+                                                    <td style={{ ...tdStyle, fontSize: 10.5, whiteSpace: 'nowrap', color: INK_MUTED }}>
+                                                        {ticket.done_at_display || '\u2014'}
+                                                    </td>
+                                                    <td style={{
+                                                        ...tdStyle, textAlign: 'right', fontWeight: 700, fontSize: 10.5,
+                                                        fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap',
+                                                        fontFamily: "'SF Mono', 'Fira Code', 'Consolas', monospace",
+                                                    }}>
+                                                        {ticket.solve_time_hours !== null ? formatHours(ticket.solve_time_hours) : '\u2014'}
+                                                    </td>
+                                                    <td style={{ ...tdStyle, textAlign: 'center', whiteSpace: 'nowrap' }}>
+                                                        {ticket.on_time === true && (
+                                                            <span style={{
+                                                                fontSize: 8.5, fontWeight: 700, color: '#059669',
+                                                                background: '#ecfdf5', padding: '2px 5px', borderRadius: 3,
+                                                                border: '1px solid #a7f3d0', letterSpacing: '0.02em',
+                                                            }}>
+                                                                ON TIME
+                                                            </span>
+                                                        )}
+                                                        {ticket.on_time === false && (
+                                                            <span style={{
+                                                                fontSize: 8.5, fontWeight: 700, color: '#dc2626',
+                                                                background: '#fef2f2', padding: '2px 5px', borderRadius: 3,
+                                                                border: '1px solid #fecaca', letterSpacing: '0.02em',
+                                                            }}>
+                                                                LATE
+                                                            </span>
+                                                        )}
+                                                        {ticket.on_time === null && (
+                                                            <span style={{ fontSize: 10, color: '#cbd5e1' }}>{'\u2014'}</span>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
-                    </div>
-                )}
+                    )}
 
-                {report.tickets && report.tickets.length === 0 && (
-                    <div style={{ textAlign: 'center', padding: '40px 0', color: '#94a3b8', fontSize: 14 }}>
-                        No tickets found for this period.
+                    {report.tickets && report.tickets.length === 0 && (
+                        <div style={{
+                            textAlign: 'center', padding: '40px 0', color: INK_FAINT, fontSize: 13,
+                            border: `1px dashed ${RULE}`, borderRadius: 6,
+                        }}>
+                            No tickets found for this period.
+                        </div>
+                    )}
+
+                    {/* ── Document Footer ── */}
+                    <div style={{
+                        marginTop: 28, paddingTop: 16,
+                        borderTop: `1px solid ${RULE}`,
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end',
+                    }}>
+                        <div style={{ display: 'flex', gap: 24 }}>
+                            <div>
+                                <div style={{ fontSize: 9, color: INK_FAINT, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total</div>
+                                <div style={{ fontSize: 14, fontWeight: 800, color: INK, fontVariantNumeric: 'tabular-nums' }}>{report.tickets.length}</div>
+                            </div>
+                            <div>
+                                <div style={{ fontSize: 9, color: INK_FAINT, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Resolved</div>
+                                <div style={{ fontSize: 14, fontWeight: 800, color: '#059669', fontVariantNumeric: 'tabular-nums' }}>{resolvedTickets.length}</div>
+                            </div>
+                            <div>
+                                <div style={{ fontSize: 9, color: INK_FAINT, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Avg Time</div>
+                                <div style={{ fontSize: 14, fontWeight: 800, color: INK, fontVariantNumeric: 'tabular-nums' }}>{formatHours(avgSolveTime)}</div>
+                            </div>
+                            {withDueCount > 0 && (
+                                <div>
+                                    <div style={{ fontSize: 9, color: INK_FAINT, textTransform: 'uppercase', letterSpacing: '0.05em' }}>SLA Rate</div>
+                                    <div style={{ fontSize: 14, fontWeight: 800, color: INK, fontVariantNumeric: 'tabular-nums' }}>
+                                        {Math.round(onTimeCount / withDueCount * 100)}%
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                        <div style={{ fontSize: 9, color: INK_FAINT, textAlign: 'right', lineHeight: 1.6 }}>
+                            {report.company.name} &middot; {report.period.month_name} {report.period.year}<br />
+                            Generated {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                        </div>
                     </div>
-                )}
+
+                </div>
               </div>
             </div>
 
-            {/* Send modal */}
+            {/* ── Send Modal ── */}
             <Modal
                 title="Send Report"
                 open={sendModalOpen}
@@ -622,7 +1306,7 @@ export const CompanyMonthlyReport: React.FC<CompanyMonthlyReportProps> = ({
                 width={420}
             >
                 <div style={{ marginBottom: 16 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 6 }}>Recipient</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: INK_MUTED, marginBottom: 6 }}>Recipient</div>
                     <Input
                         type="email"
                         value={recipientEmail}
@@ -631,19 +1315,19 @@ export const CompanyMonthlyReport: React.FC<CompanyMonthlyReportProps> = ({
                     />
                 </div>
                 <div style={{ marginBottom: 16 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 6 }}>Period</div>
-                    <span style={{ fontSize: 14, color: '#1e293b' }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: INK_MUTED, marginBottom: 6 }}>Period</div>
+                    <span style={{ fontSize: 14, color: INK }}>
                         {report.period.month_name} {report.period.year} &mdash; {report.company.name}
                     </span>
                 </div>
                 <div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 6 }}>Included metrics</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: INK_MUTED, marginBottom: 6 }}>Included metrics</div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                         {ALL_METRICS.filter(m => enabledMetrics[m.key]).map(m => (
                             <Tag key={m.key} style={{ fontSize: 12 }}>{m.label}</Tag>
                         ))}
                         {enabledSections.length === 0 && (
-                            <span style={{ fontSize: 13, color: '#94a3b8' }}>None selected</span>
+                            <span style={{ fontSize: 13, color: INK_FAINT }}>None selected</span>
                         )}
                     </div>
                 </div>
