@@ -19,6 +19,7 @@ import {
   faBolt,
 } from "@fortawesome/free-solid-svg-icons";
 import dayjs from "dayjs";
+import { useTranslation } from 'react-i18next';
 import { getPriorityIcon } from "./PriorityIcons";
 import { useProject } from "../contexts/AppContext";
 import {
@@ -62,10 +63,12 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
   onSuccess,
   initialCompanyId,
 }) => {
+  const { t } = useTranslation('tickets');
+  const { t: tCommon } = useTranslation('common');
   const [form] = Form.useForm();
   const [saving, setSaving] = useState(false);
   const [createAnother, setCreateAnother] = useState(false);
-  const [ticketType, setTicketType] = useState("task");
+  const [, setTicketType] = useState("task");
   const [showDetailedForm, setShowDetailedForm] = useState(false);
   const { selectedProject, availableProjects, setSelectedProject } =
     useProject();
@@ -191,13 +194,13 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
         } else {
           setActualColumnId(null);
           message.warning(
-            "This project has no columns. Please set up columns for this project first."
+            t('msg.noColumnsWarning')
           );
         }
       })
       .catch((error) => {
         console.error("❌ Failed to load project columns:", error);
-        message.error("Failed to load project columns");
+        message.error(t('msg.failedLoad'));
         setProjectColumns([]);
         setActualColumnId(null);
       });
@@ -241,14 +244,13 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
 
   const handleSubmit = async (values: any) => {
     if (!selectedProject) {
-      message.error("No project selected. Please select a project first.");
+      message.error(t('msg.noColumnsWarning'));
       return;
     }
 
     if (!actualColumnId) {
       message.error({
-        content:
-          "This project has no columns. Please create a new project (the old one was created before columns were added automatically).",
+        content: t('msg.noColumnsWarning'),
         duration: 8,
       });
       return;
@@ -330,7 +332,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
       console.error("❌ Failed to create ticket:", error);
       console.error("Error details:", error.details || error.response || error);
       console.groupEnd();
-      message.error(error.message || "Failed to create ticket");
+      message.error(error.message || t('msg.failedCreate'));
     } finally {
       setSaving(false);
     }
@@ -397,11 +399,11 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
         <div
           style={{
             padding: "12px 16px",
-            borderBottom: "1px solid #f0f0f0",
+            borderBottom: "1px solid var(--color-border-light)",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            backgroundColor: "#fafafa",
+            backgroundColor: "var(--color-bg-sidebar)",
             position: "sticky",
             top: 0,
             zIndex: 10,
@@ -415,13 +417,13 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                 margin: 0,
                 fontSize: "15px",
                 fontWeight: 600,
-                color: "#262626",
+                color: "var(--color-text-primary)",
                 display: "flex",
                 alignItems: "center",
                 gap: "8px",
               }}
             >
-              Create {ticketType.charAt(0).toUpperCase() + ticketType.slice(1)}
+              {t('createTicket')}
             </h1>
             <Button
               type="link"
@@ -433,7 +435,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                 height: "24px",
               }}
             >
-              {showDetailedForm ? "Show simple form" : "Show detailed form"}
+              {showDetailedForm ? t('form.summary') : t('form.description')}
             </Button>
           </div>
           <Button
@@ -441,7 +443,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
             size="small"
             icon={<CloseOutlined />}
             onClick={handleClose}
-            style={{ color: "#8c8c8c" }}
+            style={{ color: "var(--color-text-muted)" }}
           />
         </div>
 
@@ -468,14 +470,14 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
           >
             {/* Project */}
             <Form.Item
-              label="Space"
+              label={tCommon('field.project')}
               name="project"
               required
-              rules={[{ required: true, message: "Project is required" }]}
+              rules={[{ required: true, message: tCommon('validation.required') }]}
               style={{ marginBottom: "10px" }}
             >
               <Select
-                placeholder="Select project"
+                placeholder={tCommon('validation.pleaseSelect', { field: tCommon('field.project') })}
                 onChange={handleProjectChange}
                 showSearch
                 filterOption={(input, option) =>
@@ -498,7 +500,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                           width: 24,
                           height: 24,
                           borderRadius: "3px",
-                          backgroundColor: "#0052cc",
+                          backgroundColor: "var(--color-primary)",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
@@ -523,14 +525,14 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               <>
                 {/* Work Type */}
                 <Form.Item
-                  label="Work type"
+                  label={t('form.type')}
                   name="type"
                   required
-                  rules={[{ required: true, message: "Work type is required" }]}
+                  rules={[{ required: true, message: tCommon('validation.required') }]}
                   style={{ marginBottom: "10px" }}
                 >
                   <Select
-                    placeholder="Select type"
+                    placeholder={t('form.typePlaceholder')}
                     onChange={(value) => setTicketType(value)}
                   >
                     <Option value="task">
@@ -548,7 +550,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                             color: getTypeIcon("task").color,
                           }}
                         />
-                        <span>Task</span>
+                        <span>{tCommon('type.task')}</span>
                       </div>
                     </Option>
                     <Option value="bug">
@@ -566,7 +568,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                             color: getTypeIcon("bug").color,
                           }}
                         />
-                        <span>Bug</span>
+                        <span>{tCommon('type.bug')}</span>
                       </div>
                     </Option>
                     <Option value="story">
@@ -584,7 +586,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                             color: getTypeIcon("story").color,
                           }}
                         />
-                        <span>Story</span>
+                        <span>{tCommon('type.story')}</span>
                       </div>
                     </Option>
                     <Option value="epic">
@@ -602,7 +604,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                             color: getTypeIcon("epic").color,
                           }}
                         />
-                        <span>Epic</span>
+                        <span>{tCommon('type.epic')}</span>
                       </div>
                     </Option>
                   </Select>
@@ -610,11 +612,11 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
 
                 {/* Column/Status */}
                 <Form.Item
-                  label="Column"
+                  label={t('form.column')}
                   name="column"
                   style={{ marginBottom: "10px" }}
                 >
-                  <Select placeholder="Select column">
+                  <Select placeholder={t('form.columnPlaceholder')}>
                     {projectColumns.map((col) => (
                       <Option key={col.id} value={col.id}>
                         {col.name}
@@ -627,35 +629,35 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
 
             {/* Summary - Always visible */}
             <Form.Item
-              label="Summary"
+              label={t('form.summary')}
               name="summary"
               required
-              rules={[{ required: true, message: "Summary is required" }]}
+              rules={[{ required: true, message: tCommon('validation.required') }]}
               style={{ marginBottom: "10px" }}
             >
-              <Input placeholder="Enter a summary" />
+              <Input placeholder={t('form.summaryPlaceholder')} />
             </Form.Item>
 
             {/* Description - Always visible */}
             <Form.Item
-              label="Description"
+              label={t('form.description')}
               name="description"
               style={{ marginBottom: "10px" }}
             >
               <TextArea
-                placeholder="Add description..."
+                placeholder={t('form.descriptionPlaceholder')}
                 autoSize={{ minRows: 3, maxRows: 8 }}
               />
             </Form.Item>
 
             {/* Company - moved here from detailed form */}
             <Form.Item
-              label="Company"
+              label={t('form.company')}
               name="company"
               style={{ marginBottom: "10px" }}
             >
               <Select
-                placeholder="Select company (Optional)"
+                placeholder={t('form.companyPlaceholder')}
                 allowClear
                 showSearch
                 filterOption={(input, option) =>
@@ -683,12 +685,12 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               {/* Assignee */}
               {/* Assignee */}
               <Form.Item
-                label="Assignee"
+                label={t('form.assignee')}
                 name="assignee"
                 style={{ marginBottom: "10px" }}
               >
                 <Select
-                  placeholder="Select assignee"
+                  placeholder={t('form.assigneePlaceholder')}
                   allowClear
                   showSearch
                   loading={loadingAdmins}
@@ -712,7 +714,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                             width: 24,
                             height: 24,
                             borderRadius: "50%",
-                            backgroundColor: "#0052cc",
+                            backgroundColor: "var(--color-primary)",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
@@ -758,7 +760,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                           fontSize: "12px",
                         }}
                       >
-                        Assign to me
+                        {t('form.assignee')}
                       </Button>
                     );
                   } catch (e) {
@@ -769,10 +771,10 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
 
               {/* Due date */}
               <Form.Item
-                label="Due date"
+                label={t('form.dueDate')}
                 name="dueDate"
                 required
-                rules={[{ required: true, message: "Due date is required" }]}
+                rules={[{ required: true, message: tCommon('validation.required') }]}
                 style={{ marginBottom: "10px" }}
               >
                 <DatePicker
@@ -797,12 +799,12 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
 
                   {/* Parent */}
                   <Form.Item
-                    label="Parent"
+                    label={t('form.parent')}
                     name="parent"
                     style={{ marginBottom: "10px" }}
                   >
                     <Select
-                      placeholder="Select parent ticket"
+                      placeholder={t('form.parentPlaceholder')}
                       allowClear
                       showSearch
                       filterOption={(input, option) =>
@@ -824,11 +826,11 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
 
                   {/* Priority */}
                   <Form.Item
-                    label="Priority"
+                    label={t('form.priority')}
                     name="priority"
                     style={{ marginBottom: "10px" }}
                   >
-                    <Select placeholder="Select priority">
+                    <Select placeholder={t('form.priorityPlaceholder')}>
                       <Option value={1}>{getPriorityIcon(1)}</Option>
                       <Option value={2}>{getPriorityIcon(2)}</Option>
                       <Option value={3}>{getPriorityIcon(3)}</Option>
@@ -838,42 +840,42 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
 
                   {/* Urgency */}
                   <Form.Item
-                    label="Urgency"
+                    label={tCommon('priority.urgent')}
                     name="urgency"
                     initialValue="normal"
                     style={{ marginBottom: "10px" }}
                   >
-                    <Select placeholder="Select urgency">
-                      <Option value="low">Low</Option>
-                      <Option value="normal">Normal</Option>
-                      <Option value="high">High</Option>
+                    <Select placeholder={tCommon('validation.pleaseSelect', { field: tCommon('priority.urgent') })}>
+                      <Option value="low">{tCommon('priority.low')}</Option>
+                      <Option value="normal">{tCommon('priority.normal')}</Option>
+                      <Option value="high">{tCommon('priority.high')}</Option>
                     </Select>
                   </Form.Item>
 
                   {/* Importance */}
                   <Form.Item
-                    label="Importance"
+                    label={tCommon('priority.critical')}
                     name="importance"
                     initialValue="normal"
                     style={{ marginBottom: "10px" }}
                   >
-                    <Select placeholder="Select importance">
-                      <Option value="low">Low</Option>
-                      <Option value="normal">Normal</Option>
-                      <Option value="high">High</Option>
-                      <Option value="critical">Critical</Option>
+                    <Select placeholder={tCommon('validation.pleaseSelect', { field: tCommon('priority.critical') })}>
+                      <Option value="low">{tCommon('priority.low')}</Option>
+                      <Option value="normal">{tCommon('priority.normal')}</Option>
+                      <Option value="high">{tCommon('priority.high')}</Option>
+                      <Option value="critical">{tCommon('priority.critical')}</Option>
                     </Select>
                   </Form.Item>
 
                   {/* Due date */}
                   <Form.Item
-                    label="Due date"
+                    label={t('form.dueDate')}
                     name="dueDate"
                     style={{ marginBottom: "10px" }}
                   >
                     <DatePicker
                       style={{ width: "100%" }}
-                      placeholder="Add due date"
+                      placeholder={t('form.dueDate')}
                       format="YYYY-MM-DD"
                     />
                   </Form.Item>
@@ -882,24 +884,24 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
 
                   {/* Start date */}
                   <Form.Item
-                    label="Start date"
+                    label={t('form.dueDate')}
                     name="startDate"
                     style={{ marginBottom: "10px" }}
                   >
                     <DatePicker
                       style={{ width: "100%" }}
-                      placeholder="Add date"
+                      placeholder={t('form.dueDate')}
                       format="YYYY-MM-DD"
                     />
                   </Form.Item>
 
                   {/* Reporter */}
                   <Form.Item
-                    label="Reporter"
+                    label={t('form.reporter')}
                     name="reporter"
                     style={{ marginBottom: "10px" }}
                   >
-                    <Select placeholder="Select reporter" disabled>
+                    <Select placeholder={t('form.reporter')} disabled>
                       <Option value={1}>
                         <div
                           style={{
@@ -913,7 +915,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                               width: 24,
                               height: 24,
                               borderRadius: "50%",
-                              backgroundColor: "#0052cc",
+                              backgroundColor: "var(--color-primary)",
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
@@ -937,25 +939,25 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
             {showDetailedForm && (
               <>
                 <Form.Item
-                  label="Attachment"
+                  label={t('form.attachments')}
                   name="attachment"
                   style={{ marginBottom: "10px" }}
                 >
                   <div
                     style={{
-                      border: "2px dashed #dfe1e6",
+                      border: "2px dashed var(--color-border)",
                       borderRadius: "3px",
                       padding: "12px",
                       textAlign: "center",
-                      color: "#5e6c84",
+                      color: "var(--color-text-muted)",
                       cursor: "pointer",
-                      backgroundColor: "#fafbfc",
+                      backgroundColor: "var(--color-bg-sidebar)",
                       fontSize: "13px",
                     }}
                   >
-                    Drop files to attach or{" "}
+                    {t('form.attachments')}{" "}
                     <Button type="link" size="small" style={{ padding: 0 }}>
-                      Browse
+                      {tCommon('btn.upload')}
                     </Button>
                   </div>
                 </Form.Item>
@@ -1009,7 +1011,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                   style={{ marginBottom: 0 }}
                 >
                   <Checkbox>
-                    <span style={{ color: "#172b4d", fontSize: "13px" }}>
+                    <span style={{ color: "var(--color-text-heading)", fontSize: "13px" }}>
                       Impediment
                     </span>
                   </Checkbox>
@@ -1023,11 +1025,11 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
         <div
           style={{
             padding: "12px 16px",
-            borderTop: "1px solid #f0f0f0",
+            borderTop: "1px solid var(--color-border-light)",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            backgroundColor: "#fafafa",
+            backgroundColor: "var(--color-bg-sidebar)",
             position: "sticky",
             bottom: 0,
             zIndex: 10,
@@ -1040,16 +1042,16 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
             onChange={(e) => setCreateAnother(e.target.checked)}
             style={{ fontSize: "13px" }}
           >
-            Create another
+            {t('createTicket')}
           </Checkbox>
           <Space size="small">
-            <Button onClick={handleClose}>Cancel</Button>
+            <Button onClick={handleClose}>{tCommon('btn.cancel')}</Button>
             <Button
               type="primary"
               onClick={() => form.submit()}
               loading={saving}
             >
-              Create
+              {tCommon('btn.create')}
             </Button>
           </Space>
         </div>

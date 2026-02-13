@@ -6,6 +6,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Spin, message, Empty } from "antd";
 import { useProject, useAuth } from "../contexts/AppContext";
+import { useTranslation } from "react-i18next";
 import { TicketModal } from "../components/TicketModal";
 import { CreateTicketModal } from "../components/CreateTicketModal";
 import {
@@ -31,6 +32,8 @@ import type {
 } from "../types/dashboard";
 
 const Dashboard: React.FC = () => {
+  const { t } = useTranslation('dashboard');
+  const { t: tCommon } = useTranslation('common');
   const { selectedProject } = useProject();
   const { user } = useAuth();
 
@@ -114,7 +117,7 @@ const Dashboard: React.FC = () => {
       setKanbanSummary(kanbanData);
     } catch (error) {
       console.error("Failed to fetch dashboard data:", error);
-      message.error("Failed to load dashboard data");
+      message.error(tCommon('msg.error.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -154,7 +157,7 @@ const Dashboard: React.FC = () => {
       setSelectedTicket(ticket);
     } catch (error) {
       console.error("Failed to fetch ticket:", error);
-      message.error("Failed to load ticket details");
+      message.error(tCommon('msg.error.loadFailed'));
     }
   };
 
@@ -177,9 +180,9 @@ const Dashboard: React.FC = () => {
     () => [
       {
         i: "attention",
-        title: "Needs Attention",
+        title: t('attention.needsAttention'),
         component: (
-          <DashboardWidget title="Needs Attention" loading={loading}>
+          <DashboardWidget title={t('attention.needsAttention')} loading={loading}>
             <AttentionNeededCards
               data={attentionNeeded}
               loading={loading}
@@ -191,9 +194,9 @@ const Dashboard: React.FC = () => {
       },
       {
         i: "newest",
-        title: "Newest Tickets",
+        title: t('newest.newestTickets'),
         component: (
-          <DashboardWidget title="Newest Tickets" loading={loading}>
+          <DashboardWidget title={t('newest.newestTickets')} loading={loading}>
             <NewestTicketCards
               tickets={newestTickets}
               loading={loading}
@@ -206,9 +209,9 @@ const Dashboard: React.FC = () => {
       },
       {
         i: "activity",
-        title: "Activity Feed",
+        title: t('activity.liveActivity'),
         component: (
-          <DashboardWidget title="Activity Feed" loading={loading}>
+          <DashboardWidget title={t('activity.liveActivity')} loading={loading}>
             <TimelineActivityFeed
               activities={liveActivity}
               loading={loading}
@@ -220,9 +223,9 @@ const Dashboard: React.FC = () => {
       },
       {
         i: "pipeline",
-        title: "Pipeline",
+        title: t('pipeline.pipeline'),
         component: (
-          <DashboardWidget title="Pipeline" loading={loading}>
+          <DashboardWidget title={t('pipeline.pipeline')} loading={loading}>
             <KanbanPipeline data={kanbanSummary} loading={loading} />
           </DashboardWidget>
         ),
@@ -230,9 +233,9 @@ const Dashboard: React.FC = () => {
       },
       {
         i: "workload",
-        title: "Team Workload",
+        title: t('widgets.teamWorkload'),
         component: (
-          <DashboardWidget title="Team Workload" loading={loading}>
+          <DashboardWidget title={t('widgets.teamWorkload')} loading={loading}>
             <TeamWorkloadCards workloads={agentWorkload} loading={loading} />
           </DashboardWidget>
         ),
@@ -262,7 +265,7 @@ const Dashboard: React.FC = () => {
           backgroundColor: "#f4f5f7",
         }}
       >
-        <Empty description="Select a project to view dashboard" />
+        <Empty description={t('selectProject')} />
       </div>
     );
   }

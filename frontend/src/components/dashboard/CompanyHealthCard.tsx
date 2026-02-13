@@ -12,6 +12,7 @@ import {
 } from "@ant-design/icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBuilding } from "@fortawesome/free-solid-svg-icons";
+import { useTranslation } from "react-i18next";
 import type { CompanyHealth } from "../../types/dashboard";
 
 interface Props {
@@ -28,14 +29,14 @@ const getColumnColor = (columnName: string): string => {
     name.includes("to do") ||
     name.includes("open")
   ) {
-    return "#8c8c8c";
+    return "var(--color-text-muted)";
   }
   if (
     name.includes("progress") ||
     name.includes("doing") ||
     name.includes("dev")
   ) {
-    return "#1890ff";
+    return "var(--color-primary)";
   }
   if (name.includes("review") || name.includes("test") || name.includes("qa")) {
     return "#faad14";
@@ -47,17 +48,18 @@ const getColumnColor = (columnName: string): string => {
   ) {
     return "#52c41a";
   }
-  return "#d9d9d9";
+  return "var(--color-border)";
 };
 
 // Mini Kanban flow visualization
 const MiniKanbanFlow: React.FC<{ ticketsByStatus: Record<string, number> }> = ({
   ticketsByStatus,
 }) => {
+  const { t } = useTranslation('dashboard');
   const entries = Object.entries(ticketsByStatus);
 
   if (entries.length === 0) {
-    return <div style={{ color: "#8c8c8c", fontSize: 12 }}>No tickets</div>;
+    return <div style={{ color: "var(--color-text-muted)", fontSize: 12 }}>{t('company.noTickets')}</div>;
   }
 
   return (
@@ -72,7 +74,7 @@ const MiniKanbanFlow: React.FC<{ ticketsByStatus: Record<string, number> }> = ({
       {entries.map(([status, count], index) => (
         <React.Fragment key={status}>
           <Tooltip
-            title={`${status}: ${count} ticket${count !== 1 ? "s" : ""}`}
+            title={t('kanban.ticketTooltip', { name: status, count })}
           >
             <div
               style={{
@@ -91,7 +93,7 @@ const MiniKanbanFlow: React.FC<{ ticketsByStatus: Record<string, number> }> = ({
             </div>
           </Tooltip>
           {index < entries.length - 1 && (
-            <ArrowRightOutlined style={{ fontSize: 10, color: "#d9d9d9" }} />
+            <ArrowRightOutlined style={{ fontSize: 10, color: "var(--color-border)" }} />
           )}
         </React.Fragment>
       ))}
@@ -104,6 +106,7 @@ const CompanyHealthCard: React.FC<Props> = ({
   onClick,
   isExpanded = false,
 }) => {
+  const { t } = useTranslation('dashboard');
   const hasIssues = company.overdue_count > 0 || company.unassigned_count > 0;
 
   // Calculate flow health (percentage not in backlog/done)
@@ -131,7 +134,7 @@ const CompanyHealthCard: React.FC<Props> = ({
       onClick={() => onClick?.(company.id)}
       style={{
         borderRadius: 8,
-        border: hasIssues ? "1px solid #ff4d4f40" : "1px solid #f0f0f0",
+        border: hasIssues ? "1px solid #ff4d4f40" : "1px solid var(--color-border-light)",
         height: isExpanded ? "auto" : 160,
       }}
       styles={{
@@ -155,7 +158,7 @@ const CompanyHealthCard: React.FC<Props> = ({
         <Avatar
           size={isExpanded ? 48 : 36}
           src={company.logo_thumbnail_url || company.logo_url}
-          style={{ backgroundColor: "#1890ff" }}
+          style={{ backgroundColor: "var(--color-primary)" }}
         >
           {!company.logo_url && (
             <FontAwesomeIcon
@@ -176,9 +179,8 @@ const CompanyHealthCard: React.FC<Props> = ({
           >
             {company.name}
           </div>
-          <div style={{ fontSize: 12, color: "#8c8c8c" }}>
-            {company.total_tickets} ticket
-            {company.total_tickets !== 1 ? "s" : ""}
+          <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
+            {t('company.tickets', { count: company.total_tickets })}
           </div>
         </div>
       </div>
@@ -192,7 +194,7 @@ const CompanyHealthCard: React.FC<Props> = ({
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         {company.overdue_count > 0 && (
           <Tag color="error" icon={<WarningOutlined />} style={{ margin: 0 }}>
-            {company.overdue_count} overdue
+            {t('company.overdue', { count: company.overdue_count })}
           </Tag>
         )}
         {company.unassigned_count > 0 && (
@@ -201,7 +203,7 @@ const CompanyHealthCard: React.FC<Props> = ({
             icon={<UserDeleteOutlined />}
             style={{ margin: 0 }}
           >
-            {company.unassigned_count} unassigned
+            {t('company.unassigned', { count: company.unassigned_count })}
           </Tag>
         )}
       </div>
@@ -209,20 +211,20 @@ const CompanyHealthCard: React.FC<Props> = ({
       {/* Expanded view extras */}
       {isExpanded && (
         <div style={{ marginTop: 16 }}>
-          <div style={{ marginBottom: 8, fontSize: 12, color: "#8c8c8c" }}>
-            Work in Progress
+          <div style={{ marginBottom: 8, fontSize: 12, color: "var(--color-text-muted)" }}>
+            {t('company.workInProgress')}
           </div>
           <Progress
             percent={flowPercentage}
-            strokeColor="#1890ff"
-            trailColor="#f0f0f0"
+            strokeColor="var(--color-primary)"
+            trailColor="var(--color-border-light)"
             size="small"
           />
 
           {Object.keys(company.tickets_by_priority).length > 0 && (
             <div style={{ marginTop: 12 }}>
-              <div style={{ marginBottom: 4, fontSize: 12, color: "#8c8c8c" }}>
-                By Priority
+              <div style={{ marginBottom: 4, fontSize: 12, color: "var(--color-text-muted)" }}>
+                {t('company.byPriority')}
               </div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                 {Object.entries(company.tickets_by_priority).map(

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { PageContainer } from "../components/layout";
 import { Ticket } from "../types";
 import apiService from "../services/api.service";
@@ -33,6 +34,8 @@ interface PaginatedResponse<T> {
 }
 
 export default function Dashboard() {
+  const { t } = useTranslation('tickets');
+  const { t: tCommon } = useTranslation('common');
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [archivedTickets, setArchivedTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
@@ -253,10 +256,10 @@ export default function Dashboard() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-semibold text-gray-900 mb-1">
-              How can we help you today?
+              {t('title')}
             </h1>
             <p className="text-gray-600">
-              Search your tickets or submit a new request
+              {t('subtitle')}
             </p>
           </div>
           <Button
@@ -266,7 +269,7 @@ export default function Dashboard() {
             className="bg-brand-400 hover:bg-brand-500 border-none shadow-sm h-auto py-2.5 px-5"
             onClick={() => setIsCreateModalOpen(true)}
           >
-            Submit a Request
+            {t('submitRequest')}
           </Button>
         </div>
       </div>
@@ -278,8 +281,8 @@ export default function Dashboard() {
             <div className="mb-4">
                  <div className="relative">
                      <SearchOutlined className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg" />
-                     <input 
-                         placeholder="Search tickets..." 
+                     <input
+                         placeholder={t('searchPlaceholder')}
                          className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 bg-white" 
                          type="text" 
                          value={searchQuery}
@@ -295,25 +298,25 @@ export default function Dashboard() {
                         onClick={() => setFilter("all")}
                         className={`px-3 py-1 text-xs font-medium rounded-full transition-colors whitespace-nowrap ${filter === 'all' ? 'bg-gray-200 text-gray-900' : 'text-gray-500 hover:bg-gray-100'}`}
                     >
-                        All
+                        {t('filter.all')}
                     </button>
-                    <button 
+                    <button
                         onClick={() => setFilter("open")}
                         className={`px-3 py-1 text-xs font-medium rounded-full transition-colors whitespace-nowrap ${filter === 'open' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-100'}`}
                     >
-                        Open ({openCount})
+                        {t('filter.open')} ({openCount})
                     </button>
-                    <button 
+                    <button
                         onClick={() => setFilter("resolved")}
                         className={`px-3 py-1 text-xs font-medium rounded-full transition-colors whitespace-nowrap ${filter === 'resolved' ? 'bg-green-100 text-green-700' : 'text-gray-500 hover:bg-gray-100'}`}
                     >
-                        Resolved ({resolvedCount})
+                        {t('filter.resolved')} ({resolvedCount})
                     </button>
-                     <button 
+                     <button
                         onClick={() => setFilter("archived")}
                         className={`px-3 py-1 text-xs font-medium rounded-full transition-colors whitespace-nowrap ${filter === 'archived' ? 'bg-gray-200 text-gray-700' : 'text-gray-500 hover:bg-gray-100'}`}
                     >
-                        Archived
+                        {t('filter.archived')}
                     </button>
                 </div>
             </div>
@@ -326,7 +329,7 @@ export default function Dashboard() {
                     </div>
                 ) : filteredTickets.length === 0 ? (
                     <div className="text-center py-10 bg-white rounded-md border border-gray-100">
-                        <Empty description="No tickets found" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                        <Empty description={t('noTickets')} image={Empty.PRESENTED_IMAGE_SIMPLE} />
                     </div>
                 ) : (
                     filteredTickets.map(ticket => {
@@ -369,7 +372,7 @@ export default function Dashboard() {
 
                                 <div className="flex items-center justify-between pt-3 border-t border-gray-100/50">
                                     <div className="flex items-center gap-3">
-                                        <Tooltip title={ticket.assignees?.length ? `Assigned to ${ticket.assignees[0].first_name}` : 'Unassigned'}>
+                                        <Tooltip title={ticket.assignees?.length ? tCommon('assignedTo', { name: ticket.assignees[0].first_name }) : tCommon('unassigned')}>
                                             {ticket.assignees && ticket.assignees.length > 0 ? (
                                                 <Avatar size="small" className="bg-blue-100 text-blue-600 border border-white shadow-sm">
                                                     {ticket.assignees[0].first_name?.[0] || ticket.assignees[0].username[0]}
@@ -403,7 +406,7 @@ export default function Dashboard() {
                          <div className="mx-auto w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mb-3">
                              <MoreOutlined className="text-xl" />
                          </div>
-                         <p className="font-medium">Select a ticket to view conversation</p>
+                         <p className="font-medium">{t('selectTicket')}</p>
                      </div>
                  </div>
              )}

@@ -6,6 +6,7 @@
 import React from "react";
 import { Card, List, Avatar, Progress, Tooltip, Spin, Empty, Tag } from "antd";
 import { WarningOutlined, UserOutlined } from "@ant-design/icons";
+import { useTranslation } from "react-i18next";
 import type { AgentWorkload as AgentWorkloadData } from "../../types/dashboard";
 
 interface Props {
@@ -29,17 +30,18 @@ const AgentWorkload: React.FC<Props> = ({
   maxHeight = 350,
   onUserClick,
 }) => {
+  const { t } = useTranslation('dashboard');
   const maxWorkload = Math.max(...workloads.map((w) => w.total_active), 1);
 
   return (
     <Card
-      title="Team Workload"
+      title={t('widgets.teamWorkload')}
       size="small"
       style={{ borderRadius: 8 }}
       styles={{ body: { padding: 0 } }}
       extra={
-        <span style={{ fontSize: 11, color: "#8c8c8c" }}>
-          {workloads.length} members
+        <span style={{ fontSize: 11, color: "var(--color-text-muted)" }}>
+          {t('workload.members', { count: workloads.length })}
         </span>
       }
     >
@@ -51,7 +53,7 @@ const AgentWorkload: React.FC<Props> = ({
         ) : workloads.length === 0 ? (
           <Empty
             image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description="No team members found"
+            description={t('workload.noMembers')}
             style={{ padding: 32 }}
           />
         ) : (
@@ -76,7 +78,7 @@ const AgentWorkload: React.FC<Props> = ({
                   style={{
                     padding: "12px 16px",
                     cursor: onUserClick ? "pointer" : "default",
-                    borderBottom: "1px solid #f0f0f0",
+                    borderBottom: "1px solid var(--color-border-light)",
                   }}
                   className="hover-highlight"
                 >
@@ -87,7 +89,7 @@ const AgentWorkload: React.FC<Props> = ({
                       {/* User avatar */}
                       <Avatar
                         size={36}
-                        style={{ backgroundColor: "#1890ff", flexShrink: 0 }}
+                        style={{ backgroundColor: "var(--color-primary)", flexShrink: 0 }}
                         icon={<UserOutlined />}
                       >
                         {initials}
@@ -123,9 +125,7 @@ const AgentWorkload: React.FC<Props> = ({
                           >
                             {hasOverdue && (
                               <Tooltip
-                                title={`${workload.overdue} overdue ticket${
-                                  workload.overdue !== 1 ? "s" : ""
-                                }`}
+                                title={t('workload.overdueTickets', { count: workload.overdue })}
                               >
                                 <Tag
                                   color="error"
@@ -137,7 +137,7 @@ const AgentWorkload: React.FC<Props> = ({
                               </Tooltip>
                             )}
                             <Tag style={{ margin: 0 }}>
-                              {workload.total_active} active
+                              {workload.total_active} {t('workload.active')}
                             </Tag>
                           </div>
                         </div>

@@ -1,4 +1,5 @@
 import { useState, FormEvent, useEffect, useRef, DragEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { Button, Input, Textarea } from "./ui";
 
 interface CreateTicketModalProps {
@@ -143,6 +144,8 @@ export default function CreateTicketModal({
   onClose,
   onSubmit,
 }: CreateTicketModalProps) {
+  const { t } = useTranslation('tickets');
+  const { t: tCommon } = useTranslation('common');
   const [step, setStep] = useState<ModalStep>("form");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -205,7 +208,7 @@ export default function CreateTicketModal({
     setError("");
 
     if (!name.trim()) {
-      setError("Please describe your issue");
+      setError(t('create.validation.subject'));
       return;
     }
 
@@ -277,11 +280,11 @@ export default function CreateTicketModal({
 
     const validFiles = files.filter((file) => {
       if (file.size > maxSize) {
-        setError(`${file.name} exceeds 10MB limit`);
+        setError(t('create.validation.fileTooLarge', { name: file.name }));
         return false;
       }
       if (!allowedTypes.includes(file.type)) {
-        setError(`${file.name} is not an allowed file type`);
+        setError(t('create.validation.fileTypeNotAllowed', { name: file.name }));
         return false;
       }
       return true;
@@ -328,7 +331,7 @@ export default function CreateTicketModal({
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 sticky top-0 bg-white z-10">
               <h2 className="text-lg font-semibold text-gray-900">
-                Submit a Request
+                {t('create.title')}
               </h2>
               <button
                 onClick={handleClose}
@@ -362,25 +365,25 @@ export default function CreateTicketModal({
                 {/* Subject */}
                 <Input
                   ref={inputRef}
-                  label="What do you need help with?"
+                  label={t('create.subject')}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g., I can't access my email"
+                  placeholder={t('create.subjectPlaceholder')}
                 />
 
                 {/* Description */}
                 <Textarea
-                  label="Tell us more (optional)"
+                  label={t('create.description')}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Any details that might help us resolve this faster..."
+                  placeholder={t('create.descriptionPlaceholder')}
                   rows={3}
                 />
 
                 {/* File Upload */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Attach screenshots or files (optional)
+                    {t('create.attachments')}
                   </label>
                   <div
                     onDragOver={handleDragOver}
@@ -418,11 +421,10 @@ export default function CreateTicketModal({
                       />
                     </svg>
                     <p className="text-sm text-gray-600">
-                      Drop files here or{" "}
-                      <span className="text-brand-500 font-medium">browse</span>
+                      {t('create.dropFiles')}
                     </p>
                     <p className="text-xs text-gray-400 mt-1">
-                      PNG, JPG, PDF up to 10MB
+                      {t('create.attachmentsHint')}
                     </p>
                   </div>
 
@@ -555,7 +557,7 @@ export default function CreateTicketModal({
                       />
                     </svg>
                     <span className="text-sm font-medium text-gray-700">
-                      Need remote assistance? (optional)
+                      {t('create.remoteAssist')}
                     </span>
                   </div>
 
@@ -611,8 +613,7 @@ export default function CreateTicketModal({
                         placeholder="e.g., 123 456 789"
                       />
                       <p className="text-xs text-gray-500 mt-1">
-                        This helps IT connect to your computer faster if remote
-                        assistance is needed.
+                        {t('create.remoteAssistHelp')}
                       </p>
                     </div>
                   )}
@@ -622,10 +623,10 @@ export default function CreateTicketModal({
               {/* Footer */}
               <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
                 <Button type="button" variant="ghost" onClick={handleClose}>
-                  Cancel
+                  {tCommon('btn.cancel')}
                 </Button>
                 <Button type="submit" loading={loading}>
-                  Submit Request
+                  {t('create.submit')}
                 </Button>
               </div>
             </form>

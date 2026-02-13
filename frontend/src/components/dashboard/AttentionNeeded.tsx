@@ -23,6 +23,7 @@ import {
 } from "@ant-design/icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBuilding } from "@fortawesome/free-solid-svg-icons";
+import { useTranslation } from "react-i18next";
 import type {
   AttentionNeeded as AttentionNeededData,
   DashboardTicket,
@@ -66,13 +67,15 @@ const TicketListItem: React.FC<{
   ticket: DashboardTicket;
   type: ViewType;
   onClick?: () => void;
-}> = ({ ticket, type, onClick }) => (
+}> = ({ ticket, type, onClick }) => {
+  const { t } = useTranslation('dashboard');
+  return (
   <List.Item
     onClick={onClick}
     style={{
       padding: "10px 12px",
       cursor: onClick ? "pointer" : "default",
-      borderBottom: "1px solid #f0f0f0",
+      borderBottom: "1px solid var(--color-border-light)",
     }}
     className="hover-highlight"
   >
@@ -82,7 +85,7 @@ const TicketListItem: React.FC<{
         <Avatar
           size={28}
           src={ticket.company?.logo_url}
-          style={{ backgroundColor: "#1890ff", flexShrink: 0 }}
+          style={{ backgroundColor: "var(--color-primary)", flexShrink: 0 }}
         >
           {ticket.company && (
             <FontAwesomeIcon icon={faBuilding} style={{ fontSize: 10 }} />
@@ -111,7 +114,7 @@ const TicketListItem: React.FC<{
               alignItems: "center",
               gap: 6,
               fontSize: 10,
-              color: "#8c8c8c",
+              color: "var(--color-text-muted)",
               flexWrap: "wrap",
             }}
           >
@@ -155,7 +158,7 @@ const TicketListItem: React.FC<{
                   padding: "0 3px",
                 }}
               >
-                No updates {formatTimeDiff(ticket.updated_at, false)}
+                {t('attention.noUpdates', { time: formatTimeDiff(ticket.updated_at, false) })}
               </Tag>
             )}
           </div>
@@ -164,7 +167,7 @@ const TicketListItem: React.FC<{
         {/* Assignee avatar (if any) */}
         {ticket.assignee && (
           <Tooltip
-            title={`Assigned to ${ticket.assignee.first_name} ${ticket.assignee.last_name}`}
+            title={t('attention.assignedTo', { name: `${ticket.assignee.first_name} ${ticket.assignee.last_name}` })}
           >
             <Avatar
               size={22}
@@ -177,7 +180,8 @@ const TicketListItem: React.FC<{
       </div>
     </div>
   </List.Item>
-);
+  );
+};
 
 const AttentionNeeded: React.FC<Props> = ({
   data,
@@ -185,6 +189,7 @@ const AttentionNeeded: React.FC<Props> = ({
   onTicketClick,
   maxHeight = 350,
 }) => {
+  const { t } = useTranslation('dashboard');
   const [activeView, setActiveView] = useState<ViewType>("overdue");
 
   const getTickets = (): DashboardTicket[] => {
@@ -222,7 +227,7 @@ const AttentionNeeded: React.FC<Props> = ({
             <WarningOutlined
               style={{ color: totalCount > 0 ? "#ff4d4f" : "#52c41a" }}
             />
-            Needs Attention
+            {t('attention.needsAttention')}
           </span>
           {totalCount > 0 && (
             <Badge count={totalCount} style={{ backgroundColor: "#ff4d4f" }} />
@@ -235,7 +240,7 @@ const AttentionNeeded: React.FC<Props> = ({
     >
       {/* Tab selector */}
       <div
-        style={{ padding: "12px 12px 0", borderBottom: "1px solid #f0f0f0" }}
+        style={{ padding: "12px 12px 0", borderBottom: "1px solid var(--color-border-light)" }}
       >
         <Segmented
           block
@@ -254,7 +259,7 @@ const AttentionNeeded: React.FC<Props> = ({
                   }}
                 >
                   <ClockCircleOutlined />
-                  Overdue
+                  {t('attention.overdue')}
                   {overdueCount > 0 && (
                     <Badge
                       count={overdueCount}
@@ -277,7 +282,7 @@ const AttentionNeeded: React.FC<Props> = ({
                   }}
                 >
                   <UserDeleteOutlined />
-                  Unassigned
+                  {t('attention.unassigned')}
                   {unassignedCount > 0 && (
                     <Badge
                       count={unassignedCount}
@@ -300,7 +305,7 @@ const AttentionNeeded: React.FC<Props> = ({
                   }}
                 >
                   <FieldTimeOutlined />
-                  Stale
+                  {t('attention.stale')}
                   {staleCount > 0 && (
                     <Badge
                       count={staleCount}
@@ -325,9 +330,11 @@ const AttentionNeeded: React.FC<Props> = ({
         ) : tickets.length === 0 ? (
           <Empty
             image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description={`No ${
-              activeView === "unassigned" ? "unassigned critical" : activeView
-            } tickets`}
+            description={
+              activeView === "overdue" ? t('attention.noOverdue') :
+              activeView === "unassigned" ? t('attention.noUnassignedCritical') :
+              t('attention.noStale')
+            }
             style={{ padding: "24px 16px" }}
           />
         ) : (

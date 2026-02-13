@@ -19,6 +19,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AppContext";
 import { projectService } from "../services/project.service";
 import { LogoIcon } from "../components/Logo";
+import { useTranslation } from "react-i18next";
 import "./ProjectSetup.css";
 
 const { Title, Text, Paragraph } = Typography;
@@ -32,6 +33,8 @@ interface ProjectFormValues {
 }
 
 const ProjectSetup: React.FC = () => {
+  const { t } = useTranslation('settings');
+  const { t: tCommon } = useTranslation('common');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -80,7 +83,7 @@ const ProjectSetup: React.FC = () => {
       // Navigate to dashboard
       navigate("/");
     } catch (err: any) {
-      setError(err?.message || "An error occurred while creating the project");
+      setError(err?.message || t('createProject.msg.failed'));
     } finally {
       setLoading(false);
     }
@@ -88,10 +91,10 @@ const ProjectSetup: React.FC = () => {
 
   const validateProjectKey = (_: any, value: string) => {
     if (!value) {
-      return Promise.reject(new Error("Project key is required"));
+      return Promise.reject(new Error(tCommon('validation.required')));
     }
     if (!/^[A-Z]{2,10}$/.test(value.toUpperCase())) {
-      return Promise.reject(new Error("Key must be 2-10 uppercase letters"));
+      return Promise.reject(new Error(t('projectKeyHelp')));
     }
     return Promise.resolve();
   };
@@ -110,12 +113,11 @@ const ProjectSetup: React.FC = () => {
               <div className="logo-section">
                 <LogoIcon size={48} />
                 <Title level={2} className="app-title">
-                  Create Your Project
+                  {t('setup.createProject')}
                 </Title>
               </div>
               <Paragraph type="secondary" className="subtitle">
-                Set up a new project to organize your tickets and collaborate
-                with your team
+                {t('setup.welcome')}
               </Paragraph>
             </div>
 
@@ -139,14 +141,14 @@ const ProjectSetup: React.FC = () => {
             >
               <Form.Item
                 name="name"
-                label="Project Name"
+                label={t('projectName')}
                 rules={[
-                  { required: true, message: "Please enter a project name" },
+                  { required: true, message: tCommon('validation.required') },
                 ]}
               >
                 <Input
                   prefix={<ProjectOutlined />}
-                  placeholder="My First Project"
+                  placeholder={t('projectNamePlaceholder')}
                   onChange={handleNameChange}
                   size="large"
                 />
@@ -154,9 +156,9 @@ const ProjectSetup: React.FC = () => {
 
               <Form.Item
                 name="key"
-                label="Project Key"
+                label={t('projectKey')}
                 rules={[{ validator: validateProjectKey }]}
-                tooltip="A short, unique identifier for your project (2-10 uppercase letters). Auto-filled from project name."
+                tooltip={t('setup.keyTooltip')}
                 normalize={(value) => value.toUpperCase()}
               >
                 <Input
@@ -168,21 +170,21 @@ const ProjectSetup: React.FC = () => {
                 />
               </Form.Item>
 
-              <Form.Item name="description" label="Description (Optional)">
+              <Form.Item name="description" label={t('projectDescription')}>
                 <TextArea
-                  placeholder="Describe what this project is about..."
+                  placeholder={t('projectDescriptionPlaceholder')}
                   rows={3}
                 />
               </Form.Item>
 
               <Form.Item
                 name="collaborators"
-                label="Invite Collaborators (Optional)"
-                tooltip="Enter email addresses to send project invitations"
+                label={t('setup.inviteCollaborators')}
+                tooltip={t('setup.inviteTooltip')}
               >
                 <Select
                   mode="tags"
-                  placeholder="Enter email addresses and press Enter"
+                  placeholder={t('setup.emailPlaceholder')}
                   onChange={(emails: string[]) => {
                     // Validate emails as they're added
                     const validEmails = emails.filter((email: string) =>
@@ -192,7 +194,7 @@ const ProjectSetup: React.FC = () => {
                       form.setFields([
                         {
                           name: "collaborators",
-                          errors: ["Please enter valid email addresses"],
+                          errors: [tCommon('validation.email')],
                         },
                       ]);
                     }
@@ -226,14 +228,13 @@ const ProjectSetup: React.FC = () => {
                   className="setup-button"
                   icon={<PlusOutlined />}
                 >
-                  Create Project
+                  {t('setup.createProject')}
                 </Button>
               </Form.Item>
 
               <div style={{ textAlign: "center", marginTop: 16 }}>
                 <Text type="secondary" style={{ fontSize: 12 }}>
-                  You'll be the project lead and can add more collaborators
-                  later
+                  {t('setup.helperText')}
                 </Text>
               </div>
             </Form>

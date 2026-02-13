@@ -3,7 +3,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+  background: var(--gradient-primary);
   padding: 20px;
 }
 
@@ -22,7 +22,7 @@
 
 .login-card {
   border-radius: 12px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-lg);
   padding: 20px;
 }
 
@@ -41,35 +41,35 @@
 
 .app-title {
   margin: 0 !important;
-  color: #262626;
+  color: var(--color-text-primary);
 }
 
 .subtitle {
   font-size: 14px;
-  color: #8c8c8c;
+  color: var(--color-text-muted);
 }
 
 .login-button {
   height: 44px;
   font-size: 16px;
   font-weight: 500;
-  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+  background: var(--gradient-primary);
   border: none;
   border-radius: 6px;
   margin-top: 8px;
 }
 
 .login-button:hover {
-  background: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%);
+  background: linear-gradient(135deg, var(--color-primary-hover) 0%, var(--color-primary) 100%);
 }
 
 .forgot-link {
-  color: #1890ff;
+  color: var(--color-primary);
   font-size: 14px;
 }
 
 .forgot-link:hover {
-  color: #096dd9;
+  color: var(--color-primary-active);
 }
 
 .register-section {
@@ -78,12 +78,12 @@
 }
 
 .register-link {
-  color: #1890ff;
+  color: var(--color-primary);
   font-weight: 500;
 }
 
 .register-link:hover {
-  color: #096dd9;
+  color: var(--color-primary-active);
 }
 
 /* Responsive */
@@ -91,7 +91,7 @@
   .login-card {
     padding: 16px;
   }
-  
+
   .app-title {
     font-size: 24px !important;
   }

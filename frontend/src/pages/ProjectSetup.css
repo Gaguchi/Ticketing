@@ -3,7 +3,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+  background: var(--gradient-primary);
   padding: 20px;
 }
 
@@ -22,7 +22,7 @@
 
 .setup-card {
   border-radius: 12px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-lg);
   padding: 32px;
 }
 
@@ -54,7 +54,7 @@
 
 .feature-icon {
   font-size: 32px;
-  color: #1890ff;
+  color: var(--color-primary);
   flex-shrink: 0;
 }
 
@@ -70,13 +70,13 @@
   height: 44px;
   font-size: 16px;
   font-weight: 500;
-  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+  background: var(--gradient-primary);
   border: none;
   border-radius: 6px;
 }
 
 .setup-button:hover {
-  background: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%);
+  background: linear-gradient(135deg, var(--color-primary-hover) 0%, var(--color-primary) 100%);
 }
 
 /* Responsive */
@@ -84,11 +84,11 @@
   .setup-card {
     padding: 24px 20px;
   }
-  
+
   .feature-list {
     gap: 20px;
   }
-  
+
   .feature-icon {
     font-size: 24px;
   }
@@ -98,11 +98,11 @@
   .setup-card {
     padding: 20px 16px;
   }
-  
+
   .app-title {
     font-size: 20px !important;
   }
-  
+
   .feature-item {
     gap: 12px;
   }

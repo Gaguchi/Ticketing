@@ -115,7 +115,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
   const getNotificationStyle = (type: string) => {
     switch (type) {
       case "ticket_assigned":
-        return { color: "#1890ff", emoji: "📋" };
+        return { color: "var(--color-primary)", emoji: "📋" };
       case "ticket_created":
         return { color: "#52c41a", emoji: "✨" };
       case "comment_added":
@@ -127,7 +127,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
       case "priority_changed":
         return { color: "#fa541c", emoji: "⚡" };
       default:
-        return { color: "#8c8c8c", emoji: "🔔" };
+        return { color: "var(--color-text-muted)", emoji: "🔔" };
     }
   };
 
@@ -139,7 +139,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
       style={{
         width: 380,
         maxHeight: 500,
-        backgroundColor: "#ffffff",
+        backgroundColor: "var(--color-bg-surface)",
         borderRadius: 8,
         boxShadow:
           "0 3px 6px -4px rgba(0, 0, 0, 0.12), 0 6px 16px 0 rgba(0, 0, 0, 0.08), 0 9px 28px 8px rgba(0, 0, 0, 0.05)",
@@ -152,8 +152,8 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
       <div
         style={{
           padding: "12px 16px",
-          borderBottom: "1px solid #f0f0f0",
-          backgroundColor: "#fafafa",
+          borderBottom: "1px solid var(--color-border-light)",
+          backgroundColor: "var(--color-bg-sidebar)",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
@@ -195,7 +195,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
                     cursor: notification.link ? "pointer" : "default",
                     backgroundColor: notification.is_read
                       ? "transparent"
-                      : "#f0f7ff",
+                      : "var(--color-primary-light)",
                     borderLeft: notification.is_read
                       ? "none"
                       : `3px solid ${style.color}`,
@@ -204,13 +204,13 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
                   onClick={() => handleNotificationClick(notification)}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.backgroundColor = notification.is_read
-                      ? "#fafafa"
-                      : "#e6f4ff";
+                      ? "var(--color-bg-sidebar)"
+                      : "var(--color-primary-light)";
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.backgroundColor = notification.is_read
                       ? "transparent"
-                      : "#f0f7ff";
+                      : "var(--color-primary-light)";
                   }}
                   actions={[
                     <Button

@@ -659,18 +659,18 @@ const Chat: React.FC = () => {
         height: "calc(100vh - 64px)",
         display: "flex",
         flexDirection: "column",
-        backgroundColor: "#f5f5f5",
+        backgroundColor: "var(--color-bg-inset)",
       }}
     >
       {/* Header */}
       <div
         style={{
           padding: "16px 24px",
-          backgroundColor: "#fff",
-          borderBottom: "1px solid #e8e8e8",
+          backgroundColor: "var(--color-bg-surface)",
+          borderBottom: "1px solid var(--color-border)",
         }}
       >
-        <Text style={{ fontSize: 20, fontWeight: 600, color: "#172b4d" }}>
+        <Text style={{ fontSize: 20, fontWeight: 600, color: "var(--color-text-heading)" }}>
           Messages
         </Text>
       </div>
@@ -681,8 +681,8 @@ const Chat: React.FC = () => {
         <div
           style={{
             width: 320,
-            backgroundColor: "#fff",
-            borderRight: "1px solid #e8e8e8",
+            backgroundColor: "var(--color-bg-surface)",
+            borderRight: "1px solid var(--color-border)",
             display: "flex",
             flexDirection: "column",
           }}
@@ -731,7 +731,7 @@ const Chat: React.FC = () => {
                   ? "Search users..."
                   : "Search tickets..."
               }
-              prefix={<SearchOutlined style={{ color: "#8c8c8c" }} />}
+              prefix={<SearchOutlined style={{ color: "var(--color-text-muted)" }} />}
               style={{ borderRadius: 8 }}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -739,7 +739,7 @@ const Chat: React.FC = () => {
                 searchQuery && (
                   <CloseOutlined
                     onClick={() => setSearchQuery("")}
-                    style={{ color: "#8c8c8c", cursor: "pointer" }}
+                    style={{ color: "var(--color-text-muted)", cursor: "pointer" }}
                   />
                 )
               }
@@ -780,9 +780,9 @@ const Chat: React.FC = () => {
                       style={{
                         padding: "12px 16px",
                         cursor: "pointer",
-                        backgroundColor: isActive ? "#f0f5ff" : "transparent",
+                        backgroundColor: isActive ? "var(--color-primary-light)" : "transparent",
                         borderLeft: isActive
-                          ? "3px solid #1890ff"
+                          ? "3px solid var(--color-primary)"
                           : "3px solid transparent",
                         transition: "all 0.2s",
                       }}
@@ -797,7 +797,7 @@ const Chat: React.FC = () => {
                             <Avatar
                               size={40}
                               style={{
-                                backgroundColor: "#1890ff",
+                                backgroundColor: "var(--color-primary)",
                               }}
                             >
                               {member.first_name?.[0] || member.username[0]}
@@ -807,7 +807,7 @@ const Chat: React.FC = () => {
                         title={
                           <Text
                             strong
-                            style={{ fontSize: 14, color: "#172b4d" }}
+                            style={{ fontSize: 14, color: "var(--color-text-heading)" }}
                           >
                             {member.first_name && member.last_name
                               ? `${member.first_name} ${member.last_name}`
@@ -820,14 +820,14 @@ const Chat: React.FC = () => {
                               ellipsis
                               style={{
                                 fontSize: 13,
-                                color: unreadCount > 0 ? "#172b4d" : "#8c8c8c",
+                                color: unreadCount > 0 ? "var(--color-text-heading)" : "var(--color-text-muted)",
                                 fontWeight: unreadCount > 0 ? 500 : 400,
                               }}
                             >
                               {existingChat.last_message.content}
                             </Text>
                           ) : (
-                            <Text style={{ fontSize: 13, color: "#8c8c8c" }}>
+                            <Text style={{ fontSize: 13, color: "var(--color-text-muted)" }}>
                               Click to start chatting
                             </Text>
                           )
@@ -864,9 +864,9 @@ const Chat: React.FC = () => {
                       style={{
                         padding: "12px 16px",
                         cursor: "pointer",
-                        backgroundColor: isActive ? "#f0f5ff" : "transparent",
+                        backgroundColor: isActive ? "var(--color-primary-light)" : "transparent",
                         borderLeft: isActive
-                          ? "3px solid #1890ff"
+                          ? "3px solid var(--color-primary)"
                           : "3px solid transparent",
                         transition: "all 0.2s",
                       }}
@@ -897,12 +897,12 @@ const Chat: React.FC = () => {
                           >
                             <Text
                               strong
-                              style={{ fontSize: 14, color: "#172b4d" }}
+                              style={{ fontSize: 14, color: "var(--color-text-heading)" }}
                             >
                               {room.ticket_key || room.display_name}
                             </Text>
                             {room.last_message && (
-                              <Text style={{ fontSize: 11, color: "#8c8c8c" }}>
+                              <Text style={{ fontSize: 11, color: "var(--color-text-muted)" }}>
                                 {formatTime(room.last_message.created_at)}
                               </Text>
                             )}
@@ -915,7 +915,7 @@ const Chat: React.FC = () => {
                                 ellipsis
                                 style={{
                                   fontSize: 12,
-                                  color: "#595959",
+                                  color: "var(--color-text-secondary)",
                                   display: "block",
                                 }}
                               >
@@ -927,7 +927,7 @@ const Chat: React.FC = () => {
                               style={{
                                 fontSize: 13,
                                 color:
-                                  room.unread_count > 0 ? "#172b4d" : "#8c8c8c",
+                                  room.unread_count > 0 ? "var(--color-text-heading)" : "var(--color-text-muted)",
                                 fontWeight: room.unread_count > 0 ? 500 : 400,
                               }}
                             >
@@ -969,15 +969,15 @@ const Chat: React.FC = () => {
               flex: 1,
               display: "flex",
               flexDirection: "column",
-              backgroundColor: "#fff",
+              backgroundColor: "var(--color-bg-surface)",
             }}
           >
             {/* Chat Header */}
             <div
               style={{
                 padding: "12px 24px",
-                borderBottom: "1px solid #e8e8e8",
-                backgroundColor: "#fafafa",
+                borderBottom: "1px solid var(--color-border)",
+                backgroundColor: "var(--color-bg-sidebar)",
               }}
             >
               <Space size={12}>
@@ -986,15 +986,15 @@ const Chat: React.FC = () => {
                   icon={<UserOutlined />}
                   style={{
                     backgroundColor:
-                      activeRoom.type === "group" ? "#52c41a" : "#1890ff",
+                      activeRoom.type === "group" ? "#52c41a" : "var(--color-primary)",
                   }}
                 />
                 <div>
-                  <Text strong style={{ fontSize: 15, color: "#172b4d" }}>
+                  <Text strong style={{ fontSize: 15, color: "var(--color-text-heading)" }}>
                     {activeRoom.display_name}
                   </Text>
                   <br />
-                  <Text style={{ fontSize: 12, color: "#8c8c8c" }}>
+                  <Text style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
                     {activeRoom.type === "group"
                       ? `${activeRoom.participants.length} members`
                       : "Direct message"}
@@ -1011,7 +1011,7 @@ const Chat: React.FC = () => {
                 flex: 1,
                 overflowY: "auto",
                 padding: "24px",
-                backgroundColor: "#f9fafb",
+                backgroundColor: "var(--color-bg-inset)",
                 display: "flex",
                 flexDirection: "column-reverse", // Key: renders from bottom up
               }}
@@ -1049,7 +1049,7 @@ const Chat: React.FC = () => {
                               type="secondary"
                               style={{
                                 fontSize: 12,
-                                backgroundColor: "#f0f0f0",
+                                backgroundColor: "var(--color-bg-content)",
                                 padding: "6px 16px",
                                 borderRadius: 12,
                               }}
@@ -1081,7 +1081,7 @@ const Chat: React.FC = () => {
                                 size={32}
                                 icon={<UserOutlined />}
                                 style={{
-                                  backgroundColor: "#1890ff",
+                                  backgroundColor: "var(--color-primary)",
                                   flexShrink: 0,
                                 }}
                               />
@@ -1091,11 +1091,11 @@ const Chat: React.FC = () => {
                                 style={{
                                   padding:
                                     msg.type !== "text" ? "4px" : "10px 14px",
-                                  backgroundColor: isMine ? "#1890ff" : "#fff",
+                                  backgroundColor: isMine ? "var(--color-chat-mine)" : "var(--color-chat-other-bg)",
                                   borderRadius: isMine
                                     ? "12px 12px 2px 12px"
                                     : "12px 12px 12px 2px",
-                                  border: isMine ? "none" : "1px solid #e8e8e8",
+                                  border: isMine ? "none" : "1px solid var(--color-chat-other-border)",
                                   boxShadow: isMine
                                     ? "none"
                                     : "0 1px 2px rgba(0,0,0,0.05)",
@@ -1104,7 +1104,7 @@ const Chat: React.FC = () => {
                                 {msg.type === "text" && (
                                   <Text
                                     style={{
-                                      color: isMine ? "#fff" : "#172b4d",
+                                      color: isMine ? "var(--color-chat-mine-text)" : "var(--color-text-heading)",
                                       fontSize: 14,
                                       lineHeight: "20px",
                                       wordBreak: "break-word",
@@ -1119,7 +1119,7 @@ const Chat: React.FC = () => {
                                     {msg.content && (
                                       <Text
                                         style={{
-                                          color: isMine ? "#fff" : "#172b4d",
+                                          color: isMine ? "var(--color-chat-mine-text)" : "var(--color-text-heading)",
                                           fontSize: 14,
                                           display: "block",
                                           padding: "6px 10px",
@@ -1159,14 +1159,14 @@ const Chat: React.FC = () => {
                                     <FileOutlined
                                       style={{
                                         fontSize: 24,
-                                        color: isMine ? "#fff" : "#1890ff",
+                                        color: isMine ? "var(--color-chat-mine-text)" : "var(--color-primary)",
                                       }}
                                     />
                                     <div style={{ flex: 1 }}>
                                       <Text
                                         strong
                                         style={{
-                                          color: isMine ? "#fff" : "#172b4d",
+                                          color: isMine ? "var(--color-chat-mine-text)" : "var(--color-text-heading)",
                                           fontSize: 14,
                                           display: "block",
                                         }}
@@ -1178,7 +1178,7 @@ const Chat: React.FC = () => {
                                           style={{
                                             color: isMine
                                               ? "rgba(255,255,255,0.8)"
-                                              : "#8c8c8c",
+                                              : "var(--color-text-muted)",
                                             fontSize: 12,
                                           }}
                                         >
@@ -1200,7 +1200,7 @@ const Chat: React.FC = () => {
                                         )
                                       }
                                       style={{
-                                        color: isMine ? "#fff" : "#1890ff",
+                                        color: isMine ? "var(--color-chat-mine-text)" : "var(--color-primary)",
                                       }}
                                     />
                                   </div>
@@ -1237,11 +1237,11 @@ const Chat: React.FC = () => {
                                         size="small"
                                         style={{
                                           backgroundColor: hasUserReacted
-                                            ? "#1890ff"
-                                            : "#f0f0f0",
+                                            ? "var(--color-primary)"
+                                            : "var(--color-bg-content)",
                                           color: hasUserReacted
-                                            ? "#fff"
-                                            : "#595959",
+                                            ? "var(--color-chat-mine-text)"
+                                            : "var(--color-text-secondary)",
                                         }}
                                       >
                                         <div
@@ -1260,11 +1260,11 @@ const Chat: React.FC = () => {
                                           style={{
                                             padding: "2px 8px",
                                             backgroundColor: hasUserReacted
-                                              ? "#e6f7ff"
-                                              : "#fafafa",
+                                              ? "var(--color-primary-light)"
+                                              : "var(--color-bg-sidebar)",
                                             border: `1px solid ${
                                               hasUserReacted
-                                                ? "#1890ff"
+                                                ? "var(--color-primary)"
                                                 : "#d9d9d9"
                                             }`,
                                             borderRadius: 12,
@@ -1292,7 +1292,7 @@ const Chat: React.FC = () => {
                                 <Text
                                   style={{
                                     fontSize: 11,
-                                    color: "#8c8c8c",
+                                    color: "var(--color-text-muted)",
                                     textAlign: isMine ? "right" : "left",
                                   }}
                                 >
@@ -1324,15 +1324,15 @@ const Chat: React.FC = () => {
                                   <SmileOutlined
                                     style={{
                                       fontSize: 14,
-                                      color: "#8c8c8c",
+                                      color: "var(--color-text-muted)",
                                       cursor: "pointer",
                                       transition: "color 0.2s",
                                     }}
                                     onMouseEnter={(e) =>
-                                      (e.currentTarget.style.color = "#1890ff")
+                                      (e.currentTarget.style.color = "var(--color-primary)")
                                     }
                                     onMouseLeave={(e) =>
-                                      (e.currentTarget.style.color = "#8c8c8c")
+                                      (e.currentTarget.style.color = "var(--color-text-muted)")
                                     }
                                   />
                                 </Popover>
@@ -1348,7 +1348,7 @@ const Chat: React.FC = () => {
                   {/* No more messages indicator */}
                   {!hasMoreMessages && messages.length > 0 && (
                     <div style={{ textAlign: "center", padding: "12px 0" }}>
-                      <Text style={{ color: "#8c8c8c", fontSize: 12 }}>
+                      <Text style={{ color: "var(--color-text-muted)", fontSize: 12 }}>
                         Beginning of conversation
                       </Text>
                     </div>
@@ -1361,7 +1361,7 @@ const Chat: React.FC = () => {
                       <Text
                         style={{
                           marginLeft: 8,
-                          color: "#8c8c8c",
+                          color: "var(--color-text-muted)",
                           fontSize: 12,
                         }}
                       >
@@ -1379,12 +1379,12 @@ const Chat: React.FC = () => {
             {/* Typing Indicator */}
             {typingUsers.size > 0 && (
               <div
-                style={{ padding: "0 24px 8px", backgroundColor: "#f9fafb" }}
+                style={{ padding: "0 24px 8px", backgroundColor: "var(--color-bg-inset)" }}
               >
                 <Text
                   style={{
                     fontSize: 12,
-                    color: "#8c8c8c",
+                    color: "var(--color-text-muted)",
                     fontStyle: "italic",
                   }}
                 >
@@ -1397,8 +1397,8 @@ const Chat: React.FC = () => {
             <div
               style={{
                 padding: "16px 24px",
-                borderTop: "1px solid #e8e8e8",
-                backgroundColor: "#fff",
+                borderTop: "1px solid var(--color-border)",
+                backgroundColor: "var(--color-bg-surface)",
               }}
             >
               {uploadFile && (
@@ -1406,7 +1406,7 @@ const Chat: React.FC = () => {
                   style={{
                     marginBottom: 8,
                     padding: "8px 12px",
-                    backgroundColor: "#f0f5ff",
+                    backgroundColor: "var(--color-primary-light)",
                     borderRadius: 8,
                     display: "flex",
                     alignItems: "center",
@@ -1414,7 +1414,7 @@ const Chat: React.FC = () => {
                   }}
                 >
                   <Space>
-                    <FileOutlined style={{ color: "#1890ff" }} />
+                    <FileOutlined style={{ color: "var(--color-primary)" }} />
                     <Text style={{ fontSize: 13 }}>{uploadFile.name}</Text>
                     <Text type="secondary" style={{ fontSize: 12 }}>
                       ({(uploadFile.size / 1024).toFixed(1)} KB)
@@ -1460,7 +1460,7 @@ const Chat: React.FC = () => {
                       style={{
                         color:
                           (messageInput.trim() || uploadFile) && !uploading
-                            ? "#1890ff"
+                            ? "var(--color-primary)"
                             : "#d9d9d9",
                         cursor:
                           (messageInput.trim() || uploadFile) && !uploading

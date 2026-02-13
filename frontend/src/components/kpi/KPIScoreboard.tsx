@@ -18,6 +18,7 @@ import {
   ReloadOutlined,
   CrownOutlined,
 } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 import { useProject } from '../../contexts/AppContext';
 import kpiService from '../../services/kpi.service';
 import type { ScoreboardResponse, UserKPIScore } from '../../types/kpi';
@@ -26,6 +27,8 @@ import dayjs from 'dayjs';
 const { Text } = Typography;
 
 const KPIScoreboard: React.FC = () => {
+  const { t } = useTranslation('dashboard');
+  const { t: tCommon } = useTranslation('common');
   const { selectedProject } = useProject();
   const [data, setData] = useState<ScoreboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -54,7 +57,7 @@ const KPIScoreboard: React.FC = () => {
   }, [fetchData]);
 
   if (!selectedProject) {
-    return <Empty description="Please select a project" />;
+    return <Empty description={t('kpi.selectProject')} />;
   }
 
   const getRankIcon = (rank: number) => {
@@ -80,14 +83,14 @@ const KPIScoreboard: React.FC = () => {
   const buildColumns = (): ColumnsType<UserKPIScore> => {
     const cols: ColumnsType<UserKPIScore> = [
       {
-        title: '#',
+        title: t('kpi.rank'),
         key: 'rank',
         width: 50,
         align: 'center',
         render: (_, record) => getRankIcon(record.rank),
       },
       {
-        title: 'Member',
+        title: t('kpi.member'),
         key: 'member',
         width: 180,
         render: (_, record) => (
@@ -99,7 +102,7 @@ const KPIScoreboard: React.FC = () => {
         ),
       },
       {
-        title: 'Score',
+        title: t('kpi.score'),
         key: 'total_score',
         width: 200,
         sorter: (a, b) => a.total_score - b.total_score,
@@ -132,7 +135,7 @@ const KPIScoreboard: React.FC = () => {
       for (const ind of data.active_indicators) {
         cols.push({
           title: (
-            <Tooltip title={`Weight: ${ind.weight} | ${ind.higher_is_better ? '↑ Higher is better' : '↓ Lower is better'}`}>
+            <Tooltip title={`${t('kpi.weightLabel', { weight: ind.weight })} | ${ind.higher_is_better ? `↑ ${t('kpi.higherIsBetter')}` : `↓ ${t('kpi.lowerIsBetter')}`}`}>
               <span style={{ fontSize: 12 }}>{ind.name}</span>
             </Tooltip>
           ),
@@ -190,13 +193,13 @@ const KPIScoreboard: React.FC = () => {
               disabledDate={(current) => current && current > dayjs().endOf('month')}
             />
             <Button icon={<ReloadOutlined />} onClick={fetchData} loading={loading}>
-              Refresh
+              {tCommon('btn.refresh')}
             </Button>
             {data && (
               <Space>
                 <Tag>{data.config_name}</Tag>
                 <Text type="secondary">
-                  {data.team_size} members | {data.active_indicators.length} indicators | {data.total_weight} total weight
+                  {t('kpi.members', { count: data.team_size })} | {t('kpi.indicatorsCount', { count: data.active_indicators.length })} | {t('kpi.totalWeight', { count: data.total_weight })}
                 </Text>
               </Space>
             )}
@@ -209,7 +212,7 @@ const KPIScoreboard: React.FC = () => {
             title={
               <Space>
                 <TrophyOutlined style={{ color: '#faad14' }} />
-                <span>Team Scoreboard</span>
+                <span>{t('kpi.teamScoreboard')}</span>
               </Space>
             }
           >
@@ -225,7 +228,7 @@ const KPIScoreboard: React.FC = () => {
         ) : (
           !loading && (
             <Card>
-              <Empty description="No KPI configuration found. A superadmin must configure KPI indicators first." />
+              <Empty description={t('kpi.noConfig')} />
             </Card>
           )
         )}

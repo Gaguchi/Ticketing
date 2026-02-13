@@ -16,6 +16,7 @@ import {
 import {
   SaveOutlined,
 } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 import { useProject } from '../../contexts/AppContext';
 import kpiService from '../../services/kpi.service';
 import type { AvailableIndicator, KPIConfigSavePayload, IndicatorConfigMeta } from '../../types/kpi';
@@ -93,6 +94,8 @@ function collapsedSummary(config: IndicatorConfigMeta, value: number | null): st
 }
 
 const KPIBuilder: React.FC = () => {
+  const { t } = useTranslation('dashboard');
+
   const { selectedProject } = useProject();
   const [indicators, setIndicators] = useState<IndicatorRow[]>([]);
   const [configName, setConfigName] = useState('Default KPI Configuration');
@@ -137,7 +140,7 @@ const KPIBuilder: React.FC = () => {
       setIndicators(rows);
     } catch (error) {
       console.error('Failed to load KPI builder data:', error);
-      message.error('Failed to load KPI configuration');
+      message.error(t('kpi.configLoadFailed'));
     } finally {
       setLoading(false);
     }

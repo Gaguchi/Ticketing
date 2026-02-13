@@ -392,16 +392,16 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
                     fontSize: "12px",
                     height: "28px",
                     padding: "0 12px",
-                    border: "1px solid #dfe1e6",
+                    border: "1px solid var(--color-border)",
                     borderRadius: "6px",
                     transition: "all 0.3s",
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = "#4096ff";
-                    e.currentTarget.style.backgroundColor = "#f0f7ff";
+                    e.currentTarget.style.borderColor = "var(--color-primary)";
+                    e.currentTarget.style.backgroundColor = "var(--color-primary-light)";
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = "#dfe1e6";
+                    e.currentTarget.style.borderColor = "var(--color-border)";
                     e.currentTarget.style.backgroundColor = "transparent";
                   }}
                 >
@@ -430,17 +430,17 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
               autoSize={{ minRows: 2, maxRows: 6 }}
               style={{
                 fontSize: "14px",
-                color: "#172b4d",
-                border: "2px solid #dfe1e6",
+                color: "var(--color-text-heading)",
+                border: "2px solid var(--color-border)",
                 borderRadius: "8px",
                 paddingRight: "40px",
                 transition: "border-color 0.3s",
               }}
               onFocus={(e) => {
-                e.target.style.borderColor = "#4096ff";
+                e.target.style.borderColor = "var(--color-primary)";
               }}
               onBlur={(e) => {
-                e.target.style.borderColor = "#dfe1e6";
+                e.target.style.borderColor = "var(--color-border)";
               }}
               disabled={sending}
             />
@@ -451,7 +451,7 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
                   position: "absolute",
                   right: "12px",
                   top: "8px",
-                  color: "#9E9E9E",
+                  color: "var(--color-text-muted)",
                   fontSize: "16px",
                   pointerEvents: "none",
                   opacity: newComment.trim() ? 1 : 0.5,
@@ -477,7 +477,7 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
                   padding: "2px 6px",
                   border: "1px solid #ddd",
                   borderRadius: "4px",
-                  backgroundColor: "#f5f5f5",
+                  backgroundColor: "var(--color-bg-inset)",
                   fontSize: "11px",
                 }}
               >
@@ -489,7 +489,7 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
                   padding: "2px 6px",
                   border: "1px solid #ddd",
                   borderRadius: "4px",
-                  backgroundColor: "#f5f5f5",
+                  backgroundColor: "var(--color-bg-inset)",
                   fontSize: "11px",
                 }}
               >
@@ -519,7 +519,7 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
         <div
           style={{
             fontSize: "12px",
-            color: "#9E9E9E",
+            color: "var(--color-text-muted)",
             fontStyle: "italic",
             marginBottom: "12px",
             paddingLeft: "44px",
@@ -563,29 +563,29 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
                     width: "100%",
                     display: "flex",
                     gap: "12px",
-                    backgroundColor: "#fff",
+                    backgroundColor: "var(--color-bg-surface)",
                     borderRadius: "12px",
                     padding: "16px",
-                    border: "1px solid #f0f0f0",
+                    border: "1px solid var(--color-border-light)",
                     boxShadow: "0 1px 2px rgba(0, 0, 0, 0.04)",
                     transition: "all 0.3s",
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.boxShadow =
                       "0 4px 12px rgba(0, 0, 0, 0.08)";
-                    e.currentTarget.style.borderColor = "#e6e6e6";
+                    e.currentTarget.style.borderColor = "var(--color-border)";
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.boxShadow =
                       "0 1px 2px rgba(0, 0, 0, 0.04)";
-                    e.currentTarget.style.borderColor = "#f0f0f0";
+                    e.currentTarget.style.borderColor = "var(--color-border-light)";
                   }}
                 >
                   {/* Avatar */}
                   <Avatar
                     size={40}
                     style={{
-                      backgroundColor: "#4096ff",
+                      backgroundColor: "var(--color-primary)",
                       flexShrink: 0,
                       fontSize: "16px",
                       fontWeight: 600,
@@ -616,7 +616,7 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
                         <span
                           style={{
                             fontWeight: 600,
-                            color: "#172b4d",
+                            color: "var(--color-text-heading)",
                             fontSize: "14px",
                           }}
                         >
@@ -630,7 +630,7 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
                           <span
                             style={{
                               fontSize: "12px",
-                              color: "#9E9E9E",
+                              color: "var(--color-text-muted)",
                             }}
                           >
                             {dayjs(comment.created_at).fromNow()}
@@ -640,8 +640,8 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
                           <span
                             style={{
                               fontSize: "11px",
-                              color: "#9E9E9E",
-                              backgroundColor: "#f5f5f5",
+                              color: "var(--color-text-muted)",
+                              backgroundColor: "var(--color-bg-inset)",
                               padding: "2px 6px",
                               borderRadius: "4px",
                             }}
@@ -683,7 +683,7 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
                             size="small"
                             icon={<MoreOutlined />}
                             style={{
-                              color: "#9E9E9E",
+                              color: "var(--color-text-muted)",
                               opacity: 0.6,
                               transition: "opacity 0.3s",
                             }}
@@ -708,7 +708,7 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
                           style={{
                             marginBottom: "8px",
                             borderRadius: "8px",
-                            border: "2px solid #4096ff",
+                            border: "2px solid var(--color-primary)",
                           }}
                           autoFocus
                         />
@@ -753,14 +753,14 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
                       <div
                         style={{
                           fontSize: "14px",
-                          color: "#172b4d",
+                          color: "var(--color-text-heading)",
                           whiteSpace: "pre-wrap",
                           wordBreak: "break-word",
                           lineHeight: "1.6",
-                          backgroundColor: "#fafbfc",
+                          backgroundColor: "var(--color-bg-sidebar)",
                           padding: "12px",
                           borderRadius: "8px",
-                          border: "1px solid #f0f0f0",
+                          border: "1px solid var(--color-border-light)",
                         }}
                       >
                         {comment.content}

@@ -22,11 +22,14 @@ import {
 } from "@ant-design/icons";
 import { invitationService } from "../services";
 import { useAuth } from "../contexts/AppContext";
+import { useTranslation } from "react-i18next";
 import type { CheckInvitationResponse } from "../services";
 
 const { Title, Paragraph, Text } = Typography;
 
 export const AcceptInvitationPage: React.FC = () => {
+  const { t } = useTranslation('settings');
+  const { t: tCommon } = useTranslation('common');
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
@@ -115,7 +118,7 @@ export const AcceptInvitationPage: React.FC = () => {
           <div style={{ textAlign: "center", padding: "40px 20px" }}>
             <Spin size="large" />
             <Paragraph style={{ marginTop: 16, color: "#666" }}>
-              Loading invitation...
+              {t('acceptInvitation.accepting')}
             </Paragraph>
           </div>
         </Card>
@@ -137,11 +140,11 @@ export const AcceptInvitationPage: React.FC = () => {
         <Card style={{ maxWidth: 500, width: "100%", margin: 20 }}>
           <Result
             status="success"
-            title="Welcome to the Team!"
+            title={t('acceptInvitation.msg.success')}
             subTitle={
               invitation
                 ? `You've been added to ${invitation.project_name}`
-                : "You have successfully joined the project"
+                : t('acceptInvitation.msg.success')
             }
             extra={[
               <Button
@@ -149,7 +152,7 @@ export const AcceptInvitationPage: React.FC = () => {
                 key="dashboard"
                 onClick={() => navigate("/dashboard")}
               >
-                Go to Dashboard
+                {tCommon('nav.dashboard')}
               </Button>,
             ]}
           />
@@ -172,11 +175,11 @@ export const AcceptInvitationPage: React.FC = () => {
         <Card style={{ maxWidth: 500, width: "100%", margin: 20 }}>
           <Result
             status="error"
-            title="Invalid Invitation"
-            subTitle={error || "This invitation link is invalid or has expired"}
+            title={t('acceptInvitation.msg.failed')}
+            subTitle={error || t('acceptInvitation.msg.failed')}
             extra={[
               <Button type="primary" key="home" onClick={() => navigate("/")}>
-                Go Home
+                {tCommon('btn.back')}
               </Button>,
             ]}
           />
@@ -199,11 +202,11 @@ export const AcceptInvitationPage: React.FC = () => {
         <Card style={{ maxWidth: 500, width: "100%", margin: 20 }}>
           <Result
             status="warning"
-            title="Invitation Expired"
+            title={t('acceptInvitation.msg.failed')}
             subTitle={`This invitation is ${invitation.status}. Please contact the project admin for a new invitation.`}
             extra={[
               <Button type="primary" key="home" onClick={() => navigate("/")}>
-                Go Home
+                {tCommon('btn.back')}
               </Button>,
             ]}
           />
@@ -226,7 +229,7 @@ export const AcceptInvitationPage: React.FC = () => {
         <div style={{ textAlign: "center", marginBottom: 24 }}>
           <TeamOutlined style={{ fontSize: 48, color: "#0052cc" }} />
           <Title level={2} style={{ marginTop: 16, marginBottom: 8 }}>
-            You're Invited!
+            {t('acceptInvitation.title')}
           </Title>
           <Text type="secondary">
             {invitation.invited_by
@@ -241,16 +244,16 @@ export const AcceptInvitationPage: React.FC = () => {
           size="small"
           style={{ marginBottom: 24 }}
         >
-          <Descriptions.Item label="Project">
+          <Descriptions.Item label={tCommon('field.project')}>
             <Text strong>{invitation.project_name}</Text>
             <Tag color="blue" style={{ marginLeft: 8 }}>
               {invitation.project_key}
             </Tag>
           </Descriptions.Item>
-          <Descriptions.Item label="Role">
+          <Descriptions.Item label={tCommon('col.role')}>
             <Tag color="green">{invitation.role}</Tag>
           </Descriptions.Item>
-          <Descriptions.Item label="Invited Email">
+          <Descriptions.Item label={tCommon('col.email')}>
             {invitation.email}
           </Descriptions.Item>
           <Descriptions.Item label="Expires">
@@ -267,8 +270,8 @@ export const AcceptInvitationPage: React.FC = () => {
 
         {!isAuthenticated && (
           <Alert
-            message="Login Required"
-            description="You need to be logged in to accept this invitation. Please login or create an account."
+            message={tCommon('auth.login')}
+            description={tCommon('auth.login')}
             type="info"
             showIcon
             style={{ marginBottom: 16 }}
@@ -291,10 +294,10 @@ export const AcceptInvitationPage: React.FC = () => {
           {!isAuthenticated ? (
             <>
               <Button type="primary" size="large" onClick={handleLogin}>
-                Login to Accept
+                {tCommon('auth.login')}
               </Button>
               <Button size="large" onClick={() => navigate("/register")}>
-                Create Account
+                {tCommon('auth.signUp')}
               </Button>
             </>
           ) : user &&
@@ -306,7 +309,7 @@ export const AcceptInvitationPage: React.FC = () => {
               onClick={handleAccept}
               loading={accepting}
             >
-              Accept Invitation
+              {t('acceptInvitation.title')}
             </Button>
           ) : (
             <Alert

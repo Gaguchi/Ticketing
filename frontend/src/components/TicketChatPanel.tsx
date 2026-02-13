@@ -475,7 +475,7 @@ export const TicketChatPanel: React.FC<TicketChatPanelProps> = ({
     return (
       <div className="ticket-chat-panel ticket-chat-empty">
         <Empty
-          image={<MessageOutlined style={{ fontSize: 64, color: "#d9d9d9" }} />}
+          image={<MessageOutlined style={{ fontSize: 64, color: "var(--color-border)" }} />}
           description={
             <div>
               <Text
@@ -599,7 +599,7 @@ export const TicketChatPanel: React.FC<TicketChatPanelProps> = ({
                       {msg.user.id !== user?.id && (
                         <Avatar
                           size={32}
-                          style={{ backgroundColor: "#1890ff" }}
+                          style={{ backgroundColor: "var(--color-primary)" }}
                         >
                           {msg.user.first_name?.[0] || msg.user.username[0]}
                         </Avatar>

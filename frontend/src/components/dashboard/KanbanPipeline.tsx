@@ -6,6 +6,7 @@
 
 import React from "react";
 import { Card, Tooltip, Spin, Empty } from "antd";
+import { useTranslation } from "react-i18next";
 import type { KanbanSummary } from "../../types/dashboard";
 
 interface Props {
@@ -19,6 +20,7 @@ const KanbanPipeline: React.FC<Props> = ({
   loading = false,
   onColumnClick,
 }) => {
+  const { t } = useTranslation('dashboard');
   if (loading) {
     return (
       <Card
@@ -50,7 +52,7 @@ const KanbanPipeline: React.FC<Props> = ({
       >
         <Empty
           image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description="No workflow data"
+          description={t('kanban.noWorkflowData')}
         />
       </Card>
     );
@@ -81,9 +83,9 @@ const KanbanPipeline: React.FC<Props> = ({
           marginBottom: 12,
         }}
       >
-        <span style={{ fontWeight: 600, fontSize: 13 }}>Pipeline</span>
-        <span style={{ fontSize: 11, color: "#8c8c8c" }}>
-          {data.total_tickets} tickets
+        <span style={{ fontWeight: 600, fontSize: 13 }}>{t('pipeline.pipeline')}</span>
+        <span style={{ fontSize: 11, color: "var(--color-text-muted)" }}>
+          {t('pipeline.tickets', { count: data.total_tickets })}
         </span>
       </div>
 
@@ -117,9 +119,7 @@ const KanbanPipeline: React.FC<Props> = ({
           return (
             <Tooltip
               key={column.id}
-              title={`${column.name}: ${column.ticket_count} ticket${
-                column.ticket_count !== 1 ? "s" : ""
-              } (${Math.round(percentage)}%)`}
+              title={`${t('kanban.ticketTooltip', { name: column.name, count: column.ticket_count })} (${Math.round(percentage)}%)`}
             >
               <div
                 onClick={() => onColumnClick?.(column.id)}
@@ -133,7 +133,7 @@ const KanbanPipeline: React.FC<Props> = ({
                 {/* Funnel stage bar */}
                 <div
                   style={{
-                    backgroundColor: column.color || "#1890ff",
+                    backgroundColor: column.color || "var(--color-primary)",
                     padding: "8px 12px",
                     display: "flex",
                     justifyContent: "space-between",
@@ -200,17 +200,17 @@ const KanbanPipeline: React.FC<Props> = ({
         }}
       >
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: "#1890ff" }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--color-primary)" }}>
             {data.columns
               .filter((c) => c.name.toLowerCase() !== "done")
               .reduce((sum, c) => sum + c.ticket_count, 0)}
           </div>
-          <div style={{ fontSize: 10, color: "#8c8c8c" }}>Active</div>
+          <div style={{ fontSize: 10, color: "var(--color-text-muted)" }}>{t('pipeline.active')}</div>
         </div>
         <div
           style={{
             width: 1,
-            backgroundColor: "#f0f0f0",
+            backgroundColor: "var(--color-border-light)",
           }}
         />
         <div style={{ textAlign: "center" }}>
@@ -218,7 +218,7 @@ const KanbanPipeline: React.FC<Props> = ({
             {data.columns.find((c) => c.name.toLowerCase() === "done")
               ?.ticket_count || 0}
           </div>
-          <div style={{ fontSize: 10, color: "#8c8c8c" }}>Done</div>
+          <div style={{ fontSize: 10, color: "var(--color-text-muted)" }}>{t('pipeline.done')}</div>
         </div>
       </div>
 

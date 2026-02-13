@@ -351,10 +351,10 @@ export const QuickTicketCreator: React.FC<QuickTicketCreatorProps> = ({
                       allowClear={false}
                       disabled={isCreating}
                       suffixIcon={<CalendarOutlined />}
-                      getPopupContainer={() => document.body}
+                      getPopupContainer={() => containerRef.current || document.body}
                       className="quick-ticket-datepicker-input"
                       popupClassName="quick-ticket-datepicker-popup"
-                      placement="topLeft"
+                      placement="bottomLeft"
                     />
                   </Tooltip>
                 </div>

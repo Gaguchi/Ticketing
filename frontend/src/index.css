@@ -26,7 +26,7 @@ code {
 /* Modal styling */
 .ant-modal-header {
   padding: 16px 24px;
-  background-color: #F5F5F5;
+  background-color: var(--color-bg-inset);
 }
 
 .ant-modal-body {
@@ -35,7 +35,7 @@ code {
 
 .ant-modal-footer {
   padding: 16px 24px;
-  background-color: #FAFAFA;
+  background-color: var(--color-bg-sidebar);
 }
 
 .ant-modal-title {
@@ -46,21 +46,21 @@ code {
 
 /* Pagination active item styling */
 .ant-pagination-item-active {
-  background-color: #1890ff !important;
-  border-color: #1890ff !important;
+  background-color: var(--color-primary) !important;
+  border-color: var(--color-primary) !important;
 }
 
 .ant-pagination-item-active a {
-  color: #ffffff !important;
+  color: var(--color-bg-surface) !important;
 }
 
 .ant-pagination-item-active:hover {
-  background-color: #40a9ff !important;
-  border-color: #40a9ff !important;
+  background-color: var(--color-primary-hover) !important;
+  border-color: var(--color-primary-hover) !important;
 }
 
 .ant-pagination-item-active:hover a {
-  color: #ffffff !important;
+  color: var(--color-bg-surface) !important;
 }
 
 /* Company logo avatar styling */
@@ -71,7 +71,7 @@ code {
 /* Thin scrollbar for kanban columns */
 .kanban-column__scroll {
   scrollbar-width: thin;
-  scrollbar-color: #c1c7d0 transparent;
+  scrollbar-color: var(--color-scrollbar) transparent;
 }
 
 .kanban-column__scroll::-webkit-scrollbar {
@@ -83,10 +83,10 @@ code {
 }
 
 .kanban-column__scroll::-webkit-scrollbar-thumb {
-  background-color: #c1c7d0;
+  background-color: var(--color-scrollbar);
   border-radius: 3px;
 }
 
 .kanban-column__scroll::-webkit-scrollbar-thumb:hover {
-  background-color: #a5adba;
+  background-color: var(--color-scrollbar-hover);
 }

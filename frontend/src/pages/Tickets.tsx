@@ -42,6 +42,7 @@ import { TicketModal } from "../components/TicketModal";
 import { CreateTicketModal } from "../components/CreateTicketModal";
 import { CompanyFilterBar } from "../components/dashboard";
 import { useProject } from "../contexts/AppContext";
+import { useTranslation } from "react-i18next";
 import { ticketService, statusService } from "../services";
 import dashboardService from "../services/dashboard.service";
 import type { Ticket, TicketColumn, BoardColumn } from "../types/api";
@@ -80,6 +81,8 @@ const formatTicketId = (ticket: Ticket) => {
 };
 
 const Tickets: React.FC = () => {
+  const { t } = useTranslation('tickets');
+  const { t: tCommon } = useTranslation('common');
   const [viewMode, setViewMode] = useState<
     "list" | "kanban" | "deadline" | "archive" | "calendar"
   >(() => {
@@ -170,9 +173,7 @@ const Tickets: React.FC = () => {
         if (kanbanData.board_columns && kanbanData.board_columns.length > 0) {
           setBoardColumns(kanbanData.board_columns);
         } else if (!kanbanData.columns || kanbanData.columns.length === 0) {
-          message.warning(
-            `Project "${selectedProject.name}" has no columns. Please set up columns first.`,
-          );
+          message.warning(t('msg.noColumnsWarning'));
         }
 
         setKanbanColumns(kanbanData.columns || []);
@@ -184,7 +185,7 @@ const Tickets: React.FC = () => {
         );
       } catch (error: any) {
         console.error("Failed to fetch data:", error);
-        message.error("Failed to load tickets");
+        message.error(t('msg.failedLoad'));
       } finally {
         setLoading(false);
         fetchInProgressRef.current = false;
@@ -374,7 +375,7 @@ const Tickets: React.FC = () => {
       setSelectedTicket(fullTicket);
     } catch (error: any) {
       console.error("Failed to fetch ticket details:", error);
-      message.error("Failed to load ticket details");
+      message.error(tCommon('msg.error.loadFailed'));
     }
   }, []);
 
@@ -389,7 +390,7 @@ const Tickets: React.FC = () => {
     const column = kanbanColumns.find((c) => c.id === newColumnId);
 
     if (!ticket || !column) {
-      message.error("Failed to update ticket");
+      message.error(t('msg.failedUpdate'));
       return;
     }
 
@@ -487,7 +488,7 @@ const Tickets: React.FC = () => {
         );
       }
 
-      message.error("Failed to update ticket - changes reverted");
+      message.error(t('msg.failedUpdateReverted'));
     } finally {
       recentTicketUpdatesRef.current.set(ticketId, Date.now());
       lastMoveTimeRef.current = Date.now();
@@ -589,7 +590,7 @@ const Tickets: React.FC = () => {
         // a page refresh will sync with server state if needed
         console.error("[Tickets] Background move failed:", error);
         // Optionally show a non-blocking notification
-        message.warning("Move may not have saved - will retry on next action");
+        message.warning(t('msg.moveRetryWarning'));
       });
 
     // Update tracking refs (outside setTickets to avoid stale closure)
@@ -599,7 +600,7 @@ const Tickets: React.FC = () => {
 
   const columns: TableColumnsType<Ticket> = [
     {
-      title: "Work",
+      title: t('col.work'),
       key: "work",
       width: 400,
       render: (_: any, record: Ticket) => (
@@ -622,7 +623,7 @@ const Tickets: React.FC = () => {
           />
           <span
             style={{
-              color: "#0052cc",
+              color: "var(--color-primary)",
               fontWeight: 500,
               fontSize: "14px",
               marginRight: "8px",
@@ -630,20 +631,20 @@ const Tickets: React.FC = () => {
           >
             {formatTicketId(record)}
           </span>
-          <span style={{ color: "#172b4d", fontSize: "14px" }}>
+          <span style={{ color: "var(--color-text-heading)", fontSize: "14px" }}>
             {record.name}
           </span>
         </div>
       ),
     },
     {
-      title: "Customer",
+      title: t('col.customer'),
       dataIndex: "customer",
       key: "customer",
       width: 180,
     },
     {
-      title: "Status",
+      title: tCommon('col.status'),
       dataIndex: "column_name",
       key: "column_name",
       width: 120,
@@ -661,19 +662,19 @@ const Tickets: React.FC = () => {
       },
     },
     {
-      title: "Priority",
+      title: tCommon('col.priority'),
       dataIndex: "priorityId",
       key: "priorityId",
       width: 100,
       render: (priorityId: number) => getPriorityIcon(priorityId),
     },
     {
-      title: "Due Date",
+      title: tCommon('col.dueDate'),
       dataIndex: "due_date",
       key: "due_date",
       width: 120,
       render: (due_date: string | null) => {
-        if (!due_date) return <span style={{ color: "#8c8c8c" }}>—</span>;
+        if (!due_date) return <span style={{ color: "var(--color-text-muted)" }}>--</span>;
         const dueDate = new Date(due_date);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -688,26 +689,26 @@ const Tickets: React.FC = () => {
 
         if (isOverdue) {
           color = "red";
-          text = `Overdue`;
+          text = tCommon('time.overdue');
         } else if (isToday) {
           color = "orange";
-          text = "Today";
+          text = tCommon('time.today');
         } else if (isTomorrow) {
           color = "gold";
-          text = "Tomorrow";
+          text = tCommon('time.tomorrow');
         }
 
         return <Tag color={color}>{text}</Tag>;
       },
     },
     {
-      title: "Assignees",
+      title: tCommon('col.assignees'),
       dataIndex: "assignees_detail",
       key: "assignees_detail",
       width: 150,
       render: (assignees: any[]) => {
         if (!assignees || assignees.length === 0) {
-          return <span style={{ color: "#8c8c8c" }}>Unassigned</span>;
+          return <span style={{ color: "var(--color-text-muted)" }}>{t('filter.unassigned')}</span>;
         }
         return (
           <Avatar.Group maxCount={3} size="small">
@@ -720,7 +721,7 @@ const Tickets: React.FC = () => {
                     : assignee.username
                 }
               >
-                <Avatar size="small" style={{ backgroundColor: "#1890ff" }}>
+                <Avatar size="small" style={{ backgroundColor: "var(--color-primary)" }}>
                   {assignee.first_name?.[0] || assignee.username?.[0] || "?"}
                 </Avatar>
               </Tooltip>
@@ -730,7 +731,7 @@ const Tickets: React.FC = () => {
       },
     },
     {
-      title: "Created",
+      title: tCommon('col.created'),
       dataIndex: "createdAt",
       key: "createdAt",
       width: 120,
@@ -782,7 +783,7 @@ const Tickets: React.FC = () => {
       setArchivedTickets(response.results);
     } catch (error: any) {
       console.error("Failed to load archived tickets", error);
-      message.error("Failed to load archive");
+      message.error(t('archive.failedLoad'));
     } finally {
       setArchiveLoading(false);
     }
@@ -819,7 +820,7 @@ const Tickets: React.FC = () => {
   const handleRestoreTicket = useCallback(async (ticketId: number) => {
     try {
       const restoredTicket = await ticketService.restoreTicket(ticketId);
-      message.success(`${restoredTicket.ticket_key} restored`);
+      message.success(t('msg.ticketRestoredKey', { key: restoredTicket.ticket_key }));
       setArchivedTickets((prev) => prev.filter((t) => t.id !== ticketId));
       setTickets((prev) => {
         const without = prev.filter((t) => t.id !== ticketId);
@@ -827,14 +828,14 @@ const Tickets: React.FC = () => {
       });
     } catch (error: any) {
       console.error("Failed to restore ticket", error);
-      message.error("Failed to restore ticket");
+      message.error(t('msg.failedRestore'));
     }
   }, []);
 
   const archiveColumns = useMemo<TableColumnsType<Ticket>>(
     () => [
       {
-        title: "Work",
+        title: t('col.work'),
         key: "work",
         width: 420,
         render: (_: any, record: Ticket) => (
@@ -857,7 +858,7 @@ const Tickets: React.FC = () => {
             />
             <span
               style={{
-                color: "#0052cc",
+                color: "var(--color-primary)",
                 fontWeight: 500,
                 fontSize: "14px",
                 marginRight: "8px",
@@ -865,7 +866,7 @@ const Tickets: React.FC = () => {
             >
               {formatTicketId(record)}
             </span>
-            <span style={{ color: "#172b4d", fontSize: "14px" }}>
+            <span style={{ color: "var(--color-text-heading)", fontSize: "14px" }}>
               {record.name}
             </span>
           </div>
@@ -975,8 +976,8 @@ const Tickets: React.FC = () => {
           alignItems: "center",
           justifyContent: "space-between",
           padding: "16px 20px",
-          borderBottom: "1px solid #e8e8e8",
-          backgroundColor: "#fff",
+          borderBottom: "1px solid var(--color-border)",
+          backgroundColor: "var(--color-bg-surface)",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
@@ -997,7 +998,7 @@ const Tickets: React.FC = () => {
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <Input
               placeholder="Search"
-              prefix={<SearchOutlined style={{ color: "#5e6c84" }} />}
+              prefix={<SearchOutlined style={{ color: "var(--color-text-muted)" }} />}
               value={searchText}
               onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
                 setSearchText(event.target.value)
@@ -1005,8 +1006,8 @@ const Tickets: React.FC = () => {
               allowClear
               style={{
                 width: 200,
-                backgroundColor: "#f4f5f7",
-                border: "1px solid #dfe1e6",
+                backgroundColor: "var(--color-bg-inset)",
+                border: "1px solid var(--color-border)",
                 borderRadius: "3px",
               }}
               size="small"

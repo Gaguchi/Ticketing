@@ -50,14 +50,14 @@ const { Title, Text } = Typography;
 
 // --- Design System Constants ---
 const COLORS = {
-  primary: "#2C3E50",
+  primary: "var(--color-text-heading)",
   secondary: "#34495E",
   accent: "#E67E22",
-  background: "#F5F7FA", // Slightly cooler gray
-  surface: "#FFFFFF",
-  text: "#1A1A1A",
-  textSecondary: "#6B7280",
-  border: "#E5E7EB",
+  background: "var(--color-bg-content)",
+  surface: "var(--color-bg-surface)",
+  text: "var(--color-text-primary)",
+  textSecondary: "var(--color-text-secondary)",
+  border: "var(--color-border)",
 };
 
 // --- Reusable Components ---

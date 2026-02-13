@@ -7,7 +7,7 @@
 
 import type { ThemeConfig } from 'antd';
 
-export const theme: ThemeConfig = {
+export const themeV1: ThemeConfig = {
   token: {
     // ===== COLOR SYSTEM =====
     
@@ -232,4 +232,4 @@ export const theme: ThemeConfig = {
   },
 };
 
-export default theme;
+export default themeV1;

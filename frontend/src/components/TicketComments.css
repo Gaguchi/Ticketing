@@ -21,18 +21,18 @@
 }
 
 .comments-list::-webkit-scrollbar-thumb {
-  background: #dfe1e6;
+  background: var(--color-border);
   border-radius: 4px;
 }
 
 .comments-list::-webkit-scrollbar-thumb:hover {
-  background: #b3b9c4;
+  background: var(--color-scrollbar-hover);
 }
 
 /* For Firefox */
 .comments-list {
   scrollbar-width: thin;
-  scrollbar-color: #dfe1e6 transparent;
+  scrollbar-color: var(--color-border) transparent;
 }
 
 /* Comment item animations */
@@ -64,7 +64,7 @@
 
 /* Smooth focus state for textarea */
 .ant-input-textarea-affix-wrapper:focus-within {
-  border-color: #4096ff !important;
+  border-color: var(--color-primary) !important;
   box-shadow: 0 0 0 2px rgba(64, 150, 255, 0.1);
 }
 

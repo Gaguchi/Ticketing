@@ -125,7 +125,7 @@ const UserReviewModal: React.FC<UserReviewModalProps> = ({
         gap: 12, 
         marginBottom: 24,
         padding: 16,
-        backgroundColor: '#fafafa',
+        backgroundColor: 'var(--color-bg-sidebar)',
         borderRadius: 8,
       }}>
         <Avatar size={48} icon={<UserOutlined />} />

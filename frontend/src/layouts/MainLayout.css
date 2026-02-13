@@ -8,11 +8,11 @@
 }
 
 .nav-item:hover {
-  background: #e6f7ff !important;
+  background: var(--color-primary-light) !important;
 }
 
 .nav-item.active:hover {
-  background: #e6f7ff !important;
+  background: var(--color-primary-light) !important;
 }
 
 .nav-item.collapsed {
@@ -29,10 +29,10 @@
 }
 
 .modern-sider::-webkit-scrollbar-thumb {
-  background: #d9d9d9;
+  background: var(--color-scrollbar);
   border-radius: 2px;
 }
 
 .modern-sider::-webkit-scrollbar-thumb:hover {
-  background: #bfbfbf;
+  background: var(--color-scrollbar-hover);
 }

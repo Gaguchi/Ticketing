@@ -31,6 +31,8 @@ import { useWebSocketContext } from "../contexts/WebSocketContext";
 import { CreateProjectModal } from "../components/CreateProjectModal";
 import { NotificationBell } from "../components/NotificationBell";
 import { Logo, LogoIcon } from "../components/Logo";
+import LanguageSwitcher from "../components/LanguageSwitcher";
+import { useTranslation } from "react-i18next";
 import { chatService } from "../services/chat.service";
 import type { MenuProps } from "antd";
 import "./MainLayout.css";
@@ -46,6 +48,7 @@ interface NavItem {
 }
 
 const MainLayout: React.FC = () => {
+  const { t } = useTranslation('common');
   const [collapsed, setCollapsed] = useState(true);
   const [isCreateProjectModalOpen, setIsCreateProjectModalOpen] =
     useState(false);
@@ -184,43 +187,43 @@ const MainLayout: React.FC = () => {
     {
       key: "/",
       icon: <DashboardOutlined />,
-      label: "Dashboard",
+      label: t('nav.dashboard'),
       path: "/",
     },
     {
       key: "/tickets",
       icon: <InboxOutlined />,
-      label: "Tickets",
+      label: t('nav.tickets'),
       path: "/tickets",
     },
     {
       key: "/chat",
       icon: <MessageOutlined />,
-      label: "Chat",
+      label: t('nav.chat'),
       path: "/chat",
     },
     {
       key: "/companies",
       icon: <ShopOutlined />,
-      label: "Companies",
+      label: t('nav.companies'),
       path: "/companies",
     },
     {
       key: "/users",
       icon: <UsergroupAddOutlined />,
-      label: "Users",
+      label: t('nav.users'),
       path: "/users",
     },
     {
       key: "/kpi",
       icon: <BarChartOutlined />,
-      label: "KPI",
+      label: t('nav.kpi'),
       path: "/kpi",
     },
     {
       key: "/settings",
       icon: <SettingOutlined />,
-      label: "Settings",
+      label: t('nav.settings'),
       path: "/settings",
     },
   ];
@@ -229,12 +232,12 @@ const MainLayout: React.FC = () => {
     {
       key: "profile",
       icon: <UserOutlined />,
-      label: "Profile",
+      label: t('user.profile'),
     },
     {
       key: "settings",
       icon: <SettingOutlined />,
-      label: "Settings",
+      label: t('user.settings'),
     },
     {
       type: "divider",
@@ -242,7 +245,7 @@ const MainLayout: React.FC = () => {
     {
       key: "logout",
       icon: <LogoutOutlined />,
-      label: "Logout",
+      label: t('user.logout'),
       danger: true,
     },
   ];
@@ -263,8 +266,8 @@ const MainLayout: React.FC = () => {
           left: 0,
           top: 0,
           bottom: 0,
-          background: "#fafafa",
-          borderRight: "1px solid #e8e8e8",
+          background: "var(--color-bg-sidebar)",
+          borderRight: "1px solid var(--color-border)",
         }}
       >
         {/* Logo/Brand */}
@@ -275,8 +278,8 @@ const MainLayout: React.FC = () => {
             alignItems: "center",
             justifyContent: collapsed ? "center" : "flex-start",
             padding: collapsed ? "0" : "0 16px",
-            borderBottom: "1px solid #e8e8e8",
-            background: "#ffffff",
+            borderBottom: "1px solid var(--color-border)",
+            background: "var(--color-bg-surface)",
           }}
         >
           {collapsed ? <LogoIcon size={20} /> : <Logo size={20} showText />}
@@ -306,11 +309,11 @@ const MainLayout: React.FC = () => {
                   borderRadius: 2,
                   cursor: "pointer",
                   transition: "all 0.15s",
-                  background: isActive ? "#e6f7ff" : "transparent",
+                  background: isActive ? "var(--color-nav-active-bg)" : "transparent",
                   borderLeft: isActive
-                    ? "2px solid #1890ff"
+                    ? "2px solid var(--color-nav-active-border)"
                     : "2px solid transparent",
-                  color: isActive ? "#1890ff" : "#595959",
+                  color: isActive ? "var(--color-nav-active-text)" : "var(--color-text-secondary)",
                   position: "relative",
                 }}
               >
@@ -354,8 +357,8 @@ const MainLayout: React.FC = () => {
             left: 0,
             right: 0,
             padding: collapsed ? "8px 6px" : "8px",
-            borderTop: "1px solid #e8e8e8",
-            background: "#ffffff",
+            borderTop: "1px solid var(--color-border)",
+            background: "var(--color-bg-surface)",
           }}
         >
           <div
@@ -370,13 +373,13 @@ const MainLayout: React.FC = () => {
               borderRadius: 2,
               cursor: "pointer",
               transition: "all 0.15s",
-              background: "#1890ff",
-              color: "#ffffff",
+              background: "var(--color-primary)",
+              color: "var(--color-chat-mine-text)",
             }}
           >
             <PlusOutlined style={{ fontSize: collapsed ? 20 : 16 }} />
             {!collapsed && (
-              <span style={{ fontSize: 13, fontWeight: 500 }}>New Ticket</span>
+              <span style={{ fontSize: 13, fontWeight: 500 }}>{t('nav.newTicket')}</span>
             )}
           </div>
         </div>
@@ -385,17 +388,17 @@ const MainLayout: React.FC = () => {
         style={{
           marginLeft: collapsed ? 88 : 240,
           transition: "all 0.15s",
-          background: "#f0f0f0",
+          background: "var(--color-bg-content)",
         }}
       >
         <Header
           style={{
             padding: "0 16px",
-            background: "#ffffff",
+            background: "var(--color-bg-surface)",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            borderBottom: "1px solid #e8e8e8",
+            borderBottom: "1px solid var(--color-border)",
             position: "sticky",
             top: 0,
             zIndex: 10,
@@ -412,10 +415,10 @@ const MainLayout: React.FC = () => {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: "#595959",
+              color: "var(--color-text-secondary)",
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = "#f0f0f0";
+              e.currentTarget.style.background = "var(--color-bg-content)";
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.background = "transparent";
@@ -431,18 +434,18 @@ const MainLayout: React.FC = () => {
             {/* Project Selector - Show loading or data based on state */}
             {authLoading || projectLoading ? (
               <Space size="small">
-                <ProjectOutlined style={{ fontSize: 16, color: "#595959" }} />
+                <ProjectOutlined style={{ fontSize: 16, color: "var(--color-text-secondary)" }} />
                 <Select
                   loading={true}
                   disabled={true}
                   style={{ minWidth: 150 }}
                   size="small"
-                  placeholder="Loading projects..."
+                  placeholder={t('nav.loadingProjects')}
                 />
               </Space>
             ) : availableProjects.length > 0 ? (
               <Space size="small">
-                <ProjectOutlined style={{ fontSize: 16, color: "#595959" }} />
+                <ProjectOutlined style={{ fontSize: 16, color: "var(--color-text-secondary)" }} />
                 <Select
                   value={selectedProject?.id}
                   onChange={(value) => {
@@ -455,7 +458,7 @@ const MainLayout: React.FC = () => {
                   }}
                   style={{ minWidth: 150 }}
                   size="small"
-                  placeholder="Select Project"
+                  placeholder={t('nav.selectProject')}
                   options={availableProjects.map((project) => ({
                     label: `${project.key} - ${project.name}`,
                     value: project.id,
@@ -467,7 +470,7 @@ const MainLayout: React.FC = () => {
                   icon={<PlusOutlined />}
                   onClick={() => setIsCreateProjectModalOpen(true)}
                 >
-                  New Project
+                  {t('nav.newProject')}
                 </Button>
               </Space>
             ) : (
@@ -478,9 +481,11 @@ const MainLayout: React.FC = () => {
                 icon={<PlusOutlined />}
                 onClick={() => setIsCreateProjectModalOpen(true)}
               >
-                Create Your First Project
+                {t('nav.createFirstProject')}
               </Button>
             )}
+
+            <LanguageSwitcher />
 
             {/* Notification Bell */}
             <NotificationBell
@@ -498,7 +503,7 @@ const MainLayout: React.FC = () => {
                 <Avatar
                   size="small"
                   style={{
-                    background: "#1890ff",
+                    background: "var(--color-primary)",
                   }}
                   icon={<UserOutlined />}
                 />
@@ -513,7 +518,7 @@ const MainLayout: React.FC = () => {
           style={{
             padding: 0,
             minHeight: "calc(100vh - 48px)",
-            background: "#fff",
+            background: "var(--color-bg-surface)",
           }}
         >
           <Outlet />

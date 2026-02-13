@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Input,
   Avatar,
@@ -39,6 +40,8 @@ import type { User } from "../types";
 const { Text } = Typography;
 
 const Chat: React.FC = () => {
+  const { t } = useTranslation('tickets');
+  const { t: tCommon } = useTranslation('common');
   const { selectedProject } = useProject();
   const { user, logout } = useAuth();
   const { fetchChatUnreadCount } = useWebSocketContext();
@@ -216,7 +219,7 @@ const Chat: React.FC = () => {
         }
       } catch (error) {
         console.error("Failed to load chat rooms:", error);
-        antMessage.error("Failed to load conversations");
+        antMessage.error(t('msg.chatFailedLoad'));
       } finally {
         // Only set loading false on initial load
         if (isInitialLoadRef.current) {
@@ -273,7 +276,7 @@ const Chat: React.FC = () => {
         });
       } catch (error) {
         console.error("Failed to load messages:", error);
-        antMessage.error("Failed to load messages");
+        antMessage.error(t('msg.failedSend'));
       } finally {
         setMessagesLoading(false);
       }
@@ -434,7 +437,7 @@ const Chat: React.FC = () => {
       }
     } catch (error) {
       console.error("Failed to send message:", error);
-      antMessage.error("Failed to send message");
+      antMessage.error(t('msg.failedSend'));
     } finally {
       setUploading(false);
     }
@@ -445,7 +448,7 @@ const Chat: React.FC = () => {
     // Validate file size (10MB limit)
     const maxSize = 10 * 1024 * 1024;
     if (file.size > maxSize) {
-      antMessage.error("File size must be less than 10MB");
+      antMessage.error(t('chat.fileSizeLimit'));
       return false;
     }
 
@@ -504,7 +507,7 @@ const Chat: React.FC = () => {
       }
     } catch (error) {
       console.error("Failed to add reaction:", error);
-      antMessage.error("Failed to add reaction");
+      antMessage.error(t('chat.failedReaction'));
     }
   };
 
@@ -525,7 +528,7 @@ const Chat: React.FC = () => {
       }
     } catch (error) {
       console.error("Failed to remove reaction:", error);
-      antMessage.error("Failed to remove reaction");
+      antMessage.error(t('chat.failedReaction'));
     }
   };
 
@@ -553,17 +556,17 @@ const Chat: React.FC = () => {
 
       setRooms([newRoom, ...rooms]);
       setActiveRoom(newRoom);
-      antMessage.success(`Started chat with ${member.username}`);
+      antMessage.success(t('chat.startedChat', { name: member.username }));
     } catch (error) {
       console.error("Failed to start direct chat:", error);
-      antMessage.error("Failed to start chat");
+      antMessage.error(t('chat.failedStartChat'));
     }
   };
 
   // Create group chat
   const handleCreateGroup = async () => {
     if (!selectedProject || !groupName.trim() || selectedMembers.length === 0) {
-      antMessage.error("Please enter a group name and select members");
+      antMessage.error(t('chat.groupValidation'));
       return;
     }
 
@@ -581,10 +584,10 @@ const Chat: React.FC = () => {
       setGroupModalVisible(false);
       setGroupName("");
       setSelectedMembers([]);
-      antMessage.success("Group created successfully");
+      antMessage.success(t('chat.groupCreated'));
     } catch (error) {
       console.error("Failed to create group:", error);
-      antMessage.error("Failed to create group");
+      antMessage.error(t('chat.failedCreateGroup'));
     } finally {
       setCreatingGroup(false);
     }
@@ -599,7 +602,7 @@ const Chat: React.FC = () => {
   if (!selectedProject) {
     return (
       <div style={{ padding: 24, textAlign: "center" }}>
-        <Text type="secondary">Please select a project to use chat</Text>
+        <Text type="secondary">{t('chat.selectProject')}</Text>
       </div>
     );
   }
@@ -644,14 +647,14 @@ const Chat: React.FC = () => {
           }}
         >
           <Text style={{ fontSize: 20, fontWeight: 600, color: "#172b4d" }}>
-            Messages
+            {tCommon('nav.messages')}
           </Text>
           <Button
             type="primary"
             icon={<TeamOutlined />}
             onClick={() => setGroupModalVisible(true)}
           >
-            New Group
+            {t('chat.newGroup')}
           </Button>
         </div>
       </div>
@@ -678,7 +681,7 @@ const Chat: React.FC = () => {
                 key: "direct",
                 label: (
                   <span>
-                    <UserOutlined /> Direct Messages
+                    <UserOutlined /> {t('chat.directMessages')}
                   </span>
                 ),
               },
@@ -686,7 +689,7 @@ const Chat: React.FC = () => {
                 key: "groups",
                 label: (
                   <span>
-                    <TeamOutlined /> Groups
+                    <TeamOutlined /> {t('chat.groups')}
                   </span>
                 ),
               },
@@ -697,7 +700,7 @@ const Chat: React.FC = () => {
           <div style={{ padding: "0 16px 12px" }}>
             <Input
               placeholder={
-                sidebarTab === "direct" ? "Search users..." : "Search groups..."
+                sidebarTab === "direct" ? t('chat.searchUsers') : t('chat.searchGroups')
               }
               prefix={<SearchOutlined style={{ color: "#8c8c8c" }} />}
               style={{ borderRadius: 8 }}
@@ -796,7 +799,7 @@ const Chat: React.FC = () => {
                             </Text>
                           ) : (
                             <Text style={{ fontSize: 13, color: "#8c8c8c" }}>
-                              Click to start chatting
+                              {t('chat.clickToStart')}
                             </Text>
                           )
                         }
@@ -878,7 +881,7 @@ const Chat: React.FC = () => {
                               fontWeight: room.unread_count > 0 ? 500 : 400,
                             }}
                           >
-                            {room.last_message?.content || "No messages yet"}
+                            {room.last_message?.content || t('detail.noMessages')}
                           </Text>
                         }
                       />
@@ -892,14 +895,14 @@ const Chat: React.FC = () => {
                         style={{ fontSize: 48, color: "#d9d9d9" }}
                       />
                       <div style={{ marginTop: 16 }}>
-                        <Text type="secondary">No groups yet</Text>
+                        <Text type="secondary">{t('chat.noGroups')}</Text>
                       </div>
                       <div style={{ marginTop: 8 }}>
                         <Button
                           type="link"
                           onClick={() => setGroupModalVisible(true)}
                         >
-                          Create your first group
+                          {t('chat.createFirstGroup')}
                         </Button>
                       </div>
                     </div>
@@ -944,8 +947,8 @@ const Chat: React.FC = () => {
                   <br />
                   <Text style={{ fontSize: 12, color: "#8c8c8c" }}>
                     {activeRoom.type === "group"
-                      ? `${activeRoom.participants?.length || 0} members`
-                      : "Direct message"}
+                      ? t('chat.membersCount', { count: activeRoom.participants?.length || 0 })
+                      : t('chat.directMessage')}
                   </Text>
                 </div>
               </Space>
@@ -1245,7 +1248,7 @@ const Chat: React.FC = () => {
                                   }}
                                 >
                                   {formatTime(msg.created_at)}
-                                  {msg.is_edited && " (edited)"}
+                                  {msg.is_edited && ` (${t('chat.edited')})`}
                                 </Text>
 
                                 {/* Emoji Picker Button */}
@@ -1297,7 +1300,7 @@ const Chat: React.FC = () => {
                   {!hasMoreMessages && messages.length > 0 && (
                     <div style={{ textAlign: "center", padding: "12px 0" }}>
                       <Text style={{ color: "#8c8c8c", fontSize: 12 }}>
-                        Beginning of conversation
+                        {t('chat.beginningOfConversation')}
                       </Text>
                     </div>
                   )}
@@ -1313,7 +1316,7 @@ const Chat: React.FC = () => {
                           fontSize: 12,
                         }}
                       >
-                        Loading older messages...
+                        {t('chat.loadingOlder')}
                       </Text>
                     </div>
                   )}
@@ -1336,7 +1339,7 @@ const Chat: React.FC = () => {
                     fontStyle: "italic",
                   }}
                 >
-                  Someone is typing...
+                  {t('chat.someoneTyping')}
                 </Text>
               </div>
             )}
@@ -1373,7 +1376,7 @@ const Chat: React.FC = () => {
                     size="small"
                     onClick={() => setUploadFile(null)}
                   >
-                    Remove
+                    {t('chat.remove')}
                   </Button>
                 </div>
               )}
@@ -1389,7 +1392,7 @@ const Chat: React.FC = () => {
                   />
                 </Upload>
                 <Input
-                  placeholder="Type a message..."
+                  placeholder={t('chat.typePlaceholder')}
                   value={messageInput}
                   onChange={(e) => {
                     setMessageInput(e.target.value);
@@ -1432,7 +1435,7 @@ const Chat: React.FC = () => {
             }}
           >
             <Text type="secondary">
-              Select a conversation to start chatting
+              {t('chat.selectConversation')}
             </Text>
           </div>
         )}
@@ -1440,7 +1443,7 @@ const Chat: React.FC = () => {
 
       {/* Group Creation Modal */}
       <Modal
-        title="Create New Group"
+        title={t('chat.createNewGroup')}
         open={groupModalVisible}
         onOk={handleCreateGroup}
         onCancel={() => {
@@ -1449,14 +1452,14 @@ const Chat: React.FC = () => {
           setSelectedMembers([]);
         }}
         confirmLoading={creatingGroup}
-        okText="Create Group"
-        cancelText="Cancel"
+        okText={t('chat.createGroup')}
+        cancelText={tCommon('btn.cancel')}
       >
         <Space direction="vertical" style={{ width: "100%" }} size="large">
           <div>
-            <Text strong>Group Name</Text>
+            <Text strong>{t('chat.groupName')}</Text>
             <Input
-              placeholder="Enter group name"
+              placeholder={t('chat.groupNamePlaceholder')}
               value={groupName}
               onChange={(e) => setGroupName(e.target.value)}
               style={{ marginTop: 8 }}
@@ -1464,10 +1467,10 @@ const Chat: React.FC = () => {
             />
           </div>
           <div>
-            <Text strong>Add Members</Text>
+            <Text strong>{t('chat.addMembers')}</Text>
             <Select
               mode="multiple"
-              placeholder="Select members to add"
+              placeholder={t('chat.selectMembers')}
               value={selectedMembers}
               onChange={setSelectedMembers}
               style={{ width: "100%", marginTop: 8 }}
@@ -1486,7 +1489,7 @@ const Chat: React.FC = () => {
               }))}
             />
             <Text type="secondary" style={{ fontSize: 12, marginTop: 4 }}>
-              Select at least one member to create a group
+              {t('chat.selectAtLeastOne')}
             </Text>
           </div>
         </Space>

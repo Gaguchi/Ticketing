@@ -23,6 +23,7 @@ import {
 import { KanbanColumn } from "./KanbanColumn";
 import { DragOverlayCard } from "./TicketCard";
 import { message } from "antd";
+import { useTranslation } from 'react-i18next';
 import type { Ticket, TicketColumn, BoardColumn } from "../types/api";
 
 // Adapter type to support both old TicketColumn and new BoardColumn
@@ -69,6 +70,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   onTicketCreated,
   onTicketUpdate,
 }) => {
+  const { t } = useTranslation('tickets');
   // Determine which mode we're in
   const useNewStatusSystem = Boolean(boardColumns && boardColumns.length > 0);
 
@@ -430,7 +432,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       const isDoneColumn = destColumn.name.toLowerCase().includes("done") ||
         destColumn.name.toLowerCase().includes("completed");
       if (isDoneColumn && !ticket?.due_date) {
-        message.warning("Please set a due date before closing this ticket");
+        message.warning(t('msg.dueDateWarning'));
         setDragOverItems(null);
         setPendingMoveTicketId(null);
         return;
@@ -651,7 +653,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
               style={{
                 fontSize: "20px",
                 fontWeight: 400,
-                color: "#5e6c84",
+                color: "var(--color-text-muted)",
                 lineHeight: "1",
               }}
             >

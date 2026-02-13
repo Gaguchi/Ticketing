@@ -261,16 +261,16 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
             style={{
               padding: 8,
               borderRadius: 6,
-              backgroundColor: "#f5f5f5",
+              backgroundColor: "var(--color-bg-inset)",
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <FileTextOutlined style={{ color: "#1890ff", fontSize: 12 }} />
+              <FileTextOutlined style={{ color: "var(--color-primary)", fontSize: 12 }} />
               <Text type="secondary" style={{ fontSize: 11 }}>
                 Open
               </Text>
             </div>
-            <div style={{ fontSize: 18, fontWeight: 600, color: "#1890ff" }}>
+            <div style={{ fontSize: 18, fontWeight: 600, color: "var(--color-primary)" }}>
               {stats.open_tickets}
             </div>
           </div>
@@ -283,7 +283,7 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
               backgroundColor:
                 stats.urgent_tickets > 0 || stats.overdue_tickets > 0
                   ? "#fff7e6"
-                  : "#f5f5f5",
+                  : "var(--color-bg-inset)",
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
@@ -292,7 +292,7 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
                   color:
                     stats.urgent_tickets > 0 || stats.overdue_tickets > 0
                       ? "#fa8c16"
-                      : "#8c8c8c",
+                      : "var(--color-text-muted)",
                   fontSize: 12,
                 }}
               />
@@ -307,7 +307,7 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
                 color:
                   stats.urgent_tickets > 0 || stats.overdue_tickets > 0
                     ? "#fa8c16"
-                    : "#8c8c8c",
+                    : "var(--color-text-muted)",
               }}
             >
               {stats.urgent_tickets + stats.overdue_tickets}
@@ -338,16 +338,16 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
             style={{
               padding: 8,
               borderRadius: 6,
-              backgroundColor: "#f5f5f5",
+              backgroundColor: "var(--color-bg-inset)",
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <FileTextOutlined style={{ color: "#8c8c8c", fontSize: 12 }} />
+              <FileTextOutlined style={{ color: "var(--color-text-muted)", fontSize: 12 }} />
               <Text type="secondary" style={{ fontSize: 11 }}>
                 Total
               </Text>
             </div>
-            <div style={{ fontSize: 18, fontWeight: 600, color: "#262626" }}>
+            <div style={{ fontSize: 18, fontWeight: 600, color: "var(--color-text-primary)" }}>
               {stats.total_tickets}
             </div>
           </div>
@@ -360,7 +360,7 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
           style={{ width: "100%", marginBottom: 12 }}
         >
           <Space>
-            <FileTextOutlined style={{ color: "#9E9E9E" }} />
+            <FileTextOutlined style={{ color: "var(--color-text-muted)" }} />
             <Text type="secondary" style={{ fontSize: 12 }}>
               {company.ticket_count} tickets
             </Text>
@@ -374,13 +374,13 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          borderTop: "1px solid #f0f0f0",
+          borderTop: "1px solid var(--color-border-light)",
           paddingTop: 8,
           marginTop: 4,
         }}
       >
         <Space size={4}>
-          <TeamOutlined style={{ color: "#8c8c8c", fontSize: 12 }} />
+          <TeamOutlined style={{ color: "var(--color-text-muted)", fontSize: 12 }} />
           <Text type="secondary" style={{ fontSize: 11 }}>
             {stats?.admin_count ?? company.admin_count} admins ·{" "}
             {stats?.user_count ?? company.user_count} users
@@ -390,7 +390,7 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
         {stats?.last_activity && (
           <Tooltip title={new Date(stats.last_activity).toLocaleString()}>
             <Space size={4}>
-              <ClockCircleOutlined style={{ color: "#8c8c8c", fontSize: 12 }} />
+              <ClockCircleOutlined style={{ color: "var(--color-text-muted)", fontSize: 12 }} />
               <Text type="secondary" style={{ fontSize: 11 }}>
                 {formatLastActivity(stats.last_activity)}
               </Text>

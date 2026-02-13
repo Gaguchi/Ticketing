@@ -256,7 +256,7 @@ export const CompanyDrawer: React.FC<CompanyDrawerProps> = ({
           <div
             style={{
               padding: 20,
-              borderBottom: "1px solid #f0f0f0",
+              borderBottom: "1px solid var(--color-border-light)",
               background: health ? health.bgColor : "#fff",
             }}
           >
@@ -338,12 +338,12 @@ export const CompanyDrawer: React.FC<CompanyDrawerProps> = ({
                   style={{
                     textAlign: "center",
                     padding: 8,
-                    background: "#f5f5f5",
+                    background: "var(--color-bg-inset)",
                     borderRadius: 6,
                   }}
                 >
                   <div
-                    style={{ fontSize: 18, fontWeight: 600, color: "#1890ff" }}
+                    style={{ fontSize: 18, fontWeight: 600, color: "var(--color-primary)" }}
                   >
                     {stats.open_tickets}
                   </div>
@@ -356,7 +356,7 @@ export const CompanyDrawer: React.FC<CompanyDrawerProps> = ({
                     textAlign: "center",
                     padding: 8,
                     background:
-                      stats.urgent_tickets > 0 ? "#fff7e6" : "#f5f5f5",
+                      stats.urgent_tickets > 0 ? "#fff7e6" : "var(--color-bg-inset)",
                     borderRadius: 6,
                   }}
                 >
@@ -364,7 +364,7 @@ export const CompanyDrawer: React.FC<CompanyDrawerProps> = ({
                     style={{
                       fontSize: 18,
                       fontWeight: 600,
-                      color: stats.urgent_tickets > 0 ? "#fa8c16" : "#8c8c8c",
+                      color: stats.urgent_tickets > 0 ? "#fa8c16" : "var(--color-text-muted)",
                     }}
                   >
                     {stats.urgent_tickets}
@@ -378,7 +378,7 @@ export const CompanyDrawer: React.FC<CompanyDrawerProps> = ({
                     textAlign: "center",
                     padding: 8,
                     background:
-                      stats.overdue_tickets > 0 ? "#fff2f0" : "#f5f5f5",
+                      stats.overdue_tickets > 0 ? "#fff2f0" : "var(--color-bg-inset)",
                     borderRadius: 6,
                   }}
                 >
@@ -386,7 +386,7 @@ export const CompanyDrawer: React.FC<CompanyDrawerProps> = ({
                     style={{
                       fontSize: 18,
                       fontWeight: 600,
-                      color: stats.overdue_tickets > 0 ? "#ff4d4f" : "#8c8c8c",
+                      color: stats.overdue_tickets > 0 ? "#ff4d4f" : "var(--color-text-muted)",
                     }}
                   >
                     {stats.overdue_tickets}
@@ -447,7 +447,7 @@ export const CompanyDrawer: React.FC<CompanyDrawerProps> = ({
                 <div
                   style={{
                     padding: 12,
-                    background: "#fafafa",
+                    background: "var(--color-bg-sidebar)",
                     borderRadius: 6,
                     marginBottom: 12,
                   }}
@@ -637,7 +637,7 @@ export const CompanyDrawer: React.FC<CompanyDrawerProps> = ({
                         avatar={
                           <Avatar
                             size="small"
-                            style={{ background: "#1890ff" }}
+                            style={{ background: "var(--color-primary)" }}
                             icon={<UserOutlined />}
                           />
                         }
@@ -665,8 +665,8 @@ export const CompanyDrawer: React.FC<CompanyDrawerProps> = ({
           <div
             style={{
               padding: 16,
-              borderTop: "1px solid #f0f0f0",
-              background: "#fafafa",
+              borderTop: "1px solid var(--color-border-light)",
+              background: "var(--color-bg-sidebar)",
             }}
           >
             <Button

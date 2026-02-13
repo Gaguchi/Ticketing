@@ -6,6 +6,7 @@
 import React from "react";
 import { Card, Tooltip, Spin } from "antd";
 import { RightOutlined } from "@ant-design/icons";
+import { useTranslation } from "react-i18next";
 import type { KanbanSummary } from "../../types/dashboard";
 
 interface Props {
@@ -19,10 +20,11 @@ const KanbanFlowOverview: React.FC<Props> = ({
   loading = false,
   onClick,
 }) => {
+  const { t } = useTranslation('dashboard');
   if (loading) {
     return (
       <Card
-        title="Workflow Overview"
+        title={t('kanban.workflowOverview')}
         size="small"
         style={{ borderRadius: 8 }}
         styles={{
@@ -37,14 +39,14 @@ const KanbanFlowOverview: React.FC<Props> = ({
   if (!data) {
     return (
       <Card
-        title="Workflow Overview"
+        title={t('kanban.workflowOverview')}
         size="small"
         style={{ borderRadius: 8 }}
         styles={{
-          body: { color: "#8c8c8c", textAlign: "center", padding: 32 },
+          body: { color: "var(--color-text-muted)", textAlign: "center", padding: 32 },
         }}
       >
-        Select a project to see workflow overview
+        {t('kanban.selectProject')}
       </Card>
     );
   }
@@ -61,9 +63,9 @@ const KanbanFlowOverview: React.FC<Props> = ({
             alignItems: "center",
           }}
         >
-          <span>Workflow Overview</span>
-          <span style={{ fontSize: 12, fontWeight: 400, color: "#8c8c8c" }}>
-            {data.total_tickets} total tickets
+          <span>{t('kanban.workflowOverview')}</span>
+          <span style={{ fontSize: 12, fontWeight: 400, color: "var(--color-text-muted)" }}>
+            {t('kanban.totalTickets', { count: data.total_tickets })}
           </span>
         </div>
       }
@@ -90,9 +92,7 @@ const KanbanFlowOverview: React.FC<Props> = ({
           return (
             <React.Fragment key={column.id}>
               <Tooltip
-                title={`${column.name}: ${column.ticket_count} ticket${
-                  column.ticket_count !== 1 ? "s" : ""
-                }`}
+                title={t('kanban.ticketTooltip', { name: column.name, count: column.ticket_count })}
               >
                 <div
                   onClick={() => onClick?.(column.id)}
@@ -120,7 +120,7 @@ const KanbanFlowOverview: React.FC<Props> = ({
                       style={{
                         width: "80%",
                         height: `${heightPercent}%`,
-                        backgroundColor: column.color || "#1890ff",
+                        backgroundColor: column.color || "var(--color-primary)",
                         borderRadius: "4px 4px 0 0",
                         display: "flex",
                         alignItems: "center",
@@ -141,7 +141,7 @@ const KanbanFlowOverview: React.FC<Props> = ({
                     style={{
                       marginTop: 8,
                       fontSize: 11,
-                      color: "#595959",
+                      color: "var(--color-text-secondary)",
                       textAlign: "center",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
@@ -160,7 +160,7 @@ const KanbanFlowOverview: React.FC<Props> = ({
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    color: "#d9d9d9",
+                    color: "var(--color-border)",
                     paddingBottom: 20,
                   }}
                 >

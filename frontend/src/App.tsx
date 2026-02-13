@@ -2,12 +2,16 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ConfigProvider } from "antd";
 import { Suspense, lazy } from "react";
 import { Spin } from "antd";
+import { useTranslation } from "react-i18next";
+import enUS from "antd/locale/en_US";
+import kaGE from "antd/locale/ka_GE";
+import "./i18n";
 import { AppProvider } from "./contexts/AppContext";
 import { CompanyProvider } from "./contexts/CompanyContext";
 import { WebSocketProvider } from "./contexts/WebSocketContext";
+import { ThemeProvider, useThemeVersion } from "./contexts/ThemeContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import MainLayout from "./layouts/MainLayout";
-import theme from "./theme/antd-theme";
 
 // Lazy load all pages for code splitting
 const Login = lazy(() => import("./pages/Login"));
@@ -38,9 +42,13 @@ const PageLoader = () => (
   </div>
 );
 
-function App() {
+function AppInner() {
+  const { i18n } = useTranslation();
+  const { activeTheme } = useThemeVersion();
+  const antdLocale = i18n.language === "ka" ? kaGE : enUS;
+
   return (
-    <ConfigProvider theme={theme}>
+    <ConfigProvider theme={activeTheme} locale={antdLocale}>
       <AppProvider>
         <CompanyProvider>
           <BrowserRouter>
@@ -94,6 +102,14 @@ function App() {
         </CompanyProvider>
       </AppProvider>
     </ConfigProvider>
+  );
+}
+
+function App() {
+  return (
+    <ThemeProvider>
+      <AppInner />
+    </ThemeProvider>
   );
 }
 

@@ -6,6 +6,7 @@ import { useAuth } from "../contexts/AppContext";
 import { authService } from "../services/auth.service";
 import { Turnstile } from "../components/Turnstile";
 import { LogoIcon } from "../components/Logo";
+import { useTranslation } from "react-i18next";
 import "./Login.css";
 
 const { Title, Text } = Typography;
@@ -20,6 +21,8 @@ interface RegisterFormValues {
 }
 
 const Register: React.FC = () => {
+  const { t } = useTranslation('settings');
+  const { t: tCommon } = useTranslation('common');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
@@ -31,7 +34,7 @@ const Register: React.FC = () => {
 
   const onFinish = async (values: RegisterFormValues) => {
     if (turnstileEnabled && turnstileSiteKey && !captchaToken) {
-      setError("Please complete the CAPTCHA verification");
+      setError(t('register.captchaRequired'));
       return;
     }
 
@@ -76,7 +79,7 @@ const Register: React.FC = () => {
       console.error("Registration error:", err);
 
       // Extract detailed error message
-      let errorMessage = "An error occurred during registration";
+      let errorMessage = t('register.msg.failed');
 
       if (err?.details) {
         // Handle field-specific errors
@@ -116,11 +119,11 @@ const Register: React.FC = () => {
               <div className="logo-section">
                 <LogoIcon size={48} />
                 <Title level={2} className="app-title">
-                  Create Account
+                  {t('register.title')}
                 </Title>
               </div>
               <Text type="secondary" className="subtitle">
-                Get started with Ticketing
+                {tCommon('auth.appSubtitle')}
               </Text>
             </div>
 
@@ -144,13 +147,13 @@ const Register: React.FC = () => {
               <Form.Item
                 name="username"
                 rules={[
-                  { required: true, message: "Please input your username!" },
-                  { min: 3, message: "Username must be at least 3 characters" },
+                  { required: true, message: tCommon('validation.required') },
+                  { min: 3, message: tCommon('validation.minLength', { min: 3 }) },
                 ]}
               >
                 <Input
                   prefix={<UserOutlined />}
-                  placeholder="Username"
+                  placeholder={tCommon('auth.username')}
                   autoComplete="username"
                 />
               </Form.Item>
@@ -158,13 +161,13 @@ const Register: React.FC = () => {
               <Form.Item
                 name="email"
                 rules={[
-                  { required: true, message: "Please input your email!" },
-                  { type: "email", message: "Please enter a valid email!" },
+                  { required: true, message: tCommon('validation.required') },
+                  { type: "email", message: tCommon('validation.email') },
                 ]}
               >
                 <Input
                   prefix={<MailOutlined />}
-                  placeholder="Email"
+                  placeholder={tCommon('auth.email')}
                   autoComplete="email"
                 />
               </Form.Item>
@@ -172,31 +175,31 @@ const Register: React.FC = () => {
               <div style={{ display: "flex", gap: 12 }}>
                 <Form.Item
                   name="firstName"
-                  rules={[{ required: true, message: "Required" }]}
+                  rules={[{ required: true, message: tCommon('validation.required') }]}
                   style={{ flex: 1, marginBottom: 16 }}
                 >
-                  <Input placeholder="First name" autoComplete="given-name" />
+                  <Input placeholder={t('register.firstName')} autoComplete="given-name" />
                 </Form.Item>
 
                 <Form.Item
                   name="lastName"
-                  rules={[{ required: true, message: "Required" }]}
+                  rules={[{ required: true, message: tCommon('validation.required') }]}
                   style={{ flex: 1, marginBottom: 16 }}
                 >
-                  <Input placeholder="Last name" autoComplete="family-name" />
+                  <Input placeholder={t('register.lastName')} autoComplete="family-name" />
                 </Form.Item>
               </div>
 
               <Form.Item
                 name="password"
                 rules={[
-                  { required: true, message: "Please input your password!" },
-                  { min: 8, message: "Password must be at least 8 characters" },
+                  { required: true, message: tCommon('validation.required') },
+                  { min: 8, message: tCommon('validation.minLength', { min: 8 }) },
                 ]}
               >
                 <Input.Password
                   prefix={<LockOutlined />}
-                  placeholder="Password"
+                  placeholder={tCommon('auth.password')}
                   autoComplete="new-password"
                 />
               </Form.Item>
@@ -205,14 +208,14 @@ const Register: React.FC = () => {
                 name="confirmPassword"
                 dependencies={["password"]}
                 rules={[
-                  { required: true, message: "Please confirm your password!" },
+                  { required: true, message: tCommon('validation.required') },
                   ({ getFieldValue }) => ({
                     validator(_, value) {
                       if (!value || getFieldValue("password") === value) {
                         return Promise.resolve();
                       }
                       return Promise.reject(
-                        new Error("Passwords do not match!")
+                        new Error(t('password.mismatch'))
                       );
                     },
                   }),
@@ -220,7 +223,7 @@ const Register: React.FC = () => {
               >
                 <Input.Password
                   prefix={<LockOutlined />}
-                  placeholder="Confirm password"
+                  placeholder={t('password.confirm')}
                   autoComplete="new-password"
                 />
               </Form.Item>
@@ -246,14 +249,14 @@ const Register: React.FC = () => {
                   block
                   className="login-button"
                 >
-                  Create Account
+                  {t('register.submit')}
                 </Button>
               </Form.Item>
 
               <div className="register-section">
-                <Text type="secondary">Already have an account? </Text>
+                <Text type="secondary">{tCommon('auth.hasAccount')} </Text>
                 <Link to="/login" className="register-link">
-                  Log in
+                  {tCommon('auth.login')}
                 </Link>
               </div>
             </Form>

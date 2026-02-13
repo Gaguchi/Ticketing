@@ -2,13 +2,16 @@ import React from "react";
 import { Layout, Avatar, Dropdown, Typography, Space } from "antd";
 import { useNavigate } from "react-router-dom";
 import { UserOutlined, LogoutOutlined, LockOutlined } from "@ant-design/icons";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../contexts/AuthContext";
+import LanguageSwitcher from "./LanguageSwitcher";
 import type { MenuProps } from "antd";
 
 const { Header } = Layout;
 const { Text } = Typography;
 
 const Navbar: React.FC = () => {
+  const { t } = useTranslation('common');
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -16,13 +19,13 @@ const Navbar: React.FC = () => {
     {
       key: "profile",
       icon: <UserOutlined />,
-      label: "Profile",
+      label: t('user.profile'),
       onClick: () => navigate("/profile"),
     },
     {
       key: "change-password",
       icon: <LockOutlined />,
-      label: "Change Password",
+      label: t('user.changePassword'),
       onClick: () => navigate("/change-password"),
     },
     {
@@ -31,7 +34,7 @@ const Navbar: React.FC = () => {
     {
       key: "logout",
       icon: <LogoutOutlined />,
-      label: "Logout",
+      label: t('user.logout'),
       danger: true,
       onClick: () => {
         logout();
@@ -58,9 +61,10 @@ const Navbar: React.FC = () => {
         }}
         onClick={() => navigate("/tickets")}
       >
-        Service Desk
+        {t('appName')}
       </div>
 
+      <LanguageSwitcher />
       <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
         <Space style={{ cursor: "pointer" }}>
           <Avatar

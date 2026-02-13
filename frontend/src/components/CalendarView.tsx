@@ -50,8 +50,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
   const getStatusColor = (columnName: string) => {
     const colorMap: Record<string, string> = {
-      "To Do": "#1890ff", // blue
-      New: "#1890ff",
+      "To Do": "var(--color-primary)", // blue
+      New: "var(--color-primary)",
       "In Progress": "#2f54eb", // geekblue
       Review: "#722ed1", // purple
       Done: "#52c41a", // green

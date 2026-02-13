@@ -7,11 +7,13 @@ import {
   LockOutlined,
   MessageOutlined,
 } from "@ant-design/icons";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../contexts/AuthContext";
 import { useWebSocketContext } from "../contexts/WebSocketContext";
 import type { MenuProps } from "antd";
 
 const MainLayout: React.FC = () => {
+  const { t } = useTranslation('common');
   const { user, logout } = useAuth();
   const { chatUnreadCount } = useWebSocketContext();
   const navigate = useNavigate();
@@ -21,13 +23,13 @@ const MainLayout: React.FC = () => {
     {
       key: "profile",
       icon: <UserOutlined />,
-      label: "Profile",
+      label: t('user.profile'),
       onClick: () => navigate("/profile"),
     },
     {
       key: "change-password",
       icon: <LockOutlined />,
-      label: "Change Password",
+      label: t('user.changePassword'),
       onClick: () => navigate("/change-password"),
     },
     {
@@ -36,7 +38,7 @@ const MainLayout: React.FC = () => {
     {
       key: "logout",
       icon: <LogoutOutlined />,
-      label: "Logout",
+      label: t('user.logout'),
       danger: true,
       onClick: () => {
         logout();
@@ -71,7 +73,7 @@ const MainLayout: React.FC = () => {
               }`}
               onClick={() => navigate("/tickets")}
             >
-              My Tickets
+              {t('nav.myTickets')}
             </div>
             <div
               className={`cursor-pointer text-sm font-medium transition-colors ${
@@ -84,7 +86,7 @@ const MainLayout: React.FC = () => {
               <Badge count={chatUnreadCount} size="small" offset={[10, 0]}>
                 <span className="flex items-center gap-2">
                   <MessageOutlined />
-                  Messages
+                  {t('nav.messages')}
                 </span>
               </Badge>
             </div>

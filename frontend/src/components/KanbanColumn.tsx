@@ -8,6 +8,7 @@ import { useDroppable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { Button } from "antd";
 import { PlusOutlined, CloseOutlined } from "@ant-design/icons";
+import { useTranslation } from 'react-i18next';
 import { TicketCard } from "./TicketCard";
 import { QuickTicketCreator } from "./QuickTicketCreator";
 import type { Ticket } from "../types/api";
@@ -66,6 +67,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
   onTicketCreated,
   onTicketUpdate,
 }) => {
+  const { t: tCommon } = useTranslation('common');
   const [showQuickCreate, setShowQuickCreate] = useState(false);
 
   const {
@@ -96,7 +98,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
     minWidth: "288px",
     maxWidth: "288px",
     borderRadius: "3px",
-    backgroundColor: "#f4f5f7",
+    backgroundColor: "var(--color-bg-inset)",
     height: "calc(100vh - 180px)",
   };
 
@@ -111,7 +113,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
           fontWeight: 600,
           fontSize: "13px",
           cursor: dragOverlay ? "grabbing" : "grab",
-          color: "#172b4d",
+          color: "var(--color-text-heading)",
           textTransform: "uppercase",
           display: "flex",
           alignItems: "center",
@@ -124,8 +126,8 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
           style={{
             fontSize: "13px",
             fontWeight: 600,
-            color: "#5e6c84",
-            backgroundColor: "#dfe1e6",
+            color: "var(--color-text-muted)",
+            backgroundColor: "var(--color-border)",
             padding: "2px 8px",
             borderRadius: "10px",
           }}
@@ -197,11 +199,11 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
               style={{
                 width: "100%",
                 marginTop: "4px",
-                color: "#5e6c84",
+                color: "var(--color-text-muted)",
                 fontSize: "13px",
               }}
             >
-              Cancel
+              {tCommon('btn.cancel')}
             </Button>
           </div>
         ) : (
@@ -216,13 +218,13 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
               fontSize: "14px",
               height: "32px",
               padding: "4px 8px",
-              color: "#5e6c84",
+              color: "var(--color-text-muted)",
               justifyContent: "flex-start",
               fontWeight: 400,
               flexShrink: 0,
             }}
           >
-            Create
+            {tCommon('btn.create')}
           </Button>
         )}
       </div>

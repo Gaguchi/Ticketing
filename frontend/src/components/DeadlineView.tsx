@@ -190,8 +190,8 @@ const DeadlineColumn: React.FC<{
                 cursor: "pointer",
                 borderRadius: 4,
                 boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
-                border: "1px solid #f0f0f0",
-                background: "#fff",
+                border: "1px solid var(--color-border-light)",
+                background: "var(--color-bg-surface)",
               }}
               styles={{ body: { padding: "10px 12px" } }}
             >
@@ -201,7 +201,7 @@ const DeadlineColumn: React.FC<{
                   fontSize: 13,
                   fontWeight: 500,
                   marginBottom: 8,
-                  color: "#172b4d",
+                  color: "var(--color-text-heading)",
                   lineHeight: "18px",
                 }}
               >
@@ -217,10 +217,10 @@ const DeadlineColumn: React.FC<{
                     gap: 4,
                     marginBottom: 8,
                     padding: "4px 6px",
-                    backgroundColor: "#f4f5f7",
+                    backgroundColor: "var(--color-bg-inset)",
                     borderRadius: 3,
                     fontSize: 12,
-                    color: "#5e6c84",
+                    color: "var(--color-text-muted)",
                   }}
                 >
                   <ClockCircleOutlined style={{ fontSize: 12 }} />
@@ -242,7 +242,7 @@ const DeadlineColumn: React.FC<{
                   alignItems: "center",
                   justifyContent: "space-between",
                   fontSize: 12,
-                  color: "#5e6c84",
+                  color: "var(--color-text-muted)",
                 }}
               >
                 <Space size={6} align="center">
@@ -257,7 +257,7 @@ const DeadlineColumn: React.FC<{
 
                   {/* Ticket ID */}
                   <Text
-                    style={{ fontSize: 11, color: "#5e6c84", fontWeight: 500 }}
+                    style={{ fontSize: 11, color: "var(--color-text-muted)", fontWeight: 500 }}
                   >
                     {formatTicketId(ticket)}
                   </Text>

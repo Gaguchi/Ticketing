@@ -1,5 +1,6 @@
 import { useState, FormEvent } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { PageContainer } from "../components/layout";
 import { Card, Button, Input, Avatar } from "../components/ui";
 import { useAuth } from "../contexts/AuthContext";
@@ -7,6 +8,8 @@ import apiService from "../services/api.service";
 import { API_ENDPOINTS } from "../config/api";
 
 export default function Profile() {
+  const { t } = useTranslation('auth');
+  const { t: tCommon } = useTranslation('common');
   const { user, logout } = useAuth();
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [passwordData, setPasswordData] = useState({
@@ -29,14 +32,14 @@ export default function Profile() {
     setMessage(null);
 
     if (passwordData.new_password !== passwordData.confirm_password) {
-      setMessage({ type: "error", text: "New passwords do not match" });
+      setMessage({ type: "error", text: t('password.validation.mismatch') });
       return;
     }
 
     if (passwordData.new_password.length < 8) {
       setMessage({
         type: "error",
-        text: "Password must be at least 8 characters",
+        text: t('password.validation.minLength8'),
       });
       return;
     }
@@ -44,7 +47,7 @@ export default function Profile() {
     setSaving(true);
     try {
       await apiService.post(API_ENDPOINTS.AUTH_CHANGE_PASSWORD, passwordData);
-      setMessage({ type: "success", text: "Password changed successfully" });
+      setMessage({ type: "success", text: t('password.msg.success') });
       setPasswordData({
         old_password: "",
         new_password: "",
@@ -54,7 +57,7 @@ export default function Profile() {
     } catch (err) {
       setMessage({
         type: "error",
-        text: err instanceof Error ? err.message : "Failed to change password",
+        text: err instanceof Error ? err.message : t('password.msg.failed'),
       });
     } finally {
       setSaving(false);
@@ -81,7 +84,7 @@ export default function Profile() {
             d="M10 19l-7-7m0 0l7-7m-7 7h18"
           />
         </svg>
-        Back
+        {tCommon('btn.back')}
       </Link>
 
       {/* Profile Header */}
@@ -113,7 +116,7 @@ export default function Profile() {
       {/* Settings */}
       <Card className="mb-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">
-          Account Settings
+          {t('profile.title')}
         </h2>
 
         {/* Change Password */}
@@ -139,9 +142,9 @@ export default function Profile() {
                 </svg>
               </div>
               <div>
-                <p className="font-medium text-gray-900">Change Password</p>
+                <p className="font-medium text-gray-900">{t('password.title')}</p>
                 <p className="text-sm text-gray-500">
-                  Update your account password
+                  {t('password.update')}
                 </p>
               </div>
             </div>
@@ -169,7 +172,7 @@ export default function Profile() {
             >
               <Input
                 type="password"
-                label="Current Password"
+                label={t('password.current')}
                 value={passwordData.old_password}
                 onChange={(e) =>
                   setPasswordData({
@@ -181,7 +184,7 @@ export default function Profile() {
               />
               <Input
                 type="password"
-                label="New Password"
+                label={t('password.new')}
                 value={passwordData.new_password}
                 onChange={(e) =>
                   setPasswordData({
@@ -193,7 +196,7 @@ export default function Profile() {
               />
               <Input
                 type="password"
-                label="Confirm New Password"
+                label={t('password.confirm')}
                 value={passwordData.confirm_password}
                 onChange={(e) =>
                   setPasswordData({
@@ -205,7 +208,7 @@ export default function Profile() {
               />
               <div className="flex gap-2">
                 <Button type="submit" loading={saving}>
-                  Update Password
+                  {t('password.update')}
                 </Button>
                 <Button
                   type="button"
@@ -219,7 +222,7 @@ export default function Profile() {
                     });
                   }}
                 >
-                  Cancel
+                  {tCommon('btn.cancel')}
                 </Button>
               </div>
             </form>
@@ -245,7 +248,7 @@ export default function Profile() {
               </svg>
             </div>
             <div>
-              <p className="text-sm text-gray-500">Username</p>
+              <p className="text-sm text-gray-500">{t('profile.username')}</p>
               <p className="font-medium text-gray-900">{user?.username}</p>
             </div>
           </div>
@@ -267,7 +270,7 @@ export default function Profile() {
               </svg>
             </div>
             <div>
-              <p className="text-sm text-gray-500">Email</p>
+              <p className="text-sm text-gray-500">{t('profile.email')}</p>
               <p className="font-medium text-gray-900">{user?.email}</p>
             </div>
           </div>
@@ -276,7 +279,7 @@ export default function Profile() {
 
       {/* Sign Out */}
       <Button variant="danger" fullWidth onClick={logout}>
-        Sign Out
+        {t('profile.signOut')}
       </Button>
     </PageContainer>
   );

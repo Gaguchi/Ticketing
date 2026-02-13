@@ -20,6 +20,7 @@ import {
   faBookmark,
   faBolt,
 } from "@fortawesome/free-solid-svg-icons";
+import { useTranslation } from 'react-i18next';
 import { getPriorityIcon } from "./PriorityIcons";
 import type { Ticket, User } from "../types/api";
 import { useAuth } from "../contexts/AppContext";
@@ -84,8 +85,8 @@ const formatDueDate = (dueDate: string | null | undefined) => {
   const isTomorrow = dateOnly.getTime() === tomorrow.getTime();
 
   let text = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  let color = '#5e6c84';
-  let bgColor = '#f4f5f7';
+  let color = 'var(--color-text-muted)';
+  let bgColor = 'var(--color-bg-inset)';
 
   if (isOverdue) {
     text = 'Overdue';
@@ -118,7 +119,7 @@ const DragOverlayCard: React.FC<{ ticket: Ticket }> = ({ ticket }) => {
         cursor: "grabbing",
         padding: "8px 10px",
         borderRadius: "3px",
-        backgroundColor: isUnassigned ? "#fffbe6" : "#fff",
+        backgroundColor: isUnassigned ? "#fffbe6" : "var(--color-bg-surface)",
         marginBottom: "8px",
         borderLeft: isUnassigned ? "3px solid #faad14" : undefined,
       }}
@@ -127,7 +128,7 @@ const DragOverlayCard: React.FC<{ ticket: Ticket }> = ({ ticket }) => {
         style={{
           fontSize: "14px",
           fontWeight: 400,
-          color: "#172b4d",
+          color: "var(--color-text-heading)",
           marginBottom: "8px",
           lineHeight: "20px",
         }}
@@ -139,7 +140,7 @@ const DragOverlayCard: React.FC<{ ticket: Ticket }> = ({ ticket }) => {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          color: "#5e6c84",
+          color: "var(--color-text-muted)",
           fontSize: "12px",
         }}
       >
@@ -150,7 +151,7 @@ const DragOverlayCard: React.FC<{ ticket: Ticket }> = ({ ticket }) => {
             ) : (
               <FontAwesomeIcon icon={getTypeIcon(ticket.type).icon} style={{ fontSize: "14px", color: getTypeIcon(ticket.type).color }} />
             )}
-            <span style={{ fontSize: "12px", color: "#5e6c84", fontWeight: 500 }}>{formatTicketId(ticket)}</span>
+            <span style={{ fontSize: "12px", color: "var(--color-text-muted)", fontWeight: 500 }}>{formatTicketId(ticket)}</span>
           </Space>
         </Space>
         <Space align="center" size={6}>
@@ -158,10 +159,10 @@ const DragOverlayCard: React.FC<{ ticket: Ticket }> = ({ ticket }) => {
           <span style={{
             display: "inline-flex", alignItems: "center", gap: "3px",
             padding: "1px 6px", borderRadius: "3px",
-            backgroundColor: dueDateInfo?.bgColor || "#f4f5f7",
-            color: dueDateInfo?.color || "#8c8c8c",
+            backgroundColor: dueDateInfo?.bgColor || "var(--color-bg-inset)",
+            color: dueDateInfo?.color || "var(--color-text-muted)",
             fontSize: "11px", fontWeight: 500, lineHeight: "20px",
-            border: dueDateInfo ? "none" : "1px dashed #d9d9d9",
+            border: dueDateInfo ? "none" : "1px dashed var(--color-border)",
           }}>
             {dueDateInfo ? (
               <ClockCircleOutlined style={{ fontSize: "10px" }} />
@@ -171,9 +172,9 @@ const DragOverlayCard: React.FC<{ ticket: Ticket }> = ({ ticket }) => {
             {dueDateInfo ? dueDateInfo.text : "Date"}
           </span>
           {assigneesList.length > 0 ? (
-            <Avatar.Group size={20} max={{ count: 2, style: { color: "#fff", backgroundColor: "#dfe1e6", fontSize: "11px" } }}>
+            <Avatar.Group size={20} max={{ count: 2, style: { color: "#fff", backgroundColor: "var(--color-border)", fontSize: "11px" } }}>
               {assigneesList.map((u: any) => (
-                <Avatar key={u.id} icon={<UserOutlined />} size={20} style={{ backgroundColor: "#0052cc" }} />
+                <Avatar key={u.id} icon={<UserOutlined />} size={20} style={{ backgroundColor: "var(--color-primary)" }} />
               ))}
             </Avatar.Group>
           ) : (
@@ -199,6 +200,8 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
   onClick,
   onTicketUpdate,
 }) => {
+  const { t } = useTranslation('tickets');
+
   const { user } = useAuth();
   const [assigning, setAssigning] = React.useState(false);
   const [searchText, setSearchText] = React.useState("");
@@ -231,7 +234,7 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
         setAssignableUsers(users);
       } catch (error) {
         console.error("Failed to load assignable users", error);
-        message.error("Failed to load users");
+        message.error(t('card.failedLoadUsers'));
       } finally {
         setLoadingUsers(false);
       }
@@ -265,10 +268,10 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
       // Only merge assignee fields from response — never positional fields (rank, status, column)
       // which may have been changed by a concurrent drag operation
       onTicketUpdate?.(ticket.id, { assignees: updated.assignees, assignee_ids: updated.assignee_ids });
-      message.success(`Assigned to ${targetUser.first_name || targetUser.username}`);
+      message.success(t('card.assignedTo', { name: targetUser.first_name || targetUser.username }));
     } catch (error) {
       console.error("Failed to assign ticket:", error);
-      message.error("Failed to assign ticket");
+      message.error(t('card.failedAssign'));
       // Revert
       onTicketUpdate?.(ticket.id, { assignees: ticket.assignees } as any);
     } finally {
@@ -288,7 +291,7 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
       const updated = await ticketService.updateTicket(ticket.id, { due_date: dateString });
       // Only merge the due_date field — not positional fields that may be stale
       onTicketUpdate?.(ticket.id, { due_date: updated.due_date });
-      message.success(dateString ? `Due date set to ${date!.format("MMM D")}` : "Due date cleared");
+      message.success(dateString ? t('card.dueDateSetTo', { date: date!.format("MMM D") }) : t('card.dueDateCleared'));
     } catch (error) {
       console.error("Failed to update due date:", error);
       message.error("Failed to update due date");
@@ -343,7 +346,7 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
     touchAction: "manipulation",
     padding: "8px 10px",
     borderRadius: "3px",
-    backgroundColor: isUnassigned ? "#fffbe6" : "#fff",
+    backgroundColor: isUnassigned ? "#fffbe6" : "var(--color-bg-surface)",
     marginBottom: "8px",
     borderLeft: isUnassigned ? "3px solid #faad14" : undefined,
   };
@@ -362,11 +365,11 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
       }}
       onMouseEnter={(e) => {
         if (!isDragging) {
-          e.currentTarget.style.backgroundColor = isUnassigned ? "#fff8e1" : "#f4f5f7";
+          e.currentTarget.style.backgroundColor = isUnassigned ? "#fff8e1" : "var(--color-bg-inset)";
         }
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.backgroundColor = isUnassigned ? "#fffbe6" : "#fff";
+        e.currentTarget.style.backgroundColor = isUnassigned ? "#fffbe6" : "var(--color-bg-surface)";
       }}
     >
       <div>
@@ -374,14 +377,14 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
         {ticket.resolution_status === "rejected" && (
           <div style={{ marginBottom: "6px" }}>
             <Tag color="#cd201f" style={{ margin: 0, fontSize: "11px" }}>
-              Resolution Rejected
+              {t('card.resolutionRejected')}
             </Tag>
           </div>
         )}
         {ticket.resolution_status === "awaiting_review" && (
           <div style={{ marginBottom: "6px" }}>
             <Tag color="gold" style={{ margin: 0, fontSize: "11px" }}>
-              Awaiting Review
+              {t('card.awaitingReview')}
             </Tag>
           </div>
         )}
@@ -395,7 +398,7 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
                 color="success"
                 style={{ margin: 0, fontSize: "11px" }}
               >
-                Resolved
+                {t('card.resolved')}
               </Tag>
             </div>
           )}
@@ -415,7 +418,7 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
               }}
               title={ticket.resolution_feedback}
             >
-              <span style={{ fontWeight: 600 }}>Feedback: </span>
+              <span style={{ fontWeight: 600 }}>{t('card.feedback')} </span>
               {ticket.resolution_feedback.length > 80
                 ? `${ticket.resolution_feedback.substring(0, 80)}...`
                 : ticket.resolution_feedback}
@@ -425,7 +428,7 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
           style={{
             fontSize: "14px",
             fontWeight: 400,
-            color: "#172b4d",
+            color: "var(--color-text-heading)",
             marginBottom: "8px",
             lineHeight: "20px",
           }}
@@ -438,7 +441,7 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            color: "#5e6c84",
+            color: "var(--color-text-muted)",
             fontSize: "12px",
           }}
         >
@@ -467,7 +470,7 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
                 <span
                   style={{
                     fontSize: "12px",
-                    color: "#5e6c84",
+                    color: "var(--color-text-muted)",
                     fontWeight: 500,
                   }}
                 >
@@ -505,7 +508,7 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
                           style={{
                             cursor: "pointer",
                             padding: "4px 8px",
-                            backgroundColor: item.id === currentPriority ? "#f0f0f0" : undefined,
+                            backgroundColor: item.id === currentPriority ? "var(--color-bg-content)" : undefined,
                           }}
                           className="assignee-item"
                         >
@@ -543,13 +546,13 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
                       gap: "3px",
                       padding: "1px 6px",
                       borderRadius: "3px",
-                      backgroundColor: dueDateInfo?.bgColor || "#f4f5f7",
-                      color: dueDateInfo?.color || "#8c8c8c",
+                      backgroundColor: dueDateInfo?.bgColor || "var(--color-bg-inset)",
+                      color: dueDateInfo?.color || "var(--color-text-muted)",
                       fontSize: "11px",
                       fontWeight: 500,
                       cursor: "pointer",
                       lineHeight: "20px",
-                      border: dueDateInfo ? "none" : "1px dashed #d9d9d9",
+                      border: dueDateInfo ? "none" : "1px dashed var(--color-border)",
                     }}
                   >
                     {dueDateInfo ? (
@@ -609,7 +612,7 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
                     count: 2,
                     style: {
                       color: "#fff",
-                      backgroundColor: "#dfe1e6",
+                      backgroundColor: "var(--color-border)",
                       fontSize: "11px",
                     },
                   }}
@@ -622,7 +625,7 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
                       <Avatar
                         icon={<UserOutlined />}
                         size={20}
-                        style={{ backgroundColor: "#0052cc" }}
+                        style={{ backgroundColor: "var(--color-primary)" }}
                       />
                     </Tooltip>
                   ))}
@@ -659,7 +662,7 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
                               className="assignee-item"
                             >
                               <Space size={6}>
-                                <Avatar size={20} style={{ backgroundColor: "#1890ff", fontSize: "10px" }}>
+                                <Avatar size={20} style={{ backgroundColor: "var(--color-primary)", fontSize: "10px" }}>
                                   {member.first_name?.[0] || member.username[0]}
                                 </Avatar>
                                 <span style={{ fontSize: "12px" }}>
@@ -674,7 +677,7 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
                         />
                       </div>
                       <style>{`
-                        .assignee-item:hover { background-color: #f5f5f5; }
+                        .assignee-item:hover { background-color: var(--color-bg-inset); }
                       `}</style>
                     </div>
                   }

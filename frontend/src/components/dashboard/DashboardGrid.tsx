@@ -7,6 +7,7 @@ import React, { useState, useCallback, useMemo, useRef, useEffect } from "react"
 import GridLayout, { type Layout } from "react-grid-layout";
 import { Button, Tooltip, message } from "antd";
 import { ReloadOutlined, UndoOutlined } from "@ant-design/icons";
+import { useTranslation } from "react-i18next";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 
@@ -77,6 +78,8 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
   loading,
   onRefresh,
 }) => {
+  const { t } = useTranslation('dashboard');
+  const { t: tCommon } = useTranslation('common');
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(1200);
 
@@ -137,7 +140,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
   const handleResetLayout = useCallback(() => {
     setLayout(defaultLayout);
     localStorage.removeItem(storageKey);
-    message.success("Layout reset to default");
+    message.success(t('grid.layoutReset'));
   }, [defaultLayout, storageKey]);
 
   return (
@@ -153,9 +156,9 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
           backgroundColor: "#fff",
         }}
       >
-        <h1 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>Dashboard</h1>
+        <h1 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>{t('grid.dashboard')}</h1>
         <div style={{ display: "flex", gap: 8 }}>
-          <Tooltip title="Reset Layout">
+          <Tooltip title={t('grid.resetLayout')}>
             <Button
               icon={<UndoOutlined />}
               onClick={handleResetLayout}
@@ -168,7 +171,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
             loading={loading}
             size="small"
           >
-            Refresh
+            {tCommon('btn.refresh')}
           </Button>
         </div>
       </div>
@@ -180,7 +183,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
           flex: 1,
           overflow: "auto",
           padding: "16px 20px",
-          backgroundColor: "#f4f5f7",
+          backgroundColor: "var(--color-bg-inset)",
         }}
       >
         <GridLayoutAny

@@ -625,7 +625,7 @@ const Companies: React.FC = () => {
       }}
     >
       <Empty
-        image={<ShopOutlined style={{ fontSize: 64, color: "#9E9E9E" }} />}
+        image={<ShopOutlined style={{ fontSize: 64, color: "var(--color-text-muted)" }} />}
         description="No companies yet"
       >
         <Button
@@ -681,7 +681,7 @@ const Companies: React.FC = () => {
               <Col>
                 <Avatar
                   size={80}
-                  style={{ background: "#1890ff" }}
+                  style={{ background: "var(--color-primary)" }}
                   icon={<ShopOutlined />}
                 />
               </Col>
@@ -697,7 +697,7 @@ const Companies: React.FC = () => {
                 </Text>
                 <Space size={16}>
                   <Space>
-                    <UserOutlined style={{ color: "#1890ff" }} />
+                    <UserOutlined style={{ color: "var(--color-primary)" }} />
                     <Text>{selectedCompany.admin_count} Admins</Text>
                   </Space>
                   <Space>
@@ -705,11 +705,11 @@ const Companies: React.FC = () => {
                     <Text>{selectedCompany.user_count} Users</Text>
                   </Space>
                   <Space>
-                    <ShopOutlined style={{ color: "#9E9E9E" }} />
+                    <ShopOutlined style={{ color: "var(--color-text-muted)" }} />
                     <Text>{selectedCompany.project_count} Projects</Text>
                   </Space>
                   <Space>
-                    <MailOutlined style={{ color: "#1565C0" }} />
+                    <MailOutlined style={{ color: "var(--color-primary)" }} />
                     <Text>{companyTickets.length} Tickets</Text>
                   </Space>
                 </Space>
@@ -1231,7 +1231,7 @@ const Companies: React.FC = () => {
                 >
                   <List.Item.Meta
                     avatar={
-                      <Avatar style={{ backgroundColor: "#1890ff" }}>
+                      <Avatar style={{ backgroundColor: "var(--color-primary)" }}>
                         {user.first_name?.[0] || user.email[0].toUpperCase()}
                       </Avatar>
                     }

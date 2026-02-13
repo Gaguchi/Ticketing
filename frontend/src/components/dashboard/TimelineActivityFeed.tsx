@@ -12,6 +12,7 @@ import {
   PlusOutlined,
   DeleteOutlined,
 } from "@ant-design/icons";
+import { useTranslation } from "react-i18next";
 import type { ActivityEntry } from "../../types/dashboard";
 
 interface Props {
@@ -34,11 +35,11 @@ const getActivityIcon = (field: string) => {
 const getActivityColor = (field: string): string => {
   const f = field.toLowerCase();
   if (f.includes("assignee")) return "#722ed1";
-  if (f.includes("status") || f.includes("column")) return "#1890ff";
+  if (f.includes("status") || f.includes("column")) return "var(--color-primary)";
   if (f.includes("created") || f === "new") return "#52c41a";
   if (f.includes("priority")) return "#fa8c16";
   if (f.includes("delete")) return "#ff4d4f";
-  return "#8c8c8c";
+  return "var(--color-text-muted)";
 };
 
 // Format relative time
@@ -70,11 +71,11 @@ const formatFieldName = (field: string): string => {
   return field.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
 };
 
-// Group activities by time periods
+// Group activities by time periods (uses translation keys as labels)
 const groupActivitiesByTime = (
   activities: ActivityEntry[]
 ): {
-  label: string;
+  labelKey: string;
   activities: ActivityEntry[];
 }[] => {
   const now = new Date();
@@ -82,11 +83,11 @@ const groupActivitiesByTime = (
   const yesterday = new Date(today.getTime() - 86400000);
   const thisWeek = new Date(today.getTime() - 7 * 86400000);
 
-  const groups: { label: string; activities: ActivityEntry[] }[] = [
-    { label: "Today", activities: [] },
-    { label: "Yesterday", activities: [] },
-    { label: "This Week", activities: [] },
-    { label: "Older", activities: [] },
+  const groups: { labelKey: string; activities: ActivityEntry[] }[] = [
+    { labelKey: "activity.today", activities: [] },
+    { labelKey: "activity.yesterday", activities: [] },
+    { labelKey: "activity.thisWeek", activities: [] },
+    { labelKey: "activity.older", activities: [] },
   ];
 
   activities.forEach((activity) => {
@@ -110,6 +111,7 @@ const TimelineActivityFeed: React.FC<Props> = ({
   loading = false,
   onTicketClick,
 }) => {
+  const { t } = useTranslation('dashboard');
   const groupedActivities = groupActivitiesByTime(activities);
 
   return (
@@ -125,7 +127,7 @@ const TimelineActivityFeed: React.FC<Props> = ({
               animation: "pulse 2s infinite",
             }}
           />
-          <span style={{ fontSize: 13 }}>Live Activity</span>
+          <span style={{ fontSize: 13 }}>{t('activity.liveActivity')}</span>
         </div>
       }
       size="small"
@@ -134,8 +136,8 @@ const TimelineActivityFeed: React.FC<Props> = ({
         body: { padding: 0, height: "calc(100% - 40px)", overflow: "hidden" },
       }}
       extra={
-        <span style={{ fontSize: 11, color: "#8c8c8c" }}>
-          {activities.length} recent
+        <span style={{ fontSize: 11, color: "var(--color-text-muted)" }}>
+          {t('activity.recent', { count: activities.length })}
         </span>
       }
     >
@@ -146,7 +148,7 @@ const TimelineActivityFeed: React.FC<Props> = ({
             50% { opacity: 0.4; }
           }
           .timeline-item:hover {
-            background-color: #fafafa;
+            background-color: var(--color-bg-sidebar);
           }
         `}
       </style>
@@ -159,29 +161,29 @@ const TimelineActivityFeed: React.FC<Props> = ({
         ) : activities.length === 0 ? (
           <Empty
             image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description="No recent activity"
+            description={t('activity.noActivity')}
             style={{ padding: 32 }}
           />
         ) : (
           <div style={{ padding: "12px 0" }}>
             {groupedActivities.map((group) => (
-              <div key={group.label}>
+              <div key={group.labelKey}>
                 {/* Time Group Label */}
                 <div
                   style={{
                     padding: "8px 16px",
                     fontSize: 11,
                     fontWeight: 600,
-                    color: "#8c8c8c",
+                    color: "var(--color-text-muted)",
                     textTransform: "uppercase",
                     letterSpacing: 0.5,
-                    backgroundColor: "#fafafa",
+                    backgroundColor: "var(--color-bg-sidebar)",
                     position: "sticky",
                     top: 0,
                     zIndex: 1,
                   }}
                 >
-                  {group.label}
+                  {t(group.labelKey)}
                 </div>
 
                 {/* Activities in group */}
@@ -234,7 +236,7 @@ const TimelineActivityFeed: React.FC<Props> = ({
                             style={{
                               width: 2,
                               flex: 1,
-                              backgroundColor: "#f0f0f0",
+                              backgroundColor: "var(--color-border-light)",
                               position: "absolute",
                               top: 28,
                               bottom: -12,
@@ -257,7 +259,7 @@ const TimelineActivityFeed: React.FC<Props> = ({
                           <Avatar
                             size={18}
                             style={{
-                              backgroundColor: "#1890ff",
+                              backgroundColor: "var(--color-primary)",
                               fontSize: 10,
                             }}
                           >
@@ -270,10 +272,10 @@ const TimelineActivityFeed: React.FC<Props> = ({
                             {activity.changed_by
                               ? activity.changed_by.first_name ||
                                 activity.changed_by.username
-                              : "System"}
+                              : t('activity.system')}
                           </span>
-                          <span style={{ fontSize: 12, color: "#8c8c8c" }}>
-                            updated{" "}
+                          <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
+                            {t('activity.updated')}{" "}
                             <span style={{ color: color, fontWeight: 500 }}>
                               {formatFieldName(activity.field)}
                             </span>
@@ -284,7 +286,7 @@ const TimelineActivityFeed: React.FC<Props> = ({
                         <div
                           style={{
                             fontSize: 11,
-                            color: "#595959",
+                            color: "var(--color-text-secondary)",
                             marginBottom: 4,
                             overflow: "hidden",
                             textOverflow: "ellipsis",
@@ -294,7 +296,7 @@ const TimelineActivityFeed: React.FC<Props> = ({
                           <span
                             style={{
                               fontFamily: "monospace",
-                              backgroundColor: "#f5f5f5",
+                              backgroundColor: "var(--color-bg-inset)",
                               padding: "1px 4px",
                               borderRadius: 3,
                               marginRight: 6,
@@ -319,15 +321,15 @@ const TimelineActivityFeed: React.FC<Props> = ({
                               style={{
                                 padding: "2px 6px",
                                 borderRadius: 4,
-                                backgroundColor: "#f5f5f5",
-                                color: "#8c8c8c",
+                                backgroundColor: "var(--color-bg-inset)",
+                                color: "var(--color-text-muted)",
                                 maxWidth: 100,
                                 overflow: "hidden",
                                 textOverflow: "ellipsis",
                                 whiteSpace: "nowrap",
                               }}
                             >
-                              {activity.old_value || "(empty)"}
+                              {activity.old_value || t('activity.empty')}
                             </span>
                             <span style={{ color: "#bfbfbf" }}>→</span>
                             <span
@@ -343,7 +345,7 @@ const TimelineActivityFeed: React.FC<Props> = ({
                                 fontWeight: 500,
                               }}
                             >
-                              {activity.new_value || "(empty)"}
+                              {activity.new_value || t('activity.empty')}
                             </span>
                           </div>
                         )}

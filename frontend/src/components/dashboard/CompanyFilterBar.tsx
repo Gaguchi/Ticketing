@@ -8,6 +8,7 @@ import React from "react";
 import { Avatar, Badge, Tooltip, Tag } from "antd";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBuilding, faLayerGroup } from "@fortawesome/free-solid-svg-icons";
+import { useTranslation } from "react-i18next";
 import type { CompanyHealth } from "../../types/dashboard";
 
 interface Props {
@@ -30,6 +31,7 @@ const CompanyFilterBar: React.FC<Props> = ({
   loading: _loading = false,
   compact = false,
 }) => {
+  const { t } = useTranslation('dashboard');
   const isAllSelected = selectedCompanyIds.length === 0;
 
   // Compact pill style
@@ -51,15 +53,15 @@ const CompanyFilterBar: React.FC<Props> = ({
             margin: 0,
             padding: "4px 12px",
             borderRadius: 4,
-            backgroundColor: isAllSelected ? "#1890ff" : "#fafafa",
-            color: isAllSelected ? "#fff" : "#595959",
-            border: isAllSelected ? "1px solid #1890ff" : "1px solid #d9d9d9",
+            backgroundColor: isAllSelected ? "var(--color-primary)" : "var(--color-bg-sidebar)",
+            color: isAllSelected ? "#fff" : "var(--color-text-secondary)",
+            border: isAllSelected ? "1px solid var(--color-primary)" : "1px solid var(--color-border)",
             fontWeight: isAllSelected ? 600 : 400,
             fontSize: 12,
             transition: "all 0.2s",
           }}
         >
-          All {totalTickets > 0 && `(${totalTickets})`}
+          {t('filter.all')} {totalTickets > 0 && `(${totalTickets})`}
         </Tag>
 
         {/* Company pills */}
@@ -73,10 +75,10 @@ const CompanyFilterBar: React.FC<Props> = ({
               title={
                 <div style={{ fontSize: 11 }}>
                   <div style={{ fontWeight: 600 }}>{company.name}</div>
-                  <div>{company.total_tickets} tickets</div>
+                  <div>{t('company.tickets', { count: company.total_tickets })}</div>
                   {company.overdue_count > 0 && (
                     <div style={{ color: "#ff7875" }}>
-                      {company.overdue_count} overdue
+                      {t('company.overdue', { count: company.overdue_count })}
                     </div>
                   )}
                 </div>
@@ -95,9 +97,9 @@ const CompanyFilterBar: React.FC<Props> = ({
                     padding: "4px 10px",
                     paddingLeft: company.logo_url ? 4 : 10,
                     borderRadius: 4,
-                    backgroundColor: isSelected ? "#1890ff" : "#fafafa",
-                    color: isSelected ? "#fff" : "#595959",
-                    border: isSelected ? "1px solid #1890ff" : "1px solid #d9d9d9",
+                    backgroundColor: isSelected ? "var(--color-primary)" : "var(--color-bg-sidebar)",
+                    color: isSelected ? "#fff" : "var(--color-text-secondary)",
+                    border: isSelected ? "1px solid var(--color-primary)" : "1px solid var(--color-border)",
                     fontWeight: isSelected ? 600 : 400,
                     fontSize: 12,
                     display: "inline-flex",
@@ -152,7 +154,7 @@ const CompanyFilterBar: React.FC<Props> = ({
       }}
     >
       {/* All Tickets Card */}
-      <Tooltip title="View all tickets">
+      <Tooltip title={t('filter.viewAllTickets')}>
         <div
           onClick={() => onClearAll()}
           style={{
@@ -161,8 +163,8 @@ const CompanyFilterBar: React.FC<Props> = ({
             gap: 8,
             padding: "8px 14px",
             borderRadius: 6,
-            backgroundColor: isAllSelected ? "#e6f4ff" : "#fff",
-            border: isAllSelected ? "2px solid #1890ff" : "1px solid #e8e8e8",
+            backgroundColor: isAllSelected ? "var(--color-primary-light)" : "var(--color-bg-surface)",
+            border: isAllSelected ? "2px solid var(--color-primary)" : "1px solid var(--color-border)",
             cursor: "pointer",
             minWidth: 130,
             flexShrink: 0,
@@ -176,8 +178,8 @@ const CompanyFilterBar: React.FC<Props> = ({
           <Avatar
             size={32}
             style={{
-              backgroundColor: isAllSelected ? "#1890ff" : "#f0f0f0",
-              color: isAllSelected ? "#fff" : "#595959",
+              backgroundColor: isAllSelected ? "var(--color-primary)" : "var(--color-border-light)",
+              color: isAllSelected ? "#fff" : "var(--color-text-secondary)",
               flexShrink: 0,
             }}
           >
@@ -188,20 +190,20 @@ const CompanyFilterBar: React.FC<Props> = ({
               style={{
                 fontWeight: 600,
                 fontSize: 12,
-                color: isAllSelected ? "#1890ff" : "#262626",
+                color: isAllSelected ? "var(--color-primary)" : "var(--color-text-primary)",
                 whiteSpace: "nowrap",
               }}
             >
-              All Tickets
+              {t('filter.allTickets')}
             </div>
             <div
               style={{
                 fontSize: 10,
-                color: "#8c8c8c",
+                color: "var(--color-text-muted)",
                 whiteSpace: "nowrap",
               }}
             >
-              {totalTickets} total
+              {t('filter.total', { count: totalTickets })}
             </div>
           </div>
         </div>
@@ -221,12 +223,12 @@ const CompanyFilterBar: React.FC<Props> = ({
                 <div>{company.name}</div>
                 {company.overdue_count > 0 && (
                   <div style={{ color: "#ff4d4f" }}>
-                    {company.overdue_count} overdue
+                    {t('company.overdue', { count: company.overdue_count })}
                   </div>
                 )}
                 {company.unassigned_count > 0 && (
                   <div style={{ color: "#faad14" }}>
-                    {company.unassigned_count} unassigned
+                    {t('company.unassigned', { count: company.unassigned_count })}
                   </div>
                 )}
               </div>
@@ -247,12 +249,12 @@ const CompanyFilterBar: React.FC<Props> = ({
                   gap: 8,
                   padding: "8px 14px",
                   borderRadius: 6,
-                  backgroundColor: isSelected ? "#e6f4ff" : "#fff",
+                  backgroundColor: isSelected ? "var(--color-primary-light)" : "var(--color-bg-surface)",
                   border: isSelected
-                    ? "2px solid #1890ff"
+                    ? "2px solid var(--color-primary)"
                     : hasIssues
                     ? "1px solid #ff4d4f40"
-                    : "1px solid #e8e8e8",
+                    : "1px solid var(--color-border)",
                   cursor: "pointer",
                   minWidth: 120,
                   flexShrink: 0,
@@ -278,7 +280,7 @@ const CompanyFilterBar: React.FC<Props> = ({
                       icon={faBuilding}
                       style={{
                         fontSize: 14,
-                        color: "#595959",
+                        color: "var(--color-text-secondary)",
                       }}
                     />
                   )}
@@ -288,7 +290,7 @@ const CompanyFilterBar: React.FC<Props> = ({
                     style={{
                       fontWeight: 600,
                       fontSize: 12,
-                      color: isSelected ? "#1890ff" : "#262626",
+                      color: isSelected ? "var(--color-primary)" : "var(--color-text-primary)",
                       whiteSpace: "nowrap",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
@@ -300,11 +302,11 @@ const CompanyFilterBar: React.FC<Props> = ({
                   <div
                     style={{
                       fontSize: 10,
-                      color: "#8c8c8c",
+                      color: "var(--color-text-muted)",
                       whiteSpace: "nowrap",
                     }}
                   >
-                    {company.total_tickets} tickets
+                    {t('company.tickets', { count: company.total_tickets })}
                   </div>
                 </div>
               </div>

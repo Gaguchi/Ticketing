@@ -11,6 +11,7 @@ export const StorageKeys = {
   USER: "user",
   SELECTED_PROJECT_ID: "selectedProjectId",
   LAST_USER_FETCH: "last_user_fetch",
+  THEME_VERSION: "theme_version",
 } as const;
 
 // Cache duration constants
@@ -118,6 +119,15 @@ class StorageService {
 
   clearSelectedProjectId(): void {
     this.remove(StorageKeys.SELECTED_PROJECT_ID);
+  }
+
+  // ============ THEME VERSION ============
+  getThemeVersion(): 'v1' | 'v2' {
+    return (localStorage.getItem(StorageKeys.THEME_VERSION) as 'v1' | 'v2') || 'v2';
+  }
+
+  setThemeVersion(version: 'v1' | 'v2'): void {
+    localStorage.setItem(StorageKeys.THEME_VERSION, version);
   }
 
   // ============ CLEAR ALL ============

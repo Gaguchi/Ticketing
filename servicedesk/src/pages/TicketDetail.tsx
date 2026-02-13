@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   Tag,
   Button,
@@ -36,6 +37,8 @@ import { useAuth } from "../contexts/AuthContext";
 const { TextArea } = Input;
 
 const TicketDetail: React.FC = () => {
+  const { t } = useTranslation('tickets');
+  const { t: tCommon } = useTranslation('common');
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -112,7 +115,7 @@ const TicketDetail: React.FC = () => {
       );
       setTicket(data);
     } catch (error: any) {
-      message.error("Failed to load ticket details");
+      message.error(t('detail.failedLoad'));
       navigate("/");
     } finally {
       setLoading(false);
@@ -171,7 +174,7 @@ const TicketDetail: React.FC = () => {
       setNewMessage("");
       // Message update will come via WebSocket
     } catch (error: any) {
-      message.error(error.message || "Failed to send message");
+      message.error(error.message || t('detail.failedSend'));
     } finally {
       setSending(false);
     }
@@ -185,7 +188,7 @@ const TicketDetail: React.FC = () => {
   const submitResolutionFeedback = async () => {
     if (!id || !feedbackType) return;
     if (feedbackType === "rejected" && !feedbackText.trim()) {
-      message.warning("Please provide a reason for rejection");
+      message.warning(t('review.validation.reason'));
       return;
     }
 
@@ -201,15 +204,15 @@ const TicketDetail: React.FC = () => {
       );
       message.success(
         feedbackType === "accepted"
-          ? "Ticket resolved successfully"
-          : "Ticket reopened"
+          ? t('msg.resolvedSuccess')
+          : t('msg.reopened')
       );
       setFeedbackModalOpen(false);
       setFeedbackText("");
       setRating(0);
       fetchTicket();
     } catch (error: any) {
-      message.error(error.message || "Failed to submit feedback");
+      message.error(error.message || t('review.msg.failedSubmit'));
     } finally {
       setSubmittingFeedback(false);
     }
@@ -241,7 +244,7 @@ const TicketDetail: React.FC = () => {
         onClick={() => navigate(-1)}
         className="mb-4 hover:bg-slate-100 text-slate-500 font-medium"
       >
-        Back to Tickets
+        {t('backToTickets')}
       </Button>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full pb-4">
@@ -282,7 +285,7 @@ const TicketDetail: React.FC = () => {
             <div className="space-y-4">
               <div className="flex flex-col gap-1">
                 <span className="text-xs text-slate-500 uppercase tracking-wide">
-                  Project
+                  {t('detail.project')}
                 </span>
                 <span className="text-sm font-semibold text-slate-800">
                   {ticket.project_name}
@@ -290,7 +293,7 @@ const TicketDetail: React.FC = () => {
               </div>
               <div className="flex flex-col gap-1">
                 <span className="text-xs text-slate-500 uppercase tracking-wide">
-                  Created
+                  {t('detail.created')}
                 </span>
                 <span className="text-sm text-slate-800">
                   {formatDate(ticket.created_at)}
@@ -298,7 +301,7 @@ const TicketDetail: React.FC = () => {
               </div>
               <div className="flex flex-col gap-1">
                 <span className="text-xs text-slate-500 uppercase tracking-wide">
-                  Assignees
+                  {t('detail.assignees')}
                 </span>
                 <div className="flex flex-wrap gap-2 mt-1">
                   {ticket.assignees && ticket.assignees.length > 0 ? (
@@ -322,7 +325,7 @@ const TicketDetail: React.FC = () => {
                     ))
                   ) : (
                     <span className="text-sm text-slate-400 italic">
-                      No assignees
+                      {tCommon('noAssignees')}
                     </span>
                   )}
                 </div>
@@ -336,11 +339,11 @@ const TicketDetail: React.FC = () => {
               <div className="flex items-center gap-3 mb-3">
                 <InfoCircleOutlined className="text-lg text-amber-600" />
                 <h3 className="font-bold text-amber-900 text-sm">
-                  Review Pending
+                  {t('review.pending')}
                 </h3>
               </div>
               <p className="text-amber-800 text-xs mb-4">
-                Please review the proposed resolution.
+                {t('review.pendingHint')}
               </p>
               <div className="flex gap-2">
                 <Button
@@ -349,7 +352,7 @@ const TicketDetail: React.FC = () => {
                   className="flex-1 text-slate-400 hover:text-red-600 hover:bg-red-50"
                   onClick={() => handleResolutionAction("rejected")}
                 >
-                  Not Resolved
+                  {t('review.reject')}
                 </Button>
                 <Button
                   type="primary"
@@ -357,7 +360,7 @@ const TicketDetail: React.FC = () => {
                   className="flex-1 bg-emerald-600 hover:bg-emerald-700 border-none"
                   onClick={() => handleResolutionAction("accepted")}
                 >
-                  Accept
+                  {t('review.accept')}
                 </Button>
               </div>
             </div>
@@ -366,13 +369,13 @@ const TicketDetail: React.FC = () => {
           {/* Description */}
           <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
             <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">
-              Description
+              {t('detail.description')}
             </h3>
             <div className="prose prose-slate prose-sm max-w-none text-slate-700">
               <p className="whitespace-pre-wrap break-words">
                 {ticket.description || (
                   <span className="text-slate-400 italic">
-                    No description provided.
+                    {t('detail.noDescription')}
                   </span>
                 )}
               </p>
@@ -385,7 +388,7 @@ const TicketDetail: React.FC = () => {
                 className="mt-4 flex items-center gap-2 text-blue-600 hover:text-blue-800 text-sm font-medium p-2 bg-blue-50 rounded-lg border border-blue-100 transition-colors"
               >
                 <PaperClipOutlined />
-                View Attachment
+                {t('detail.viewAttachment')}
               </a>
             )}
           </div>
@@ -395,7 +398,7 @@ const TicketDetail: React.FC = () => {
             ticket.resolution_feedbacks.length > 0 && (
               <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
                 <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-4">
-                  History
+                  {t('detail.history')}
                 </h3>
                 <div className="space-y-4">
                   {ticket.resolution_feedbacks.map((fb) => (
@@ -442,14 +445,14 @@ const TicketDetail: React.FC = () => {
           <div className="px-6 py-4 border-b border-slate-100 bg-white flex justify-between items-center z-10">
             <div>
               <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2">
-                Discussion
+                {t('detail.discussion')}
                 <span className="flex h-2.5 w-2.5 relative">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
                 </span>
               </h3>
               <p className="text-xs text-slate-400 mt-0.5">
-                Real-time collaboration
+                {t('detail.realtime')}
               </p>
             </div>
             <div className="flex -space-x-2">
@@ -466,8 +469,8 @@ const TicketDetail: React.FC = () => {
             ) : messages.length === 0 ? (
               <div className="h-full flex flex-col justify-center items-center text-center p-10 text-slate-400 opacity-60">
                 <InfoCircleOutlined className="text-4xl mb-4" />
-                <p className="text-base font-medium">No messages yet</p>
-                <p className="text-sm">Start the conversation with the team</p>
+                <p className="text-base font-medium">{t('detail.noMessages')}</p>
+                <p className="text-sm">{t('detail.startConversation')}</p>
               </div>
             ) : (
               messages.map((msg) => {
@@ -545,7 +548,7 @@ const TicketDetail: React.FC = () => {
             <div className="flex gap-4 items-end max-w-5xl mx-auto">
               <div className="flex-1 relative">
                 <TextArea
-                  placeholder="Type your message..."
+                  placeholder={t('detail.messagePlaceholder')}
                   autoSize={{ minRows: 1, maxRows: 6 }}
                   className="w-full py-3 px-4 rounded-xl border-slate-300 bg-slate-50 focus:bg-white focus:border-blue-500 focus:shadow-sm resize-none text-sm transition-all"
                   value={newMessage}
@@ -567,16 +570,12 @@ const TicketDetail: React.FC = () => {
                 loading={sending}
                 disabled={!newMessage.trim()}
               >
-                Send
+                {tCommon('btn.send')}
               </Button>
             </div>
             <div className="text-center mt-2">
               <span className="text-[10px] text-slate-400">
-                Press{" "}
-                <kbd className="font-sans border border-slate-200 rounded px-1 bg-slate-50">
-                  Enter
-                </kbd>{" "}
-                to send
+                {t('detail.enterToSend')}
               </span>
             </div>
           </div>
@@ -594,8 +593,8 @@ const TicketDetail: React.FC = () => {
             )}
             <span className="font-bold">
               {feedbackType === "accepted"
-                ? "Accept Resolution"
-                : "Reject Resolution"}
+                ? t('review.accept')
+                : t('review.reject')}
             </span>
           </div>
         }
@@ -603,7 +602,7 @@ const TicketDetail: React.FC = () => {
         onCancel={() => setFeedbackModalOpen(false)}
         onOk={submitResolutionFeedback}
         confirmLoading={submittingFeedback}
-        okText="Submit"
+        okText={tCommon('btn.submit')}
         okButtonProps={{
           className:
             feedbackType === "accepted" ? "bg-emerald-500" : "bg-red-500",
@@ -613,7 +612,7 @@ const TicketDetail: React.FC = () => {
           {feedbackType === "accepted" && (
             <div className="mb-6 text-center">
               <p className="text-slate-500 mb-2 font-medium">
-                Rate your experience
+                {t('review.rateQuestion')}
               </p>
               <Rate
                 value={rating}
@@ -625,8 +624,8 @@ const TicketDetail: React.FC = () => {
           <div className="mb-2">
             <span className="block text-sm font-bold text-slate-700 mb-2">
               {feedbackType === "accepted"
-                ? "Comments (Optional)"
-                : "Reason for Rejection"}
+                ? t('review.feedbackLabel')
+                : t('review.rejectFeedbackLabel')}
             </span>
             <TextArea
               rows={4}
@@ -634,8 +633,8 @@ const TicketDetail: React.FC = () => {
               onChange={(e: any) => setFeedbackText(e.target.value)}
               placeholder={
                 feedbackType === "accepted"
-                  ? "Any additional feedback..."
-                  : "Please explain why the resolution isn't satisfactory..."
+                  ? t('review.feedbackPlaceholder')
+                  : t('review.feedbackPlaceholder')
               }
               className="rounded-lg border-slate-200"
             />

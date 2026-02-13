@@ -6,6 +6,7 @@
 import React from "react";
 import { Card, Avatar, Tooltip, Spin, Empty, Tag, Progress } from "antd";
 import { WarningOutlined, UserOutlined } from "@ant-design/icons";
+import { useTranslation } from "react-i18next";
 import type { AgentWorkload as AgentWorkloadData } from "../../types/dashboard";
 
 interface Props {
@@ -26,9 +27,9 @@ const getWorkloadColor = (count: number, maxCount: number): string => {
 const getStatusColor = (status: string): string => {
   const s = status.toLowerCase();
   if (s.includes("done") || s.includes("complete")) return "#52c41a";
-  if (s.includes("progress") || s.includes("doing")) return "#1890ff";
+  if (s.includes("progress") || s.includes("doing")) return "var(--color-primary)";
   if (s.includes("review") || s.includes("test")) return "#faad14";
-  return "#8c8c8c";
+  return "var(--color-text-muted)";
 };
 
 const TeamWorkloadCards: React.FC<Props> = ({
@@ -36,17 +37,18 @@ const TeamWorkloadCards: React.FC<Props> = ({
   loading = false,
   onUserClick,
 }) => {
+  const { t } = useTranslation('dashboard');
   const maxWorkload = Math.max(...workloads.map((w) => w.total_active), 1);
 
   return (
     <Card
-      title="Team Workload"
+      title={t('widgets.teamWorkload')}
       size="small"
       style={{ borderRadius: 8 }}
       styles={{ body: { padding: 12 } }}
       extra={
-        <span style={{ fontSize: 11, color: "#8c8c8c" }}>
-          {workloads.length} member{workloads.length !== 1 ? "s" : ""}
+        <span style={{ fontSize: 11, color: "var(--color-text-muted)" }}>
+          {t('workload.members', { count: workloads.length })}
         </span>
       }
     >
@@ -57,7 +59,7 @@ const TeamWorkloadCards: React.FC<Props> = ({
       ) : workloads.length === 0 ? (
         <Empty
           image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description="No team members found"
+          description={t('workload.noMembers')}
           style={{ padding: 24 }}
         />
       ) : (
@@ -97,8 +99,8 @@ const TeamWorkloadCards: React.FC<Props> = ({
                   borderRadius: 8,
                   border: hasOverdue
                     ? "1px solid #ff4d4f40"
-                    : "1px solid #f0f0f0",
-                  backgroundColor: hasOverdue ? "#fff1f0" : "#fff",
+                    : "1px solid var(--color-border-light)",
+                  backgroundColor: hasOverdue ? "#fff1f0" : "var(--color-bg-surface)",
                   cursor: onUserClick ? "pointer" : "default",
                   transition: "all 0.2s ease",
                 }}
@@ -116,7 +118,7 @@ const TeamWorkloadCards: React.FC<Props> = ({
                   <Avatar
                     size={36}
                     style={{
-                      backgroundColor: "#1890ff",
+                      backgroundColor: "var(--color-primary)",
                       flexShrink: 0,
                     }}
                     icon={<UserOutlined />}
@@ -153,11 +155,11 @@ const TeamWorkloadCards: React.FC<Props> = ({
                       >
                         {workload.total_active}
                       </span>
-                      <span style={{ fontSize: 11, color: "#8c8c8c" }}>
-                        active
+                      <span style={{ fontSize: 11, color: "var(--color-text-muted)" }}>
+                        {t('workload.active')}
                       </span>
                       {hasOverdue && (
-                        <Tooltip title={`${workload.overdue} overdue`}>
+                        <Tooltip title={t('company.overdue', { count: workload.overdue })}>
                           <Tag
                             color="error"
                             icon={<WarningOutlined />}
@@ -203,7 +205,7 @@ const TeamWorkloadCards: React.FC<Props> = ({
                               gap: 4,
                               padding: "2px 6px",
                               borderRadius: 4,
-                              backgroundColor: "#f5f5f5",
+                              backgroundColor: "var(--color-bg-inset)",
                               fontSize: 10,
                             }}
                           >
@@ -215,7 +217,7 @@ const TeamWorkloadCards: React.FC<Props> = ({
                                 backgroundColor: getStatusColor(status),
                               }}
                             />
-                            <span style={{ color: "#595959" }}>
+                            <span style={{ color: "var(--color-text-secondary)" }}>
                               {status.length > 10
                                 ? status.substring(0, 10) + "..."
                                 : status}
@@ -236,7 +238,7 @@ const TeamWorkloadCards: React.FC<Props> = ({
       <style>
         {`
           .workload-card:hover {
-            border-color: #1890ff !important;
+            border-color: var(--color-primary) !important;
             box-shadow: 0 2px 8px rgba(24, 144, 255, 0.1);
           }
         `}

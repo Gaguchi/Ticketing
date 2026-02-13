@@ -12,6 +12,7 @@ import {
   PlusOutlined,
   DeleteOutlined,
 } from "@ant-design/icons";
+import { useTranslation } from "react-i18next";
 import type { ActivityEntry } from "../../types/dashboard";
 
 interface Props {
@@ -36,11 +37,11 @@ const getActivityIcon = (field: string) => {
 const getActivityColor = (field: string): string => {
   const f = field.toLowerCase();
   if (f.includes("assignee")) return "#722ed1";
-  if (f.includes("status") || f.includes("column")) return "#1890ff";
+  if (f.includes("status") || f.includes("column")) return "var(--color-primary)";
   if (f.includes("created") || f === "new") return "#52c41a";
   if (f.includes("priority")) return "#fa8c16";
   if (f.includes("delete")) return "#ff4d4f";
-  return "#8c8c8c";
+  return "var(--color-text-muted)";
 };
 
 // Format relative time
@@ -87,6 +88,7 @@ const LiveActivityFeed: React.FC<Props> = ({
   maxHeight = 400,
   autoScroll = false,
 }) => {
+  const { t } = useTranslation('dashboard');
   const listRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to top when new activities arrive
@@ -109,15 +111,15 @@ const LiveActivityFeed: React.FC<Props> = ({
               animation: "pulse 2s infinite",
             }}
           />
-          Live Activity
+          {t('activity.liveActivity')}
         </div>
       }
       size="small"
       style={{ borderRadius: 8 }}
       styles={{ body: { padding: 0 } }}
       extra={
-        <span style={{ fontSize: 11, color: "#8c8c8c" }}>
-          {activities.length} recent
+        <span style={{ fontSize: 11, color: "var(--color-text-muted)" }}>
+          {t('activity.recent', { count: activities.length })}
         </span>
       }
     >
@@ -128,7 +130,7 @@ const LiveActivityFeed: React.FC<Props> = ({
             50% { opacity: 0.4; }
           }
           .activity-item:hover {
-            background-color: #fafafa;
+            background-color: var(--color-bg-sidebar);
           }
         `}
       </style>
@@ -141,7 +143,7 @@ const LiveActivityFeed: React.FC<Props> = ({
         ) : activities.length === 0 ? (
           <Empty
             image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description="No recent activity"
+            description={t('activity.noActivity')}
             style={{ padding: 32 }}
           />
         ) : (
@@ -154,7 +156,7 @@ const LiveActivityFeed: React.FC<Props> = ({
                 style={{
                   padding: "10px 12px",
                   cursor: onTicketClick ? "pointer" : "default",
-                  borderBottom: "1px solid #f5f5f5",
+                  borderBottom: "1px solid var(--color-bg-inset)",
                 }}
               >
                 <div style={{ display: "flex", gap: 10, width: "100%" }}>
@@ -185,9 +187,9 @@ const LiveActivityFeed: React.FC<Props> = ({
                               activity.changed_by.first_name ||
                               activity.changed_by.username
                             }`
-                          : "System"}
+                          : t('activity.system')}
                       </span>
-                      <span style={{ color: "#8c8c8c" }}> updated </span>
+                      <span style={{ color: "var(--color-text-muted)" }}> {t('activity.updated')} </span>
                       <span style={{ fontWeight: 500 }}>
                         {formatFieldName(activity.field)}
                       </span>
@@ -197,7 +199,7 @@ const LiveActivityFeed: React.FC<Props> = ({
                     <div
                       style={{
                         fontSize: 11,
-                        color: "#595959",
+                        color: "var(--color-text-secondary)",
                         marginBottom: 4,
                       }}
                     >
@@ -233,14 +235,14 @@ const LiveActivityFeed: React.FC<Props> = ({
                               maxWidth: 80,
                               overflow: "hidden",
                               textOverflow: "ellipsis",
-                              backgroundColor: "#f5f5f5",
+                              backgroundColor: "var(--color-bg-inset)",
                               border: "none",
                             }}
                           >
                             {truncateValue(activity.old_value, 12)}
                           </Tag>
                         </Tooltip>
-                        <span style={{ color: "#8c8c8c" }}>→</span>
+                        <span style={{ color: "var(--color-text-muted)" }}>→</span>
                         <Tooltip title={activity.new_value || "(empty)"}>
                           <Tag
                             style={{

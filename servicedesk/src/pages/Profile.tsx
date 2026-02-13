@@ -1,16 +1,18 @@
 import React from "react";
 import { Avatar } from "antd";
 import { UserOutlined, MailOutlined, IdcardOutlined } from "@ant-design/icons";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../contexts/AuthContext";
 
 const Profile: React.FC = () => {
+  const { t } = useTranslation('auth');
   const { user } = useAuth();
 
   if (!user) return null;
 
   return (
     <div className="max-w-3xl mx-auto">
-      <h1 className="text-2xl font-bold text-slate-800 mb-6">My Profile</h1>
+      <h1 className="text-2xl font-bold text-slate-800 mb-6">{t('profile.myProfile')}</h1>
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         {/* Header Background */}
@@ -42,7 +44,7 @@ const Profile: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
               <div className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">
-                Username
+                {t('profile.username')}
               </div>
               <div className="font-medium text-slate-700 flex items-center gap-2">
                 <IdcardOutlined className="text-blue-500" />
@@ -52,7 +54,7 @@ const Profile: React.FC = () => {
 
             <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
               <div className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">
-                Email Address
+                {t('profile.email')}
               </div>
               <div className="font-medium text-slate-700 flex items-center gap-2">
                 <MailOutlined className="text-blue-500" />
@@ -62,7 +64,7 @@ const Profile: React.FC = () => {
 
             <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
               <div className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">
-                First Name
+                {t('profile.firstName')}
               </div>
               <div className="font-medium text-slate-700">
                 {user.first_name || "—"}
@@ -71,7 +73,7 @@ const Profile: React.FC = () => {
 
             <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
               <div className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">
-                Last Name
+                {t('profile.lastName')}
               </div>
               <div className="font-medium text-slate-700">
                 {user.last_name || "—"}

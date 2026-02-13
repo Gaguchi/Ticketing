@@ -411,7 +411,7 @@ const Users: React.FC = () => {
               background: record.is_superuser
                 ? "#f5222d"
                 : record.is_staff
-                  ? "#1890ff"
+                  ? "var(--color-primary)"
                   : "#52c41a",
             }}
             icon={<UserOutlined />}
@@ -503,7 +503,7 @@ const Users: React.FC = () => {
             }
           >
             <Badge count={totalCompanies} showZero>
-              <TeamOutlined style={{ fontSize: 20, color: "#1890ff" }} />
+              <TeamOutlined style={{ fontSize: 20, color: "var(--color-primary)" }} />
             </Badge>
           </Tooltip>
         );

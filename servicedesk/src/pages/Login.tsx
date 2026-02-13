@@ -2,9 +2,11 @@ import React, { useState } from "react";
 import { Form, Input, Button, message } from "antd";
 import { UserOutlined, LockOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../contexts/AuthContext";
 
 const Login: React.FC = () => {
+  const { t } = useTranslation('auth');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -13,11 +15,11 @@ const Login: React.FC = () => {
     try {
       setLoading(true);
       await login(values.username, values.password);
-      message.success("Welcome back!");
+      message.success(t('login.msg.welcome'));
       navigate("/tickets");
     } catch (error: any) {
       message.error(
-        error.message || "Login failed. Please check your credentials."
+        error.message || t('login.msg.failed')
       );
     } finally {
       setLoading(false);
@@ -36,11 +38,10 @@ const Login: React.FC = () => {
             <span className="text-3xl font-bold">SD</span>
           </div>
           <h1 className="text-5xl font-bold mb-6 leading-tight">
-            Enterprise Service Desk
+            {t('login.branding.title')}
           </h1>
           <p className="text-lg text-blue-100 leading-relaxed">
-            Streamline your support workflow with our advanced ticketing system.
-            Track, manage, and resolve issues efficiently.
+            {t('login.branding.description')}
           </p>
         </div>
       </div>
@@ -50,9 +51,9 @@ const Login: React.FC = () => {
         <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
           <div className="mb-10 text-center">
             <h2 className="text-3xl font-bold text-slate-800 mb-2">
-              Welcome Back
+              {t('login.welcome')}
             </h2>
-            <p className="text-slate-500">Please sign in to your account</p>
+            <p className="text-slate-500">{t('login.subtitle')}</p>
           </div>
 
           <Form
@@ -65,15 +66,15 @@ const Login: React.FC = () => {
             <Form.Item
               name="username"
               label={
-                <span className="text-slate-700 font-medium">Username</span>
+                <span className="text-slate-700 font-medium">{t('login.username')}</span>
               }
               rules={[
-                { required: true, message: "Please enter your username" },
+                { required: true, message: t('login.validation.username') },
               ]}
             >
               <Input
                 prefix={<UserOutlined className="text-slate-400" />}
-                placeholder="Enter your username"
+                placeholder={t('login.usernamePlaceholder')}
                 className="rounded-lg py-2.5"
               />
             </Form.Item>
@@ -81,15 +82,15 @@ const Login: React.FC = () => {
             <Form.Item
               name="password"
               label={
-                <span className="text-slate-700 font-medium">Password</span>
+                <span className="text-slate-700 font-medium">{t('login.password')}</span>
               }
               rules={[
-                { required: true, message: "Please enter your password" },
+                { required: true, message: t('login.validation.password') },
               ]}
             >
               <Input.Password
                 prefix={<LockOutlined className="text-slate-400" />}
-                placeholder="Enter your password"
+                placeholder={t('login.passwordPlaceholder')}
                 className="rounded-lg py-2.5"
               />
             </Form.Item>
@@ -102,20 +103,14 @@ const Login: React.FC = () => {
                 loading={loading}
                 className="h-12 bg-blue-600 hover:bg-blue-700 border-none rounded-lg text-base font-semibold shadow-md shadow-blue-600/20"
               >
-                Sign In
+                {t('login.submit')}
               </Button>
             </Form.Item>
           </Form>
 
           <div className="mt-6 text-center">
             <p className="text-sm text-slate-500">
-              Need help?{" "}
-              <a
-                href="#"
-                className="text-blue-600 hover:text-blue-700 font-medium"
-              >
-                Contact Administrator
-              </a>
+              {t('login.needHelp')}
             </p>
           </div>
         </div>

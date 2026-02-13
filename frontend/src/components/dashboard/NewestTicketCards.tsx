@@ -6,6 +6,7 @@
 
 import React from "react";
 import { Card, Spin, Empty } from "antd";
+import { useTranslation } from "react-i18next";
 import type { DashboardTicket } from "../../types/dashboard";
 
 interface Props {
@@ -37,20 +38,20 @@ const getPriorityColor = (priority: string | null): string => {
   const p = priority.toLowerCase();
   if (p.includes("critical") || p.includes("highest")) return "#ff4d4f";
   if (p.includes("high")) return "#fa8c16";
-  if (p.includes("medium")) return "#1890ff";
+  if (p.includes("medium")) return "var(--color-primary)";
   if (p.includes("low")) return "#52c41a";
-  return "#8c8c8c";
+  return "var(--color-text-muted)";
 };
 
 // Priority background color
 const getPriorityBgColor = (priority: string | null): string => {
-  if (!priority) return "#fafafa";
+  if (!priority) return "var(--color-bg-sidebar)";
   const p = priority.toLowerCase();
   if (p.includes("critical") || p.includes("highest")) return "#fff1f0";
   if (p.includes("high")) return "#fff7e6";
-  if (p.includes("medium")) return "#e6f7ff";
+  if (p.includes("medium")) return "var(--color-primary-light)";
   if (p.includes("low")) return "#f6ffed";
-  return "#fafafa";
+  return "var(--color-bg-sidebar)";
 };
 
 const NewestTicketCards: React.FC<Props> = ({
@@ -59,6 +60,7 @@ const NewestTicketCards: React.FC<Props> = ({
   onTicketClick,
   maxCards = 8,
 }) => {
+  const { t } = useTranslation('dashboard');
   const displayTickets = tickets.slice(0, maxCards);
 
   return (
@@ -71,9 +73,9 @@ const NewestTicketCards: React.FC<Props> = ({
             alignItems: "center",
           }}
         >
-          <span style={{ fontSize: 13 }}>📥 Newest Tickets</span>
-          <span style={{ fontSize: 11, color: "#8c8c8c", fontWeight: 400 }}>
-            {tickets.length} recent
+          <span style={{ fontSize: 13 }}>{t('newest.newestTickets')}</span>
+          <span style={{ fontSize: 11, color: "var(--color-text-muted)", fontWeight: 400 }}>
+            {t('newest.recent', { count: tickets.length })}
           </span>
         </div>
       }
@@ -97,7 +99,7 @@ const NewestTicketCards: React.FC<Props> = ({
       ) : displayTickets.length === 0 ? (
         <Empty
           image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description="No recent tickets"
+          description={t('newest.noTickets')}
           style={{ padding: 24 }}
         />
       ) : (
@@ -109,19 +111,19 @@ const NewestTicketCards: React.FC<Props> = ({
               gridTemplateColumns: "70px 1fr 70px 60px 50px",
               gap: 8,
               padding: "8px 12px",
-              backgroundColor: "#fafafa",
-              borderBottom: "1px solid #f0f0f0",
+              backgroundColor: "var(--color-bg-sidebar)",
+              borderBottom: "1px solid var(--color-border-light)",
               fontWeight: 600,
               fontSize: 10,
-              color: "#8c8c8c",
+              color: "var(--color-text-muted)",
               textTransform: "uppercase",
             }}
           >
-            <span>Ticket</span>
-            <span>Title</span>
-            <span>Priority</span>
-            <span>Status</span>
-            <span>Age</span>
+            <span>{t('newest.ticket')}</span>
+            <span>{t('newest.title')}</span>
+            <span>{t('newest.priority')}</span>
+            <span>{t('newest.status')}</span>
+            <span>{t('newest.age')}</span>
           </div>
 
           {/* Table Rows */}
@@ -135,7 +137,7 @@ const NewestTicketCards: React.FC<Props> = ({
                 gap: 8,
                 padding: "8px 12px",
                 cursor: "pointer",
-                borderBottom: "1px solid #f5f5f5",
+                borderBottom: "1px solid var(--color-bg-inset)",
                 alignItems: "center",
               }}
               className="newest-ticket-row"
@@ -145,7 +147,7 @@ const NewestTicketCards: React.FC<Props> = ({
                 style={{
                   fontFamily: "monospace",
                   fontSize: 11,
-                  color: "#1890ff",
+                  color: "var(--color-primary)",
                   fontWeight: 500,
                 }}
               >
@@ -158,7 +160,7 @@ const NewestTicketCards: React.FC<Props> = ({
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   whiteSpace: "nowrap",
-                  color: "#262626",
+                  color: "var(--color-text-primary)",
                 }}
               >
                 {ticket.title}
@@ -183,7 +185,7 @@ const NewestTicketCards: React.FC<Props> = ({
               <span
                 style={{
                   fontSize: 10,
-                  color: "#595959",
+                  color: "var(--color-text-secondary)",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   whiteSpace: "nowrap",
@@ -196,7 +198,7 @@ const NewestTicketCards: React.FC<Props> = ({
               <span
                 style={{
                   fontSize: 10,
-                  color: "#8c8c8c",
+                  color: "var(--color-text-muted)",
                   textAlign: "right",
                 }}
               >
@@ -210,7 +212,7 @@ const NewestTicketCards: React.FC<Props> = ({
       <style>
         {`
           .newest-ticket-row:hover {
-            background-color: #f5f5f5 !important;
+            background-color: var(--color-bg-inset) !important;
           }
         `}
       </style>

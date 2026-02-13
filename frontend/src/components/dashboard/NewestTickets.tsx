@@ -8,6 +8,7 @@ import { Card, List, Avatar, Tag, Tooltip, Spin, Empty } from "antd";
 import { ClockCircleOutlined } from "@ant-design/icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBuilding, faUser } from "@fortawesome/free-solid-svg-icons";
+import { useTranslation } from "react-i18next";
 import type { DashboardTicket } from "../../types/dashboard";
 
 interface Props {
@@ -50,6 +51,7 @@ const NewestTickets: React.FC<Props> = ({
   onTicketClick,
   maxHeight = 400,
 }) => {
+  const { t } = useTranslation('dashboard');
   return (
     <Card
       title={
@@ -60,7 +62,7 @@ const NewestTickets: React.FC<Props> = ({
             alignItems: "center",
           }}
         >
-          <span>Newest Tickets</span>
+          <span>{t('newest.newestTickets')}</span>
           <Tag color="blue" style={{ marginRight: 0 }}>
             {tickets.length}
           </Tag>
@@ -83,7 +85,7 @@ const NewestTickets: React.FC<Props> = ({
       ) : tickets.length === 0 ? (
         <Empty
           image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description="No recent tickets"
+          description={t('newest.noTickets')}
           style={{ padding: 32 }}
         />
       ) : (
@@ -95,7 +97,7 @@ const NewestTickets: React.FC<Props> = ({
               style={{
                 padding: "12px 16px",
                 cursor: onTicketClick ? "pointer" : "default",
-                borderBottom: "1px solid #f0f0f0",
+                borderBottom: "1px solid var(--color-border-light)",
               }}
               className="hover-highlight"
             >
@@ -107,7 +109,7 @@ const NewestTickets: React.FC<Props> = ({
                   <Avatar
                     size={32}
                     src={ticket.company?.logo_url}
-                    style={{ backgroundColor: "#1890ff", flexShrink: 0 }}
+                    style={{ backgroundColor: "var(--color-primary)", flexShrink: 0 }}
                   >
                     {ticket.company ? (
                       <FontAwesomeIcon
@@ -149,7 +151,7 @@ const NewestTickets: React.FC<Props> = ({
                         alignItems: "center",
                         gap: 8,
                         fontSize: 11,
-                        color: "#8c8c8c",
+                        color: "var(--color-text-muted)",
                         flexWrap: "wrap",
                       }}
                     >
@@ -172,7 +174,7 @@ const NewestTickets: React.FC<Props> = ({
                       )}
 
                       {ticket.company && (
-                        <span style={{ color: "#595959" }}>
+                        <span style={{ color: "var(--color-text-secondary)" }}>
                           {ticket.company.name}
                         </span>
                       )}
@@ -197,7 +199,7 @@ const NewestTickets: React.FC<Props> = ({
                   {/* Reporter avatar */}
                   {ticket.reporter && (
                     <Tooltip
-                      title={`Created by ${ticket.reporter.first_name} ${ticket.reporter.last_name}`}
+                      title={t('newest.createdBy', { name: `${ticket.reporter.first_name} ${ticket.reporter.last_name}` })}
                     >
                       <Avatar
                         size={24}

@@ -15,6 +15,7 @@ import {
   Drawer,
   Typography,
 } from "antd";
+import { useTranslation } from 'react-i18next';
 import {
   ShareAltOutlined,
   EllipsisOutlined,
@@ -91,7 +92,7 @@ const getTypeIcon = (type?: string) => {
   }
 };
 
-// Priority labels matching PriorityIcons.tsx
+// Priority labels - will be replaced with translated versions in component
 const PRIORITY_LABELS: Record<number, string> = {
   1: "Backlog",
   2: "Normal",
@@ -120,6 +121,8 @@ export const TicketModal: React.FC<TicketModalProps> = ({
   onSuccess,
   boardColumns = [],
 }) => {
+  const { t } = useTranslation('tickets');
+  const { t: tCommon } = useTranslation('common');
   const isCreateMode = mode === "create";
 
   // Form state
@@ -195,11 +198,11 @@ export const TicketModal: React.FC<TicketModalProps> = ({
     setArchiveActionLoading(true);
     try {
       const updatedTicket = await ticketService.archiveTicket(ticket.id);
-      message.success("Ticket moved to archive");
+      message.success(t('msg.ticketArchived'));
       onSuccess?.(updatedTicket);
       onClose();
     } catch (e) {
-      message.error("Failed to archive");
+      message.error(t('msg.failedMove'));
     } finally {
       setArchiveActionLoading(false);
     }
@@ -210,10 +213,10 @@ export const TicketModal: React.FC<TicketModalProps> = ({
     setArchiveActionLoading(true);
     try {
       const updatedTicket = await ticketService.restoreTicket(ticket.id);
-      message.success("Ticket restored");
+      message.success(t('msg.ticketRestored'));
       onSuccess?.(updatedTicket);
     } catch (e) {
-      message.error("Failed to restore");
+      message.error(t('msg.failedRestore'));
     } finally {
       setArchiveActionLoading(false);
     }
@@ -329,7 +332,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
 
   const handleSave = async () => {
     if (!title.trim()) {
-      message.error("Title required");
+      message.error(tCommon('validation.required'));
       return;
     }
     setSaving(true);
@@ -356,14 +359,14 @@ export const TicketModal: React.FC<TicketModalProps> = ({
         savedTicket = await ticketService.createTicket(ticketData);
       else if (ticket) {
         savedTicket = await ticketService.updateTicket(ticket.id, ticketData);
-        message.success("Saved");
+        message.success(tCommon('msg.success.saved'));
       } else return;
 
       onSuccess?.(savedTicket);
       if (isCreateMode) onClose();
       setIsEditingDescription(false);
     } catch (e) {
-      message.error("Failed to save");
+      message.error(tCommon('msg.error.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -380,7 +383,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
       setSubtasks([...subtasks, s]);
       setNewSubtaskTitle("");
     } catch (e) {
-      message.error("Failed to add subtask");
+      message.error(tCommon('msg.error.saveFailed'));
     } finally {
       setAddingSubtask(false);
     }
@@ -422,7 +425,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
       setAddingLink(false);
       setSelectedTargetTicket(null);
     } catch (e) {
-      message.error("Failed to link");
+      message.error(tCommon('msg.error.saveFailed'));
     } finally {
       setAddingLink(false);
     }
@@ -459,7 +462,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                   items: [
                     {
                       key: "task",
-                      label: "Task",
+                      label: tCommon('type.task'),
                       icon: (
                         <FontAwesomeIcon icon={faCheckSquare} color="#4bade8" />
                       ),
@@ -470,17 +473,17 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                             await ticketService.updateTicket(ticket.id, {
                               type: "task",
                             });
-                            message.success("Type updated");
+                            message.success(t('msg.ticketUpdated'));
                             onSuccess?.({ ...ticket, type: "task" } as Ticket);
                           } catch (e) {
-                            message.error("Failed to update type");
+                            message.error(t('msg.failedUpdate'));
                           }
                         }
                       },
                     },
                     {
                       key: "bug",
-                      label: "Bug",
+                      label: tCommon('type.bug'),
                       icon: <FontAwesomeIcon icon={faBug} color="#e5493a" />,
                       onClick: async () => {
                         setTicketType("bug");
@@ -489,17 +492,17 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                             await ticketService.updateTicket(ticket.id, {
                               type: "bug",
                             });
-                            message.success("Type updated");
+                            message.success(t('msg.ticketUpdated'));
                             onSuccess?.({ ...ticket, type: "bug" } as Ticket);
                           } catch (e) {
-                            message.error("Failed to update type");
+                            message.error(t('msg.failedUpdate'));
                           }
                         }
                       },
                     },
                     {
                       key: "story",
-                      label: "Story",
+                      label: tCommon('type.story'),
                       icon: (
                         <FontAwesomeIcon icon={faBookmark} color="#63ba3c" />
                       ),
@@ -510,17 +513,17 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                             await ticketService.updateTicket(ticket.id, {
                               type: "story",
                             });
-                            message.success("Type updated");
+                            message.success(t('msg.ticketUpdated'));
                             onSuccess?.({ ...ticket, type: "story" } as Ticket);
                           } catch (e) {
-                            message.error("Failed to update type");
+                            message.error(t('msg.failedUpdate'));
                           }
                         }
                       },
                     },
                     {
                       key: "epic",
-                      label: "Epic",
+                      label: tCommon('type.epic'),
                       icon: <FontAwesomeIcon icon={faBolt} color="#904ee2" />,
                       onClick: async () => {
                         setTicketType("epic");
@@ -529,10 +532,10 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                             await ticketService.updateTicket(ticket.id, {
                               type: "epic",
                             });
-                            message.success("Type updated");
+                            message.success(t('msg.ticketUpdated'));
                             onSuccess?.({ ...ticket, type: "epic" } as Ticket);
                           } catch (e) {
-                            message.error("Failed to update type");
+                            message.error(t('msg.failedUpdate'));
                           }
                         }
                       },
@@ -558,7 +561,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
               {/* Breadcrumbs */}
               <Text type="secondary" style={{ fontSize: 13 }}>
                 {currentProject?.name} /{" "}
-                <Text strong style={{ color: "#172b4d" }}>
+                <Text strong style={{ color: "var(--color-text-heading)" }}>
                   {ticket?.ticket_key || "NEW"}
                 </Text>
               </Text>
@@ -569,14 +572,14 @@ export const TicketModal: React.FC<TicketModalProps> = ({
             <Space>
               {!isCreateMode && (
                 <>
-                  <Tooltip title="View History">
+                  <Tooltip title={t('history.title')}>
                     <Button
                       type="text"
                       icon={<HistoryOutlined />}
                       onClick={() => setHistoryOpen(true)}
                     />
                   </Tooltip>
-                  <Tooltip title="Share">
+                  <Tooltip title={tCommon('btn.export')}>
                     <Button type="text" icon={<ShareAltOutlined />} />
                   </Tooltip>
                   <Dropdown
@@ -584,7 +587,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                       items: [
                         {
                           key: "archive",
-                          label: ticket?.is_archived ? "Restore" : "Archive",
+                          label: ticket?.is_archived ? tCommon('btn.restore') : tCommon('btn.archive'),
                           icon: <InboxOutlined />,
                           onClick: ticket?.is_archived
                             ? handleRestoreTicket
@@ -613,7 +616,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                 <Input.TextArea
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Successfully created ticket title..."
+                  placeholder={t('form.titlePlaceholder')}
                   autoSize={{ minRows: 1, maxRows: 2 }}
                   className="v3-ticket-title"
                   onBlur={handleSave} // Auto-save on blur
@@ -623,7 +626,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
               <div className="ticket-meta-row">
                 {/* Reporter */}
                 <div className="meta-item">
-                  <span className="meta-label">Reporter</span>
+                  <span className="meta-label">{t('form.reporter')}</span>
                   <div className="meta-value">
                     <Space size={4}>
                       <Avatar
@@ -644,7 +647,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
 
                 {/* Assignees - Only project admins, or company admins if company is attached */}
                 <div className="meta-item">
-                  <span className="meta-label">Assignees</span>
+                  <span className="meta-label">{tCommon('col.assignees')}</span>
                   <div className="meta-value">
                     <Select
                       mode="multiple"
@@ -657,7 +660,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                               await ticketService.updateTicket(ticket.id, {
                                 assignee_ids: ids,
                               });
-                            message.success("Assignees updated");
+                            message.success(t('msg.ticketUpdated'));
                             // Build assignees array from assignableUsers for Kanban display
                             const assigneesArray = assignableUsers.filter((u) =>
                               ids.includes(u.id),
@@ -668,14 +671,14 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                               assignees: assigneesArray,
                             } as Ticket);
                           } catch (e) {
-                            message.error("Failed to update assignees");
+                            message.error(t('msg.failedUpdate'));
                           }
                         }
                       }}
                       placeholder={
                         ticket?.company
-                          ? "Company admins..."
-                          : "Project admins..."
+                          ? t('form.assigneesCompanyAdmins')
+                          : t('form.assigneesProjectAdmins')
                       }
                       style={{ minWidth: 100, maxWidth: 200 }}
                       variant="borderless"
@@ -720,7 +723,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
 
                 {/* Status - Use board columns if available, else fall back to legacy columns */}
                 <div className="meta-item">
-                  <span className="meta-label">Status</span>
+                  <span className="meta-label">{tCommon('col.status')}</span>
                   <div className="meta-value">
                     {boardColumns.length > 0 ? (
                       // Board column-based status - show column names (To Do, In Progress, Review, Done)
@@ -748,7 +751,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                           const isDoneColumn = targetColumn.name.toLowerCase().includes("done") ||
                             targetColumn.name.toLowerCase().includes("completed");
                           if (isDoneColumn && !dueDate && !ticket?.due_date) {
-                            message.warning("Please set a due date before closing this ticket");
+                            message.warning(t('form.dueDate'));
                             return;
                           }
 
@@ -762,7 +765,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                                 await ticketService.updateTicket(ticket.id, {
                                   ticket_status_key: targetStatus.key,
                                 });
-                              message.success("Status updated");
+                              message.success(t('msg.ticketUpdated'));
                               onSuccess?.({
                                 ...ticket,
                                 ...updatedTicket,
@@ -773,7 +776,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                                   targetStatus.category_color,
                               } as Ticket);
                             } catch (e) {
-                              message.error("Failed to update status");
+                              message.error(t('msg.failedUpdate'));
                             }
                           }
                         }}
@@ -812,7 +815,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                           const isDoneColumn = targetColumn?.name?.toLowerCase().includes("done") ||
                             targetColumn?.name?.toLowerCase().includes("completed");
                           if (isDoneColumn && !dueDate && !ticket?.due_date) {
-                            message.warning("Please set a due date before closing this ticket");
+                            message.warning(t('form.dueDate'));
                             return;
                           }
 
@@ -823,13 +826,13 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                                 await ticketService.updateTicket(ticket.id, {
                                   column: c,
                                 });
-                              message.success("Status updated");
+                              message.success(t('msg.ticketUpdated'));
                               onSuccess?.({
                                 ...ticket,
                                 ...updatedTicket,
                               } as Ticket);
                             } catch (e) {
-                              message.error("Failed to update status");
+                              message.error(t('msg.failedUpdate'));
                             }
                           }
                         }}
@@ -850,7 +853,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
 
                 {/* Priority */}
                 <div className="meta-item">
-                  <span className="meta-label">Priority</span>
+                  <span className="meta-label">{tCommon('col.priority')}</span>
                   <div className="meta-value">
                     <Select
                       value={priority}
@@ -861,13 +864,13 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                             await ticketService.updateTicket(ticket.id, {
                               priority_id: p,
                             });
-                            message.success("Priority updated");
+                            message.success(t('msg.ticketUpdated'));
                             onSuccess?.({
                               ...ticket,
                               priority_id: p,
                             } as Ticket);
                           } catch (e) {
-                            message.error("Failed to update priority");
+                            message.error(t('msg.failedUpdate'));
                           }
                         }
                       }}
@@ -889,7 +892,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
 
                 {/* Company */}
                 <div className="meta-item">
-                  <span className="meta-label">Company</span>
+                  <span className="meta-label">{tCommon('field.company')}</span>
                   <div className="meta-value">
                     <Select
                       value={selectedCompanyId}
@@ -900,14 +903,14 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                             await ticketService.updateTicket(ticket.id, {
                               company: id || null,
                             });
-                            message.success("Company updated");
+                            message.success(t('msg.ticketUpdated'));
                             onSuccess?.({ ...ticket, company: id } as Ticket);
                           } catch (e) {
-                            message.error("Failed to update company");
+                            message.error(t('msg.failedUpdate'));
                           }
                         }
                       }}
-                      placeholder="None"
+                      placeholder={tCommon('empty.noData')}
                       allowClear
                       style={{ width: 130 }}
                       size="small"
@@ -928,7 +931,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
 
                 {/* Dates */}
                 <div className="meta-item">
-                  <span className="meta-label">Due Date</span>
+                  <span className="meta-label">{t('form.dueDate')}</span>
                   <div className="meta-value">
                     <DatePicker
                       value={dueDate}
@@ -939,20 +942,20 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                             await ticketService.updateTicket(ticket.id, {
                               due_date: date ? date.format("YYYY-MM-DD") : null,
                             });
-                            message.success("Due date updated");
+                            message.success(t('msg.ticketUpdated'));
                             onSuccess?.({
                               ...ticket,
                               due_date: date ? date.format("YYYY-MM-DD") : null,
                             } as Ticket);
                           } catch (e) {
-                            message.error("Failed to update due date");
+                            message.error(t('msg.failedUpdate'));
                           }
                         }
                       }}
                       variant="borderless"
                       size="small"
                       format="MMM D"
-                      placeholder="Set date"
+                      placeholder={t('form.dueDate')}
                       style={{ width: 100 }}
                     />
                   </div>
@@ -963,7 +966,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
               {/* 3. DESCRIPTION */}
               <div className="ticket-description-section">
                 <div className="section-header-row">
-                  <Text strong>Description</Text>
+                  <Text strong>{t('form.description')}</Text>
                   {!isEditingDescription && !isCreateMode && (
                     <Button
                       type="text"
@@ -991,7 +994,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                           size="small"
                           onClick={() => setIsEditingDescription(false)}
                         >
-                          Cancel
+                          {tCommon('btn.cancel')}
                         </Button>
                         <Button
                           size="small"
@@ -1001,7 +1004,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                             setIsEditingDescription(false);
                           }}
                         >
-                          Save
+                          {tCommon('btn.save')}
                         </Button>
                       </Space>
                     </div>
@@ -1013,7 +1016,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                     dangerouslySetInnerHTML={{
                       __html:
                         description ||
-                        "<p class='placeholder'>Add a description...</p>",
+                        `<p class='placeholder'>${t('form.descriptionPlaceholder')}</p>`,
                     }}
                   />
                 )}
@@ -1022,7 +1025,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
               {/* 4. SUBTASKS */}
               <div className="ticket-section">
                 <div style={{ marginBottom: 16 }}>
-                  <Text strong>Subtasks</Text>
+                  <Text strong>{tCommon('field.subtasks')}</Text>
                 </div>
                 <div className="subtask-list">
                   {subtasks.map((s) => (
@@ -1060,7 +1063,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                       onChange={(e) => setNewSubtaskTitle(e.target.value)}
                       onPressEnter={handleAddSubtask}
                       onBlur={() => !newSubtaskTitle && setAddingSubtask(false)}
-                      placeholder="Enter subtask..."
+                      placeholder={t('subtasks.placeholder')}
                     />
                   ) : (
                     <Button
@@ -1071,7 +1074,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                       onClick={() => setAddingSubtask(true)}
                       style={{ marginTop: 8 }}
                     >
-                      Add subtask
+                      {t('subtasks.add')}
                     </Button>
                   )}
                 </div>
@@ -1079,7 +1082,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
               {/* 5. LINKS */}
               <div className="ticket-section" style={{ marginTop: 24 }}>
                 <div style={{ marginBottom: 16 }}>
-                  <Text strong>Linked Issues</Text>
+                  <Text strong>{t('links.title')}</Text>
                 </div>
                 {linkedItems.map((l) => (
                   <div key={l.id} className="linked-item-row">
@@ -1113,7 +1116,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                     onClick={() => setAddingLink(true)}
                     style={{ marginTop: 8 }}
                   >
-                    Link issue
+                    {t('links.add')}
                   </Button>
                 )}
                 {addingLink && (
@@ -1126,7 +1129,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                       style={{ width: 120 }}
                       value={newLinkType}
                       onChange={setNewLinkType}
-                      placeholder="Type"
+                      placeholder={t('links.typePlaceholder')}
                     >
                       {LINK_TYPES.map((lt) => (
                         <Option key={lt.value} value={lt.value}>
@@ -1138,7 +1141,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                       size="small"
                       showSearch
                       style={{ flex: 1 }}
-                      placeholder="Search ticket..."
+                      placeholder={t('links.searchPlaceholder')}
                       onSearch={handleSearchTickets}
                       onChange={setSelectedTargetTicket}
                     >
@@ -1149,7 +1152,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                       ))}
                     </Select>
                     <Button size="small" type="primary" onClick={handleAddLink}>
-                      Add
+                      {tCommon('btn.add')}
                     </Button>
                     <Button size="small" onClick={() => setAddingLink(false)}>
                       X
@@ -1167,9 +1170,9 @@ export const TicketModal: React.FC<TicketModalProps> = ({
               <TicketChatPanel ticket={ticket} />
             ) : (
               <div className="chat-placeholder">
-                <InboxOutlined style={{ fontSize: 48, color: "#e0e0e0" }} />
+                <InboxOutlined style={{ fontSize: 48, color: "var(--color-border)" }} />
                 <Text type="secondary" style={{ marginTop: 16 }}>
-                  Create ticket to start chat
+                  {t('chat.createToStart')}
                 </Text>
               </div>
             )}
@@ -1178,7 +1181,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
 
         {/* DETAILS DRAWER (HISTORY) */}
         <Drawer
-          title="Activity History"
+          title={t('history.activityHistory')}
           placement="right"
           onClose={() => setHistoryOpen(false)}
           open={historyOpen}

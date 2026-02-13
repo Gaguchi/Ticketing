@@ -618,7 +618,7 @@ const CompanyDetail: React.FC = () => {
       key: "ticket_key",
       width: 100,
       render: (key: string, record: any) => (
-        <Text strong style={{ color: "#1890ff" }}>
+        <Text strong style={{ color: "var(--color-primary)" }}>
           {key || `#${record.id}`}
         </Text>
       ),
@@ -762,13 +762,13 @@ const CompanyDetail: React.FC = () => {
                     <span
                       style={{
                         fontSize: 12,
-                        color: "#595959",
+                        color: "var(--color-text-secondary)",
                         display: "flex",
                         alignItems: "center",
                         gap: 4,
                       }}
                     >
-                      <MailOutlined style={{ color: "#8c8c8c" }} />
+                      <MailOutlined style={{ color: "var(--color-text-muted)" }} />
                       {company.primary_contact_email}
                     </span>
                   </Tooltip>
@@ -778,13 +778,13 @@ const CompanyDetail: React.FC = () => {
                     <span
                       style={{
                         fontSize: 12,
-                        color: "#595959",
+                        color: "var(--color-text-secondary)",
                         display: "flex",
                         alignItems: "center",
                         gap: 4,
                       }}
                     >
-                      <PhoneOutlined style={{ color: "#8c8c8c" }} />
+                      <PhoneOutlined style={{ color: "var(--color-text-muted)" }} />
                       {company.phone}
                     </span>
                   </Tooltip>
@@ -794,13 +794,13 @@ const CompanyDetail: React.FC = () => {
                     <span
                       style={{
                         fontSize: 12,
-                        color: "#595959",
+                        color: "var(--color-text-secondary)",
                         display: "flex",
                         alignItems: "center",
                         gap: 4,
                       }}
                     >
-                      <EnvironmentOutlined style={{ color: "#8c8c8c" }} />
+                      <EnvironmentOutlined style={{ color: "var(--color-text-muted)" }} />
                       {company.address}
                     </span>
                   </Tooltip>
@@ -809,7 +809,7 @@ const CompanyDetail: React.FC = () => {
                   <span
                     style={{
                       fontSize: 12,
-                      color: "#8c8c8c",
+                      color: "var(--color-text-muted)",
                       display: "flex",
                       alignItems: "center",
                       gap: 4,
@@ -850,7 +850,7 @@ const CompanyDetail: React.FC = () => {
             <Statistic
               title="Open Tickets"
               value={stats?.open_tickets ?? 0}
-              prefix={<FileTextOutlined style={{ color: "#1890ff" }} />}
+              prefix={<FileTextOutlined style={{ color: "var(--color-primary)" }} />}
               loading={statsLoading}
             />
           </Col>
@@ -865,7 +865,7 @@ const CompanyDetail: React.FC = () => {
                 <ExclamationCircleOutlined
                   style={{
                     color:
-                      (stats?.urgent_tickets ?? 0) > 0 ? "#ff4d4f" : "#8c8c8c",
+                      (stats?.urgent_tickets ?? 0) > 0 ? "#ff4d4f" : "var(--color-text-muted)",
                   }}
                 />
               }
@@ -884,7 +884,7 @@ const CompanyDetail: React.FC = () => {
                 <ClockCircleOutlined
                   style={{
                     color:
-                      (stats?.overdue_tickets ?? 0) > 0 ? "#fa8c16" : "#8c8c8c",
+                      (stats?.overdue_tickets ?? 0) > 0 ? "#fa8c16" : "var(--color-text-muted)",
                   }}
                 />
               }
@@ -915,7 +915,7 @@ const CompanyDetail: React.FC = () => {
                     <div
                       style={{ display: "flex", alignItems: "center", gap: 8 }}
                     >
-                      <FileTextOutlined style={{ color: "#1890ff" }} />
+                      <FileTextOutlined style={{ color: "var(--color-primary)" }} />
                       <span style={{ fontSize: 13 }}>Newest Tickets</span>
                     </div>
                   }
@@ -959,14 +959,14 @@ const CompanyDetail: React.FC = () => {
                           gap: 8,
                           padding: "8px 12px",
                           fontSize: 10,
-                          color: "#8c8c8c",
+                          color: "var(--color-text-muted)",
                           fontWeight: 500,
                           textTransform: "uppercase",
                           letterSpacing: 0.5,
-                          borderBottom: "1px solid #f0f0f0",
+                          borderBottom: "1px solid var(--color-border-light)",
                           position: "sticky",
                           top: 0,
-                          backgroundColor: "#fafafa",
+                          backgroundColor: "var(--color-bg-sidebar)",
                           zIndex: 1,
                         }}
                       >
@@ -996,7 +996,7 @@ const CompanyDetail: React.FC = () => {
                               padding: "10px 12px",
                               fontSize: 12,
                               alignItems: "center",
-                              borderBottom: "1px solid #f5f5f5",
+                              borderBottom: "1px solid var(--color-border-light)",
                               cursor: "pointer",
                             }}
                             onClick={(e) => {
@@ -1014,8 +1014,8 @@ const CompanyDetail: React.FC = () => {
                               style={{
                                 fontFamily: "monospace",
                                 fontSize: 11,
-                                color: "#1890ff",
-                                backgroundColor: "#e6f7ff",
+                                color: "var(--color-primary)",
+                                backgroundColor: "var(--color-primary-light)",
                                 padding: "2px 6px",
                                 borderRadius: 4,
                                 fontWeight: 500,
@@ -1030,7 +1030,7 @@ const CompanyDetail: React.FC = () => {
                                 overflow: "hidden",
                                 textOverflow: "ellipsis",
                                 whiteSpace: "nowrap",
-                                color: "#262626",
+                                color: "var(--color-text-primary)",
                               }}
                             >
                               {ticket.name}
@@ -1106,7 +1106,7 @@ const CompanyDetail: React.FC = () => {
                                       <Avatar
                                         size={16}
                                         style={{
-                                          backgroundColor: "#1890ff",
+                                          backgroundColor: "var(--color-primary)",
                                           fontSize: 9,
                                         }}
                                       >
@@ -1159,7 +1159,7 @@ const CompanyDetail: React.FC = () => {
                     },
                   }}
                   extra={
-                    <span style={{ fontSize: 11, color: "#8c8c8c" }}>
+                    <span style={{ fontSize: 11, color: "var(--color-text-muted)" }}>
                       {activities.length} recent
                     </span>
                   }
@@ -1215,7 +1215,7 @@ const CompanyDetail: React.FC = () => {
                           <Avatar
                             size={24}
                             style={{
-                              backgroundColor: "#1890ff",
+                              backgroundColor: "var(--color-primary)",
                               fontSize: 10,
                               flexShrink: 0,
                             }}
@@ -1231,12 +1231,12 @@ const CompanyDetail: React.FC = () => {
                                   activity.changed_by?.username ||
                                   "System"}
                               </span>
-                              <span style={{ color: "#8c8c8c" }}>
+                              <span style={{ color: "var(--color-text-muted)" }}>
                                 {" "}
                                 updated{" "}
                               </span>
                               <span
-                                style={{ color: "#1890ff", fontWeight: 500 }}
+                                style={{ color: "var(--color-primary)", fontWeight: 500 }}
                               >
                                 {activity.field?.replace(/_/g, " ")}
                               </span>
@@ -1244,7 +1244,7 @@ const CompanyDetail: React.FC = () => {
                             <div
                               style={{
                                 fontSize: 11,
-                                color: "#595959",
+                                color: "var(--color-text-secondary)",
                                 overflow: "hidden",
                                 textOverflow: "ellipsis",
                                 whiteSpace: "nowrap",
@@ -1253,7 +1253,7 @@ const CompanyDetail: React.FC = () => {
                               <span
                                 style={{
                                   fontFamily: "monospace",
-                                  backgroundColor: "#f5f5f5",
+                                  backgroundColor: "var(--color-bg-inset)",
                                   padding: "1px 4px",
                                   borderRadius: 3,
                                   marginRight: 4,
@@ -1357,7 +1357,7 @@ const CompanyDetail: React.FC = () => {
                             avatar={
                               <Avatar
                                 size="small"
-                                style={{ background: "#1890ff" }}
+                                style={{ background: "var(--color-primary)" }}
                                 icon={<UserOutlined />}
                               />
                             }
@@ -1596,7 +1596,7 @@ const CompanyDetail: React.FC = () => {
                           <List.Item.Meta
                             avatar={
                               <Avatar
-                                style={{ background: "#1890ff" }}
+                                style={{ background: "var(--color-primary)" }}
                                 icon={<UserOutlined />}
                               />
                             }
@@ -1643,7 +1643,7 @@ const CompanyDetail: React.FC = () => {
                   {showCreateUser && (
                     <Card
                       size="small"
-                      style={{ marginBottom: 16, background: "#fafafa" }}
+                      style={{ marginBottom: 16, background: "var(--color-bg-sidebar)" }}
                       title="Create New Company User"
                     >
                       <Form

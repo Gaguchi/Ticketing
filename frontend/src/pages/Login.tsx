@@ -6,6 +6,7 @@ import { useAuth } from "../contexts/AppContext";
 import { authService } from "../services/auth.service";
 import { Turnstile } from "../components/Turnstile";
 import { LogoIcon } from "../components/Logo";
+import { useTranslation } from "react-i18next";
 import "./Login.css";
 
 const { Title, Text } = Typography;
@@ -17,6 +18,7 @@ interface LoginFormValues {
 }
 
 const Login: React.FC = () => {
+  const { t } = useTranslation('common');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
@@ -33,7 +35,7 @@ const Login: React.FC = () => {
 
   const onFinish = async (values: LoginFormValues) => {
     if (turnstileEnabled && turnstileSiteKey && !captchaToken) {
-      setError("Please complete the CAPTCHA verification");
+      setError(t('validation.required'));
       return;
     }
 
@@ -78,7 +80,7 @@ const Login: React.FC = () => {
       console.error("Login error:", err);
 
       // Extract detailed error message
-      let errorMessage = "Invalid username or password";
+      let errorMessage = t('auth.invalidCredentials');
 
       if (err?.details) {
         const details = err.details;
@@ -117,11 +119,11 @@ const Login: React.FC = () => {
               <div className="logo-section">
                 <LogoIcon size={48} />
                 <Title level={2} className="app-title">
-                  Ticketing
+                  {t('auth.appTitle')}
                 </Title>
               </div>
               <Text type="secondary" className="subtitle">
-                Project management inspired by Jira
+                {t('auth.appSubtitle')}
               </Text>
             </div>
 
@@ -145,12 +147,12 @@ const Login: React.FC = () => {
               <Form.Item
                 name="username"
                 rules={[
-                  { required: true, message: "Please input your username!" },
+                  { required: true, message: t('validation.required') },
                 ]}
               >
                 <Input
                   prefix={<UserOutlined />}
-                  placeholder="Username"
+                  placeholder={t('auth.username')}
                   autoComplete="username"
                 />
               </Form.Item>
@@ -158,12 +160,12 @@ const Login: React.FC = () => {
               <Form.Item
                 name="password"
                 rules={[
-                  { required: true, message: "Please input your password!" },
+                  { required: true, message: t('validation.required') },
                 ]}
               >
                 <Input.Password
                   prefix={<LockOutlined />}
-                  placeholder="Password"
+                  placeholder={t('auth.password')}
                   autoComplete="current-password"
                 />
               </Form.Item>
@@ -177,10 +179,10 @@ const Login: React.FC = () => {
                   }}
                 >
                   <Form.Item name="remember" valuePropName="checked" noStyle>
-                    <Checkbox>Remember me</Checkbox>
+                    <Checkbox>{t('auth.rememberMe')}</Checkbox>
                   </Form.Item>
                   <Link to="/forgot-password" className="forgot-link">
-                    Forgot password?
+                    {t('auth.forgotPassword')}
                   </Link>
                 </div>
               </Form.Item>
@@ -206,14 +208,14 @@ const Login: React.FC = () => {
                   block
                   className="login-button"
                 >
-                  Log in
+                  {t('auth.login')}
                 </Button>
               </Form.Item>
 
               <div className="register-section">
-                <Text type="secondary">Don't have an account? </Text>
+                <Text type="secondary">{t('auth.noAccount')} </Text>
                 <Link to="/register" className="register-link">
-                  Sign up
+                  {t('auth.signUp')}
                 </Link>
               </div>
             </Form>

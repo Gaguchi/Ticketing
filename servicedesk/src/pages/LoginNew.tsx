@@ -1,9 +1,11 @@
 import { useState, FormEvent } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../contexts/AuthContext";
 import { Card, Input, Button } from "../components/ui";
 
 export default function Login() {
+  const { t } = useTranslation('auth');
   const { login, user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
@@ -22,7 +24,7 @@ export default function Login() {
     setError("");
 
     if (!username.trim() || !password) {
-      setError("Please enter both username and password");
+      setError(t('login.validation.bothRequired'));
       return;
     }
 
@@ -32,7 +34,7 @@ export default function Login() {
       navigate("/");
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Login failed. Please try again."
+        err instanceof Error ? err.message : t('login.msg.tryAgain')
       );
     } finally {
       setLoading(false);
@@ -58,9 +60,9 @@ export default function Login() {
         {/* Welcome Text */}
         <div className="text-center mb-8">
           <h1 className="text-2xl font-semibold text-gray-900 mb-2">
-            Welcome back
+            {t('login.welcome')}
           </h1>
-          <p className="text-gray-500">Sign in to access IT Support</p>
+          <p className="text-gray-500">{t('login.subtitle')}</p>
         </div>
 
         {/* Error Message */}
@@ -73,11 +75,11 @@ export default function Login() {
         {/* Login Form */}
         <form onSubmit={handleSubmit} className="space-y-5">
           <Input
-            label="Username"
+            label={t('login.username')}
             type="text"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            placeholder="Enter your username"
+            placeholder={t('login.usernamePlaceholder')}
             autoComplete="username"
             autoFocus
             icon={
@@ -98,11 +100,11 @@ export default function Login() {
           />
 
           <Input
-            label="Password"
+            label={t('login.password')}
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Enter your password"
+            placeholder={t('login.passwordPlaceholder')}
             autoComplete="current-password"
             icon={
               <svg
@@ -128,14 +130,14 @@ export default function Login() {
             size="lg"
             className="mt-6"
           >
-            Sign In
+            {t('login.submit')}
           </Button>
         </form>
       </Card>
 
       {/* Help Text */}
       <p className="mt-8 text-sm text-gray-500">
-        Need help? Contact your IT administrator
+        {t('login.needHelp')}
       </p>
     </div>
   );
