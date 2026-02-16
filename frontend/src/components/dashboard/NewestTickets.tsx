@@ -114,10 +114,10 @@ const NewestTickets: React.FC<Props> = ({
                     {ticket.company ? (
                       <FontAwesomeIcon
                         icon={faBuilding}
-                        style={{ fontSize: 12 }}
+                        style={{ fontSize: 'var(--fs-sm)' }}
                       />
                     ) : (
-                      <FontAwesomeIcon icon={faUser} style={{ fontSize: 12 }} />
+                      <FontAwesomeIcon icon={faUser} style={{ fontSize: 'var(--fs-sm)' }} />
                     )}
                   </Avatar>
 
@@ -134,7 +134,7 @@ const NewestTickets: React.FC<Props> = ({
                       <span
                         style={{
                           fontWeight: 500,
-                          fontSize: 13,
+                          fontSize: 'var(--fs-caption)',
                           overflow: "hidden",
                           textOverflow: "ellipsis",
                           whiteSpace: "nowrap",
@@ -150,12 +150,12 @@ const NewestTickets: React.FC<Props> = ({
                         display: "flex",
                         alignItems: "center",
                         gap: 8,
-                        fontSize: 11,
+                        fontSize: 'var(--fs-xs)',
                         color: "var(--color-text-muted)",
                         flexWrap: "wrap",
                       }}
                     >
-                      <span style={{ fontFamily: "monospace", fontSize: 10 }}>
+                      <span style={{ fontFamily: "monospace", fontSize: 'var(--fs-2xs)' }}>
                         {ticket.key}
                       </span>
 
@@ -164,7 +164,7 @@ const NewestTickets: React.FC<Props> = ({
                           color={getPriorityColor(ticket.priority)}
                           style={{
                             margin: 0,
-                            fontSize: 10,
+                            fontSize: 'var(--fs-2xs)',
                             lineHeight: "16px",
                             padding: "0 4px",
                           }}
@@ -189,7 +189,7 @@ const NewestTickets: React.FC<Props> = ({
                             gap: 2,
                           }}
                         >
-                          <ClockCircleOutlined style={{ fontSize: 10 }} />
+                          <ClockCircleOutlined style={{ fontSize: 'var(--fs-2xs)' }} />
                           {formatRelativeTime(ticket.created_at)}
                         </span>
                       </Tooltip>

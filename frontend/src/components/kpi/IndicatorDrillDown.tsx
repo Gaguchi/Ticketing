@@ -119,7 +119,7 @@ const IndicatorDrillDown: React.FC<IndicatorDrillDownProps> = ({
                   maxWidth: 80,
                   minWidth: 4,
                 }} />
-                <Text style={{ fontSize: 13, whiteSpace: 'nowrap' }}>{formatHours(r.resolution_hours)}</Text>
+                <Text style={{ fontSize: 'var(--fs-caption)', whiteSpace: 'nowrap' }}>{formatHours(r.resolution_hours)}</Text>
               </div>
             );
           },
@@ -165,7 +165,7 @@ const IndicatorDrillDown: React.FC<IndicatorDrillDownProps> = ({
                 dataIndex: 'customer_rating',
                 key: 'rating',
                 width: 140,
-                render: (v: number | null) => v ? <Rate disabled value={v} style={{ fontSize: 13 }} /> : '-',
+                render: (v: number | null) => v ? <Rate disabled value={v} style={{ fontSize: 'var(--fs-caption)' }} /> : '-',
               },
             ]}
             dataSource={rated}
@@ -195,9 +195,9 @@ const IndicatorDrillDown: React.FC<IndicatorDrillDownProps> = ({
     if (key === 'tickets_created') {
       return (
         <div style={{ padding: '16px 0', textAlign: 'center' }}>
-          <InfoCircleOutlined style={{ fontSize: 24, color: '#3498DB', marginBottom: 8 }} />
+          <InfoCircleOutlined style={{ fontSize: 'var(--fs-3xl)', color: '#3498DB', marginBottom: 8 }} />
           <div>
-            <Text strong style={{ fontSize: 20 }}>{indicator.raw_value ?? 0}</Text>
+            <Text strong style={{ fontSize: 'var(--fs-2xl)' }}>{indicator.raw_value ?? 0}</Text>
             <Text type="secondary"> tickets created in this period</Text>
           </div>
         </div>
@@ -231,7 +231,7 @@ const IndicatorDrillDown: React.FC<IndicatorDrillDownProps> = ({
                   maxWidth: 80,
                   minWidth: 4,
                 }} />
-                <Text style={{ fontSize: 13, whiteSpace: 'nowrap' }}>{formatHours(r.first_response_hours)}</Text>
+                <Text style={{ fontSize: 'var(--fs-caption)', whiteSpace: 'nowrap' }}>{formatHours(r.first_response_hours)}</Text>
               </div>
             );
           },
@@ -282,8 +282,8 @@ const IndicatorDrillDown: React.FC<IndicatorDrillDownProps> = ({
           render: (_, r) => {
             if (r.sla_met === null) return <Text type="secondary">N/A</Text>;
             return r.sla_met
-              ? <CheckCircleOutlined style={{ color: '#27AE60', fontSize: 16 }} />
-              : <WarningOutlined style={{ color: '#E74C3C', fontSize: 16 }} />;
+              ? <CheckCircleOutlined style={{ color: '#27AE60', fontSize: 'var(--fs-lg)' }} />
+              : <WarningOutlined style={{ color: '#E74C3C', fontSize: 'var(--fs-lg)' }} />;
           },
         },
       ];
@@ -381,7 +381,7 @@ const IndicatorDrillDown: React.FC<IndicatorDrillDownProps> = ({
         padding: '6px 10px',
         marginBottom: 12,
         fontFamily: 'monospace',
-        fontSize: 12,
+        fontSize: 'var(--fs-sm)',
         color: '#4A4A4A',
         overflowX: 'auto',
       }}>

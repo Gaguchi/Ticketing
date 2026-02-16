@@ -65,7 +65,7 @@
 /* Smooth focus state for textarea */
 .ant-input-textarea-affix-wrapper:focus-within {
   border-color: var(--color-primary) !important;
-  box-shadow: 0 0 0 2px rgba(64, 150, 255, 0.1);
+  box-shadow: 0 0 0 2px var(--color-primary-light);
 }
 
 /* Quick comment button hover animation */
@@ -75,7 +75,7 @@
 
 .quick-comment-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-md);
 }
 
 /* Typing indicator animation */

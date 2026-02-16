@@ -152,11 +152,11 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
           alignItems: "center",
           justifyContent: "space-between",
           padding: "12px 20px",
-          borderBottom: "1px solid #e8e8e8",
-          backgroundColor: "#fff",
+          borderBottom: "1px solid var(--color-border-light)",
+          backgroundColor: "var(--color-bg-surface)",
         }}
       >
-        <h1 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>{t('grid.dashboard')}</h1>
+        <h1 style={{ fontSize: 'var(--fs-lg)', fontWeight: 600, margin: 0 }}>{t('grid.dashboard')}</h1>
         <div style={{ display: "flex", gap: 8 }}>
           <Tooltip title={t('grid.resetLayout')}>
             <Button
@@ -218,7 +218,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
           height: 100%;
         }
         .react-grid-item.react-grid-placeholder {
-          background: #0052cc !important;
+          background: var(--color-primary) !important;
           opacity: 0.2;
           border-radius: 4px;
         }
@@ -234,11 +234,11 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
           bottom: 4px;
           width: 8px;
           height: 8px;
-          border-right: 2px solid rgba(0,0,0,0.2);
-          border-bottom: 2px solid rgba(0,0,0,0.2);
+          border-right: 2px solid var(--color-text-muted);
+          border-bottom: 2px solid var(--color-text-muted);
         }
         .react-grid-item:hover > .react-resizable-handle::after {
-          border-color: rgba(0,0,0,0.4);
+          border-color: var(--color-text-secondary);
         }
         .drag-handle {
           cursor: grab !important;
@@ -248,7 +248,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
         }
         .react-grid-item.react-draggable-dragging {
           z-index: 100;
-          box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+          box-shadow: var(--shadow-lg);
         }
       `}</style>
     </div>

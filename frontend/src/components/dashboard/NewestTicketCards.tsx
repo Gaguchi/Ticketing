@@ -47,10 +47,10 @@ const getPriorityColor = (priority: string | null): string => {
 const getPriorityBgColor = (priority: string | null): string => {
   if (!priority) return "var(--color-bg-sidebar)";
   const p = priority.toLowerCase();
-  if (p.includes("critical") || p.includes("highest")) return "#fff1f0";
-  if (p.includes("high")) return "#fff7e6";
+  if (p.includes("critical") || p.includes("highest")) return "var(--color-tint-danger-bg)";
+  if (p.includes("high")) return "var(--color-tint-warning-bg)";
   if (p.includes("medium")) return "var(--color-primary-light)";
-  if (p.includes("low")) return "#f6ffed";
+  if (p.includes("low")) return "var(--color-tint-success-bg)";
   return "var(--color-bg-sidebar)";
 };
 
@@ -73,8 +73,8 @@ const NewestTicketCards: React.FC<Props> = ({
             alignItems: "center",
           }}
         >
-          <span style={{ fontSize: 13 }}>{t('newest.newestTickets')}</span>
-          <span style={{ fontSize: 11, color: "var(--color-text-muted)", fontWeight: 400 }}>
+          <span style={{ fontSize: 'var(--fs-caption)' }}>{t('newest.newestTickets')}</span>
+          <span style={{ fontSize: 'var(--fs-xs)', color: "var(--color-text-muted)", fontWeight: 400 }}>
             {t('newest.recent', { count: tickets.length })}
           </span>
         </div>
@@ -103,7 +103,7 @@ const NewestTicketCards: React.FC<Props> = ({
           style={{ padding: 24 }}
         />
       ) : (
-        <div style={{ fontSize: 12 }}>
+        <div style={{ fontSize: 'var(--fs-sm)' }}>
           {/* Table Header */}
           <div
             style={{
@@ -114,7 +114,7 @@ const NewestTicketCards: React.FC<Props> = ({
               backgroundColor: "var(--color-bg-sidebar)",
               borderBottom: "1px solid var(--color-border-light)",
               fontWeight: 600,
-              fontSize: 10,
+              fontSize: 'var(--fs-2xs)',
               color: "var(--color-text-muted)",
               textTransform: "uppercase",
             }}
@@ -146,7 +146,7 @@ const NewestTicketCards: React.FC<Props> = ({
               <span
                 style={{
                   fontFamily: "monospace",
-                  fontSize: 11,
+                  fontSize: 'var(--fs-xs)',
                   color: "var(--color-primary)",
                   fontWeight: 500,
                 }}
@@ -169,7 +169,7 @@ const NewestTicketCards: React.FC<Props> = ({
               {/* Priority */}
               <span
                 style={{
-                  fontSize: 10,
+                  fontSize: 'var(--fs-2xs)',
                   padding: "2px 6px",
                   borderRadius: 4,
                   backgroundColor: getPriorityBgColor(ticket.priority),
@@ -184,7 +184,7 @@ const NewestTicketCards: React.FC<Props> = ({
               {/* Status */}
               <span
                 style={{
-                  fontSize: 10,
+                  fontSize: 'var(--fs-2xs)',
                   color: "var(--color-text-secondary)",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
@@ -197,7 +197,7 @@ const NewestTicketCards: React.FC<Props> = ({
               {/* Age */}
               <span
                 style={{
-                  fontSize: 10,
+                  fontSize: 'var(--fs-2xs)',
                   color: "var(--color-text-muted)",
                   textAlign: "right",
                 }}

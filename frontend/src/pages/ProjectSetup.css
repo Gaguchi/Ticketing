@@ -68,7 +68,7 @@
 
 .setup-button {
   height: 44px;
-  font-size: 16px;
+  font-size: var(--fs-lg);
   font-weight: 500;
   background: var(--gradient-primary);
   border: none;
@@ -90,7 +90,7 @@
   }
 
   .feature-icon {
-    font-size: 24px;
+    font-size: var(--fs-3xl);
   }
 }
 
@@ -100,7 +100,7 @@
   }
 
   .app-title {
-    font-size: 20px !important;
+    font-size: var(--fs-2xl) !important;
   }
 
   .feature-item {

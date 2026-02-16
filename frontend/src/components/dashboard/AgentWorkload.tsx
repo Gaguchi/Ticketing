@@ -40,7 +40,7 @@ const AgentWorkload: React.FC<Props> = ({
       style={{ borderRadius: 8 }}
       styles={{ body: { padding: 0 } }}
       extra={
-        <span style={{ fontSize: 11, color: "var(--color-text-muted)" }}>
+        <span style={{ fontSize: 'var(--fs-xs)', color: "var(--color-text-muted)" }}>
           {t('workload.members', { count: workloads.length })}
         </span>
       }
@@ -108,7 +108,7 @@ const AgentWorkload: React.FC<Props> = ({
                           <span
                             style={{
                               fontWeight: 500,
-                              fontSize: 13,
+                              fontSize: 'var(--fs-caption)',
                               overflow: "hidden",
                               textOverflow: "ellipsis",
                               whiteSpace: "nowrap",
@@ -130,7 +130,7 @@ const AgentWorkload: React.FC<Props> = ({
                                 <Tag
                                   color="error"
                                   icon={<WarningOutlined />}
-                                  style={{ margin: 0, fontSize: 10 }}
+                                  style={{ margin: 0, fontSize: 'var(--fs-2xs)' }}
                                 >
                                   {workload.overdue}
                                 </Tag>
@@ -174,7 +174,7 @@ const AgentWorkload: React.FC<Props> = ({
                                   <Tag
                                     style={{
                                       margin: 0,
-                                      fontSize: 10,
+                                      fontSize: 'var(--fs-2xs)',
                                       padding: "0 4px",
                                       lineHeight: "16px",
                                     }}

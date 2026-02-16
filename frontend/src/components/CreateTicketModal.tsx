@@ -415,7 +415,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
             <h1
               style={{
                 margin: 0,
-                fontSize: "15px",
+                fontSize: 'var(--fs-md)',
                 fontWeight: 600,
                 color: "var(--color-text-primary)",
                 display: "flex",
@@ -430,7 +430,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               size="small"
               onClick={() => setShowDetailedForm(!showDetailedForm)}
               style={{
-                fontSize: "12px",
+                fontSize: 'var(--fs-sm)',
                 padding: "0 8px",
                 height: "24px",
               }}
@@ -505,7 +505,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                           alignItems: "center",
                           justifyContent: "center",
                           color: "#fff",
-                          fontSize: "12px",
+                          fontSize: 'var(--fs-sm)',
                           fontWeight: 600,
                         }}
                       >
@@ -546,7 +546,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                         <FontAwesomeIcon
                           icon={getTypeIcon("task").icon}
                           style={{
-                            fontSize: "16px",
+                            fontSize: 'var(--fs-lg)',
                             color: getTypeIcon("task").color,
                           }}
                         />
@@ -564,7 +564,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                         <FontAwesomeIcon
                           icon={getTypeIcon("bug").icon}
                           style={{
-                            fontSize: "16px",
+                            fontSize: 'var(--fs-lg)',
                             color: getTypeIcon("bug").color,
                           }}
                         />
@@ -582,7 +582,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                         <FontAwesomeIcon
                           icon={getTypeIcon("story").icon}
                           style={{
-                            fontSize: "16px",
+                            fontSize: 'var(--fs-lg)',
                             color: getTypeIcon("story").color,
                           }}
                         />
@@ -600,7 +600,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                         <FontAwesomeIcon
                           icon={getTypeIcon("epic").icon}
                           style={{
-                            fontSize: "16px",
+                            fontSize: 'var(--fs-lg)',
                             color: getTypeIcon("epic").color,
                           }}
                         />
@@ -719,7 +719,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                             alignItems: "center",
                             justifyContent: "center",
                             color: "#fff",
-                            fontSize: "12px",
+                            fontSize: 'var(--fs-sm)',
                             fontWeight: 600,
                           }}
                         >
@@ -757,7 +757,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                         style={{
                           padding: "4px 0",
                           height: "auto",
-                          fontSize: "12px",
+                          fontSize: 'var(--fs-sm)',
                         }}
                       >
                         {t('form.assignee')}
@@ -920,7 +920,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                               alignItems: "center",
                               justifyContent: "center",
                               color: "#fff",
-                              fontSize: "12px",
+                              fontSize: 'var(--fs-sm)',
                               fontWeight: 600,
                             }}
                           >
@@ -952,7 +952,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                       color: "var(--color-text-muted)",
                       cursor: "pointer",
                       backgroundColor: "var(--color-bg-sidebar)",
-                      fontSize: "13px",
+                      fontSize: 'var(--fs-caption)',
                     }}
                   >
                     {t('form.attachments')}{" "}
@@ -1011,7 +1011,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                   style={{ marginBottom: 0 }}
                 >
                   <Checkbox>
-                    <span style={{ color: "var(--color-text-heading)", fontSize: "13px" }}>
+                    <span style={{ color: "var(--color-text-heading)", fontSize: 'var(--fs-caption)' }}>
                       Impediment
                     </span>
                   </Checkbox>
@@ -1040,7 +1040,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
           <Checkbox
             checked={createAnother}
             onChange={(e) => setCreateAnother(e.target.checked)}
-            style={{ fontSize: "13px" }}
+            style={{ fontSize: 'var(--fs-caption)' }}
           >
             {t('createTicket')}
           </Checkbox>

@@ -88,7 +88,7 @@ const TicketListItem: React.FC<{
           style={{ backgroundColor: "var(--color-primary)", flexShrink: 0 }}
         >
           {ticket.company && (
-            <FontAwesomeIcon icon={faBuilding} style={{ fontSize: 10 }} />
+            <FontAwesomeIcon icon={faBuilding} style={{ fontSize: 'var(--fs-2xs)' }} />
           )}
         </Avatar>
 
@@ -97,7 +97,7 @@ const TicketListItem: React.FC<{
           <div
             style={{
               fontWeight: 500,
-              fontSize: 12,
+              fontSize: 'var(--fs-sm)',
               overflow: "hidden",
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
@@ -113,7 +113,7 @@ const TicketListItem: React.FC<{
               display: "flex",
               alignItems: "center",
               gap: 6,
-              fontSize: 10,
+              fontSize: 'var(--fs-2xs)',
               color: "var(--color-text-muted)",
               flexWrap: "wrap",
             }}
@@ -125,7 +125,7 @@ const TicketListItem: React.FC<{
                 color={getPriorityColor(ticket.priority)}
                 style={{
                   margin: 0,
-                  fontSize: 10,
+                  fontSize: 'var(--fs-2xs)',
                   lineHeight: "14px",
                   padding: "0 3px",
                 }}
@@ -139,7 +139,7 @@ const TicketListItem: React.FC<{
                 color="error"
                 style={{
                   margin: 0,
-                  fontSize: 10,
+                  fontSize: 'var(--fs-2xs)',
                   lineHeight: "14px",
                   padding: "0 3px",
                 }}
@@ -153,7 +153,7 @@ const TicketListItem: React.FC<{
                 color="warning"
                 style={{
                   margin: 0,
-                  fontSize: 10,
+                  fontSize: 'var(--fs-2xs)',
                   lineHeight: "14px",
                   padding: "0 3px",
                 }}
@@ -255,7 +255,7 @@ const AttentionNeeded: React.FC<Props> = ({
                     display: "flex",
                     alignItems: "center",
                     gap: 4,
-                    fontSize: 11,
+                    fontSize: 'var(--fs-xs)',
                   }}
                 >
                   <ClockCircleOutlined />
@@ -278,7 +278,7 @@ const AttentionNeeded: React.FC<Props> = ({
                     display: "flex",
                     alignItems: "center",
                     gap: 4,
-                    fontSize: 11,
+                    fontSize: 'var(--fs-xs)',
                   }}
                 >
                   <UserDeleteOutlined />
@@ -301,7 +301,7 @@ const AttentionNeeded: React.FC<Props> = ({
                     display: "flex",
                     alignItems: "center",
                     gap: 4,
-                    fontSize: 11,
+                    fontSize: 'var(--fs-xs)',
                   }}
                 >
                   <FieldTimeOutlined />

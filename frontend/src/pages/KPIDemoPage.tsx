@@ -126,8 +126,8 @@ const NightingaleRoseChart = () => {
         
         // Colors
         // Background track should be subtle but visible to show "Potential"
-        const trackColor = '#F5F7FA'; // Very light gray from theme
-        const strokeColor = '#FFFFFF'; // Separator lines
+        const trackColor = 'var(--color-bg-inset)';
+        const strokeColor = 'var(--color-bg-surface)';
 
         return (
             <g>
@@ -193,24 +193,24 @@ const NightingaleRoseChart = () => {
                             if (active && payload && payload.length) {
                             const d = payload[0].payload;
                             return (
-                                <div style={{ 
-                                    background: '#fff', 
-                                    padding: '12px 16px', 
-                                    borderRadius: 8, 
-                                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)', 
-                                    border: '1px solid #f0f0f0',
+                                <div style={{
+                                    background: 'var(--color-bg-elevated)',
+                                    padding: '12px 16px',
+                                    borderRadius: 8,
+                                    boxShadow: 'var(--shadow-md)',
+                                    border: '1px solid var(--color-border-light)',
                                     borderLeft: `4px solid ${d.color}`
                                 }}>
-                                    <div style={{fontWeight: 600, color: '#2C3E50', marginBottom: 4}}>{d.name}</div>
+                                    <div style={{fontWeight: 600, color: 'var(--color-text-heading)', marginBottom: 4}}>{d.name}</div>
                                     <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', minWidth: 160}}>
                                         <Text type="secondary">Score</Text>
-                                        <Text strong style={{ fontSize: 16 }}>{Math.round(d.normalized * 100)}%</Text>
+                                        <Text strong style={{ fontSize: 'var(--fs-lg)' }}>{Math.round(d.normalized * 100)}%</Text>
                                     </div>
                                     <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4}}>
                                         <Text type="secondary">Weight</Text>
                                         <Tag style={{margin: 0}}>{d.weight} pts</Tag>
                                     </div>
-                                    <div style={{marginTop: 8, paddingTop: 8, borderTop: '1px solid #f5f5f5', fontSize: 12, color: '#888'}}>
+                                    <div style={{marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--color-border-light)', fontSize: 'var(--fs-sm)', color: 'var(--color-text-muted)'}}>
                                         Raw: {d.rawValue} {d.unit}
                                     </div>
                                 </div>
@@ -228,10 +228,10 @@ const NightingaleRoseChart = () => {
                 textAlign: 'center',
                 pointerEvents: 'none'
             }}>
-                <div style={{ fontSize: 42, fontWeight: 700, color: APP_COLORS.primary, lineHeight: 1 }}>
+                <div style={{ fontSize: 42, fontWeight: 700, color: 'var(--color-primary)', lineHeight: 1 }}>
                     {Math.round(scorePercentage)}
                 </div>
-                <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, color: '#999', marginTop: 4 }}>
+                <div style={{ fontSize: 'var(--fs-xs)', textTransform: 'uppercase', letterSpacing: 1, color: 'var(--color-text-muted)', marginTop: 4 }}>
                     Score
                 </div>
             </div>
@@ -247,10 +247,10 @@ const NightingaleRoseChart = () => {
 const KPIDemoPage: React.FC = () => {
 
   return (
-    <div style={{ padding: 40, maxWidth: 1000, margin: '0 auto', background: '#F5F7FA', minHeight: '100vh' }}>
+    <div style={{ padding: 40, maxWidth: 1000, margin: '0 auto', background: 'var(--color-bg-inset)', minHeight: '100vh' }}>
         <div style={{ marginBottom: 40, textAlign: 'center' }}>
-            <Title level={2} style={{ color: APP_COLORS.primary }}>Your Performance</Title>
-            <Paragraph type="secondary" style={{ fontSize: 16, maxWidth: 600, margin: '0 auto' }}>
+            <Title level={2} style={{ color: 'var(--color-primary)' }}>Your Performance</Title>
+            <Paragraph type="secondary" style={{ fontSize: 'var(--fs-lg)', maxWidth: 600, margin: '0 auto' }}>
                 A visual breakdown of your weighted KPI scores. The <strong>radius</strong> represents your score, while the <strong>slice width</strong> represents the metric's weight.
             </Paragraph>
         </div>
@@ -258,14 +258,14 @@ const KPIDemoPage: React.FC = () => {
         <Row gutter={[24, 24]} justify="center">
             {/* Chart Column */}
             <Col xs={24} lg={14}>
-                <Card bordered={false} style={{ height: '100%', borderRadius: 16, boxShadow: '0 4px 24px rgba(0,0,0,0.04)' }}>
+                <Card bordered={false} style={{ height: '100%', borderRadius: 16, boxShadow: 'var(--shadow-md)' }}>
                     <NightingaleRoseChart />
                 </Card>
             </Col>
 
             {/* Legend / Details Column */}
             <Col xs={24} lg={10}>
-                <Card bordered={false} style={{ height: '100%', borderRadius: 16, boxShadow: '0 4px 24px rgba(0,0,0,0.04)' }}>
+                <Card bordered={false} style={{ height: '100%', borderRadius: 16, boxShadow: 'var(--shadow-md)' }}>
                     <Title level={4} style={{ marginTop: 0 }}>Metrics Breakdown</Title>
                     <Divider style={{ margin: '16px 0' }} />
                     
@@ -282,12 +282,12 @@ const KPIDemoPage: React.FC = () => {
                                 {/* Info */}
                                 <div style={{ flex: 1 }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                                        <Text strong style={{ color: '#2C3E50' }}>{ind.name}</Text>
+                                        <Text strong style={{ color: 'var(--color-text-heading)' }}>{ind.name}</Text>
                                         <Text strong>{Math.round(ind.normalized * 100)}%</Text>
                                     </div>
                                     <Space size="small">
-                                        <Tag bordered={false} style={{ fontSize: 11 }}>Weight: {ind.weight}</Tag>
-                                        <Text type="secondary" style={{ fontSize: 12 }}>
+                                        <Tag bordered={false} style={{ fontSize: 'var(--fs-xs)' }}>Weight: {ind.weight}</Tag>
+                                        <Text type="secondary" style={{ fontSize: 'var(--fs-sm)' }}>
                                             {ind.rawValue} {ind.unit}
                                         </Text>
                                     </Space>
@@ -298,12 +298,12 @@ const KPIDemoPage: React.FC = () => {
 
                     <Divider />
                     
-                    <div style={{ background: '#F8F9FA', padding: 16, borderRadius: 8 }}>
+                    <div style={{ background: 'var(--color-bg-inset)', padding: 16, borderRadius: 8 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                             <Text type="secondary">Total Weighted Score</Text>
-                            <Text strong style={{ fontSize: 18 }}>{scorePercentage.toFixed(1)} / 100</Text>
+                            <Text strong style={{ fontSize: 'var(--fs-xl)' }}>{scorePercentage.toFixed(1)} / 100</Text>
                         </div>
-                        <div style={{ height: 6, background: '#E0E0E0', borderRadius: 3, overflow: 'hidden' }}>
+                        <div style={{ height: 6, background: 'var(--color-border)', borderRadius: 3, overflow: 'hidden' }}>
                             <div style={{ 
                                 height: '100%', 
                                 width: `${scorePercentage}%`, 

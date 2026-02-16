@@ -120,7 +120,7 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
             <Option value="user">
               <div>
                 <div style={{ fontWeight: 500 }}>User</div>
-                <div style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>
+                <div style={{ fontSize: 'var(--fs-sm)', color: "var(--color-text-secondary)" }}>
                   Can create and edit own tickets
                 </div>
               </div>
@@ -128,7 +128,7 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
             <Option value="admin">
               <div>
                 <div style={{ fontWeight: 500 }}>Admin</div>
-                <div style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>
+                <div style={{ fontSize: 'var(--fs-sm)', color: "var(--color-text-secondary)" }}>
                   Can manage tickets and assign work
                 </div>
               </div>
@@ -136,7 +136,7 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
             <Option value="manager">
               <div>
                 <div style={{ fontWeight: 500 }}>Manager</div>
-                <div style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>
+                <div style={{ fontSize: 'var(--fs-sm)', color: "var(--color-text-secondary)" }}>
                   Read-only access with KPI and reports
                 </div>
               </div>
@@ -144,7 +144,7 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
             <Option value="superadmin">
               <div>
                 <div style={{ fontWeight: 500 }}>Superadmin</div>
-                <div style={{ fontSize: "12px", color: "var(--color-text-secondary)" }}>
+                <div style={{ fontSize: 'var(--fs-sm)', color: "var(--color-text-secondary)" }}>
                   Full project control
                 </div>
               </div>

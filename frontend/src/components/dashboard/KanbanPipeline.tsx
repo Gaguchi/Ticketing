@@ -83,8 +83,8 @@ const KanbanPipeline: React.FC<Props> = ({
           marginBottom: 12,
         }}
       >
-        <span style={{ fontWeight: 600, fontSize: 13 }}>{t('pipeline.pipeline')}</span>
-        <span style={{ fontSize: 11, color: "var(--color-text-muted)" }}>
+        <span style={{ fontWeight: 600, fontSize: 'var(--fs-caption)' }}>{t('pipeline.pipeline')}</span>
+        <span style={{ fontSize: 'var(--fs-xs)', color: "var(--color-text-muted)" }}>
           {t('pipeline.tickets', { count: data.total_tickets })}
         </span>
       </div>
@@ -150,7 +150,7 @@ const KanbanPipeline: React.FC<Props> = ({
                     style={{
                       color: "#fff",
                       fontWeight: 500,
-                      fontSize: 12,
+                      fontSize: 'var(--fs-sm)',
                       textShadow: "0 1px 2px rgba(0,0,0,0.2)",
                       whiteSpace: "nowrap",
                       overflow: "hidden",
@@ -166,7 +166,7 @@ const KanbanPipeline: React.FC<Props> = ({
                       style={{
                         color: "#fff",
                         fontWeight: 700,
-                        fontSize: 14,
+                        fontSize: 'var(--fs-base)',
                         textShadow: "0 1px 2px rgba(0,0,0,0.2)",
                       }}
                     >
@@ -175,7 +175,7 @@ const KanbanPipeline: React.FC<Props> = ({
                     <span
                       style={{
                         color: "rgba(255,255,255,0.7)",
-                        fontSize: 10,
+                        fontSize: 'var(--fs-2xs)',
                       }}
                     >
                       ({Math.round(percentage)}%)
@@ -196,16 +196,16 @@ const KanbanPipeline: React.FC<Props> = ({
           gap: 16,
           marginTop: 12,
           paddingTop: 8,
-          borderTop: "1px solid #f0f0f0",
+          borderTop: "1px solid var(--color-border-light)",
         }}
       >
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--color-primary)" }}>
+          <div style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: "var(--color-primary)" }}>
             {data.columns
               .filter((c) => c.name.toLowerCase() !== "done")
               .reduce((sum, c) => sum + c.ticket_count, 0)}
           </div>
-          <div style={{ fontSize: 10, color: "var(--color-text-muted)" }}>{t('pipeline.active')}</div>
+          <div style={{ fontSize: 'var(--fs-2xs)', color: "var(--color-text-muted)" }}>{t('pipeline.active')}</div>
         </div>
         <div
           style={{
@@ -214,11 +214,11 @@ const KanbanPipeline: React.FC<Props> = ({
           }}
         />
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: "#52c41a" }}>
+          <div style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: "var(--color-tint-success-border)" }}>
             {data.columns.find((c) => c.name.toLowerCase() === "done")
               ?.ticket_count || 0}
           </div>
-          <div style={{ fontSize: 10, color: "var(--color-text-muted)" }}>{t('pipeline.done')}</div>
+          <div style={{ fontSize: 'var(--fs-2xs)', color: "var(--color-text-muted)" }}>{t('pipeline.done')}</div>
         </div>
       </div>
 

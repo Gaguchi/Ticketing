@@ -36,6 +36,7 @@ const PageLoader = () => (
       justifyContent: "center",
       alignItems: "center",
       height: "100vh",
+      background: "var(--color-bg-content)",
     }}
   >
     <Spin size="large" />

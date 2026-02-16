@@ -199,7 +199,7 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
               <Text
                 type="secondary"
                 style={{
-                  fontSize: 12,
+                  fontSize: 'var(--fs-sm)',
                   display: "block",
                   whiteSpace: "nowrap",
                   overflow: "hidden",
@@ -229,7 +229,7 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
                     backgroundColor: health.bgColor,
                     border: `1px solid ${health.borderColor}`,
                     color: health.color,
-                    fontSize: 11,
+                    fontSize: 'var(--fs-xs)',
                     fontWeight: 500,
                   }}
                 >
@@ -265,12 +265,12 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <FileTextOutlined style={{ color: "var(--color-primary)", fontSize: 12 }} />
-              <Text type="secondary" style={{ fontSize: 11 }}>
+              <FileTextOutlined style={{ color: "var(--color-primary)", fontSize: 'var(--fs-sm)' }} />
+              <Text type="secondary" style={{ fontSize: 'var(--fs-xs)' }}>
                 Open
               </Text>
             </div>
-            <div style={{ fontSize: 18, fontWeight: 600, color: "var(--color-primary)" }}>
+            <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 600, color: "var(--color-primary)" }}>
               {stats.open_tickets}
             </div>
           </div>
@@ -293,16 +293,16 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
                     stats.urgent_tickets > 0 || stats.overdue_tickets > 0
                       ? "#fa8c16"
                       : "var(--color-text-muted)",
-                  fontSize: 12,
+                  fontSize: 'var(--fs-sm)',
                 }}
               />
-              <Text type="secondary" style={{ fontSize: 11 }}>
+              <Text type="secondary" style={{ fontSize: 'var(--fs-xs)' }}>
                 Urgent
               </Text>
             </div>
             <div
               style={{
-                fontSize: 18,
+                fontSize: 'var(--fs-xl)',
                 fontWeight: 600,
                 color:
                   stats.urgent_tickets > 0 || stats.overdue_tickets > 0
@@ -323,12 +323,12 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <CheckCircleOutlined style={{ color: "#52c41a", fontSize: 12 }} />
-              <Text type="secondary" style={{ fontSize: 11 }}>
+              <CheckCircleOutlined style={{ color: "#52c41a", fontSize: 'var(--fs-sm)' }} />
+              <Text type="secondary" style={{ fontSize: 'var(--fs-xs)' }}>
                 Resolved
               </Text>
             </div>
-            <div style={{ fontSize: 18, fontWeight: 600, color: "#52c41a" }}>
+            <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 600, color: "#52c41a" }}>
               {stats.resolved_this_month}
             </div>
           </div>
@@ -342,12 +342,12 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <FileTextOutlined style={{ color: "var(--color-text-muted)", fontSize: 12 }} />
-              <Text type="secondary" style={{ fontSize: 11 }}>
+              <FileTextOutlined style={{ color: "var(--color-text-muted)", fontSize: 'var(--fs-sm)' }} />
+              <Text type="secondary" style={{ fontSize: 'var(--fs-xs)' }}>
                 Total
               </Text>
             </div>
-            <div style={{ fontSize: 18, fontWeight: 600, color: "var(--color-text-primary)" }}>
+            <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 600, color: "var(--color-text-primary)" }}>
               {stats.total_tickets}
             </div>
           </div>
@@ -361,7 +361,7 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
         >
           <Space>
             <FileTextOutlined style={{ color: "var(--color-text-muted)" }} />
-            <Text type="secondary" style={{ fontSize: 12 }}>
+            <Text type="secondary" style={{ fontSize: 'var(--fs-sm)' }}>
               {company.ticket_count} tickets
             </Text>
           </Space>
@@ -380,8 +380,8 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
         }}
       >
         <Space size={4}>
-          <TeamOutlined style={{ color: "var(--color-text-muted)", fontSize: 12 }} />
-          <Text type="secondary" style={{ fontSize: 11 }}>
+          <TeamOutlined style={{ color: "var(--color-text-muted)", fontSize: 'var(--fs-sm)' }} />
+          <Text type="secondary" style={{ fontSize: 'var(--fs-xs)' }}>
             {stats?.admin_count ?? company.admin_count} admins ·{" "}
             {stats?.user_count ?? company.user_count} users
           </Text>
@@ -390,8 +390,8 @@ export const CompanyCard: React.FC<CompanyCardProps> = ({
         {stats?.last_activity && (
           <Tooltip title={new Date(stats.last_activity).toLocaleString()}>
             <Space size={4}>
-              <ClockCircleOutlined style={{ color: "var(--color-text-muted)", fontSize: 12 }} />
-              <Text type="secondary" style={{ fontSize: 11 }}>
+              <ClockCircleOutlined style={{ color: "var(--color-text-muted)", fontSize: 'var(--fs-sm)' }} />
+              <Text type="secondary" style={{ fontSize: 'var(--fs-xs)' }}>
                 {formatLastActivity(stats.last_activity)}
               </Text>
             </Space>

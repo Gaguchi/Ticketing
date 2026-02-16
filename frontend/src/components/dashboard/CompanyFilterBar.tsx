@@ -57,7 +57,7 @@ const CompanyFilterBar: React.FC<Props> = ({
             color: isAllSelected ? "#fff" : "var(--color-text-secondary)",
             border: isAllSelected ? "1px solid var(--color-primary)" : "1px solid var(--color-border)",
             fontWeight: isAllSelected ? 600 : 400,
-            fontSize: 12,
+            fontSize: 'var(--fs-sm)',
             transition: "all 0.2s",
           }}
         >
@@ -73,7 +73,7 @@ const CompanyFilterBar: React.FC<Props> = ({
             <Tooltip
               key={company.id}
               title={
-                <div style={{ fontSize: 11 }}>
+                <div style={{ fontSize: 'var(--fs-xs)' }}>
                   <div style={{ fontWeight: 600 }}>{company.name}</div>
                   <div>{t('company.tickets', { count: company.total_tickets })}</div>
                   {company.overdue_count > 0 && (
@@ -101,7 +101,7 @@ const CompanyFilterBar: React.FC<Props> = ({
                     color: isSelected ? "#fff" : "var(--color-text-secondary)",
                     border: isSelected ? "1px solid var(--color-primary)" : "1px solid var(--color-border)",
                     fontWeight: isSelected ? 600 : 400,
-                    fontSize: 12,
+                    fontSize: 'var(--fs-sm)',
                     display: "inline-flex",
                     alignItems: "center",
                     gap: 6,
@@ -183,13 +183,13 @@ const CompanyFilterBar: React.FC<Props> = ({
               flexShrink: 0,
             }}
           >
-            <FontAwesomeIcon icon={faLayerGroup} style={{ fontSize: 14 }} />
+            <FontAwesomeIcon icon={faLayerGroup} style={{ fontSize: 'var(--fs-base)' }} />
           </Avatar>
           <div style={{ minWidth: 0 }}>
             <div
               style={{
                 fontWeight: 600,
-                fontSize: 12,
+                fontSize: 'var(--fs-sm)',
                 color: isAllSelected ? "var(--color-primary)" : "var(--color-text-primary)",
                 whiteSpace: "nowrap",
               }}
@@ -198,7 +198,7 @@ const CompanyFilterBar: React.FC<Props> = ({
             </div>
             <div
               style={{
-                fontSize: 10,
+                fontSize: 'var(--fs-2xs)',
                 color: "var(--color-text-muted)",
                 whiteSpace: "nowrap",
               }}
@@ -279,7 +279,7 @@ const CompanyFilterBar: React.FC<Props> = ({
                     <FontAwesomeIcon
                       icon={faBuilding}
                       style={{
-                        fontSize: 14,
+                        fontSize: 'var(--fs-base)',
                         color: "var(--color-text-secondary)",
                       }}
                     />
@@ -289,7 +289,7 @@ const CompanyFilterBar: React.FC<Props> = ({
                   <div
                     style={{
                       fontWeight: 600,
-                      fontSize: 12,
+                      fontSize: 'var(--fs-sm)',
                       color: isSelected ? "var(--color-primary)" : "var(--color-text-primary)",
                       whiteSpace: "nowrap",
                       overflow: "hidden",
@@ -301,7 +301,7 @@ const CompanyFilterBar: React.FC<Props> = ({
                   </div>
                   <div
                     style={{
-                      fontSize: 10,
+                      fontSize: 'var(--fs-2xs)',
                       color: "var(--color-text-muted)",
                       whiteSpace: "nowrap",
                     }}

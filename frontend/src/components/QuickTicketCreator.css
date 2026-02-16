@@ -27,7 +27,7 @@
   padding: 4px 0 !important;
   resize: none !important;
   box-shadow: none !important;
-  font-size: 14px;
+  font-size: var(--fs-base);
   line-height: 20px;
   font-family: 'Inter', 'Noto Sans Georgian', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto',
     'Helvetica Neue', sans-serif;
@@ -94,7 +94,7 @@
   background: transparent;
   border-radius: 3px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: var(--fs-base);
   color: var(--color-text-secondary);
   transition: background-color 0.2s;
   height: 28px;
@@ -113,7 +113,7 @@
 
 
 .quick-ticket-dropdown-icon {
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   color: var(--color-text-muted);
 }
 
@@ -220,7 +220,7 @@
   padding: 8px 12px;
   cursor: pointer;
   transition: background-color 0.2s;
-  font-size: 14px;
+  font-size: var(--fs-base);
   color: var(--color-text-heading);
 }
 
@@ -237,7 +237,7 @@
 .quick-ticket-dropdown-item .anticon {
   width: 16px;
   height: 16px;
-  font-size: 16px;
+  font-size: var(--fs-lg);
 }
 
 .quick-ticket-submit {
@@ -250,7 +250,7 @@
   color: var(--color-bg-surface);
   border-radius: 3px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: var(--fs-base);
   font-weight: 500;
   transition: background-color 0.2s;
   height: 28px;
@@ -269,7 +269,7 @@
 }
 
 .quick-ticket-submit-icon {
-  font-size: 16px;
+  font-size: var(--fs-lg);
   font-weight: 600;
 }
 
@@ -329,7 +329,7 @@
 }
 
 .quick-ticket-datepicker-input .ant-picker-input>input {
-  font-size: 12px !important;
+  font-size: var(--fs-sm) !important;
   color: var(--color-text-secondary) !important;
   cursor: pointer;
   padding: 0 !important;
@@ -339,7 +339,7 @@
 
 .quick-ticket-datepicker-input .ant-picker-suffix {
   color: var(--color-text-muted);
-  font-size: 14px;
+  font-size: var(--fs-base);
   margin: 0;
 }
 

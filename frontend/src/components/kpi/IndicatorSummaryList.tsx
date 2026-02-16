@@ -47,12 +47,12 @@ const IndicatorSummaryList: React.FC<IndicatorSummaryListProps> = ({
             {/* Info */}
             <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                    <Text strong style={{ color: '#2C3E50', fontSize: 14 }}>{ind.name}</Text>
+                    <Text strong style={{ color: 'var(--color-text-heading)', fontSize: 'var(--fs-base)' }}>{ind.name}</Text>
                     <Text strong>{pct}%</Text>
                 </div>
                 
                 {/* Progress Bar */}
-                <div style={{ height: 6, background: '#f0f0f0', borderRadius: 3, overflow: 'hidden', marginBottom: 8 }}>
+                <div style={{ height: 6, background: 'var(--color-bg-inset)', borderRadius: 3, overflow: 'hidden', marginBottom: 8 }}>
                     <div style={{ 
                         height: '100%', 
                         width: `${pct}%`, 
@@ -62,9 +62,9 @@ const IndicatorSummaryList: React.FC<IndicatorSummaryListProps> = ({
                 </div>
 
                 <Space size="small">
-                    <Tag bordered={false} style={{ margin: 0, fontSize: 11, background: '#F5F7FA' }}>Weight: {ind.weight}</Tag>
+                    <Tag bordered={false} style={{ margin: 0, fontSize: 'var(--fs-xs)', background: 'var(--color-bg-inset)' }}>Weight: {ind.weight}</Tag>
                     {ind.raw_value !== null && (
-                      <Text type="secondary" style={{ fontSize: 12 }}>
+                      <Text type="secondary" style={{ fontSize: 'var(--fs-sm)' }}>
                           {ind.raw_value} {ind.unit}
                       </Text>
                     )}

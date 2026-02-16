@@ -389,7 +389,7 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
                   onClick={() => setNewComment(qc.text)}
                   className="quick-comment-btn"
                   style={{
-                    fontSize: "12px",
+                    fontSize: 'var(--fs-sm)',
                     height: "28px",
                     padding: "0 12px",
                     border: "1px solid var(--color-border)",
@@ -429,7 +429,7 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
               placeholder="Add a comment... (Press Enter to send, Shift+Enter for new line)"
               autoSize={{ minRows: 2, maxRows: 6 }}
               style={{
-                fontSize: "14px",
+                fontSize: 'var(--fs-base)',
                 color: "var(--color-text-heading)",
                 border: "2px solid var(--color-border)",
                 borderRadius: "8px",
@@ -452,7 +452,7 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
                   right: "12px",
                   top: "8px",
                   color: "var(--color-text-muted)",
-                  fontSize: "16px",
+                  fontSize: 'var(--fs-lg)',
                   pointerEvents: "none",
                   opacity: newComment.trim() ? 1 : 0.5,
                   transition: "opacity 0.3s",
@@ -471,14 +471,14 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
               marginTop: "8px",
             }}
           >
-            <span style={{ fontSize: "12px", color: "#9E9E9E" }}>
+            <span style={{ fontSize: 'var(--fs-sm)', color: "#9E9E9E" }}>
               <kbd
                 style={{
                   padding: "2px 6px",
                   border: "1px solid #ddd",
                   borderRadius: "4px",
                   backgroundColor: "var(--color-bg-inset)",
-                  fontSize: "11px",
+                  fontSize: 'var(--fs-xs)',
                 }}
               >
                 Enter
@@ -490,7 +490,7 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
                   border: "1px solid #ddd",
                   borderRadius: "4px",
                   backgroundColor: "var(--color-bg-inset)",
-                  fontSize: "11px",
+                  fontSize: 'var(--fs-xs)',
                 }}
               >
                 Shift+Enter
@@ -518,7 +518,7 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
       {typingUsers.length > 0 && (
         <div
           style={{
-            fontSize: "12px",
+            fontSize: 'var(--fs-sm)',
             color: "var(--color-text-muted)",
             fontStyle: "italic",
             marginBottom: "12px",
@@ -587,7 +587,7 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
                     style={{
                       backgroundColor: "var(--color-primary)",
                       flexShrink: 0,
-                      fontSize: "16px",
+                      fontSize: 'var(--fs-lg)',
                       fontWeight: 600,
                     }}
                   >
@@ -617,7 +617,7 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
                           style={{
                             fontWeight: 600,
                             color: "var(--color-text-heading)",
-                            fontSize: "14px",
+                            fontSize: 'var(--fs-base)',
                           }}
                         >
                           {getUserDisplayName(comment.user)}
@@ -629,7 +629,7 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
                         >
                           <span
                             style={{
-                              fontSize: "12px",
+                              fontSize: 'var(--fs-sm)',
                               color: "var(--color-text-muted)",
                             }}
                           >
@@ -639,7 +639,7 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
                         {comment.updated_at !== comment.created_at && (
                           <span
                             style={{
-                              fontSize: "11px",
+                              fontSize: 'var(--fs-xs)',
                               color: "var(--color-text-muted)",
                               backgroundColor: "var(--color-bg-inset)",
                               padding: "2px 6px",
@@ -752,7 +752,7 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({
                     ) : (
                       <div
                         style={{
-                          fontSize: "14px",
+                          fontSize: 'var(--fs-base)',
                           color: "var(--color-text-heading)",
                           whiteSpace: "pre-wrap",
                           wordBreak: "break-word",

@@ -146,7 +146,7 @@ const DeadlineColumn: React.FC<{
           justifyContent: "space-between",
           padding: "0 12px 0 24px", // Left padding for arrow tip
           color: "#fff",
-          fontSize: 12,
+          fontSize: 'var(--fs-sm)',
           fontWeight: 700,
           textTransform: "uppercase",
           letterSpacing: "0.5px",
@@ -161,7 +161,7 @@ const DeadlineColumn: React.FC<{
             backgroundColor: "rgba(255,255,255,0.25)",
             padding: "1px 8px",
             borderRadius: 10,
-            fontSize: 11,
+            fontSize: 'var(--fs-xs)',
             minWidth: 24,
             textAlign: "center",
           }}
@@ -198,7 +198,7 @@ const DeadlineColumn: React.FC<{
               {/* Ticket Title */}
               <div
                 style={{
-                  fontSize: 13,
+                  fontSize: 'var(--fs-caption)',
                   fontWeight: 500,
                   marginBottom: 8,
                   color: "var(--color-text-heading)",
@@ -219,12 +219,12 @@ const DeadlineColumn: React.FC<{
                     padding: "4px 6px",
                     backgroundColor: "var(--color-bg-inset)",
                     borderRadius: 3,
-                    fontSize: 12,
+                    fontSize: 'var(--fs-sm)',
                     color: "var(--color-text-muted)",
                   }}
                 >
-                  <ClockCircleOutlined style={{ fontSize: 12 }} />
-                  <Text style={{ fontSize: 12, fontWeight: 500 }}>
+                  <ClockCircleOutlined style={{ fontSize: 'var(--fs-sm)' }} />
+                  <Text style={{ fontSize: 'var(--fs-sm)', fontWeight: 500 }}>
                     {new Date(ticket.due_date).toLocaleDateString("en-US", {
                       weekday: "short",
                       month: "short",
@@ -241,7 +241,7 @@ const DeadlineColumn: React.FC<{
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
-                  fontSize: 12,
+                  fontSize: 'var(--fs-sm)',
                   color: "var(--color-text-muted)",
                 }}
               >
@@ -250,21 +250,21 @@ const DeadlineColumn: React.FC<{
                   <FontAwesomeIcon
                     icon={getTypeIcon(ticket.type).icon}
                     style={{
-                      fontSize: 12,
+                      fontSize: 'var(--fs-sm)',
                       color: getTypeIcon(ticket.type).color,
                     }}
                   />
 
                   {/* Ticket ID */}
                   <Text
-                    style={{ fontSize: 11, color: "var(--color-text-muted)", fontWeight: 500 }}
+                    style={{ fontSize: 'var(--fs-xs)', color: "var(--color-text-muted)", fontWeight: 500 }}
                   >
                     {formatTicketId(ticket)}
                   </Text>
 
                   {/* Priority */}
                   {ticket.priority_id && (
-                    <span style={{ fontSize: 12 }}>
+                    <span style={{ fontSize: 'var(--fs-sm)' }}>
                       {getPriorityIcon(ticket.priority_id)}
                     </span>
                   )}
@@ -278,7 +278,7 @@ const DeadlineColumn: React.FC<{
                         key={idx}
                         size={20}
                         icon={<UserOutlined />}
-                        style={{ fontSize: 10 }}
+                        style={{ fontSize: 'var(--fs-2xs)' }}
                       />
                     ))}
                   </Avatar.Group>
@@ -293,7 +293,7 @@ const DeadlineColumn: React.FC<{
                       <Tag
                         key={idx}
                         style={{
-                          fontSize: 10,
+                          fontSize: 'var(--fs-2xs)',
                           padding: "0 6px",
                           margin: 0,
                           borderRadius: 2,
@@ -305,7 +305,7 @@ const DeadlineColumn: React.FC<{
                     {ticket.tags_detail.length > 2 && (
                       <Tag
                         style={{
-                          fontSize: 10,
+                          fontSize: 'var(--fs-2xs)',
                           padding: "0 6px",
                           margin: 0,
                           borderRadius: 2,

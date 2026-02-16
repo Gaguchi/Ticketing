@@ -47,7 +47,7 @@ const TeamWorkloadCards: React.FC<Props> = ({
       style={{ borderRadius: 8 }}
       styles={{ body: { padding: 12 } }}
       extra={
-        <span style={{ fontSize: 11, color: "var(--color-text-muted)" }}>
+        <span style={{ fontSize: 'var(--fs-xs)', color: "var(--color-text-muted)" }}>
           {t('workload.members', { count: workloads.length })}
         </span>
       }
@@ -130,7 +130,7 @@ const TeamWorkloadCards: React.FC<Props> = ({
                     <div
                       style={{
                         fontWeight: 600,
-                        fontSize: 13,
+                        fontSize: 'var(--fs-caption)',
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                         whiteSpace: "nowrap",
@@ -148,14 +148,14 @@ const TeamWorkloadCards: React.FC<Props> = ({
                     >
                       <span
                         style={{
-                          fontSize: 16,
+                          fontSize: 'var(--fs-lg)',
                           fontWeight: 700,
                           color: workloadColor,
                         }}
                       >
                         {workload.total_active}
                       </span>
-                      <span style={{ fontSize: 11, color: "var(--color-text-muted)" }}>
+                      <span style={{ fontSize: 'var(--fs-xs)', color: "var(--color-text-muted)" }}>
                         {t('workload.active')}
                       </span>
                       {hasOverdue && (
@@ -165,7 +165,7 @@ const TeamWorkloadCards: React.FC<Props> = ({
                             icon={<WarningOutlined />}
                             style={{
                               margin: 0,
-                              fontSize: 10,
+                              fontSize: 'var(--fs-2xs)',
                               padding: "0 4px",
                             }}
                           >
@@ -206,7 +206,7 @@ const TeamWorkloadCards: React.FC<Props> = ({
                               padding: "2px 6px",
                               borderRadius: 4,
                               backgroundColor: "var(--color-bg-inset)",
-                              fontSize: 10,
+                              fontSize: 'var(--fs-2xs)',
                             }}
                           >
                             <div

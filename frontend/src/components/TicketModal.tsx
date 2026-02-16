@@ -553,13 +553,13 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                 >
                   <FontAwesomeIcon
                     icon={typeInfo.icon}
-                    style={{ color: typeInfo.color, fontSize: 16 }}
+                    style={{ color: typeInfo.color, fontSize: 'var(--fs-lg)' }}
                   />
                 </div>
               </Dropdown>
 
               {/* Breadcrumbs */}
-              <Text type="secondary" style={{ fontSize: 13 }}>
+              <Text type="secondary" style={{ fontSize: 'var(--fs-caption)' }}>
                 {currentProject?.name} /{" "}
                 <Text strong style={{ color: "var(--color-text-heading)" }}>
                   {ticket?.ticket_key || "NEW"}
@@ -796,7 +796,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                                 backgroundColor:
                                   bc.statuses[0]?.category_color || "#e0e0e0",
                                 color: "#fff",
-                                fontSize: "11px",
+                                fontSize: 'var(--fs-xs)',
                                 fontWeight: 500,
                               }}
                             >

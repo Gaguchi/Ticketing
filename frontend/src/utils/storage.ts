@@ -11,7 +11,11 @@ export const StorageKeys = {
   USER: "user",
   SELECTED_PROJECT_ID: "selectedProjectId",
   LAST_USER_FETCH: "last_user_fetch",
-  THEME_VERSION: "theme_version",
+  THEME_VERSION: "theme_version",  // legacy, kept for compat
+  THEME_PREFERENCE: "theme_preference",
+  DARK_VARIANT: "dark_variant",
+  FONT_SIZE: "font_size",
+  COMPACT_MODE: "compact_mode",
 } as const;
 
 // Cache duration constants
@@ -121,13 +125,49 @@ class StorageService {
     this.remove(StorageKeys.SELECTED_PROJECT_ID);
   }
 
-  // ============ THEME VERSION ============
+  // ============ THEME VERSION (legacy) ============
   getThemeVersion(): 'v1' | 'v2' {
     return (localStorage.getItem(StorageKeys.THEME_VERSION) as 'v1' | 'v2') || 'v2';
   }
 
   setThemeVersion(version: 'v1' | 'v2'): void {
     localStorage.setItem(StorageKeys.THEME_VERSION, version);
+  }
+
+  // ============ THEME PREFERENCE (light/dark/auto) ============
+  getThemePreference(): 'light' | 'dark' | 'auto' {
+    return (localStorage.getItem(StorageKeys.THEME_PREFERENCE) as 'light' | 'dark' | 'auto') || 'light';
+  }
+
+  setThemePreference(pref: 'light' | 'dark' | 'auto'): void {
+    localStorage.setItem(StorageKeys.THEME_PREFERENCE, pref);
+  }
+
+  // ============ DARK VARIANT ============
+  getDarkVariant(): 'midnight' | 'slate' | 'warm' {
+    return (localStorage.getItem(StorageKeys.DARK_VARIANT) as 'midnight' | 'slate' | 'warm') || 'midnight';
+  }
+
+  setDarkVariant(variant: 'midnight' | 'slate' | 'warm'): void {
+    localStorage.setItem(StorageKeys.DARK_VARIANT, variant);
+  }
+
+  // ============ FONT SIZE ============
+  getFontSize(): 'small' | 'medium' | 'large' {
+    return (localStorage.getItem(StorageKeys.FONT_SIZE) as 'small' | 'medium' | 'large') || 'medium';
+  }
+
+  setFontSize(size: 'small' | 'medium' | 'large'): void {
+    localStorage.setItem(StorageKeys.FONT_SIZE, size);
+  }
+
+  // ============ COMPACT MODE ============
+  getCompactMode(): boolean {
+    return localStorage.getItem(StorageKeys.COMPACT_MODE) === 'true';
+  }
+
+  setCompactMode(compact: boolean): void {
+    localStorage.setItem(StorageKeys.COMPACT_MODE, String(compact));
   }
 
   // ============ CLEAR ALL ============

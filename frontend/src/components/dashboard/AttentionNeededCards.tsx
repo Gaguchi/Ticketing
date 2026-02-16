@@ -112,7 +112,7 @@ const TicketItem: React.FC<{
       }}
     >
       {ticket.company ? (
-        <FontAwesomeIcon icon={faBuilding} style={{ fontSize: 10 }} />
+        <FontAwesomeIcon icon={faBuilding} style={{ fontSize: 'var(--fs-2xs)' }} />
       ) : (
         "G"
       )}
@@ -131,7 +131,7 @@ const TicketItem: React.FC<{
         <span
           style={{
             fontFamily: "monospace",
-            fontSize: 10,
+            fontSize: 'var(--fs-2xs)',
             color: "var(--color-text-muted)",
             flexShrink: 0,
           }}
@@ -140,7 +140,7 @@ const TicketItem: React.FC<{
         </span>
         <span
           style={{
-            fontSize: 12,
+            fontSize: 'var(--fs-sm)',
             fontWeight: 500,
             overflow: "hidden",
             textOverflow: "ellipsis",
@@ -158,7 +158,7 @@ const TicketItem: React.FC<{
         color={getPriorityColor(ticket.priority)}
         style={{
           margin: 0,
-          fontSize: 10,
+          fontSize: 'var(--fs-2xs)',
           lineHeight: "16px",
           padding: "0 6px",
           flexShrink: 0,
@@ -171,7 +171,7 @@ const TicketItem: React.FC<{
     {/* Time indicator */}
     <span
       style={{
-        fontSize: 10,
+        fontSize: 'var(--fs-2xs)',
         color: category === "overdue" ? "#ff4d4f" : "var(--color-text-muted)",
         fontWeight: category === "overdue" ? 600 : 400,
         flexShrink: 0,
@@ -188,7 +188,7 @@ const TicketItem: React.FC<{
     </span>
 
     {/* View arrow */}
-    <RightOutlined style={{ fontSize: 10, color: "#bfbfbf" }} />
+    <RightOutlined style={{ fontSize: 'var(--fs-2xs)', color: "#bfbfbf" }} />
   </div>
   );
 };
@@ -281,7 +281,7 @@ const AttentionNeededCards: React.FC<Props> = ({
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontWeight: 600, fontSize: 14 }}>
+          <span style={{ fontWeight: 600, fontSize: 'var(--fs-base)' }}>
             {t('attention.needsAttention')}
           </span>
           {totalCount > 0 && (
@@ -339,7 +339,7 @@ const AttentionNeededCards: React.FC<Props> = ({
                     <span
                       style={{
                         color: hasTickets ? config.color : "var(--color-border)",
-                        fontSize: 10,
+                        fontSize: 'var(--fs-2xs)',
                         transition: "transform 0.2s",
                         transform: isCollapsed ? "rotate(-90deg)" : "rotate(0)",
                       }}
@@ -357,7 +357,7 @@ const AttentionNeededCards: React.FC<Props> = ({
                     {/* Category title */}
                     <span
                       style={{
-                        fontSize: 11,
+                        fontSize: 'var(--fs-xs)',
                         fontWeight: 600,
                         color: hasTickets ? config.color : "#bfbfbf",
                         letterSpacing: "0.5px",
@@ -373,7 +373,7 @@ const AttentionNeededCards: React.FC<Props> = ({
                         type="link"
                         size="small"
                         style={{
-                          fontSize: 11,
+                          fontSize: 'var(--fs-xs)',
                           padding: 0,
                           height: "auto",
                           color: "var(--color-primary)",
@@ -404,7 +404,7 @@ const AttentionNeededCards: React.FC<Props> = ({
                           style={{
                             marginLeft: 20,
                             padding: "6px 12px",
-                            fontSize: 11,
+                            fontSize: 'var(--fs-xs)',
                             color: "var(--color-text-muted)",
                             borderLeft: `2px solid ${config.color}20`,
                           }}

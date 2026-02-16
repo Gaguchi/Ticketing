@@ -45,13 +45,13 @@
 }
 
 .subtitle {
-  font-size: 14px;
+  font-size: var(--fs-base);
   color: var(--color-text-muted);
 }
 
 .login-button {
   height: 44px;
-  font-size: 16px;
+  font-size: var(--fs-lg);
   font-weight: 500;
   background: var(--gradient-primary);
   border: none;
@@ -65,7 +65,7 @@
 
 .forgot-link {
   color: var(--color-primary);
-  font-size: 14px;
+  font-size: var(--fs-base);
 }
 
 .forgot-link:hover {
@@ -93,6 +93,6 @@
   }
 
   .app-title {
-    font-size: 24px !important;
+    font-size: var(--fs-3xl) !important;
   }
 }

@@ -64,7 +64,7 @@ const KanbanFlowOverview: React.FC<Props> = ({
           }}
         >
           <span>{t('kanban.workflowOverview')}</span>
-          <span style={{ fontSize: 12, fontWeight: 400, color: "var(--color-text-muted)" }}>
+          <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 400, color: "var(--color-text-muted)" }}>
             {t('kanban.totalTickets', { count: data.total_tickets })}
           </span>
         </div>
@@ -127,7 +127,7 @@ const KanbanFlowOverview: React.FC<Props> = ({
                         justifyContent: "center",
                         color: "#fff",
                         fontWeight: 600,
-                        fontSize: 14,
+                        fontSize: 'var(--fs-base)',
                         minHeight: 24,
                         transition: "all 0.2s",
                       }}
@@ -140,7 +140,7 @@ const KanbanFlowOverview: React.FC<Props> = ({
                   <div
                     style={{
                       marginTop: 8,
-                      fontSize: 11,
+                      fontSize: 'var(--fs-xs)',
                       color: "var(--color-text-secondary)",
                       textAlign: "center",
                       overflow: "hidden",
@@ -164,7 +164,7 @@ const KanbanFlowOverview: React.FC<Props> = ({
                     paddingBottom: 20,
                   }}
                 >
-                  <RightOutlined style={{ fontSize: 12 }} />
+                  <RightOutlined style={{ fontSize: 'var(--fs-sm)' }} />
                 </div>
               )}
             </React.Fragment>

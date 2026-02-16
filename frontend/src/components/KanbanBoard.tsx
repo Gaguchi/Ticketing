@@ -630,7 +630,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
               minWidth: "40px",
               marginRight: "8px",
               padding: "8px",
-              backgroundColor: "rgba(9,30,66,0.04)",
+              backgroundColor: "var(--color-overlay-light)",
               borderRadius: "3px",
               cursor: "pointer",
               transition: "background-color 0.15s",
@@ -640,10 +640,10 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
               height: "40px",
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = "rgba(9,30,66,0.08)";
+              e.currentTarget.style.backgroundColor = "var(--color-overlay-medium)";
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "rgba(9,30,66,0.04)";
+              e.currentTarget.style.backgroundColor = "var(--color-overlay-light)";
             }}
             onClick={() => {
               // TODO: Implement add column functionality
@@ -651,7 +651,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           >
             <span
               style={{
-                fontSize: "20px",
+                fontSize: 'var(--fs-2xl)',
                 fontWeight: 400,
                 color: "var(--color-text-muted)",
                 lineHeight: "1",

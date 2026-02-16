@@ -74,7 +74,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         borderLeftStyle: "solid" as const,
         borderLeftColor: statusColor,
         boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
-        fontSize: "12px",
+        fontSize: 'var(--fs-sm)',
         padding: "0",
         marginBottom: "4px",
         overflow: "hidden",
@@ -118,7 +118,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
               fontWeight: 600,
               flexShrink: 0,
               color: token.colorTextSecondary,
-              fontSize: "11px",
+              fontSize: 'var(--fs-xs)',
             }}
           >
             {ticket.ticket_key}
@@ -142,7 +142,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                     key={assignee.id}
                     style={{
                       backgroundColor: token.colorPrimary,
-                      fontSize: 10,
+                      fontSize: 'var(--fs-2xs)',
                       border: `1px solid ${token.colorBgContainer}`,
                     }}
                   >

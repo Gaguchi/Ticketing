@@ -61,9 +61,9 @@ const KPIScoreboard: React.FC = () => {
   }
 
   const getRankIcon = (rank: number) => {
-    if (rank === 1) return <CrownOutlined style={{ color: '#faad14', fontSize: 18 }} />;
-    if (rank === 2) return <CrownOutlined style={{ color: '#bfbfbf', fontSize: 16 }} />;
-    if (rank === 3) return <CrownOutlined style={{ color: '#d48806', fontSize: 14 }} />;
+    if (rank === 1) return <CrownOutlined style={{ color: '#faad14', fontSize: 'var(--fs-xl)' }} />;
+    if (rank === 2) return <CrownOutlined style={{ color: '#bfbfbf', fontSize: 'var(--fs-lg)' }} />;
+    if (rank === 3) return <CrownOutlined style={{ color: '#d48806', fontSize: 'var(--fs-base)' }} />;
     return <Text type="secondary">{rank}</Text>;
   };
 
@@ -122,7 +122,7 @@ const KPIScoreboard: React.FC = () => {
                     : '#ff4d4f'
               }
             />
-            <Text type="secondary" style={{ fontSize: 12 }}>
+            <Text type="secondary" style={{ fontSize: 'var(--fs-sm)' }}>
               {record.score_percentage.toFixed(1)}%
             </Text>
           </Space>
@@ -136,7 +136,7 @@ const KPIScoreboard: React.FC = () => {
         cols.push({
           title: (
             <Tooltip title={`${t('kpi.weightLabel', { weight: ind.weight })} | ${ind.higher_is_better ? `↑ ${t('kpi.higherIsBetter')}` : `↓ ${t('kpi.lowerIsBetter')}`}`}>
-              <span style={{ fontSize: 12 }}>{ind.name}</span>
+              <span style={{ fontSize: 'var(--fs-sm)' }}>{ind.name}</span>
             </Tooltip>
           ),
           key: ind.metric_key,
@@ -163,9 +163,9 @@ const KPIScoreboard: React.FC = () => {
               <Tooltip
                 title={`Raw: ${formatRawValue(score.raw_value, units[ind.metric_key] || '')} | Normalized: ${(score.normalized * 100).toFixed(0)}%`}
               >
-                <Text style={{ fontSize: 13 }}>
+                <Text style={{ fontSize: 'var(--fs-caption)' }}>
                   {score.weighted_score.toFixed(1)}
-                  <Text type="secondary" style={{ fontSize: 11 }}>
+                  <Text type="secondary" style={{ fontSize: 'var(--fs-xs)' }}>
                     /{ind.weight}
                   </Text>
                 </Text>

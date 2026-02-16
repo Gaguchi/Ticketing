@@ -192,7 +192,7 @@ const UserReviewModal: React.FC<UserReviewModalProps> = ({
         borderRadius: 6,
         border: '1px solid #ffe58f',
       }}>
-        <Text style={{ fontSize: 12 }}>
+        <Text style={{ fontSize: 'var(--fs-sm)' }}>
           <strong>Note:</strong> This review is private and will NOT be visible to {username}. 
           Only managers and superadmins can view user reviews.
         </Text>

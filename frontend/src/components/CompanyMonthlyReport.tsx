@@ -86,6 +86,8 @@ type MetricKey = typeof ALL_METRICS[number]['key'];
 
 /* ── Domain-motivated palette ── */
 /* Ink & paper: printed report feel. Blue: boardroom authority. Teal: operational status. */
+/* These constants are used for the PDF-style rendered report preview (simulates printed paper)
+   and the actual jsPDF export. They are intentionally hardcoded for the "paper" rendering. */
 const INK = '#0f172a';
 const INK_SECONDARY = '#334155';
 const INK_MUTED = '#64748b';
@@ -711,7 +713,7 @@ export const CompanyMonthlyReport: React.FC<CompanyMonthlyReportProps> = ({
         return (
             <div style={{ textAlign: 'center', padding: 80 }}>
                 <Spin size="large" />
-                <div style={{ marginTop: 16, color: INK_MUTED, fontSize: 13, fontWeight: 500 }}>Generating report...</div>
+                <div style={{ marginTop: 16, color: 'var(--color-text-muted)', fontSize: 13, fontWeight: 500 }}>Generating report...</div>
             </div>
         );
     }
@@ -775,10 +777,10 @@ export const CompanyMonthlyReport: React.FC<CompanyMonthlyReportProps> = ({
                 marginBottom: 16, flexWrap: 'wrap', gap: 8,
             }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                    <span style={{ fontSize: 15, fontWeight: 700, color: INK }}>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text-heading)' }}>
                         {report.period.month_name} {report.period.year}
                     </span>
-                    <span style={{ fontSize: 12, color: INK_FAINT }}>
+                    <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
                         {report.company.name}
                     </span>
                 </div>
@@ -812,7 +814,7 @@ export const CompanyMonthlyReport: React.FC<CompanyMonthlyReportProps> = ({
 
             {showSettings && (
                 <div style={{
-                    background: SURFACE, border: `1px solid ${RULE}`, borderRadius: 6,
+                    background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-light)', borderRadius: 6,
                     padding: '10px 14px', marginBottom: 16, display: 'flex', flexWrap: 'wrap', gap: '4px 16px',
                 }}>
                     {ALL_METRICS.map(m => (
@@ -825,7 +827,7 @@ export const CompanyMonthlyReport: React.FC<CompanyMonthlyReportProps> = ({
 
             {/* ── A4 Paper ── */}
             <div style={{
-                background: '#dfe3e8',
+                background: 'var(--color-bg-inset)',
                 borderRadius: 8,
                 padding: '28px 36px',
                 margin: '0 -12px',
@@ -1306,7 +1308,7 @@ export const CompanyMonthlyReport: React.FC<CompanyMonthlyReportProps> = ({
                 width={420}
             >
                 <div style={{ marginBottom: 16 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: INK_MUTED, marginBottom: 6 }}>Recipient</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: 6 }}>Recipient</div>
                     <Input
                         type="email"
                         value={recipientEmail}
@@ -1315,19 +1317,19 @@ export const CompanyMonthlyReport: React.FC<CompanyMonthlyReportProps> = ({
                     />
                 </div>
                 <div style={{ marginBottom: 16 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: INK_MUTED, marginBottom: 6 }}>Period</div>
-                    <span style={{ fontSize: 14, color: INK }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: 6 }}>Period</div>
+                    <span style={{ fontSize: 14, color: 'var(--color-text-primary)' }}>
                         {report.period.month_name} {report.period.year} &mdash; {report.company.name}
                     </span>
                 </div>
                 <div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: INK_MUTED, marginBottom: 6 }}>Included metrics</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: 6 }}>Included metrics</div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                         {ALL_METRICS.filter(m => enabledMetrics[m.key]).map(m => (
                             <Tag key={m.key} style={{ fontSize: 12 }}>{m.label}</Tag>
                         ))}
                         {enabledSections.length === 0 && (
-                            <span style={{ fontSize: 13, color: INK_FAINT }}>None selected</span>
+                            <span style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>None selected</span>
                         )}
                     </div>
                 </div>

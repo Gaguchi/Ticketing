@@ -485,11 +485,11 @@ export const TicketChatPanel: React.FC<TicketChatPanelProps> = ({
                 No chat room for this ticket yet
               </Text>
               {canCreateChat ? (
-                <Text type="secondary" style={{ fontSize: 12 }}>
+                <Text type="secondary" style={{ fontSize: 'var(--fs-sm)' }}>
                   Create a chat to communicate with the team
                 </Text>
               ) : (
-                <Text type="secondary" style={{ fontSize: 12 }}>
+                <Text type="secondary" style={{ fontSize: 'var(--fs-sm)' }}>
                   A chat room will be created when assigned
                 </Text>
               )}
@@ -578,12 +578,12 @@ export const TicketChatPanel: React.FC<TicketChatPanelProps> = ({
                   msg.is_system || msg.type === "system" ? (
                     // System message (status/assignment changes)
                     <div key={msg.id} className="ticket-chat-system-message">
-                      <Text type="secondary" style={{ fontSize: 12 }}>
+                      <Text type="secondary" style={{ fontSize: 'var(--fs-sm)' }}>
                         {msg.content}
                       </Text>
                       <Text
                         type="secondary"
-                        style={{ fontSize: 10, marginLeft: 8 }}
+                        style={{ fontSize: 'var(--fs-2xs)', marginLeft: 8 }}
                       >
                         {formatTime(msg.created_at)}
                       </Text>

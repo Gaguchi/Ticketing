@@ -57,9 +57,9 @@ export const DashboardWidget: React.FC<DashboardWidgetProps> = ({
         >
           <DragOutlined
             className="drag-handle"
-            style={{ cursor: "grab", color: "#bfbfbf", fontSize: 12 }}
+            style={{ cursor: "grab", color: "#bfbfbf", fontSize: 'var(--fs-sm)' }}
           />
-          <Text strong style={{ fontSize: 13 }}>
+          <Text strong style={{ fontSize: 'var(--fs-caption)' }}>
             {title}
           </Text>
         </div>

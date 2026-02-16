@@ -62,8 +62,8 @@ const NightingaleChart: React.FC<NightingaleChartProps> = ({
     const focusActiveOffset = isActive ? 10 : 0;
     
     // Colors
-    const trackColor = '#F5F7FA'; // Very light gray from theme
-    const strokeColor = '#FFFFFF'; // Separator lines
+    const trackColor = 'var(--color-bg-inset)';
+    const strokeColor = 'var(--color-bg-surface)';
 
     return (
       <g>
@@ -104,7 +104,7 @@ const NightingaleChart: React.FC<NightingaleChartProps> = ({
     );
   };
 
-  const scoreColor = '#2C3E50'; // Primary theme color
+  const scoreColor = 'var(--color-text-heading)';
 
   return (
     <div style={{ position: 'relative', width: '100%', height: size }}>
@@ -118,7 +118,7 @@ const NightingaleChart: React.FC<NightingaleChartProps> = ({
         <div style={{ fontSize: size * 0.1, fontWeight: 700, color: scoreColor, lineHeight: 1 }}>
           {Math.round(scorePercentage)}
         </div>
-        <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, color: '#999', marginTop: 4 }}>
+        <div style={{ fontSize: 'var(--fs-xs)', textTransform: 'uppercase', letterSpacing: 1, color: 'var(--color-text-muted)', marginTop: 4 }}>
           Score
         </div>
       </div>
@@ -148,25 +148,25 @@ const NightingaleChart: React.FC<NightingaleChartProps> = ({
                 const d = payload[0].payload as PersonalIndicatorScore & { value: number, rawValue: number };
                 const pct = Math.round(d.normalized * 100);
                 return (
-                  <div style={{ 
-                    background: '#fff', 
-                    padding: '12px 16px', 
-                    borderRadius: 8, 
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)', 
-                    border: '1px solid #f0f0f0',
+                  <div style={{
+                    background: 'var(--color-bg-elevated)',
+                    padding: '12px 16px',
+                    borderRadius: 8,
+                    boxShadow: 'var(--shadow-md)',
+                    border: '1px solid var(--color-border-light)',
                     borderLeft: `4px solid ${d.color}`
                   }}>
-                    <div style={{fontWeight: 600, color: '#2C3E50', marginBottom: 4}}>{d.name}</div>
+                    <div style={{fontWeight: 600, color: 'var(--color-text-heading)', marginBottom: 4}}>{d.name}</div>
                     <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', minWidth: 160}}>
                       <Text type="secondary">Score</Text>
-                      <Text strong style={{ fontSize: 16 }}>{pct}%</Text>
+                      <Text strong style={{ fontSize: 'var(--fs-lg)' }}>{pct}%</Text>
                     </div>
                     <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4}}>
                       <Text type="secondary">Weight</Text>
                       <Tag style={{margin: 0}}>{d.weight} pts</Tag>
                     </div>
                     {d.raw_value !== null && (
-                      <div style={{marginTop: 8, paddingTop: 8, borderTop: '1px solid #f5f5f5', fontSize: 12, color: '#888'}}>
+                      <div style={{marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--color-border-light)', fontSize: 'var(--fs-sm)', color: 'var(--color-text-muted)'}}>
                         Raw: {d.raw_value} {d.unit}
                       </div>
                     )}

@@ -53,18 +53,18 @@ const CustomTooltip = ({ active, payload }: any) => {
 
   return (
     <div style={{
-      background: '#fff',
-      border: '1px solid #e0e0e0',
+      background: 'var(--color-bg-elevated)',
+      border: '1px solid var(--color-border)',
       borderRadius: 6,
       padding: '8px 12px',
-      boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+      boxShadow: 'var(--shadow-md)',
       maxWidth: 220,
     }}>
-      <div style={{ fontWeight: 600, marginBottom: 4, color: '#1A1A1A' }}>{data.name}</div>
-      <div style={{ fontSize: 12, color: '#4A4A4A' }}>
+      <div style={{ fontWeight: 600, marginBottom: 4, color: 'var(--color-text-heading)' }}>{data.name}</div>
+      <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-secondary)' }}>
         Value: <strong>{formatValue(data.raw_value, data.unit)}</strong>
       </div>
-      <div style={{ fontSize: 12, color: '#4A4A4A' }}>
+      <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-secondary)' }}>
         Score: <strong>{data.weighted_score.toFixed(1)}</strong> / {data.weight}
       </div>
     </div>
@@ -115,7 +115,7 @@ const ScoreDonutChart: React.FC<ScoreDonutChartProps> = ({
             activeShape={renderActiveShape}
             onClick={handleClick}
             style={{ cursor: 'pointer', outline: 'none' }}
-            stroke="#fff"
+            stroke="var(--color-bg-surface)"
             strokeWidth={2}
           >
             {chartData.map((entry) => (
@@ -145,7 +145,7 @@ const ScoreDonutChart: React.FC<ScoreDonutChartProps> = ({
         }}>
           {Math.round(scorePercentage)}
         </div>
-        <Text type="secondary" style={{ fontSize: 13 }}>/ 100</Text>
+        <Text type="secondary" style={{ fontSize: 'var(--fs-caption)' }}>/ 100</Text>
       </div>
     </div>
   );

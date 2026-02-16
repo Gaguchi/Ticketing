@@ -32,7 +32,7 @@ const ColumnBottomDropZone: React.FC<{ columnId: string }> = ({ columnId }) => {
       style={{
         // Zero height when not hovering - completely invisible
         minHeight: isOver ? "8px" : "0px",
-        backgroundColor: isOver ? "rgba(0, 82, 204, 0.1)" : "transparent",
+        backgroundColor: isOver ? "var(--color-primary-bg)" : "transparent",
         borderRadius: "4px",
         transition: "all 0.15s ease",
       }}
@@ -89,7 +89,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
     transform: CSS.Translate.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
-    boxShadow: dragOverlay ? "0 2px 8px rgba(0,0,0,0.15)" : undefined,
+    boxShadow: dragOverlay ? "var(--shadow-md)" : undefined,
     border: "none",
     touchAction: "manipulation",
     display: "flex",
@@ -111,7 +111,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
         style={{
           padding: "12px 12px 8px",
           fontWeight: 600,
-          fontSize: "13px",
+          fontSize: 'var(--fs-caption)',
           cursor: dragOverlay ? "grabbing" : "grab",
           color: "var(--color-text-heading)",
           textTransform: "uppercase",
@@ -124,7 +124,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
         <span>{name}</span>
         <span
           style={{
-            fontSize: "13px",
+            fontSize: 'var(--fs-caption)',
             fontWeight: 600,
             color: "var(--color-text-muted)",
             backgroundColor: "var(--color-border)",
@@ -200,7 +200,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
                 width: "100%",
                 marginTop: "4px",
                 color: "var(--color-text-muted)",
-                fontSize: "13px",
+                fontSize: 'var(--fs-caption)',
               }}
             >
               {tCommon('btn.cancel')}
@@ -209,13 +209,13 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
         ) : (
           <Button
             type="text"
-            icon={<PlusOutlined style={{ fontSize: "14px" }} />}
+            icon={<PlusOutlined style={{ fontSize: 'var(--fs-base)' }} />}
             size="small"
             onClick={() => setShowQuickCreate(true)}
             style={{
               width: "100%",
               textAlign: "left",
-              fontSize: "14px",
+              fontSize: 'var(--fs-base)',
               height: "32px",
               padding: "4px 8px",
               color: "var(--color-text-muted)",

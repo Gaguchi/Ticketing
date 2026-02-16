@@ -342,7 +342,7 @@ const MyPerformance: React.FC<MyPerformanceProps> = ({ userRole }) => {
       width: 120,
       render: (r) =>
         r ? (
-          <Rate disabled allowHalf defaultValue={r} style={{ fontSize: 12 }} />
+          <Rate disabled allowHalf defaultValue={r} style={{ fontSize: 'var(--fs-sm)' }} />
         ) : (
           <Text type="secondary">-</Text>
         ),
@@ -380,7 +380,7 @@ const MyPerformance: React.FC<MyPerformanceProps> = ({ userRole }) => {
                 {m.first_name || m.last_name
                   ? `${m.first_name} ${m.last_name}`.trim()
                   : m.username}{" "}
-                <Text type="secondary" style={{ fontSize: 11 }}>
+                <Text type="secondary" style={{ fontSize: 'var(--fs-xs)' }}>
                   ({m.role})
                 </Text>
               </Select.Option>

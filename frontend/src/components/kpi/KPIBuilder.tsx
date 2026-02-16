@@ -229,11 +229,11 @@ const KPIBuilder: React.FC = () => {
           }}
           size="small"
         />
-        <Text strong style={{ fontSize: 13, flex: 1, opacity: ind.is_active ? 1 : 0.45 }}>
+        <Text strong style={{ fontSize: 'var(--fs-caption)', flex: 1, opacity: ind.is_active ? 1 : 0.45 }}>
           {ind.name}
         </Text>
         {ind.is_active && (
-          <Text type="secondary" style={{ fontSize: 12, minWidth: 80, textAlign: 'right' }}>
+          <Text type="secondary" style={{ fontSize: 'var(--fs-sm)', minWidth: 80, textAlign: 'right' }}>
             {collapsedSummary(ind.config, ind.config_value)}
           </Text>
         )}
@@ -248,7 +248,7 @@ const KPIBuilder: React.FC = () => {
               style={{ width: 55 }}
               onClick={(e) => e.stopPropagation()}
             />
-            <Text type="secondary" style={{ fontSize: 11 }}>pts</Text>
+            <Text type="secondary" style={{ fontSize: 'var(--fs-xs)' }}>pts</Text>
           </div>
         )}
       </div>
@@ -256,13 +256,13 @@ const KPIBuilder: React.FC = () => {
     children: (
       <div style={{ opacity: ind.is_active ? 1 : 0.5, transition: 'opacity 0.15s' }}>
         {/* Question */}
-        <Text style={{ fontSize: 14, display: 'block', marginBottom: 12 }}>
+        <Text style={{ fontSize: 'var(--fs-base)', display: 'block', marginBottom: 12 }}>
           {ind.config.question}
         </Text>
 
         {/* Config input */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-          <Text strong style={{ fontSize: 13, minWidth: 100 }}>{ind.config.label}:</Text>
+          <Text strong style={{ fontSize: 'var(--fs-caption)', minWidth: 100 }}>{ind.config.label}:</Text>
           <InputNumber
             min={ind.config.min}
             max={ind.config.max}
@@ -273,13 +273,13 @@ const KPIBuilder: React.FC = () => {
             size="small"
             style={{ width: 90 }}
           />
-          <Text type="secondary" style={{ fontSize: 12 }}>{ind.config.input_label}</Text>
+          <Text type="secondary" style={{ fontSize: 'var(--fs-sm)' }}>{ind.config.input_label}</Text>
         </div>
 
         {/* Quick presets for SLA types */}
         {ind.config.presets && (
           <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
-            <Text type="secondary" style={{ fontSize: 12, marginRight: 4 }}>Quick set:</Text>
+            <Text type="secondary" style={{ fontSize: 'var(--fs-sm)', marginRight: 4 }}>Quick set:</Text>
             {ind.config.presets.map((p) => (
               <Button
                 key={p}
@@ -287,7 +287,7 @@ const KPIBuilder: React.FC = () => {
                 type={ind.config_value === p ? 'primary' : 'default'}
                 onClick={() => handleConfigValueChange(ind.key, p)}
                 disabled={!ind.is_active}
-                style={{ fontSize: 12, padding: '0 8px', height: 24 }}
+                style={{ fontSize: 'var(--fs-sm)', padding: '0 8px', height: 24 }}
               >
                 {p}h
               </Button>
@@ -301,10 +301,10 @@ const KPIBuilder: React.FC = () => {
           borderRadius: 6,
           padding: '8px 12px',
         }}>
-          <Text type="secondary" style={{ fontSize: 11, display: 'block', marginBottom: 2 }}>
+          <Text type="secondary" style={{ fontSize: 'var(--fs-xs)', display: 'block', marginBottom: 2 }}>
             How scoring works
           </Text>
-          <Text style={{ fontSize: 12, fontFamily: 'monospace' }}>
+          <Text style={{ fontSize: 'var(--fs-sm)', fontFamily: 'monospace' }}>
             {scoringPreview(ind.config, ind.config_value)}
           </Text>
         </div>
@@ -320,7 +320,7 @@ const KPIBuilder: React.FC = () => {
             title="Configure Indicators"
             extra={
               <Space>
-                <Text type="secondary" style={{ fontSize: 12 }}>
+                <Text type="secondary" style={{ fontSize: 'var(--fs-sm)' }}>
                   {activeCount} active &middot; {totalWeight} pts
                 </Text>
                 <Button
@@ -351,7 +351,7 @@ const KPIBuilder: React.FC = () => {
               padding: '10px 12px',
               background: '#f9fafb',
               borderRadius: 6,
-              fontSize: 12,
+              fontSize: 'var(--fs-sm)',
               color: '#6B7280',
             }}>
               Configure each indicator with a target, SLA, minimum rating, or maximum count.

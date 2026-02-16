@@ -105,32 +105,32 @@ interface AvailableUser {
 const healthConfig = {
   critical: {
     color: "#dc2626",
-    bgColor: "#fef2f2",
-    borderColor: "#fecaca",
+    bgColor: "var(--color-tint-danger-bg)",
+    borderColor: "var(--color-tint-danger-border)",
     icon: <ExclamationCircleOutlined />,
     label: "Critical",
     description: "Requires immediate attention",
   },
   attention: {
     color: "#d97706",
-    bgColor: "#fffbeb",
-    borderColor: "#fde68a",
+    bgColor: "var(--color-tint-warning-bg)",
+    borderColor: "var(--color-tint-warning-border)",
     icon: <WarningOutlined />,
     label: "Needs Attention",
     description: "Has overdue or urgent tickets",
   },
   healthy: {
     color: "#16a34a",
-    bgColor: "#f0fdf4",
-    borderColor: "#bbf7d0",
+    bgColor: "var(--color-tint-success-bg)",
+    borderColor: "var(--color-tint-success-border)",
     icon: <CheckCircleOutlined />,
     label: "Healthy",
     description: "All systems normal",
   },
   inactive: {
-    color: "#6b7280",
-    bgColor: "#f9fafb",
-    borderColor: "#e5e7eb",
+    color: "var(--color-text-muted)",
+    bgColor: "var(--color-bg-inset)",
+    borderColor: "var(--color-border-light)",
     icon: <ClockCircleOutlined />,
     label: "Inactive",
     description: "No recent activity",
@@ -707,7 +707,7 @@ const CompanyDetail: React.FC = () => {
             ) : (
               <Avatar
                 size={64}
-                style={{ background: "#2C3E50", flexShrink: 0 }}
+                style={{ background: "var(--color-primary)", flexShrink: 0 }}
                 icon={<ShopOutlined />}
               />
             )}
@@ -729,7 +729,7 @@ const CompanyDetail: React.FC = () => {
                           backgroundColor: health.bgColor,
                           border: `1px solid ${health.borderColor}`,
                           color: health.color,
-                          fontSize: 11,
+                          fontSize: 'var(--fs-xs)',
                           fontWeight: 500,
                         }}
                       >
@@ -761,7 +761,7 @@ const CompanyDetail: React.FC = () => {
                   <Tooltip title="Primary Contact Email">
                     <span
                       style={{
-                        fontSize: 12,
+                        fontSize: 'var(--fs-sm)',
                         color: "var(--color-text-secondary)",
                         display: "flex",
                         alignItems: "center",
@@ -777,7 +777,7 @@ const CompanyDetail: React.FC = () => {
                   <Tooltip title="Phone">
                     <span
                       style={{
-                        fontSize: 12,
+                        fontSize: 'var(--fs-sm)',
                         color: "var(--color-text-secondary)",
                         display: "flex",
                         alignItems: "center",
@@ -793,7 +793,7 @@ const CompanyDetail: React.FC = () => {
                   <Tooltip title="Address">
                     <span
                       style={{
-                        fontSize: 12,
+                        fontSize: 'var(--fs-sm)',
                         color: "var(--color-text-secondary)",
                         display: "flex",
                         alignItems: "center",
@@ -808,7 +808,7 @@ const CompanyDetail: React.FC = () => {
                 <Tooltip title="Created Date">
                   <span
                     style={{
-                      fontSize: 12,
+                      fontSize: 'var(--fs-sm)',
                       color: "var(--color-text-muted)",
                       display: "flex",
                       alignItems: "center",
@@ -895,7 +895,7 @@ const CompanyDetail: React.FC = () => {
             <Statistic
               title="Resolved This Month"
               value={stats?.resolved_this_month ?? 0}
-              prefix={<CheckCircleOutlined style={{ color: "#52c41a" }} />}
+              prefix={<CheckCircleOutlined style={{ color: "var(--color-tint-success-border)" }} />}
               loading={statsLoading}
             />
           </Col>
@@ -916,7 +916,7 @@ const CompanyDetail: React.FC = () => {
                       style={{ display: "flex", alignItems: "center", gap: 8 }}
                     >
                       <FileTextOutlined style={{ color: "var(--color-primary)" }} />
-                      <span style={{ fontSize: 13 }}>Newest Tickets</span>
+                      <span style={{ fontSize: 'var(--fs-caption)' }}>Newest Tickets</span>
                     </div>
                   }
                   size="small"
@@ -933,7 +933,7 @@ const CompanyDetail: React.FC = () => {
                       type="link"
                       size="small"
                       onClick={() => handleTabChange("tickets")}
-                      style={{ fontSize: 11 }}
+                      style={{ fontSize: 'var(--fs-xs)' }}
                     >
                       View All →
                     </Button>
@@ -958,7 +958,7 @@ const CompanyDetail: React.FC = () => {
                           gridTemplateColumns: "70px 1fr 90px 100px",
                           gap: 8,
                           padding: "8px 12px",
-                          fontSize: 10,
+                          fontSize: 'var(--fs-2xs)',
                           color: "var(--color-text-muted)",
                           fontWeight: 500,
                           textTransform: "uppercase",
@@ -994,7 +994,7 @@ const CompanyDetail: React.FC = () => {
                               gridTemplateColumns: "70px 1fr 90px 100px",
                               gap: 8,
                               padding: "10px 12px",
-                              fontSize: 12,
+                              fontSize: 'var(--fs-sm)',
                               alignItems: "center",
                               borderBottom: "1px solid var(--color-border-light)",
                               cursor: "pointer",
@@ -1013,7 +1013,7 @@ const CompanyDetail: React.FC = () => {
                             <span
                               style={{
                                 fontFamily: "monospace",
-                                fontSize: 11,
+                                fontSize: 'var(--fs-xs)',
                                 color: "var(--color-primary)",
                                 backgroundColor: "var(--color-primary-light)",
                                 padding: "2px 6px",
@@ -1053,7 +1053,7 @@ const CompanyDetail: React.FC = () => {
                                   <Tag
                                     color={p.color}
                                     style={{
-                                      fontSize: 10,
+                                      fontSize: 'var(--fs-2xs)',
                                       margin: 0,
                                       padding: "0 4px",
                                     }}
@@ -1062,7 +1062,7 @@ const CompanyDetail: React.FC = () => {
                                   </Tag>
                                 ) : (
                                   <span
-                                    style={{ color: "#bfbfbf", fontSize: 10 }}
+                                    style={{ color: "var(--color-text-muted)", fontSize: 'var(--fs-2xs)' }}
                                   >
                                     -
                                   </span>
@@ -1087,7 +1087,7 @@ const CompanyDetail: React.FC = () => {
                                   handleQuickAssign(ticket.id, userId)
                                 }
                                 loading={assigningTicketId === ticket.id}
-                                style={{ width: "100%", fontSize: 10 }}
+                                style={{ width: "100%", fontSize: 'var(--fs-2xs)' }}
                                 popupMatchSelectWidth={false}
                                 dropdownStyle={{ minWidth: 180 }}
                               >
@@ -1113,7 +1113,7 @@ const CompanyDetail: React.FC = () => {
                                         {admin.first_name?.[0] ||
                                           admin.email[0].toUpperCase()}
                                       </Avatar>
-                                      <span style={{ fontSize: 11 }}>
+                                      <span style={{ fontSize: 'var(--fs-xs)' }}>
                                         {admin.first_name && admin.last_name
                                           ? `${admin.first_name} ${admin.last_name}`
                                           : admin.email}
@@ -1141,12 +1141,12 @@ const CompanyDetail: React.FC = () => {
                         style={{
                           width: 8,
                           height: 8,
-                          backgroundColor: "#52c41a",
+                          backgroundColor: "var(--color-tint-success-border)",
                           borderRadius: "50%",
                           animation: "pulse 2s infinite",
                         }}
                       />
-                      <span style={{ fontSize: 13 }}>Live Activity</span>
+                      <span style={{ fontSize: 'var(--fs-caption)' }}>Live Activity</span>
                     </div>
                   }
                   size="small"
@@ -1159,7 +1159,7 @@ const CompanyDetail: React.FC = () => {
                     },
                   }}
                   extra={
-                    <span style={{ fontSize: 11, color: "var(--color-text-muted)" }}>
+                    <span style={{ fontSize: 'var(--fs-xs)', color: "var(--color-text-muted)" }}>
                       {activities.length} recent
                     </span>
                   }
@@ -1171,10 +1171,10 @@ const CompanyDetail: React.FC = () => {
                         50% { opacity: 0.4; }
                       }
                       .activity-item:hover {
-                        background-color: #fafafa;
+                        background-color: var(--color-bg-hover);
                       }
                       .newest-ticket-row:hover {
-                        background-color: #f5f5f5 !important;
+                        background-color: var(--color-bg-hover) !important;
                       }
                     `}
                   </style>
@@ -1216,7 +1216,7 @@ const CompanyDetail: React.FC = () => {
                             size={24}
                             style={{
                               backgroundColor: "var(--color-primary)",
-                              fontSize: 10,
+                              fontSize: 'var(--fs-2xs)',
                               flexShrink: 0,
                             }}
                           >
@@ -1225,7 +1225,7 @@ const CompanyDetail: React.FC = () => {
                               "S"}
                           </Avatar>
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: 12, marginBottom: 2 }}>
+                            <div style={{ fontSize: 'var(--fs-sm)', marginBottom: 2 }}>
                               <span style={{ fontWeight: 500 }}>
                                 {activity.changed_by?.first_name ||
                                   activity.changed_by?.username ||
@@ -1243,7 +1243,7 @@ const CompanyDetail: React.FC = () => {
                             </div>
                             <div
                               style={{
-                                fontSize: 11,
+                                fontSize: 'var(--fs-xs)',
                                 color: "var(--color-text-secondary)",
                                 overflow: "hidden",
                                 textOverflow: "ellipsis",
@@ -1257,7 +1257,7 @@ const CompanyDetail: React.FC = () => {
                                   padding: "1px 4px",
                                   borderRadius: 3,
                                   marginRight: 4,
-                                  fontSize: 10,
+                                  fontSize: 'var(--fs-2xs)',
                                 }}
                               >
                                 {activity.ticket?.key}
@@ -1266,8 +1266,8 @@ const CompanyDetail: React.FC = () => {
                             </div>
                             <div
                               style={{
-                                fontSize: 10,
-                                color: "#bfbfbf",
+                                fontSize: 'var(--fs-2xs)',
+                                color: "var(--color-text-muted)",
                                 marginTop: 2,
                               }}
                             >

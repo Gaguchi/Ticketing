@@ -90,16 +90,16 @@ const formatDueDate = (dueDate: string | null | undefined) => {
 
   if (isOverdue) {
     text = 'Overdue';
-    color = '#de350b';
-    bgColor = '#ffebe6';
+    color = 'var(--color-tint-danger-border)';
+    bgColor = 'var(--color-tint-danger-bg)';
   } else if (isToday) {
     text = 'Today';
-    color = '#ff8b00';
-    bgColor = '#fff4e6';
+    color = 'var(--color-tint-warning-border)';
+    bgColor = 'var(--color-tint-warning-bg)';
   } else if (isTomorrow) {
     text = 'Tomorrow';
-    color = '#ff991f';
-    bgColor = '#fffae6';
+    color = 'var(--color-tint-warning-border)';
+    bgColor = 'var(--color-tint-warning-bg)';
   }
 
   return { text, color, bgColor };
@@ -115,18 +115,18 @@ const DragOverlayCard: React.FC<{ ticket: Ticket }> = ({ ticket }) => {
   return (
     <div
       style={{
-        boxShadow: "0 4px 8px rgba(9,30,66,0.25)",
+        boxShadow: "var(--shadow-md)",
         cursor: "grabbing",
         padding: "8px 10px",
         borderRadius: "3px",
-        backgroundColor: isUnassigned ? "#fffbe6" : "var(--color-bg-surface)",
+        backgroundColor: isUnassigned ? "var(--color-tint-warning-bg)" : "var(--color-bg-surface)",
         marginBottom: "8px",
-        borderLeft: isUnassigned ? "3px solid #faad14" : undefined,
+        borderLeft: isUnassigned ? "3px solid var(--color-tint-warning-border)" : undefined,
       }}
     >
       <div
         style={{
-          fontSize: "14px",
+          fontSize: 'var(--fs-base)',
           fontWeight: 400,
           color: "var(--color-text-heading)",
           marginBottom: "8px",
@@ -141,7 +141,7 @@ const DragOverlayCard: React.FC<{ ticket: Ticket }> = ({ ticket }) => {
           justifyContent: "space-between",
           alignItems: "center",
           color: "var(--color-text-muted)",
-          fontSize: "12px",
+          fontSize: 'var(--fs-sm)',
         }}
       >
         <Space align="center" size={8}>
@@ -149,9 +149,9 @@ const DragOverlayCard: React.FC<{ ticket: Ticket }> = ({ ticket }) => {
             {ticket.company_logo_url ? (
               <Avatar src={ticket.company_logo_url} size={16} style={{ objectFit: "contain", flexShrink: 0 }} />
             ) : (
-              <FontAwesomeIcon icon={getTypeIcon(ticket.type).icon} style={{ fontSize: "14px", color: getTypeIcon(ticket.type).color }} />
+              <FontAwesomeIcon icon={getTypeIcon(ticket.type).icon} style={{ fontSize: 'var(--fs-base)', color: getTypeIcon(ticket.type).color }} />
             )}
-            <span style={{ fontSize: "12px", color: "var(--color-text-muted)", fontWeight: 500 }}>{formatTicketId(ticket)}</span>
+            <span style={{ fontSize: 'var(--fs-sm)', color: "var(--color-text-muted)", fontWeight: 500 }}>{formatTicketId(ticket)}</span>
           </Space>
         </Space>
         <Space align="center" size={6}>
@@ -161,27 +161,27 @@ const DragOverlayCard: React.FC<{ ticket: Ticket }> = ({ ticket }) => {
             padding: "1px 6px", borderRadius: "3px",
             backgroundColor: dueDateInfo?.bgColor || "var(--color-bg-inset)",
             color: dueDateInfo?.color || "var(--color-text-muted)",
-            fontSize: "11px", fontWeight: 500, lineHeight: "20px",
+            fontSize: 'var(--fs-xs)', fontWeight: 500, lineHeight: "20px",
             border: dueDateInfo ? "none" : "1px dashed var(--color-border)",
           }}>
             {dueDateInfo ? (
-              <ClockCircleOutlined style={{ fontSize: "10px" }} />
+              <ClockCircleOutlined style={{ fontSize: 'var(--fs-2xs)' }} />
             ) : (
-              <CalendarOutlined style={{ fontSize: "10px" }} />
+              <CalendarOutlined style={{ fontSize: 'var(--fs-2xs)' }} />
             )}
             {dueDateInfo ? dueDateInfo.text : "Date"}
           </span>
           {assigneesList.length > 0 ? (
-            <Avatar.Group size={20} max={{ count: 2, style: { color: "#fff", backgroundColor: "var(--color-border)", fontSize: "11px" } }}>
+            <Avatar.Group size={20} max={{ count: 2, style: { color: "#fff", backgroundColor: "var(--color-border)", fontSize: 'var(--fs-xs)' } }}>
               {assigneesList.map((u: any) => (
                 <Avatar key={u.id} icon={<UserOutlined />} size={20} style={{ backgroundColor: "var(--color-primary)" }} />
               ))}
             </Avatar.Group>
           ) : (
             <div style={{
-              fontSize: "12px", width: "22px", height: "22px",
+              fontSize: 'var(--fs-sm)', width: "22px", height: "22px",
               display: "flex", alignItems: "center", justifyContent: "center",
-              borderRadius: "50%", color: "#faad14", border: "1px dashed #faad14",
+              borderRadius: "50%", color: "var(--color-tint-warning-border)", border: "1px dashed var(--color-tint-warning-border)",
             }}>
               <UserAddOutlined />
             </div>
@@ -340,15 +340,15 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
     transition,
     opacity: isDragging ? 0.5 : 1,
     boxShadow: dragOverlay
-      ? "0 4px 8px rgba(9,30,66,0.25)"
-      : "0 1px 2px rgba(9,30,66,0.2)",
+      ? "var(--shadow-md)"
+      : "var(--shadow-sm)",
     cursor: dragOverlay ? "grabbing" : "pointer",
     touchAction: "manipulation",
     padding: "8px 10px",
     borderRadius: "3px",
-    backgroundColor: isUnassigned ? "#fffbe6" : "var(--color-bg-surface)",
+    backgroundColor: isUnassigned ? "var(--color-tint-warning-bg)" : "var(--color-bg-surface)",
     marginBottom: "8px",
-    borderLeft: isUnassigned ? "3px solid #faad14" : undefined,
+    borderLeft: isUnassigned ? "3px solid var(--color-tint-warning-border)" : undefined,
   };
 
   return (
@@ -365,25 +365,27 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
       }}
       onMouseEnter={(e) => {
         if (!isDragging) {
-          e.currentTarget.style.backgroundColor = isUnassigned ? "#fff8e1" : "var(--color-bg-inset)";
+          e.currentTarget.style.backgroundColor = isUnassigned ? "var(--color-tint-warning-bg)" : "var(--color-bg-inset)";
+          if (isUnassigned) e.currentTarget.style.filter = "brightness(0.97)";
         }
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.backgroundColor = isUnassigned ? "#fffbe6" : "var(--color-bg-surface)";
+        e.currentTarget.style.backgroundColor = isUnassigned ? "var(--color-tint-warning-bg)" : "var(--color-bg-surface)";
+        if (isUnassigned) e.currentTarget.style.filter = "none";
       }}
     >
       <div>
         {/* Expanded Resolution Workflow Statuses */}
         {ticket.resolution_status === "rejected" && (
           <div style={{ marginBottom: "6px" }}>
-            <Tag color="#cd201f" style={{ margin: 0, fontSize: "11px" }}>
+            <Tag color="red" style={{ margin: 0, fontSize: 'var(--fs-xs)' }}>
               {t('card.resolutionRejected')}
             </Tag>
           </div>
         )}
         {ticket.resolution_status === "awaiting_review" && (
           <div style={{ marginBottom: "6px" }}>
-            <Tag color="gold" style={{ margin: 0, fontSize: "11px" }}>
+            <Tag color="gold" style={{ margin: 0, fontSize: 'var(--fs-xs)' }}>
               {t('card.awaitingReview')}
             </Tag>
           </div>
@@ -396,7 +398,7 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
               <Tag
                 icon={<CheckCircleOutlined />}
                 color="success"
-                style={{ margin: 0, fontSize: "11px" }}
+                style={{ margin: 0, fontSize: 'var(--fs-xs)' }}
               >
                 {t('card.resolved')}
               </Tag>
@@ -410,11 +412,11 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
               style={{
                 marginBottom: "8px",
                 padding: "6px 8px",
-                backgroundColor: "#FFF1F0",
-                border: "1px solid #FFCCC7",
+                backgroundColor: "var(--color-tint-danger-bg)",
+                border: "1px solid var(--color-tint-danger-border)",
                 borderRadius: "4px",
-                fontSize: "11px",
-                color: "#CF1322",
+                fontSize: 'var(--fs-xs)',
+                color: "var(--color-tint-danger-border)",
               }}
               title={ticket.resolution_feedback}
             >
@@ -426,7 +428,7 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
           )}
         <div
           style={{
-            fontSize: "14px",
+            fontSize: 'var(--fs-base)',
             fontWeight: 400,
             color: "var(--color-text-heading)",
             marginBottom: "8px",
@@ -442,7 +444,7 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
             justifyContent: "space-between",
             alignItems: "center",
             color: "var(--color-text-muted)",
-            fontSize: "12px",
+            fontSize: 'var(--fs-sm)',
           }}
         >
           <div>
@@ -462,14 +464,14 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
                   <FontAwesomeIcon
                     icon={getTypeIcon(ticket.type).icon}
                     style={{
-                      fontSize: "14px",
+                      fontSize: 'var(--fs-base)',
                       color: getTypeIcon(ticket.type).color,
                     }}
                   />
                 )}
                 <span
                   style={{
-                    fontSize: "12px",
+                    fontSize: 'var(--fs-sm)',
                     color: "var(--color-text-muted)",
                     fontWeight: 500,
                   }}
@@ -477,10 +479,10 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
                   {formatTicketId(ticket)}
                 </span>
               </Space>
-              {ticket.following && <EyeOutlined style={{ fontSize: "14px" }} />}
+              {ticket.following && <EyeOutlined style={{ fontSize: 'var(--fs-base)' }} />}
               {(ticket.comments_count ?? 0) > 0 && (
                 <Space size={4}>
-                  <MessageOutlined style={{ fontSize: "14px" }} />
+                  <MessageOutlined style={{ fontSize: 'var(--fs-base)' }} />
                   <span>{ticket.comments_count}</span>
                 </Space>
               )}
@@ -514,7 +516,7 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
                         >
                           <Space size={6} align="center">
                             {getPriorityIcon(item.id)}
-                            <span style={{ fontSize: "12px" }}>{item.label}</span>
+                            <span style={{ fontSize: 'var(--fs-sm)' }}>{item.label}</span>
                           </Space>
                         </List.Item>
                       )}
@@ -548,7 +550,7 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
                       borderRadius: "3px",
                       backgroundColor: dueDateInfo?.bgColor || "var(--color-bg-inset)",
                       color: dueDateInfo?.color || "var(--color-text-muted)",
-                      fontSize: "11px",
+                      fontSize: 'var(--fs-xs)',
                       fontWeight: 500,
                       cursor: "pointer",
                       lineHeight: "20px",
@@ -556,9 +558,9 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
                     }}
                   >
                     {dueDateInfo ? (
-                      <ClockCircleOutlined style={{ fontSize: "10px" }} />
+                      <ClockCircleOutlined style={{ fontSize: 'var(--fs-2xs)' }} />
                     ) : (
-                      <CalendarOutlined style={{ fontSize: "10px" }} />
+                      <CalendarOutlined style={{ fontSize: 'var(--fs-2xs)' }} />
                     )}
                     {dueDateInfo ? dueDateInfo.text : "Date"}
                   </div>
@@ -593,7 +595,7 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
                               handleDateChange(null);
                               setDatePopoverOpen(false);
                             }}
-                            style={{ width: "100%", fontSize: "12px" }}
+                            style={{ width: "100%", fontSize: 'var(--fs-sm)' }}
                           >
                             Clear date
                           </Button>
@@ -613,7 +615,7 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
                     style: {
                       color: "#fff",
                       backgroundColor: "var(--color-border)",
-                      fontSize: "11px",
+                      fontSize: 'var(--fs-xs)',
                     },
                   }}
                 >
@@ -643,7 +645,7 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
                         prefix={<SearchOutlined />}
                         value={searchText}
                         onChange={(e) => setSearchText(e.target.value)}
-                        style={{ marginBottom: 6, fontSize: "12px" }}
+                        style={{ marginBottom: 6, fontSize: 'var(--fs-sm)' }}
                         size="small"
                         onClick={(e) => e.stopPropagation()}
                       />
@@ -662,14 +664,14 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
                               className="assignee-item"
                             >
                               <Space size={6}>
-                                <Avatar size={20} style={{ backgroundColor: "var(--color-primary)", fontSize: "10px" }}>
+                                <Avatar size={20} style={{ backgroundColor: "var(--color-primary)", fontSize: 'var(--fs-2xs)' }}>
                                   {member.first_name?.[0] || member.username[0]}
                                 </Avatar>
-                                <span style={{ fontSize: "12px" }}>
+                                <span style={{ fontSize: 'var(--fs-sm)' }}>
                                   {member.first_name || member.username} {member.last_name || ""}
                                 </span>
                                 {user?.id === member.id && (
-                                  <Tag style={{ marginLeft: "auto", fontSize: "10px", lineHeight: "18px" }}>Me</Tag>
+                                  <Tag style={{ marginLeft: "auto", fontSize: 'var(--fs-2xs)', lineHeight: "18px" }}>Me</Tag>
                                 )}
                               </Space>
                             </List.Item>
@@ -692,7 +694,7 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
                       }}
                       icon={<UserAddOutlined />}
                       style={{
-                        fontSize: "12px",
+                        fontSize: 'var(--fs-sm)',
                         width: "22px",
                         height: "22px",
                         padding: 0,
@@ -700,8 +702,8 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
                         alignItems: "center",
                         justifyContent: "center",
                         borderRadius: "50%",
-                        color: "#faad14",
-                        border: "1px dashed #faad14"
+                        color: "var(--color-tint-warning-border)",
+                        border: "1px dashed var(--color-tint-warning-border)"
                       }}
                     />
                   </Tooltip>

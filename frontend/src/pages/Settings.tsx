@@ -1,15 +1,11 @@
 import React, { useState, useEffect } from "react";
 import {
   Typography,
-  Radio,
   Select,
   Switch,
-  Divider,
   Button,
   message,
-  Tabs,
   Alert,
-  Layout,
   Modal,
   Input,
   Form,
@@ -34,70 +30,106 @@ import {
   DeleteOutlined,
   PlusOutlined,
   TeamOutlined,
+  ClockCircleOutlined,
+  ThunderboltOutlined,
 } from "@ant-design/icons";
+import { useTranslation } from "react-i18next";
 import apiService from "../services/api.service";
 import { API_ENDPOINTS } from "../config/api";
 import { projectService } from "../services/project.service";
 import { useApp } from "../contexts/AppContext";
+import { useThemeVersion, type FontSize, type ThemePreference, type DarkVariant } from "../contexts/ThemeContext";
 import type {
   Project,
   UpdateProjectData,
   CreateProjectData,
   User,
 } from "../types/api";
+import "./Settings.css";
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
-// --- Design System Constants ---
-const COLORS = {
-  primary: "var(--color-text-heading)",
-  secondary: "#34495E",
-  accent: "#E67E22",
-  background: "var(--color-bg-content)",
-  surface: "var(--color-bg-surface)",
-  text: "var(--color-text-primary)",
-  textSecondary: "var(--color-text-secondary)",
-  border: "var(--color-border)",
-};
+// ── Navigation items ──
 
-// --- Reusable Components ---
-
-interface SettingSectionProps {
-  title: string;
-  description?: string;
-  children: React.ReactNode;
+interface NavItem {
+  key: string;
+  label: string;
+  icon: React.ReactNode;
+  description: string;
 }
 
-const SettingSection: React.FC<SettingSectionProps> = ({
+const NAV_ITEMS: NavItem[] = [
+  {
+    key: "projects",
+    label: "Projects",
+    icon: <ProjectOutlined />,
+    description: "Create, edit, and manage your workspace projects.",
+  },
+  {
+    key: "appearance",
+    label: "Appearance",
+    icon: <BgColorsOutlined />,
+    description: "Customize the look and feel of the interface.",
+  },
+  {
+    key: "language",
+    label: "Language & Region",
+    icon: <GlobalOutlined />,
+    description: "Set your preferred language, timezone, and date format.",
+  },
+  {
+    key: "notifications",
+    label: "Notifications",
+    icon: <BellOutlined />,
+    description: "Control how and when you receive alerts.",
+  },
+  {
+    key: "account",
+    label: "Account",
+    icon: <UserOutlined />,
+    description: "Manage your profile visibility and session preferences.",
+  },
+  {
+    key: "privacy",
+    label: "Privacy & Security",
+    icon: <SafetyOutlined />,
+    description: "Protect your account with security settings.",
+  },
+  {
+    key: "system",
+    label: "System",
+    icon: <SettingOutlined />,
+    description: "Maintenance tools and background task management.",
+  },
+];
+
+const DIVIDER_AFTER = ["projects", "notifications"]; // visual grouping
+
+// ── Reusable pieces ──
+
+interface SettingCardProps {
+  title: string;
+  description?: string;
+  danger?: boolean;
+  children: React.ReactNode;
+  noPadding?: boolean;
+}
+
+const SettingCard: React.FC<SettingCardProps> = ({
   title,
   description,
+  danger,
   children,
+  noPadding,
 }) => (
-  <div style={{ marginBottom: 32 }}>
-    <div style={{ marginBottom: 16 }}>
-      <Title
-        level={4}
-        style={{ margin: 0, color: COLORS.primary, fontSize: 18 }}
-      >
-        {title}
-      </Title>
+  <div className={`setting-card${danger ? " setting-card--danger" : ""}`}>
+    <div className="setting-card__header">
+      <p className="setting-card__title">{title}</p>
       {description && (
-        <Text style={{ color: COLORS.textSecondary, fontSize: 14 }}>
-          {description}
-        </Text>
+        <p className="setting-card__description">{description}</p>
       )}
     </div>
-    <div
-      style={{
-        backgroundColor: COLORS.surface,
-        borderRadius: 8,
-        border: `1px solid ${COLORS.border}`,
-        padding: "0 24px",
-        boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-      }}
-    >
-      {children}
-    </div>
+    {noPadding ? children : <div className="setting-card__body">{children}</div>}
   </div>
 );
 
@@ -105,7 +137,6 @@ interface SettingRowProps {
   label: string;
   description?: string;
   control: React.ReactNode;
-  last?: boolean;
   danger?: boolean;
 }
 
@@ -113,43 +144,25 @@ const SettingRow: React.FC<SettingRowProps> = ({
   label,
   description,
   control,
-  last,
   danger,
 }) => (
-  <div
-    style={{
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      padding: "20px 0",
-      borderBottom: last ? "none" : `1px solid ${COLORS.border}`,
-    }}
-  >
-    <div style={{ maxWidth: "60%" }}>
-      <Text
-        strong
-        style={{
-          fontSize: 15,
-          display: "block",
-          color: danger ? "#E74C3C" : COLORS.text,
-          marginBottom: 4,
-        }}
+  <div className="setting-row">
+    <div className="setting-row__info">
+      <p
+        className={`setting-row__label${danger ? " setting-row__label--danger" : ""}`}
       >
         {label}
-      </Text>
+      </p>
       {description && (
-        <Text
-          style={{ fontSize: 13, color: COLORS.textSecondary, lineHeight: 1.4 }}
-        >
-          {description}
-        </Text>
+        <p className="setting-row__description">{description}</p>
       )}
     </div>
-    <div>{control}</div>
+    <div className="setting-row__control">{control}</div>
   </div>
 );
 
-// --- Project Edit Modal ---
+// ── Project Modal ──
+
 interface ProjectModalProps {
   visible: boolean;
   project: Project | null;
@@ -191,8 +204,8 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
       const values = await form.validateFields();
       await onSave(values);
       form.resetFields();
-    } catch (error) {
-      // Validation error, form will show the error
+    } catch {
+      // validation error — form shows the message
     }
   };
 
@@ -206,7 +219,7 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
       okText={isNew ? "Create" : "Save Changes"}
       destroyOnClose
     >
-      <Form form={form} layout="vertical" style={{ marginTop: 24 }}>
+      <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
         <Form.Item
           name="name"
           label="Project Name"
@@ -214,7 +227,6 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
         >
           <Input placeholder="My Project" />
         </Form.Item>
-
         <Form.Item
           name="key"
           label="Project Key"
@@ -231,17 +243,15 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
           <Input
             placeholder="PROJ"
             style={{ textTransform: "uppercase" }}
-            disabled={!isNew} // Can't change key after creation
+            disabled={!isNew}
           />
         </Form.Item>
-
         <Form.Item name="description" label="Description">
           <Input.TextArea
             rows={3}
             placeholder="Optional project description..."
           />
         </Form.Item>
-
         <Form.Item name="lead_username" label="Project Lead">
           <Select
             placeholder="Select project lead"
@@ -261,15 +271,27 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
   );
 };
 
+// ── Main Component ──
+
 const Settings: React.FC = () => {
   const { refreshProjects } = useApp();
+  const { i18n } = useTranslation();
+  const {
+    themePreference,
+    setThemePreference,
+    resolvedMode,
+    darkVariant,
+    setDarkVariant,
+    fontSize,
+    setFontSize,
+    compactMode,
+    setCompactMode,
+  } = useThemeVersion();
 
-  // State
-  const [theme, setTheme] = useState<"light" | "dark">("light");
-  const [fontSize, setFontSize] = useState<"small" | "medium" | "large">(
-    "medium"
-  );
-  const [language, setLanguage] = useState("en");
+  // Navigation
+  const [activeTab, setActiveTab] = useState("projects");
+
+  // Settings state
   const [notifications, setNotifications] = useState({
     email: true,
     push: true,
@@ -281,7 +303,7 @@ const Settings: React.FC = () => {
     timestamp: Date;
   } | null>(null);
 
-  // Project Management State
+  // Project state
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
@@ -290,20 +312,20 @@ const Settings: React.FC = () => {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [modalLoading, setModalLoading] = useState(false);
 
-  // Load projects and users
   useEffect(() => {
     loadProjects();
     loadUsers();
   }, []);
+
+  // ── Data loaders ──
 
   const loadProjects = async () => {
     setProjectsLoading(true);
     try {
       const data = await projectService.getAllProjects();
       setProjects(data);
-    } catch (error) {
+    } catch {
       message.error("Failed to load projects");
-      console.error(error);
     } finally {
       setProjectsLoading(false);
     }
@@ -319,6 +341,8 @@ const Settings: React.FC = () => {
       console.error("Failed to load users:", error);
     }
   };
+
+  // ── Project handlers ──
 
   const handleEditProject = (project: Project) => {
     setSelectedProject(project);
@@ -340,7 +364,9 @@ const Settings: React.FC = () => {
       loadProjects();
       refreshProjects();
     } catch (error: any) {
-      message.error(error.response?.data?.detail || "Failed to update project");
+      message.error(
+        error.response?.data?.detail || "Failed to update project"
+      );
     } finally {
       setModalLoading(false);
     }
@@ -355,7 +381,9 @@ const Settings: React.FC = () => {
       loadProjects();
       refreshProjects();
     } catch (error: any) {
-      message.error(error.response?.data?.detail || "Failed to create project");
+      message.error(
+        error.response?.data?.detail || "Failed to create project"
+      );
     } finally {
       setModalLoading(false);
     }
@@ -368,11 +396,14 @@ const Settings: React.FC = () => {
       loadProjects();
       refreshProjects();
     } catch (error: any) {
-      message.error(error.response?.data?.detail || "Failed to delete project");
+      message.error(
+        error.response?.data?.detail || "Failed to delete project"
+      );
     }
   };
 
-  // Handlers
+  // ── Archive handler ──
+
   const handleTriggerArchive = async () => {
     setArchiving(true);
     try {
@@ -391,31 +422,15 @@ const Settings: React.FC = () => {
       } else {
         message.info("No tickets were eligible for archiving");
       }
-    } catch (error) {
+    } catch {
       message.error("Failed to trigger archive process");
-      console.error("Archive error:", error);
     } finally {
       setArchiving(false);
     }
   };
 
-  const handleSave = () => {
-    message.success("Settings saved successfully!");
-  };
+  // ── Project columns ──
 
-  const handleReset = () => {
-    setTheme("light");
-    setFontSize("medium");
-    setLanguage("en");
-    setNotifications({
-      email: true,
-      push: true,
-      updates: false,
-    });
-    message.info("Settings reset to defaults");
-  };
-
-  // Tab Content Definitions
   const projectColumns = [
     {
       title: "Project",
@@ -451,7 +466,7 @@ const Settings: React.FC = () => {
       render: (lead: string) =>
         lead ? (
           <Space size={4}>
-            <UserOutlined style={{ color: COLORS.textSecondary }} />
+            <UserOutlined style={{ color: "var(--color-text-muted)" }} />
             <Text>{lead}</Text>
           </Space>
         ) : (
@@ -469,7 +484,7 @@ const Settings: React.FC = () => {
           </Tooltip>
           <Tooltip title="Members">
             <Space size={4}>
-              <TeamOutlined style={{ color: COLORS.textSecondary }} />
+              <TeamOutlined style={{ color: "var(--color-text-muted)" }} />
               <Text type="secondary">{record.members?.length || 0}</Text>
             </Space>
           </Tooltip>
@@ -506,401 +521,379 @@ const Settings: React.FC = () => {
     },
   ];
 
-  const items = [
-    {
-      key: "projects",
-      label: "Projects",
-      icon: <ProjectOutlined />,
-      children: (
-        <SettingSection
-          title="Project Management"
-          description="Create, edit, and manage your projects."
-        >
-          <div style={{ padding: "20px 0" }}>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: 20,
-              }}
-            >
-              <Text type="secondary">
-                {projects.length} project{projects.length !== 1 ? "s" : ""} in
-                your workspace
-              </Text>
+  // ── Tab content renderers ──
+
+  const activeNav = NAV_ITEMS.find((n) => n.key === activeTab)!;
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case "projects":
+        return (
+          <SettingCard title="Workspace Projects" noPadding>
+            <div className="projects-toolbar">
+              <span className="projects-toolbar__count">
+                {projects.length} project{projects.length !== 1 ? "s" : ""}
+              </span>
               <Button
                 type="primary"
                 icon={<PlusOutlined />}
                 onClick={handleCreateProject}
-                style={{ backgroundColor: COLORS.primary }}
               >
                 New Project
               </Button>
             </div>
-
-            {projectsLoading ? (
-              <div style={{ textAlign: "center", padding: 40 }}>
-                <Spin size="large" />
-              </div>
-            ) : projects.length === 0 ? (
-              <Empty description="No projects yet" style={{ padding: 40 }}>
-                <Button type="primary" onClick={handleCreateProject}>
-                  Create your first project
-                </Button>
-              </Empty>
-            ) : (
-              <Table
-                dataSource={projects}
-                columns={projectColumns}
-                rowKey="id"
-                pagination={projects.length > 10 ? { pageSize: 10 } : false}
-                size="middle"
-                style={{ marginTop: 8 }}
-              />
-            )}
-          </div>
-        </SettingSection>
-      ),
-    },
-    {
-      key: "appearance",
-      label: "Appearance",
-      icon: <BgColorsOutlined />,
-      children: (
-        <>
-          <SettingSection
-            title="Interface Theme"
-            description="Customize how the application looks."
-          >
-            <SettingRow
-              label="Color Theme"
-              description="Select your preferred color scheme for the interface."
-              control={
-                <Radio.Group
-                  value={theme}
-                  onChange={(e) => setTheme(e.target.value)}
-                  optionType="button"
-                  buttonStyle="solid"
+            <div className="projects-table-wrap">
+              {projectsLoading ? (
+                <div style={{ textAlign: "center", padding: 48 }}>
+                  <Spin size="large" />
+                </div>
+              ) : projects.length === 0 ? (
+                <Empty
+                  description="No projects yet"
+                  style={{ padding: 48 }}
                 >
-                  <Radio.Button value="light">Light</Radio.Button>
-                  <Radio.Button value="dark">Dark</Radio.Button>
-                  <Radio.Button value="auto">Auto</Radio.Button>
-                </Radio.Group>
-              }
-            />
-            <SettingRow
-              label="Font Size"
-              description="Adjust the text size for better readability."
-              control={
-                <Select
-                  value={fontSize}
-                  onChange={setFontSize}
-                  style={{ width: 120 }}
-                  options={[
-                    { value: "small", label: "Small" },
-                    { value: "medium", label: "Medium" },
-                    { value: "large", label: "Large" },
-                  ]}
+                  <Button type="primary" onClick={handleCreateProject}>
+                    Create your first project
+                  </Button>
+                </Empty>
+              ) : (
+                <Table
+                  dataSource={projects}
+                  columns={projectColumns}
+                  rowKey="id"
+                  pagination={
+                    projects.length > 10 ? { pageSize: 10 } : false
+                  }
+                  size="middle"
                 />
-              }
-            />
-            <SettingRow
-              label="Compact Mode"
-              description="Reduce spacing for a denser layout, allowing more information on screen."
-              control={<Switch />}
-              last
-            />
-          </SettingSection>
+              )}
+            </div>
+          </SettingCard>
+        );
 
-          <SettingSection title="Layout">
+      case "appearance":
+        return (
+          <>
+            <SettingCard title="Theme">
+              <SettingRow
+                label="Color Theme"
+                description="Choose between light and dark mode, or follow your system preference."
+                control={
+                  <div className="theme-picker">
+                    {(
+                      [
+                        { value: "light" as ThemePreference, label: "Light" },
+                        { value: "dark" as ThemePreference, label: "Dark" },
+                        { value: "auto" as ThemePreference, label: "System" },
+                      ]
+                    ).map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        className={`theme-option${themePreference === opt.value ? " theme-option--active" : ""}`}
+                        onClick={() => setThemePreference(opt.value)}
+                      >
+                        <div
+                          className={`theme-option__preview theme-option__preview--${opt.value}`}
+                        />
+                        <span className="theme-option__label">
+                          {opt.label}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                }
+              />
+              {resolvedMode === 'dark' && (
+                <SettingRow
+                  label="Dark Theme Variant"
+                  description="Choose the style of dark mode that suits your preference."
+                  control={
+                    <div className="variant-picker">
+                      {(
+                        [
+                          { value: 'midnight' as DarkVariant, label: 'Midnight', desc: 'GitHub Dark' },
+                          { value: 'slate' as DarkVariant, label: 'Slate', desc: 'Linear' },
+                          { value: 'warm' as DarkVariant, label: 'Warm', desc: 'Discord' },
+                        ]
+                      ).map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          className={`variant-option${darkVariant === opt.value ? ' variant-option--active' : ''}`}
+                          onClick={() => setDarkVariant(opt.value)}
+                        >
+                          <div className={`variant-option__swatch variant-option__swatch--${opt.value}`} />
+                          <span className="variant-option__label">{opt.label}</span>
+                          <span className="variant-option__desc">{opt.desc}</span>
+                        </button>
+                      ))}
+                    </div>
+                  }
+                />
+              )}
+              <SettingRow
+                label="Font Size"
+                description="Adjust text size across the application."
+                control={
+                  <Select
+                    value={fontSize}
+                    onChange={(value: FontSize) => setFontSize(value)}
+                    style={{ width: 120 }}
+                    options={[
+                      { value: "small", label: "Small" },
+                      { value: "medium", label: "Medium" },
+                      { value: "large", label: "Large" },
+                    ]}
+                  />
+                }
+              />
+              <SettingRow
+                label="Compact Mode"
+                description="Reduce spacing for a denser information layout."
+                control={
+                  <Switch
+                    checked={compactMode}
+                    onChange={setCompactMode}
+                  />
+                }
+              />
+            </SettingCard>
+          </>
+        );
+
+      case "language":
+        return (
+          <SettingCard title="Localization">
             <SettingRow
-              label="Sidebar Position"
-              description="Choose where the main navigation sidebar appears."
+              label="Display Language"
+              description="The language used across the interface. Changes apply immediately."
               control={
                 <Select
-                  defaultValue="left"
-                  style={{ width: 120 }}
+                  value={i18n.language}
+                  onChange={(value: string) => i18n.changeLanguage(value)}
+                  style={{ width: 200 }}
                   options={[
-                    { value: "left", label: "Left" },
-                    { value: "right", label: "Right" },
+                    { value: "en", label: "English" },
+                    { value: "ka", label: "\u10E5\u10D0\u10E0\u10D7\u10E3\u10DA\u10D8 (Georgian)" },
                   ]}
                 />
               }
-              last
-            />
-          </SettingSection>
-        </>
-      ),
-    },
-    {
-      key: "language",
-      label: "Language & Region",
-      icon: <GlobalOutlined />,
-      children: (
-        <SettingSection title="Localization">
-          <SettingRow
-            label="Display Language"
-            description="Select the language for the user interface."
-            control={
-              <Select
-                value={language}
-                onChange={setLanguage}
-                style={{ width: 200 }}
-                options={[
-                  { value: "en", label: "🇺🇸 English" },
-                  { value: "es", label: "🇪🇸 Español" },
-                  { value: "fr", label: "🇫🇷 Français" },
-                  { value: "de", label: "🇩🇪 Deutsch" },
-                  { value: "zh", label: "🇨🇳 中文" },
-                  { value: "ja", label: "🇯🇵 日本語" },
-                ]}
-              />
-            }
-          />
-          <SettingRow
-            label="Time Zone"
-            description="Set your local time zone for accurate timestamps."
-            control={
-              <Select
-                defaultValue="utc"
-                style={{ width: 280 }}
-                options={[
-                  { value: "utc", label: "(UTC+00:00) UTC" },
-                  { value: "est", label: "(UTC-05:00) Eastern Time" },
-                  { value: "pst", label: "(UTC-08:00) Pacific Time" },
-                  { value: "cet", label: "(UTC+01:00) Central European Time" },
-                  { value: "jst", label: "(UTC+09:00) Japan Standard Time" },
-                ]}
-              />
-            }
-          />
-          <SettingRow
-            label="Date Format"
-            description="Choose how dates are displayed throughout the app."
-            control={
-              <Select
-                defaultValue="mdy"
-                style={{ width: 200 }}
-                options={[
-                  { value: "mdy", label: "MM/DD/YYYY" },
-                  { value: "dmy", label: "DD/MM/YYYY" },
-                  { value: "ymd", label: "YYYY-MM-DD" },
-                ]}
-              />
-            }
-            last
-          />
-        </SettingSection>
-      ),
-    },
-    {
-      key: "notifications",
-      label: "Notifications",
-      icon: <BellOutlined />,
-      children: (
-        <SettingSection title="Alert Preferences">
-          <SettingRow
-            label="Email Notifications"
-            description="Receive updates and digests via email."
-            control={
-              <Switch
-                checked={notifications.email}
-                onChange={(checked) =>
-                  setNotifications({ ...notifications, email: checked })
-                }
-              />
-            }
-          />
-          <SettingRow
-            label="Push Notifications"
-            description="Get real-time alerts in your browser."
-            control={
-              <Switch
-                checked={notifications.push}
-                onChange={(checked) =>
-                  setNotifications({ ...notifications, push: checked })
-                }
-              />
-            }
-          />
-          <SettingRow
-            label="Product Updates"
-            description="Stay informed about new features and improvements."
-            control={
-              <Switch
-                checked={notifications.updates}
-                onChange={(checked) =>
-                  setNotifications({ ...notifications, updates: checked })
-                }
-              />
-            }
-          />
-          <SettingRow
-            label="Notification Sound"
-            description="Play a sound when a new notification arrives."
-            control={
-              <Select
-                defaultValue="default"
-                style={{ width: 150 }}
-                options={[
-                  { value: "default", label: "Default" },
-                  { value: "chime", label: "Chime" },
-                  { value: "bell", label: "Bell" },
-                  { value: "none", label: "None" },
-                ]}
-              />
-            }
-            last
-          />
-        </SettingSection>
-      ),
-    },
-    {
-      key: "account",
-      label: "Account",
-      icon: <UserOutlined />,
-      children: (
-        <SettingSection title="Profile Settings">
-          <SettingRow
-            label="Profile Visibility"
-            description="Control who can see your profile information."
-            control={
-              <Select
-                defaultValue="everyone"
-                style={{ width: 180 }}
-                options={[
-                  { value: "everyone", label: "Everyone" },
-                  { value: "team", label: "Team Only" },
-                  { value: "private", label: "Private" },
-                ]}
-              />
-            }
-          />
-          <SettingRow
-            label="Online Status"
-            description="Show others when you are active."
-            control={<Switch defaultChecked />}
-          />
-          <SettingRow
-            label="Session Timeout"
-            description="Automatically log out after a period of inactivity."
-            control={
-              <Select
-                defaultValue="30"
-                style={{ width: 150 }}
-                options={[
-                  { value: "15", label: "15 minutes" },
-                  { value: "30", label: "30 minutes" },
-                  { value: "60", label: "1 hour" },
-                  { value: "never", label: "Never" },
-                ]}
-              />
-            }
-            last
-          />
-        </SettingSection>
-      ),
-    },
-    {
-      key: "privacy",
-      label: "Privacy & Security",
-      icon: <SafetyOutlined />,
-      children: (
-        <>
-          <SettingSection title="Security">
-            <SettingRow
-              label="Two-Factor Authentication"
-              description="Add an extra layer of security to your account."
-              control={<Switch defaultChecked={false} />}
             />
             <SettingRow
-              label="Login Alerts"
-              description="Get notified of new login attempts from unrecognized devices."
+              label="Time Zone"
+              description="Used for timestamps and scheduling."
+              control={
+                <Select
+                  defaultValue="utc"
+                  style={{ width: 280 }}
+                  options={[
+                    { value: "utc", label: "(UTC+00:00) UTC" },
+                    { value: "est", label: "(UTC-05:00) Eastern Time" },
+                    { value: "pst", label: "(UTC-08:00) Pacific Time" },
+                    {
+                      value: "cet",
+                      label: "(UTC+01:00) Central European Time",
+                    },
+                    {
+                      value: "get",
+                      label: "(UTC+04:00) Georgia Standard Time",
+                    },
+                    {
+                      value: "jst",
+                      label: "(UTC+09:00) Japan Standard Time",
+                    },
+                  ]}
+                />
+              }
+            />
+            <SettingRow
+              label="Date Format"
+              description="How dates appear throughout the app."
+              control={
+                <Select
+                  defaultValue="mdy"
+                  style={{ width: 200 }}
+                  options={[
+                    { value: "mdy", label: "MM/DD/YYYY" },
+                    { value: "dmy", label: "DD/MM/YYYY" },
+                    { value: "ymd", label: "YYYY-MM-DD" },
+                  ]}
+                />
+              }
+            />
+          </SettingCard>
+        );
+
+      case "notifications":
+        return (
+          <SettingCard title="Alert Preferences">
+            <SettingRow
+              label="Email Notifications"
+              description="Receive updates and digests via email."
+              control={
+                <Switch
+                  checked={notifications.email}
+                  onChange={(checked) =>
+                    setNotifications({ ...notifications, email: checked })
+                  }
+                />
+              }
+            />
+            <SettingRow
+              label="Push Notifications"
+              description="Real-time browser alerts for new activity."
+              control={
+                <Switch
+                  checked={notifications.push}
+                  onChange={(checked) =>
+                    setNotifications({ ...notifications, push: checked })
+                  }
+                />
+              }
+            />
+            <SettingRow
+              label="Product Updates"
+              description="Stay informed about new features."
+              control={
+                <Switch
+                  checked={notifications.updates}
+                  onChange={(checked) =>
+                    setNotifications({ ...notifications, updates: checked })
+                  }
+                />
+              }
+            />
+            <SettingRow
+              label="Notification Sound"
+              description="Play a sound when a notification arrives."
+              control={
+                <Select
+                  defaultValue="default"
+                  style={{ width: 150 }}
+                  options={[
+                    { value: "default", label: "Default" },
+                    { value: "chime", label: "Chime" },
+                    { value: "bell", label: "Bell" },
+                    { value: "none", label: "None" },
+                  ]}
+                />
+              }
+            />
+          </SettingCard>
+        );
+
+      case "account":
+        return (
+          <SettingCard title="Profile">
+            <SettingRow
+              label="Profile Visibility"
+              description="Control who can see your profile."
+              control={
+                <Select
+                  defaultValue="everyone"
+                  style={{ width: 160 }}
+                  options={[
+                    { value: "everyone", label: "Everyone" },
+                    { value: "team", label: "Team Only" },
+                    { value: "private", label: "Private" },
+                  ]}
+                />
+              }
+            />
+            <SettingRow
+              label="Online Status"
+              description="Show others when you are active."
               control={<Switch defaultChecked />}
             />
             <SettingRow
-              label="Password"
-              description="Update your password regularly to keep your account safe."
-              control={<Button>Change Password</Button>}
-              last
-            />
-          </SettingSection>
-
-          <SettingSection title="Danger Zone">
-            <SettingRow
-              label="Clear All Data"
-              description="Permanently remove all your data from this device."
-              danger
-              control={<Button danger>Clear Data</Button>}
-            />
-            <SettingRow
-              label="Delete Account"
-              description="Permanently delete your account and all associated data."
-              danger
+              label="Session Timeout"
+              description="Auto log-out after inactivity."
               control={
-                <Button danger type="primary">
-                  Delete Account
-                </Button>
+                <Select
+                  defaultValue="30"
+                  style={{ width: 150 }}
+                  options={[
+                    { value: "15", label: "15 minutes" },
+                    { value: "30", label: "30 minutes" },
+                    { value: "60", label: "1 hour" },
+                    { value: "never", label: "Never" },
+                  ]}
+                />
               }
-              last
             />
-          </SettingSection>
-        </>
-      ),
-    },
-    {
-      key: "system",
-      label: "System",
-      icon: <SettingOutlined />,
-      children: (
-        <SettingSection title="Maintenance">
-          <div style={{ padding: "20px 0" }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "flex-start",
-                gap: 16,
-                marginBottom: 16,
-              }}
-            >
-              <div
-                style={{
-                  backgroundColor: "#E8F5E9",
-                  padding: 12,
-                  borderRadius: "50%",
-                  color: "#2E7D32",
-                }}
-              >
-                <InboxOutlined style={{ fontSize: 24 }} />
+          </SettingCard>
+        );
+
+      case "privacy":
+        return (
+          <>
+            <SettingCard title="Security">
+              <SettingRow
+                label="Two-Factor Authentication"
+                description="Add an extra layer of security to your account."
+                control={<Switch defaultChecked={false} />}
+              />
+              <SettingRow
+                label="Login Alerts"
+                description="Get notified of logins from new devices."
+                control={<Switch defaultChecked />}
+              />
+              <SettingRow
+                label="Password"
+                description="Update your password regularly."
+                control={<Button>Change Password</Button>}
+              />
+            </SettingCard>
+
+            <SettingCard title="Danger Zone" danger>
+              <SettingRow
+                label="Clear All Data"
+                description="Permanently remove all your local data."
+                danger
+                control={<Button danger>Clear Data</Button>}
+              />
+              <SettingRow
+                label="Delete Account"
+                description="Permanently delete your account and all associated data. This cannot be undone."
+                danger
+                control={
+                  <Button danger type="primary">
+                    Delete Account
+                  </Button>
+                }
+              />
+            </SettingCard>
+          </>
+        );
+
+      case "system":
+        return (
+          <SettingCard title="Maintenance" noPadding>
+            <div className="system-feature">
+              <div className="system-feature__icon system-feature__icon--archive">
+                <InboxOutlined />
               </div>
-              <div>
-                <Text
-                  strong
-                  style={{ fontSize: 16, display: "block", marginBottom: 4 }}
-                >
-                  Ticket Archiving
-                </Text>
-                <Text
-                  type="secondary"
-                  style={{ display: "block", marginBottom: 12, maxWidth: 600 }}
-                >
+              <div className="system-feature__body">
+                <p className="system-feature__title">Ticket Archiving</p>
+                <p className="system-feature__text">
                   Tickets in the "Done" column for more than 24 hours are
-                  automatically archived to maintain system performance. You can
-                  manually trigger this process if needed.
-                </Text>
+                  automatically archived. You can trigger this manually if
+                  needed.
+                </p>
 
                 {lastArchiveResult && (
                   <Alert
+                    className="archive-result"
                     type={lastArchiveResult.count > 0 ? "success" : "info"}
                     message={
                       lastArchiveResult.count > 0
-                        ? `${lastArchiveResult.count} ticket(s) were archived`
+                        ? `${lastArchiveResult.count} ticket(s) archived`
                         : "No tickets needed archiving"
                     }
                     description={`Last run: ${lastArchiveResult.timestamp.toLocaleString()}`}
-                    style={{ marginBottom: 16, maxWidth: 500 }}
                     showIcon
+                    style={{ maxWidth: 460 }}
                   />
                 )}
 
@@ -908,112 +901,76 @@ const Settings: React.FC = () => {
                   type="primary"
                   onClick={handleTriggerArchive}
                   loading={archiving}
-                  style={{ backgroundColor: COLORS.primary }}
+                  icon={<ThunderboltOutlined />}
                 >
                   {archiving ? "Archiving..." : "Run Archive Now"}
                 </Button>
               </div>
             </div>
-          </div>
 
-          <Divider />
+            <div className="system-feature">
+              <div className="system-feature__icon system-feature__icon--tasks">
+                <ClockCircleOutlined />
+              </div>
+              <div className="system-feature__body">
+                <p className="system-feature__title">Background Tasks</p>
+                <p className="system-feature__text">
+                  Automated tasks that run on a schedule to keep the system
+                  healthy.
+                </p>
+                <ul className="system-tasks-list">
+                  <li>Auto-archive completed tickets (runs hourly)</li>
+                  <li>Clean up expired sessions (runs daily)</li>
+                </ul>
+              </div>
+            </div>
+          </SettingCard>
+        );
 
-          <div style={{ padding: "20px 0" }}>
-            <Text
-              strong
-              style={{ fontSize: 15, display: "block", marginBottom: 8 }}
-            >
-              Background Tasks
-            </Text>
-            <ul
-              style={{
-                margin: 0,
-                paddingLeft: 20,
-                color: COLORS.textSecondary,
-              }}
-            >
-              <li style={{ marginBottom: 4 }}>
-                Auto-archive completed tickets (runs hourly)
-              </li>
-              <li>Clean up expired sessions (runs daily)</li>
-            </ul>
-          </div>
-        </SettingSection>
-      ),
-    },
-  ];
+      default:
+        return null;
+    }
+  };
 
   return (
-    <Layout style={{ minHeight: "100vh", backgroundColor: COLORS.background }}>
-      <div
-        style={{
-          maxWidth: 1200,
-          margin: "0 auto",
-          width: "100%",
-          padding: "40px 24px",
-        }}
-      >
-        {/* Header */}
-        <div style={{ marginBottom: 40 }}>
-          <Title level={2} style={{ marginBottom: 8, color: COLORS.primary }}>
-            Settings
-          </Title>
-          <Text style={{ fontSize: 16, color: COLORS.textSecondary }}>
-            Manage your workspace preferences and account details.
-          </Text>
+    <div className="settings-page">
+      {/* ── Sidebar ── */}
+      <aside className="settings-sidebar">
+        <div className="settings-sidebar__title">Settings</div>
+        <nav className="settings-sidebar__nav">
+          {NAV_ITEMS.map((item) => (
+            <React.Fragment key={item.key}>
+              <button
+                type="button"
+                className={`settings-sidebar__item${activeTab === item.key ? " settings-sidebar__item--active" : ""}`}
+                onClick={() => setActiveTab(item.key)}
+              >
+                {item.icon}
+                {item.label}
+              </button>
+              {DIVIDER_AFTER.includes(item.key) && (
+                <div className="settings-sidebar__divider" />
+              )}
+            </React.Fragment>
+          ))}
+        </nav>
+        <div className="settings-sidebar__spacer" />
+        <div className="settings-sidebar__version">v1.0.0</div>
+      </aside>
+
+      {/* ── Content ── */}
+      <main className="settings-content">
+        <div className="settings-content__header">
+          <h1 className="settings-content__title">{activeNav.label}</h1>
+          <p className="settings-content__subtitle">
+            {activeNav.description}
+          </p>
         </div>
 
-        <div style={{ backgroundColor: "transparent" }}>
-          <Tabs
-            tabPosition="left"
-            items={items.map((item) => ({
-              key: item.key,
-              label: (
-                <span style={{ fontSize: 15, padding: "4px 0" }}>
-                  {item.icon}
-                  <span style={{ marginLeft: 10 }}>{item.label}</span>
-                </span>
-              ),
-              children: (
-                <div style={{ paddingLeft: 24, maxWidth: 800 }}>
-                  {item.children}
-                </div>
-              ),
-            }))}
-            style={{
-              backgroundColor: "transparent",
-            }}
-            tabBarStyle={{
-              width: 260,
-              backgroundColor: "transparent",
-            }}
-            renderTabBar={(props, DefaultTabBar) => (
-              <div style={{ marginRight: 32 }}>
-                <DefaultTabBar {...props} />
-                <div style={{ marginTop: 40, padding: "0 16px" }}>
-                  <Button
-                    block
-                    onClick={handleReset}
-                    style={{ marginBottom: 12 }}
-                  >
-                    Reset Defaults
-                  </Button>
-                  <Button
-                    block
-                    type="primary"
-                    onClick={handleSave}
-                    style={{ backgroundColor: COLORS.primary }}
-                  >
-                    Save Changes
-                  </Button>
-                </div>
-              </div>
-            )}
-          />
-        </div>
-      </div>
+        {renderContent()}
+      </main>
 
-      {/* Project Edit Modal */}
+      {/* ── Modals ── */}
       <ProjectModal
         visible={editModalVisible}
         project={selectedProject}
@@ -1022,8 +979,6 @@ const Settings: React.FC = () => {
         onSave={handleSaveProject}
         loading={modalLoading}
       />
-
-      {/* Project Create Modal */}
       <ProjectModal
         visible={createModalVisible}
         project={null}
@@ -1033,7 +988,7 @@ const Settings: React.FC = () => {
         loading={modalLoading}
         isNew
       />
-    </Layout>
+    </div>
   );
 };
 

@@ -159,7 +159,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
           alignItems: "center",
         }}
       >
-        <Text strong style={{ fontSize: 16 }}>
+        <Text strong style={{ fontSize: 'var(--fs-lg)' }}>
           Notifications
         </Text>
         {displayUnreadCount > 0 && (
@@ -223,23 +223,23 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
                   ]}
                 >
                   <List.Item.Meta
-                    avatar={<div style={{ fontSize: 24 }}>{style.emoji}</div>}
+                    avatar={<div style={{ fontSize: 'var(--fs-3xl)' }}>{style.emoji}</div>}
                     title={
                       <Space
                         direction="vertical"
                         size={0}
                         style={{ width: "100%" }}
                       >
-                        <Text strong style={{ fontSize: 14 }}>
+                        <Text strong style={{ fontSize: 'var(--fs-base)' }}>
                           {notification.title}
                         </Text>
-                        <Text type="secondary" style={{ fontSize: 12 }}>
+                        <Text type="secondary" style={{ fontSize: 'var(--fs-sm)' }}>
                           {dayjs(notification.created_at).fromNow()}
                         </Text>
                       </Space>
                     }
                     description={
-                      <Text style={{ fontSize: 13 }}>
+                      <Text style={{ fontSize: 'var(--fs-caption)' }}>
                         {notification.message}
                       </Text>
                     }
@@ -266,7 +266,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
       <Badge count={displayUnreadCount} offset={[-5, 5]} size="small">
         <Button
           type="text"
-          icon={<BellOutlined style={{ fontSize: 18 }} />}
+          icon={<BellOutlined style={{ fontSize: 'var(--fs-xl)' }} />}
           style={{
             display: "flex",
             alignItems: "center",

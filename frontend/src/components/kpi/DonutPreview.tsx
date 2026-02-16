@@ -27,14 +27,14 @@ const PreviewTooltip = ({ active, payload }: any) => {
   const data = payload[0].payload;
   return (
     <div style={{
-      background: '#fff',
-      border: '1px solid #e0e0e0',
+      background: 'var(--color-bg-elevated)',
+      border: '1px solid var(--color-border)',
       borderRadius: 6,
       padding: '6px 10px',
-      boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+      boxShadow: 'var(--shadow-md)',
     }}>
-      <div style={{ fontWeight: 600, fontSize: 13 }}>{data.name}</div>
-      <div style={{ fontSize: 12, color: '#4A4A4A' }}>Weight: {data.weight}</div>
+      <div style={{ fontWeight: 600, fontSize: 'var(--fs-caption)', color: 'var(--color-text-heading)' }}>{data.name}</div>
+      <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-secondary)' }}>Weight: {data.weight}</div>
     </div>
   );
 };
@@ -72,7 +72,7 @@ const DonutPreview: React.FC<DonutPreviewProps> = ({ indicators }) => {
               innerRadius={55}
               outerRadius={85}
               dataKey="value"
-              stroke="#fff"
+              stroke="var(--color-bg-surface)"
               strokeWidth={2}
             >
               {chartData.map((_, index) => (
@@ -93,10 +93,10 @@ const DonutPreview: React.FC<DonutPreviewProps> = ({ indicators }) => {
           textAlign: 'center',
           pointerEvents: 'none',
         }}>
-          <div style={{ fontSize: 24, fontWeight: 700, color: '#2C3E50', lineHeight: 1 }}>
+          <div style={{ fontSize: 'var(--fs-3xl)', fontWeight: 700, color: 'var(--color-text-heading)', lineHeight: 1 }}>
             {totalWeight}
           </div>
-          <Text type="secondary" style={{ fontSize: 11 }}>total pts</Text>
+          <Text type="secondary" style={{ fontSize: 'var(--fs-xs)' }}>total pts</Text>
         </div>
       </div>
       <div style={{ marginTop: 12 }}>
@@ -106,7 +106,7 @@ const DonutPreview: React.FC<DonutPreviewProps> = ({ indicators }) => {
             alignItems: 'center',
             marginRight: 12,
             marginBottom: 4,
-            fontSize: 12,
+            fontSize: 'var(--fs-sm)',
           }}>
             <span style={{
               width: 8,
@@ -116,7 +116,7 @@ const DonutPreview: React.FC<DonutPreviewProps> = ({ indicators }) => {
               display: 'inline-block',
               marginRight: 4,
             }} />
-            <span style={{ color: '#4A4A4A' }}>{item.name}</span>
+            <span style={{ color: 'var(--color-text-secondary)' }}>{item.name}</span>
           </div>
         ))}
       </div>

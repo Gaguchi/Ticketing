@@ -262,7 +262,7 @@ const Dashboard: React.FC = () => {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: "#f4f5f7",
+          backgroundColor: "var(--color-bg-inset)",
         }}
       >
         <Empty description={t('selectProject')} />
@@ -279,7 +279,7 @@ const Dashboard: React.FC = () => {
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          backgroundColor: "#f4f5f7",
+          backgroundColor: "var(--color-bg-inset)",
         }}
       >
         <Spin size="large" />
@@ -290,7 +290,7 @@ const Dashboard: React.FC = () => {
   return (
     <>
       {/* Company Filter Header - Fixed position, not draggable */}
-      <div style={{ padding: "0 20px", marginBottom: 0, backgroundColor: "#fff" }}>
+      <div style={{ padding: "0 20px", marginBottom: 0, backgroundColor: "var(--color-bg-surface)" }}>
         <CompanyFilterBar
           companies={companyHealth}
           selectedCompanyIds={selectedCompanyIds}

@@ -2,11 +2,11 @@ import React from 'react';
 import { useThemeVersion } from '../contexts/ThemeContext';
 
 const ThemeSwitcher: React.FC = () => {
-  const { themeVersion, setThemeVersion } = useThemeVersion();
-  const isV2 = themeVersion === 'v2';
+  const { resolvedMode, setThemePreference } = useThemeVersion();
+  const isDark = resolvedMode === 'dark';
 
   const toggle = () => {
-    setThemeVersion(isV2 ? 'v1' : 'v2');
+    setThemePreference(isDark ? 'light' : 'dark');
   };
 
   return (
@@ -20,7 +20,7 @@ const ThemeSwitcher: React.FC = () => {
         borderRadius: 4,
         border: '1px solid var(--color-border)',
         overflow: 'hidden',
-        fontSize: 12,
+        fontSize: 'var(--fs-sm)',
         fontWeight: 600,
         lineHeight: 1,
         userSelect: 'none',
@@ -29,22 +29,22 @@ const ThemeSwitcher: React.FC = () => {
       <span
         style={{
           padding: '4px 8px',
-          background: !isV2 ? 'var(--color-primary)' : 'transparent',
-          color: !isV2 ? '#fff' : 'var(--color-text-muted)',
+          background: !isDark ? 'var(--color-primary)' : 'transparent',
+          color: !isDark ? '#fff' : 'var(--color-text-muted)',
           transition: 'all 0.2s',
         }}
       >
-        V1
+        Light
       </span>
       <span
         style={{
           padding: '4px 8px',
-          background: isV2 ? 'var(--color-primary)' : 'transparent',
-          color: isV2 ? '#fff' : 'var(--color-text-muted)',
+          background: isDark ? 'var(--color-primary)' : 'transparent',
+          color: isDark ? '#fff' : 'var(--color-text-muted)',
           transition: 'all 0.2s',
         }}
       >
-        V2
+        Dark
       </span>
     </div>
   );

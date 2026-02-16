@@ -323,21 +323,21 @@ const MainLayout: React.FC = () => {
                     size="small"
                     offset={collapsed ? [5, 0] : [10, 0]}
                     style={{
-                      fontSize: collapsed ? 10 : 11,
+                      fontSize: collapsed ? 'var(--fs-2xs)' : 'var(--fs-xs)',
                     }}
                   >
-                    <span style={{ fontSize: collapsed ? 20 : 16 }}>
+                    <span style={{ fontSize: collapsed ? 'var(--fs-2xl)' : 'var(--fs-lg)' }}>
                       {item.icon}
                     </span>
                   </Badge>
                 ) : (
-                  <span style={{ fontSize: collapsed ? 20 : 16 }}>
+                  <span style={{ fontSize: collapsed ? 'var(--fs-2xl)' : 'var(--fs-lg)' }}>
                     {item.icon}
                   </span>
                 )}
                 <span
                   style={{
-                    fontSize: collapsed ? 10 : 13,
+                    fontSize: collapsed ? 'var(--fs-2xs)' : 'var(--fs-caption)',
                     fontWeight: isActive ? 500 : 400,
                     whiteSpace: "nowrap",
                   }}
@@ -377,9 +377,9 @@ const MainLayout: React.FC = () => {
               color: "var(--color-chat-mine-text)",
             }}
           >
-            <PlusOutlined style={{ fontSize: collapsed ? 20 : 16 }} />
+            <PlusOutlined style={{ fontSize: collapsed ? 'var(--fs-2xl)' : 'var(--fs-lg)' }} />
             {!collapsed && (
-              <span style={{ fontSize: 13, fontWeight: 500 }}>{t('nav.newTicket')}</span>
+              <span style={{ fontSize: 'var(--fs-caption)', fontWeight: 500 }}>{t('nav.newTicket')}</span>
             )}
           </div>
         </div>
@@ -425,16 +425,16 @@ const MainLayout: React.FC = () => {
             }}
           >
             {collapsed ? (
-              <MenuUnfoldOutlined style={{ fontSize: 16 }} />
+              <MenuUnfoldOutlined style={{ fontSize: 'var(--fs-lg)' }} />
             ) : (
-              <MenuFoldOutlined style={{ fontSize: 16 }} />
+              <MenuFoldOutlined style={{ fontSize: 'var(--fs-lg)' }} />
             )}
           </div>
           <Space size="middle">
             {/* Project Selector - Show loading or data based on state */}
             {authLoading || projectLoading ? (
               <Space size="small">
-                <ProjectOutlined style={{ fontSize: 16, color: "var(--color-text-secondary)" }} />
+                <ProjectOutlined style={{ fontSize: 'var(--fs-lg)', color: "var(--color-text-secondary)" }} />
                 <Select
                   loading={true}
                   disabled={true}
@@ -445,7 +445,7 @@ const MainLayout: React.FC = () => {
               </Space>
             ) : availableProjects.length > 0 ? (
               <Space size="small">
-                <ProjectOutlined style={{ fontSize: 16, color: "var(--color-text-secondary)" }} />
+                <ProjectOutlined style={{ fontSize: 'var(--fs-lg)', color: "var(--color-text-secondary)" }} />
                 <Select
                   value={selectedProject?.id}
                   onChange={(value) => {
@@ -507,7 +507,7 @@ const MainLayout: React.FC = () => {
                   }}
                   icon={<UserOutlined />}
                 />
-                <Text strong style={{ fontSize: 13 }}>
+                <Text strong style={{ fontSize: 'var(--fs-caption)' }}>
                   {user?.username || "Admin"}
                 </Text>
               </Space>

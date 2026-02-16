@@ -145,7 +145,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
             marginTop: "16px",
           }}
         >
-          <p style={{ margin: 0, fontSize: "13px", color: "var(--color-primary)" }}>
+          <p style={{ margin: 0, fontSize: 'var(--fs-caption)', color: "var(--color-primary)" }}>
             <strong>Note:</strong> Default columns (To Do, In Progress, Review,
             Done) will be automatically created for this project.
           </p>

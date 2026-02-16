@@ -118,7 +118,7 @@ const LiveActivityFeed: React.FC<Props> = ({
       style={{ borderRadius: 8 }}
       styles={{ body: { padding: 0 } }}
       extra={
-        <span style={{ fontSize: 11, color: "var(--color-text-muted)" }}>
+        <span style={{ fontSize: 'var(--fs-xs)', color: "var(--color-text-muted)" }}>
           {t('activity.recent', { count: activities.length })}
         </span>
       }
@@ -171,7 +171,7 @@ const LiveActivityFeed: React.FC<Props> = ({
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      fontSize: 12,
+                      fontSize: 'var(--fs-sm)',
                       flexShrink: 0,
                     }}
                   >
@@ -180,7 +180,7 @@ const LiveActivityFeed: React.FC<Props> = ({
 
                   <div style={{ flex: 1, minWidth: 0 }}>
                     {/* User and action */}
-                    <div style={{ fontSize: 12, marginBottom: 2 }}>
+                    <div style={{ fontSize: 'var(--fs-sm)', marginBottom: 2 }}>
                       <span style={{ fontWeight: 500 }}>
                         {activity.changed_by
                           ? `${
@@ -198,7 +198,7 @@ const LiveActivityFeed: React.FC<Props> = ({
                     {/* Ticket info */}
                     <div
                       style={{
-                        fontSize: 11,
+                        fontSize: 'var(--fs-xs)',
                         color: "var(--color-text-secondary)",
                         marginBottom: 4,
                       }}
@@ -225,7 +225,7 @@ const LiveActivityFeed: React.FC<Props> = ({
                           display: "flex",
                           alignItems: "center",
                           gap: 4,
-                          fontSize: 10,
+                          fontSize: 'var(--fs-2xs)',
                         }}
                       >
                         <Tooltip title={activity.old_value || "(empty)"}>
@@ -268,7 +268,7 @@ const LiveActivityFeed: React.FC<Props> = ({
                     title={new Date(activity.changed_at).toLocaleString()}
                   >
                     <span
-                      style={{ fontSize: 10, color: "#bfbfbf", flexShrink: 0 }}
+                      style={{ fontSize: 'var(--fs-2xs)', color: "#bfbfbf", flexShrink: 0 }}
                     >
                       {formatRelativeTime(activity.changed_at)}
                     </span>

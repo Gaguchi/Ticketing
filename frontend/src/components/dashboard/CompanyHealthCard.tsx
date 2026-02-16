@@ -59,7 +59,7 @@ const MiniKanbanFlow: React.FC<{ ticketsByStatus: Record<string, number> }> = ({
   const entries = Object.entries(ticketsByStatus);
 
   if (entries.length === 0) {
-    return <div style={{ color: "var(--color-text-muted)", fontSize: 12 }}>{t('company.noTickets')}</div>;
+    return <div style={{ color: "var(--color-text-muted)", fontSize: 'var(--fs-sm)' }}>{t('company.noTickets')}</div>;
   }
 
   return (
@@ -85,7 +85,7 @@ const MiniKanbanFlow: React.FC<{ ticketsByStatus: Record<string, number> }> = ({
                 borderRadius: 4,
                 backgroundColor: getColumnColor(status) + "20",
                 border: `1px solid ${getColumnColor(status)}`,
-                fontSize: 11,
+                fontSize: 'var(--fs-xs)',
                 fontWeight: 500,
               }}
             >
@@ -93,7 +93,7 @@ const MiniKanbanFlow: React.FC<{ ticketsByStatus: Record<string, number> }> = ({
             </div>
           </Tooltip>
           {index < entries.length - 1 && (
-            <ArrowRightOutlined style={{ fontSize: 10, color: "var(--color-border)" }} />
+            <ArrowRightOutlined style={{ fontSize: 'var(--fs-2xs)', color: "var(--color-border)" }} />
           )}
         </React.Fragment>
       ))}
@@ -163,7 +163,7 @@ const CompanyHealthCard: React.FC<Props> = ({
           {!company.logo_url && (
             <FontAwesomeIcon
               icon={faBuilding}
-              style={{ fontSize: isExpanded ? 20 : 14 }}
+              style={{ fontSize: isExpanded ? 'var(--fs-2xl)' : 'var(--fs-base)' }}
             />
           )}
         </Avatar>
@@ -171,7 +171,7 @@ const CompanyHealthCard: React.FC<Props> = ({
           <div
             style={{
               fontWeight: 600,
-              fontSize: isExpanded ? 16 : 14,
+              fontSize: isExpanded ? 'var(--fs-lg)' : 'var(--fs-base)',
               overflow: "hidden",
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
@@ -179,7 +179,7 @@ const CompanyHealthCard: React.FC<Props> = ({
           >
             {company.name}
           </div>
-          <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
+          <div style={{ fontSize: 'var(--fs-sm)', color: "var(--color-text-muted)" }}>
             {t('company.tickets', { count: company.total_tickets })}
           </div>
         </div>
@@ -211,7 +211,7 @@ const CompanyHealthCard: React.FC<Props> = ({
       {/* Expanded view extras */}
       {isExpanded && (
         <div style={{ marginTop: 16 }}>
-          <div style={{ marginBottom: 8, fontSize: 12, color: "var(--color-text-muted)" }}>
+          <div style={{ marginBottom: 8, fontSize: 'var(--fs-sm)', color: "var(--color-text-muted)" }}>
             {t('company.workInProgress')}
           </div>
           <Progress
@@ -223,13 +223,13 @@ const CompanyHealthCard: React.FC<Props> = ({
 
           {Object.keys(company.tickets_by_priority).length > 0 && (
             <div style={{ marginTop: 12 }}>
-              <div style={{ marginBottom: 4, fontSize: 12, color: "var(--color-text-muted)" }}>
+              <div style={{ marginBottom: 4, fontSize: 'var(--fs-sm)', color: "var(--color-text-muted)" }}>
                 {t('company.byPriority')}
               </div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                 {Object.entries(company.tickets_by_priority).map(
                   ([priority, count]) => (
-                    <Tag key={priority} style={{ margin: 0, fontSize: 11 }}>
+                    <Tag key={priority} style={{ margin: 0, fontSize: 'var(--fs-xs)' }}>
                       {priority}: {count}
                     </Tag>
                   )

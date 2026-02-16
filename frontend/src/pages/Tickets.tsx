@@ -616,7 +616,7 @@ const Tickets: React.FC = () => {
           <FontAwesomeIcon
             icon={getTypeIcon(record.type).icon}
             style={{
-              fontSize: "16px",
+              fontSize: 'var(--fs-lg)',
               color: getTypeIcon(record.type).color,
               flexShrink: 0,
             }}
@@ -625,13 +625,13 @@ const Tickets: React.FC = () => {
             style={{
               color: "var(--color-primary)",
               fontWeight: 500,
-              fontSize: "14px",
+              fontSize: 'var(--fs-base)',
               marginRight: "8px",
             }}
           >
             {formatTicketId(record)}
           </span>
-          <span style={{ color: "var(--color-text-heading)", fontSize: "14px" }}>
+          <span style={{ color: "var(--color-text-heading)", fontSize: 'var(--fs-base)' }}>
             {record.name}
           </span>
         </div>
@@ -851,7 +851,7 @@ const Tickets: React.FC = () => {
             <FontAwesomeIcon
               icon={getTypeIcon(record.type).icon}
               style={{
-                fontSize: "16px",
+                fontSize: 'var(--fs-lg)',
                 color: getTypeIcon(record.type).color,
                 flexShrink: 0,
               }}
@@ -860,13 +860,13 @@ const Tickets: React.FC = () => {
               style={{
                 color: "var(--color-primary)",
                 fontWeight: 500,
-                fontSize: "14px",
+                fontSize: 'var(--fs-base)',
                 marginRight: "8px",
               }}
             >
               {formatTicketId(record)}
             </span>
-            <span style={{ color: "var(--color-text-heading)", fontSize: "14px" }}>
+            <span style={{ color: "var(--color-text-heading)", fontSize: 'var(--fs-base)' }}>
               {record.name}
             </span>
           </div>
@@ -981,7 +981,7 @@ const Tickets: React.FC = () => {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-          <h1 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>Board</h1>
+          <h1 style={{ fontSize: 'var(--fs-lg)', fontWeight: 600, margin: 0 }}>Board</h1>
           {/* Company Filter Pills */}
           {companies.length > 0 && (
             <CompanyFilterBar

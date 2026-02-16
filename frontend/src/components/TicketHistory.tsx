@@ -74,7 +74,7 @@ export const TicketHistory: React.FC<TicketHistoryProps> = ({ ticketId }) => {
             <div>
                 <Text strong>{history.user.first_name || history.user.username}</Text> changed <Text code>{fieldName}</Text>
                 <br />
-                <div style={{ fontSize: 12, marginTop: 4 }}>
+                <div style={{ fontSize: 'var(--fs-sm)', marginTop: 4 }}>
                     <Text delete type="secondary">{history.old_value || '(empty)'}</Text>
                     <Text type="secondary" style={{ margin: '0 8px' }}>→</Text>
                     <Text strong>{history.new_value || '(empty)'}</Text>
@@ -95,7 +95,7 @@ export const TicketHistory: React.FC<TicketHistoryProps> = ({ ticketId }) => {
                         <div style={{ marginBottom: 16 }}>
                             {renderContent(item)}
                             <div style={{ marginTop: 4 }}>
-                                <Text type="secondary" style={{ fontSize: 11 }}>
+                                <Text type="secondary" style={{ fontSize: 'var(--fs-xs)' }}>
                                     {dayjs(item.created_at).fromNow()}
                                 </Text>
                             </div>

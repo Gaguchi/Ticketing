@@ -18,7 +18,7 @@
 /* Custom Scroll for kanban wrapper */
 .kanban {
   scrollbar-width: thin;
-  scrollbar-color: rgba(9, 30, 66, 0.25) transparent;
+  scrollbar-color: var(--color-scrollbar) transparent;
 }
 
 .kanban::-webkit-scrollbar {
@@ -31,18 +31,18 @@
 }
 
 .kanban::-webkit-scrollbar-thumb {
-  background: rgba(9, 30, 66, 0.25);
+  background: var(--color-scrollbar);
   border-radius: 8px;
 }
 
 .kanban::-webkit-scrollbar-thumb:hover {
-  background: rgba(9, 30, 66, 0.4);
+  background: var(--color-scrollbar-hover);
 }
 
 /* Minimal column scrollbars */
 .kanban-column__body {
   scrollbar-width: thin;
-  scrollbar-color: rgba(9, 30, 66, 0.25) transparent;
+  scrollbar-color: var(--color-scrollbar) transparent;
 }
 
 .kanban-column__body::-webkit-scrollbar {
@@ -55,12 +55,12 @@
 }
 
 .kanban-column__body::-webkit-scrollbar-thumb {
-  background: rgba(9, 30, 66, 0.2);
+  background: var(--color-scrollbar);
   border-radius: 999px;
 }
 
 .kanban-column__body::-webkit-scrollbar-thumb:hover {
-  background: rgba(9, 30, 66, 0.35);
+  background: var(--color-scrollbar-hover);
 }
 
 .archive-panel {
@@ -81,14 +81,14 @@
 
 .archive-panel__header h3 {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--fs-lg);
   font-weight: 600;
 }
 
 .archive-panel__header p {
   margin: 4px 0 0;
   color: var(--color-text-muted);
-  font-size: 12px;
+  font-size: var(--fs-sm);
 }
 
 .archive-panel__actions {

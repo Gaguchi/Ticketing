@@ -257,7 +257,7 @@ export const CompanyDrawer: React.FC<CompanyDrawerProps> = ({
             style={{
               padding: 20,
               borderBottom: "1px solid var(--color-border-light)",
-              background: health ? health.bgColor : "#fff",
+              background: health ? health.bgColor : "var(--color-bg-surface)",
             }}
           >
             <div
@@ -277,7 +277,7 @@ export const CompanyDrawer: React.FC<CompanyDrawerProps> = ({
               ) : (
                 <Avatar
                   size={48}
-                  style={{ background: "#2C3E50" }}
+                  style={{ background: "var(--color-text-heading)" }}
                   icon={<ShopOutlined />}
                 />
               )}
@@ -286,7 +286,7 @@ export const CompanyDrawer: React.FC<CompanyDrawerProps> = ({
                   {company.name}
                 </Title>
                 {company.description && (
-                  <Text type="secondary" style={{ fontSize: 12 }}>
+                  <Text type="secondary" style={{ fontSize: 'var(--fs-sm)' }}>
                     {company.description}
                   </Text>
                 )}
@@ -301,10 +301,10 @@ export const CompanyDrawer: React.FC<CompanyDrawerProps> = ({
                         gap: 4,
                         padding: "2px 8px",
                         borderRadius: 12,
-                        backgroundColor: "#fff",
+                        backgroundColor: "var(--color-bg-surface)",
                         border: `1px solid ${health.borderColor}`,
                         color: health.color,
-                        fontSize: 11,
+                        fontSize: 'var(--fs-xs)',
                         fontWeight: 500,
                       }}
                     >
@@ -318,7 +318,7 @@ export const CompanyDrawer: React.FC<CompanyDrawerProps> = ({
           </div>
 
           {/* Quick Stats */}
-          <div style={{ padding: 16, borderBottom: "1px solid #f0f0f0" }}>
+          <div style={{ padding: 16, borderBottom: "1px solid var(--color-border-light)" }}>
             <Text strong style={{ display: "block", marginBottom: 12 }}>
               📊 Quick Stats
             </Text>
@@ -343,11 +343,11 @@ export const CompanyDrawer: React.FC<CompanyDrawerProps> = ({
                   }}
                 >
                   <div
-                    style={{ fontSize: 18, fontWeight: 600, color: "var(--color-primary)" }}
+                    style={{ fontSize: 'var(--fs-xl)', fontWeight: 600, color: "var(--color-primary)" }}
                   >
                     {stats.open_tickets}
                   </div>
-                  <Text type="secondary" style={{ fontSize: 10 }}>
+                  <Text type="secondary" style={{ fontSize: 'var(--fs-2xs)' }}>
                     Open
                   </Text>
                 </div>
@@ -356,20 +356,20 @@ export const CompanyDrawer: React.FC<CompanyDrawerProps> = ({
                     textAlign: "center",
                     padding: 8,
                     background:
-                      stats.urgent_tickets > 0 ? "#fff7e6" : "var(--color-bg-inset)",
+                      stats.urgent_tickets > 0 ? "var(--color-tint-warning-bg)" : "var(--color-bg-inset)",
                     borderRadius: 6,
                   }}
                 >
                   <div
                     style={{
-                      fontSize: 18,
+                      fontSize: 'var(--fs-xl)',
                       fontWeight: 600,
-                      color: stats.urgent_tickets > 0 ? "#fa8c16" : "var(--color-text-muted)",
+                      color: stats.urgent_tickets > 0 ? "var(--color-tint-warning-border)" : "var(--color-text-muted)",
                     }}
                   >
                     {stats.urgent_tickets}
                   </div>
-                  <Text type="secondary" style={{ fontSize: 10 }}>
+                  <Text type="secondary" style={{ fontSize: 'var(--fs-2xs)' }}>
                     Urgent
                   </Text>
                 </div>
@@ -378,20 +378,20 @@ export const CompanyDrawer: React.FC<CompanyDrawerProps> = ({
                     textAlign: "center",
                     padding: 8,
                     background:
-                      stats.overdue_tickets > 0 ? "#fff2f0" : "var(--color-bg-inset)",
+                      stats.overdue_tickets > 0 ? "var(--color-tint-danger-bg)" : "var(--color-bg-inset)",
                     borderRadius: 6,
                   }}
                 >
                   <div
                     style={{
-                      fontSize: 18,
+                      fontSize: 'var(--fs-xl)',
                       fontWeight: 600,
-                      color: stats.overdue_tickets > 0 ? "#ff4d4f" : "var(--color-text-muted)",
+                      color: stats.overdue_tickets > 0 ? "var(--color-tint-danger-border)" : "var(--color-text-muted)",
                     }}
                   >
                     {stats.overdue_tickets}
                   </div>
-                  <Text type="secondary" style={{ fontSize: 10 }}>
+                  <Text type="secondary" style={{ fontSize: 'var(--fs-2xs)' }}>
                     Overdue
                   </Text>
                 </div>
@@ -399,16 +399,16 @@ export const CompanyDrawer: React.FC<CompanyDrawerProps> = ({
                   style={{
                     textAlign: "center",
                     padding: 8,
-                    background: "#f6ffed",
+                    background: "var(--color-tint-success-bg)",
                     borderRadius: 6,
                   }}
                 >
                   <div
-                    style={{ fontSize: 18, fontWeight: 600, color: "#52c41a" }}
+                    style={{ fontSize: 'var(--fs-xl)', fontWeight: 600, color: "var(--color-tint-success-border)" }}
                   >
                     {stats.resolved_this_month}
                   </div>
-                  <Text type="secondary" style={{ fontSize: 10 }}>
+                  <Text type="secondary" style={{ fontSize: 'var(--fs-2xs)' }}>
                     Resolved
                   </Text>
                 </div>
@@ -534,14 +534,14 @@ export const CompanyDrawer: React.FC<CompanyDrawerProps> = ({
                       <List.Item.Meta
                         avatar={<Avatar size="small" icon={<UserOutlined />} />}
                         title={
-                          <Text style={{ fontSize: 13 }}>
+                          <Text style={{ fontSize: 'var(--fs-caption)' }}>
                             {user.first_name || user.last_name
                               ? `${user.first_name} ${user.last_name}`.trim()
                               : user.username}
                           </Text>
                         }
                         description={
-                          <Text type="secondary" style={{ fontSize: 11 }}>
+                          <Text type="secondary" style={{ fontSize: 'var(--fs-xs)' }}>
                             {user.email}
                           </Text>
                         }
@@ -642,14 +642,14 @@ export const CompanyDrawer: React.FC<CompanyDrawerProps> = ({
                           />
                         }
                         title={
-                          <Text style={{ fontSize: 13 }}>
+                          <Text style={{ fontSize: 'var(--fs-caption)' }}>
                             {admin.first_name || admin.last_name
                               ? `${admin.first_name} ${admin.last_name}`.trim()
                               : admin.username}
                           </Text>
                         }
                         description={
-                          <Text type="secondary" style={{ fontSize: 11 }}>
+                          <Text type="secondary" style={{ fontSize: 'var(--fs-xs)' }}>
                             {admin.email}
                           </Text>
                         }

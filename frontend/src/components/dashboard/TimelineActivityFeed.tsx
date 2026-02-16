@@ -127,7 +127,7 @@ const TimelineActivityFeed: React.FC<Props> = ({
               animation: "pulse 2s infinite",
             }}
           />
-          <span style={{ fontSize: 13 }}>{t('activity.liveActivity')}</span>
+          <span style={{ fontSize: 'var(--fs-caption)' }}>{t('activity.liveActivity')}</span>
         </div>
       }
       size="small"
@@ -136,7 +136,7 @@ const TimelineActivityFeed: React.FC<Props> = ({
         body: { padding: 0, height: "calc(100% - 40px)", overflow: "hidden" },
       }}
       extra={
-        <span style={{ fontSize: 11, color: "var(--color-text-muted)" }}>
+        <span style={{ fontSize: 'var(--fs-xs)', color: "var(--color-text-muted)" }}>
           {t('activity.recent', { count: activities.length })}
         </span>
       }
@@ -172,7 +172,7 @@ const TimelineActivityFeed: React.FC<Props> = ({
                 <div
                   style={{
                     padding: "8px 16px",
-                    fontSize: 11,
+                    fontSize: 'var(--fs-xs)',
                     fontWeight: 600,
                     color: "var(--color-text-muted)",
                     textTransform: "uppercase",
@@ -224,7 +224,7 @@ const TimelineActivityFeed: React.FC<Props> = ({
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            fontSize: 12,
+                            fontSize: 'var(--fs-sm)',
                             zIndex: 1,
                           }}
                         >
@@ -260,7 +260,7 @@ const TimelineActivityFeed: React.FC<Props> = ({
                             size={18}
                             style={{
                               backgroundColor: "var(--color-primary)",
-                              fontSize: 10,
+                              fontSize: 'var(--fs-2xs)',
                             }}
                           >
                             {activity.changed_by
@@ -268,13 +268,13 @@ const TimelineActivityFeed: React.FC<Props> = ({
                                 activity.changed_by.username[0]
                               : "S"}
                           </Avatar>
-                          <span style={{ fontSize: 12, fontWeight: 500 }}>
+                          <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 500 }}>
                             {activity.changed_by
                               ? activity.changed_by.first_name ||
                                 activity.changed_by.username
                               : t('activity.system')}
                           </span>
-                          <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
+                          <span style={{ fontSize: 'var(--fs-sm)', color: "var(--color-text-muted)" }}>
                             {t('activity.updated')}{" "}
                             <span style={{ color: color, fontWeight: 500 }}>
                               {formatFieldName(activity.field)}
@@ -285,7 +285,7 @@ const TimelineActivityFeed: React.FC<Props> = ({
                         {/* Ticket info */}
                         <div
                           style={{
-                            fontSize: 11,
+                            fontSize: 'var(--fs-xs)',
                             color: "var(--color-text-secondary)",
                             marginBottom: 4,
                             overflow: "hidden",
@@ -314,7 +314,7 @@ const TimelineActivityFeed: React.FC<Props> = ({
                               display: "flex",
                               alignItems: "center",
                               gap: 6,
-                              fontSize: 11,
+                              fontSize: 'var(--fs-xs)',
                             }}
                           >
                             <span
@@ -357,7 +357,7 @@ const TimelineActivityFeed: React.FC<Props> = ({
                       >
                         <span
                           style={{
-                            fontSize: 10,
+                            fontSize: 'var(--fs-2xs)',
                             color: "#bfbfbf",
                             flexShrink: 0,
                             marginLeft: 8,

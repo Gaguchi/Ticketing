@@ -431,7 +431,7 @@ const Users: React.FC = () => {
                 </Tag>
               )}
             </div>
-            <Text type="secondary" style={{ fontSize: 12 }}>
+            <Text type="secondary" style={{ fontSize: 'var(--fs-sm)' }}>
               @{record.username} • {record.email}
             </Text>
           </div>
@@ -503,7 +503,7 @@ const Users: React.FC = () => {
             }
           >
             <Badge count={totalCompanies} showZero>
-              <TeamOutlined style={{ fontSize: 20, color: "var(--color-primary)" }} />
+              <TeamOutlined style={{ fontSize: 'var(--fs-2xl)', color: "var(--color-primary)" }} />
             </Badge>
           </Tooltip>
         );
@@ -597,7 +597,7 @@ const Users: React.FC = () => {
           <Title level={3} style={{ margin: 0 }}>
             User Management
             {selectedProject && (
-              <Tag color="blue" style={{ marginLeft: 12, fontSize: 14 }}>
+              <Tag color="blue" style={{ marginLeft: 12, fontSize: 'var(--fs-base)' }}>
                 {selectedProject.name}
               </Tag>
             )}
