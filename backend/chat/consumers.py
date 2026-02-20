@@ -451,6 +451,6 @@ class ChatProjectConsumer(AsyncWebsocketConsumer):
         from tickets.models import Project
         return Project.objects.filter(
             id=self.project_id,
-            members__user=self.user
+            members=self.user
         ).exists()
 
