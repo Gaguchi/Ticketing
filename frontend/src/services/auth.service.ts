@@ -1,6 +1,7 @@
 /**
  * Authentication Service
- * Handles user authentication, registration, and token management
+ * Handles user authentication via httpOnly cookies
+ * Tokens are managed by the backend via httpOnly cookies - not accessible from JS
  */
 
 import { apiService } from './api.service';
@@ -8,60 +9,44 @@ import { API_ENDPOINTS } from '../config/api';
 import type {
   LoginCredentials,
   RegisterData,
-  AuthResponse,
   User,
-  RefreshTokenResponse,
 } from '../types/api';
 
+// Helper to read a specific cookie value
+function getCookie(name: string): string | null {
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return match ? decodeURIComponent(match[2]) : null;
+}
+
 class AuthService {
-  private readonly ACCESS_TOKEN_KEY = 'access_token';
-  private readonly REFRESH_TOKEN_KEY = 'refresh_token';
   private readonly USER_KEY = 'user';
 
   /**
-   * Login user
+   * Login user - tokens are set as httpOnly cookies by the backend
    */
-  async login(credentials: LoginCredentials): Promise<AuthResponse> {
+  async login(credentials: LoginCredentials): Promise<{ user: User }> {
     const response = await apiService.post<any>(
       API_ENDPOINTS.AUTH_LOGIN,
       credentials
     );
-    
-    // Handle both response formats: {tokens: {access, refresh}} or {access, refresh}
-    const access = response.tokens?.access || response.access;
-    const refresh = response.tokens?.refresh || response.refresh;
-    
-    this.setTokens(access, refresh);
+
     this.setUser(response.user);
-    
-    // Return normalized format
-    return {
-      user: response.user,
-      tokens: { access, refresh }
-    };
+
+    return { user: response.user };
   }
 
   /**
-   * Register new user
+   * Register new user - tokens are set as httpOnly cookies by the backend
    */
-  async register(data: RegisterData): Promise<AuthResponse> {
+  async register(data: RegisterData): Promise<{ user: User }> {
     const response = await apiService.post<any>(
       API_ENDPOINTS.AUTH_REGISTER,
       data
     );
-    
-    // Handle both response formats: {tokens: {access, refresh}} or {access, refresh}
-    const access = response.tokens?.access || response.access;
-    const refresh = response.tokens?.refresh || response.refresh;
-    
-    this.setTokens(access, refresh);
+
     this.setUser(response.user);
-    
-    // Return normalized format
-    return {
-      user: response.user,
-      tokens: { access, refresh }
-    };
+
+    return { user: response.user };
   }
 
   /**
@@ -79,26 +64,15 @@ class AuthService {
   }
 
   /**
-   * Logout user
+   * Logout user - clears httpOnly cookies via API call
    */
-  logout(): void {
-    localStorage.removeItem(this.ACCESS_TOKEN_KEY);
-    localStorage.removeItem(this.REFRESH_TOKEN_KEY);
+  async logout(): Promise<void> {
+    try {
+      await apiService.post(API_ENDPOINTS.AUTH_LOGOUT);
+    } catch {
+      // Even if API call fails, clear local state
+    }
     localStorage.removeItem(this.USER_KEY);
-  }
-
-  /**
-   * Get access token
-   */
-  getAccessToken(): string | null {
-    return localStorage.getItem(this.ACCESS_TOKEN_KEY);
-  }
-
-  /**
-   * Get refresh token
-   */
-  getRefreshToken(): string | null {
-    return localStorage.getItem(this.REFRESH_TOKEN_KEY);
   }
 
   /**
@@ -110,18 +84,10 @@ class AuthService {
   }
 
   /**
-   * Check if user is authenticated
+   * Check if user is authenticated (via non-httpOnly is_authenticated cookie)
    */
   isAuthenticated(): boolean {
-    return !!this.getAccessToken();
-  }
-
-  /**
-   * Set tokens in localStorage
-   */
-  private setTokens(access: string, refresh: string): void {
-    localStorage.setItem(this.ACCESS_TOKEN_KEY, access);
-    localStorage.setItem(this.REFRESH_TOKEN_KEY, refresh);
+    return getCookie('is_authenticated') === 'true';
   }
 
   /**
@@ -132,22 +98,11 @@ class AuthService {
   }
 
   /**
-   * Refresh access token
+   * Refresh access token via httpOnly cookie
+   * Backend reads refresh_token cookie and sets new access_token cookie
    */
-  async refreshToken(): Promise<string> {
-    const refreshToken = this.getRefreshToken();
-    
-    if (!refreshToken) {
-      throw new Error('No refresh token available');
-    }
-
-    const response = await apiService.post<RefreshTokenResponse>(
-      API_ENDPOINTS.AUTH_TOKEN_REFRESH,
-      { refresh: refreshToken }
-    );
-
-    localStorage.setItem(this.ACCESS_TOKEN_KEY, response.access);
-    return response.access;
+  async refreshToken(): Promise<void> {
+    await apiService.post(API_ENDPOINTS.AUTH_TOKEN_REFRESH);
   }
 }
 

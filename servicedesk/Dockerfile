@@ -15,15 +15,22 @@ COPY . .
 # Use dokploy.env for production if it exists, otherwise use .env
 RUN if [ -f dokploy.env ]; then cp dokploy.env .env; fi
 
-# Build argument for API URL (can be overridden at build time)
+# Build arguments (can be overridden at build time)
 ARG VITE_API_BASE_URL
+ARG VITE_WS_BASE_URL
+ARG VITE_APP_NAME="Service Desk"
+ARG VITE_APP_VERSION=1.0.0
+
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
+ENV VITE_WS_BASE_URL=${VITE_WS_BASE_URL}
+ENV VITE_APP_NAME=${VITE_APP_NAME}
+ENV VITE_APP_VERSION=${VITE_APP_VERSION}
 
 # Build the application
 RUN npm run build
 
 # Production stage
-FROM nginx:alpine
+FROM nginx:1.26.2-alpine
 
 # Copy built files from build stage
 COPY --from=build /app/dist /usr/share/nginx/html

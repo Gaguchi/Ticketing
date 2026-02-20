@@ -41,6 +41,11 @@ COPY celery-entrypoint.sh /app/celery-entrypoint.sh
 COPY manual_archive.py /app/manual_archive.py
 RUN chmod +x /app/celery-entrypoint.sh
 
+# Create non-root user for security
+RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser && \
+    chown -R appuser:appgroup /app
+USER appuser
+
 # Expose no ports - Celery doesn't need external access
 
 # Health check - verify celery is running

@@ -23,19 +23,8 @@ class TabSync {
     this.listeners.forEach((callback) => callback(event));
 
     // Handle specific events
-    if (event.key === 'access_token' && event.newValue) {
-      // Token was updated in another tab - current tab will use it automatically
-    }
-
-    if (event.key === 'access_token' && event.newValue === null) {
-      // Token was removed (logout) in another tab
-      window.location.href = '/login';
-    }
-
     if (event.key === 'logout_event') {
-      // Explicit logout signal
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
+      // Explicit logout signal from another tab
       localStorage.removeItem('user');
       window.location.href = '/login';
     }
@@ -53,10 +42,10 @@ class TabSync {
 
   /**
    * Broadcast token refresh to all tabs
+   * With httpOnly cookies, tokens are managed by the browser automatically
    */
-  broadcastTokenRefresh(token: string) {
-    // Updating localStorage will trigger storage event in other tabs
-    localStorage.setItem('access_token', token);
+  broadcastTokenRefresh() {
+    // No-op: httpOnly cookies are shared across tabs automatically
   }
 
   /**

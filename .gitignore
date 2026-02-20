@@ -38,6 +38,8 @@ db.sqlite3-journal
 .env
 .env.local
 .env.*.local
+.env.production
+dokploy.env
 
 # IDE
 .vscode/

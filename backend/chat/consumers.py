@@ -68,9 +68,27 @@ class ChatConsumer(AsyncWebsocketConsumer):
     
     async def receive(self, text_data):
         """Handle incoming WebSocket messages."""
-        data = json.loads(text_data)
+        # Reject oversized messages (max 64KB)
+        if len(text_data) > 65536:
+            await self.send(text_data=json_dumps({
+                'type': 'error',
+                'message': 'Message too large'
+            }))
+            return
+
+        try:
+            data = json.loads(text_data)
+        except json.JSONDecodeError:
+            await self.send(text_data=json_dumps({
+                'type': 'error',
+                'message': 'Invalid JSON'
+            }))
+            return
+
         event_type = data.get('type')
-        
+        if not isinstance(event_type, str):
+            return
+
         if event_type == 'message_send':
             await self.handle_message_send(data)
         elif event_type == 'message_edit':
@@ -88,7 +106,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
         """Handle sending a new message."""
         content = data.get('content', '')
         message_type = data.get('message_type', 'text')
-        
+
+        # Validate content length (max 10000 chars)
+        if len(content) > 10000:
+            await self.send(text_data=json_dumps({
+                'type': 'error',
+                'message': 'Message content too long'
+            }))
+            return
+
         # Save message to database and get room info for broadcasting
         message, room_data = await self.create_message(content, message_type)
         
@@ -116,7 +142,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
         """Handle editing a message."""
         message_id = data.get('message_id')
         new_content = data.get('content')
-        
+
+        # Validate content
+        if not new_content or not isinstance(new_content, str) or len(new_content) > 10000:
+            return
+
         # Update message in database
         message = await self.edit_message(message_id, new_content)
         
@@ -393,7 +423,12 @@ class ChatProjectConsumer(AsyncWebsocketConsumer):
     
     async def receive(self, text_data):
         """Handle incoming messages (ping/pong for keepalive)."""
-        data = json.loads(text_data)
+        if len(text_data) > 1024:
+            return
+        try:
+            data = json.loads(text_data)
+        except json.JSONDecodeError:
+            return
         if data.get('type') == 'ping':
             await self.send(text_data=json_dumps({
                 'type': 'pong',

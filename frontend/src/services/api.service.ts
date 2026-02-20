@@ -44,8 +44,8 @@ class APIService {
    * Get authorization header with JWT token
    */
   private getAuthHeader(): Record<string, string> {
-    const token = localStorage.getItem('access_token');
-    return token ? { Authorization: `Bearer ${token}` } : {};
+    // Auth is handled via httpOnly cookies sent automatically with credentials: 'include'
+    return {};
   }
 
   /**
@@ -156,7 +156,7 @@ class APIService {
         // If refresh endpoint failed, logout immediately
         if (isRefreshEndpoint && (response.status === 401 || response.status === 403)) {
           console.error('❌ [APIService] Refresh token invalid, logging out...');
-          authService.logout();
+          authService.logout().catch(() => {});
           window.location.href = '/login';
         }
 
@@ -214,16 +214,13 @@ class APIService {
    */
   async postFormData<T>(url: string, formData: FormData): Promise<T> {
     // Don't set Content-Type header for FormData - browser will set it with boundary
-    const authHeader = this.getAuthHeader();
     const projectHeader = this.getProjectHeader();
 
     return this.request<T>(url, {
       method: 'POST',
       body: formData,
       headers: {
-        ...authHeader,
         ...projectHeader,
-        // Don't include Content-Type for FormData
       },
     });
   }
@@ -233,16 +230,13 @@ class APIService {
    */
   async patchFormData<T>(url: string, formData: FormData): Promise<T> {
     // Don't set Content-Type header for FormData - browser will set it with boundary
-    const authHeader = this.getAuthHeader();
     const projectHeader = this.getProjectHeader();
 
     return this.request<T>(url, {
       method: 'PATCH',
       body: formData,
       headers: {
-        ...authHeader,
         ...projectHeader,
-        // Don't include Content-Type for FormData
       },
     });
   }

@@ -58,25 +58,28 @@ class StorageService {
   }
 
   // ============ TOKEN MANAGEMENT ============
+  // Tokens are now stored in httpOnly cookies managed by the backend.
+  // These methods are kept for backward compatibility but are no-ops.
   getAccessToken(): string | null {
-    return localStorage.getItem(StorageKeys.ACCESS_TOKEN);
+    // Check is_authenticated cookie instead
+    const match = document.cookie.match(/(^| )is_authenticated=([^;]+)/);
+    return match ? 'cookie-auth' : null;
   }
 
-  setAccessToken(token: string): void {
-    localStorage.setItem(StorageKeys.ACCESS_TOKEN, token);
+  setAccessToken(_token: string): void {
+    // No-op: tokens managed by httpOnly cookies
   }
 
   getRefreshToken(): string | null {
-    return localStorage.getItem(StorageKeys.REFRESH_TOKEN);
+    return null; // httpOnly cookie, not accessible from JS
   }
 
-  setRefreshToken(token: string): void {
-    localStorage.setItem(StorageKeys.REFRESH_TOKEN, token);
+  setRefreshToken(_token: string): void {
+    // No-op: tokens managed by httpOnly cookies
   }
 
   clearTokens(): void {
-    this.remove(StorageKeys.ACCESS_TOKEN);
-    this.remove(StorageKeys.REFRESH_TOKEN);
+    // No-op: tokens cleared by backend logout endpoint
   }
 
   // ============ USER MANAGEMENT ============
@@ -172,7 +175,6 @@ class StorageService {
 
   // ============ CLEAR ALL ============
   clearAll(): void {
-    this.clearTokens();
     this.clearUser();
     this.clearSelectedProjectId();
   }

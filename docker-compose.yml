@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # PostgreSQL Database
   db:
@@ -8,36 +6,45 @@ services:
     environment:
       POSTGRES_DB: ticketing
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres123
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres123}
+      POSTGRES_INITDB_ARGS: "--auth-host=md5"
+    # Disable fsync for faster init on Docker Desktop (dev only, NOT for production)
+    command: postgres -c fsync=off -c full_page_writes=off
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+    # ports:
+    #   - "5432:5432"  # Uncomment if you need direct host access to DB
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ticketing"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 30
+      start_period: 120s
+    restart: unless-stopped
+    stop_grace_period: 120s
+    shm_size: 128mb
     networks:
       - ticketing_network
 
-  # Redis for Django Channels
+  # Redis for Django Channels + Celery broker
   redis:
     image: redis:7-alpine
     container_name: ticketing_redis
-    ports:
-      - "6379:6379"
+    # ports:
+    #   - "6379:6379"  # Uncomment if you need direct host access to Redis
     volumes:
       - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
+      interval: 5s
       timeout: 3s
-      retries: 5
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
     networks:
       - ticketing_network
 
-  # Django Backend (with Daphne for WebSockets)
+  # Django Backend (Daphne ASGI server for WebSockets)
   backend:
     build:
       context: ./backend
@@ -49,56 +56,147 @@ services:
       DB_PORT: 5432
       DB_NAME: ticketing
       DB_USER: postgres
-      DB_PASSWORD: postgres123
-      
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres123}
+
       # Django
-      DEBUG: "False"
-      SECRET_KEY: "your-secret-key-change-in-production"
+      DEBUG: "True"
+      SECRET_KEY: ${SECRET_KEY:-docker-dev-secret-key-change-in-production}
       ALLOWED_HOSTS: "localhost,127.0.0.1,backend"
-      
-      # CORS
-      CORS_ALLOWED_ORIGINS: "http://localhost:5173,http://localhost:3000,http://localhost:80"
-      
-      # Redis for Channels
+
+      # CORS - allow both frontend ports
+      CORS_ALLOWED_ORIGINS: "http://localhost:5178,http://localhost:3001"
+
+      # Redis
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      
+
+      # Celery
+      CELERY_BROKER_URL: "redis://redis:6379/0"
+      CELERY_RESULT_BACKEND: "redis://redis:6379/0"
+
       # JWT
       ACCESS_TOKEN_LIFETIME_MINUTES: 60
       REFRESH_TOKEN_LIFETIME_DAYS: 7
     volumes:
       - ./backend:/app
       - static_volume:/app/staticfiles
-      - media_volume:/app/media  # Persistent storage for uploaded files (logos, attachments)
+      - media_volume:/app/media
     ports:
-      - "8000:8000"
+      - "8002:8000"
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
+    restart: unless-stopped
     command: >
-      sh -c "python manage.py migrate &&
+      sh -c "python manage.py migrate --noinput &&
              python manage.py collectstatic --noinput &&
+             python manage.py shell -c \"from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.filter(username='admin').exists() or User.objects.create_superuser('admin', 'admin@example.com', 'admin123')\" &&
              daphne -b 0.0.0.0 -p 8000 config.asgi:application"
     networks:
       - ticketing_network
 
-  # React Frontend
+  # React Frontend (Admin App)
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        VITE_API_BASE_URL: http://localhost:8000
-        VITE_WS_BASE_URL: ws://localhost:8000
+        VITE_API_BASE_URL: http://localhost:8002
+        VITE_WS_BASE_URL: ws://localhost:8002
         VITE_APP_NAME: "Ticketing System"
         VITE_APP_VERSION: "1.0.0"
     container_name: ticketing_frontend
     ports:
-      - "80:80"
+      - "5178:80"
     depends_on:
       - backend
+    restart: unless-stopped
+    networks:
+      - ticketing_network
+
+  # React ServiceDesk (Client Portal)
+  servicedesk:
+    build:
+      context: ./servicedesk
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: http://localhost:8002
+        VITE_WS_BASE_URL: ws://localhost:8002
+        VITE_APP_NAME: "Service Desk"
+        VITE_APP_VERSION: "1.0.0"
+    container_name: ticketing_servicedesk
+    ports:
+      - "3001:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - ticketing_network
+
+  # Celery Worker - processes background tasks
+  celery-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ticketing_celery_worker
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ticketing
+      DB_USER: postgres
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres123}
+      DEBUG: "True"
+      SECRET_KEY: ${SECRET_KEY:-docker-dev-secret-key-change-in-production}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      CELERY_BROKER_URL: "redis://redis:6379/0"
+      CELERY_RESULT_BACKEND: "redis://redis:6379/0"
+      TICKET_ARCHIVE_AFTER_HOURS: 24
+    volumes:
+      - ./backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_started
+    restart: unless-stopped
+    command: celery -A config worker --loglevel=info --pool=solo
+    networks:
+      - ticketing_network
+
+  # Celery Beat - schedules periodic tasks
+  celery-beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ticketing_celery_beat
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ticketing
+      DB_USER: postgres
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres123}
+      DEBUG: "True"
+      SECRET_KEY: ${SECRET_KEY:-docker-dev-secret-key-change-in-production}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      CELERY_BROKER_URL: "redis://redis:6379/0"
+      CELERY_RESULT_BACKEND: "redis://redis:6379/0"
+    volumes:
+      - ./backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_started
+    restart: unless-stopped
+    command: celery -A config beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
     networks:
       - ticketing_network
 

@@ -7,13 +7,12 @@ import React, {
 } from "react";
 import { authService } from "../services/auth.service";
 import { tabSync } from "../utils/tab-sync";
-import { getRefreshTime, isTokenExpired } from "../utils/jwt-decoder";
 import type { User } from "../types/api";
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
-  login: (token: string, user: User) => void;
+  login: (user: User) => void;
   logout: () => void;
   refreshUser: () => Promise<void>;
   isAuthenticated: boolean;
@@ -28,9 +27,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const initRef = useRef(false); // Prevent double initialization in React Strict Mode
-  const lastFetchRef = useRef<number>(0); // Track last fetch time
-  const refreshTimeoutRef = useRef<number | null>(null); // Token refresh timer
+  const initRef = useRef(false);
+  const lastFetchRef = useRef<number>(0);
+  const refreshIntervalRef = useRef<number | null>(null);
 
   // Initialize multi-tab synchronization
   useEffect(() => {
@@ -38,106 +37,52 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     return () => tabSync.destroy();
   }, []);
 
-  // Proactive token refresh scheduler
+  // Periodic token refresh (since we can't decode httpOnly cookies)
   useEffect(() => {
-    const scheduleTokenRefresh = () => {
-      // Clear any existing timeout
-      if (refreshTimeoutRef.current) {
-        clearTimeout(refreshTimeoutRef.current);
-        refreshTimeoutRef.current = null;
-      }
-
-      const accessToken = authService.getAccessToken();
-      if (!accessToken) {
-        return;
-      }
-
-      // Check if token is already expired
-      if (isTokenExpired(accessToken)) {
-        return;
-      }
-
-      // Calculate when to refresh (10 minutes before expiry)
-      const refreshIn = getRefreshTime(accessToken, 10);
-
-      if (refreshIn <= 0) {
-        refreshTokenProactively();
-        return;
-      }
-
-      refreshTimeoutRef.current = setTimeout(() => {
-        refreshTokenProactively();
-      }, refreshIn);
-    };
-
-    const refreshTokenProactively = async () => {
-      try {
-        const newToken = await authService.refreshToken();
-
-        setToken(newToken);
-
-        // Broadcast to other tabs
-        tabSync.broadcastTokenRefresh(newToken);
-
-        // Schedule next refresh
-        scheduleTokenRefresh();
-      } catch (error) {
-        console.error("❌ [AuthContext] Failed to refresh token:", error);
-        // Let the 401 interceptor handle it on next request
-      }
-    };
-
-    // Schedule refresh when token changes
     if (token) {
-      scheduleTokenRefresh();
+      // Refresh every 20 minutes (tokens last 24 hours but refresh proactively)
+      refreshIntervalRef.current = window.setInterval(async () => {
+        try {
+          await authService.refreshToken();
+        } catch {
+          // Let the 401 interceptor handle it on next request
+        }
+      }, 20 * 60 * 1000);
     }
 
-    // Cleanup timeout on unmount
     return () => {
-      if (refreshTimeoutRef.current) {
-        clearTimeout(refreshTimeoutRef.current);
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
       }
     };
   }, [token]);
 
   useEffect(() => {
-    // Prevent duplicate initialization in React Strict Mode
-    if (initRef.current) {
-      return;
-    }
+    if (initRef.current) return;
     initRef.current = true;
 
-    // Check for stored auth on mount and fetch fresh user data
     const initAuth = async () => {
-      const storedToken = authService.getAccessToken();
+      const isAuth = authService.isAuthenticated();
       const storedUser = authService.getUser();
 
-      if (storedToken && storedUser) {
-        setToken(storedToken);
+      if (isAuth && storedUser) {
+        setToken('cookie-auth');
         setUser(storedUser);
 
-        // Check if we need to fetch fresh data (cache for 5 minutes)
         const now = Date.now();
         const fiveMinutes = 5 * 60 * 1000;
-        const timeSinceLastFetch = now - lastFetchRef.current;
-
-        if (timeSinceLastFetch < fiveMinutes && lastFetchRef.current > 0) {
+        if (now - lastFetchRef.current < fiveMinutes && lastFetchRef.current > 0) {
           setLoading(false);
           return;
         }
 
-        // Fetch fresh user data from API to get updated projects/companies
         try {
           const freshUser = await authService.getCurrentUser();
           lastFetchRef.current = Date.now();
           setUser(freshUser);
           localStorage.setItem("user", JSON.stringify(freshUser));
-        } catch (error) {
-          console.error(
-            "🔐 [AuthContext] Failed to fetch fresh user data:",
-            error
-          );
-          // Keep the stored user if API call fails
+        } catch {
+          // Keep stored user if API call fails
         }
       }
 
@@ -147,23 +92,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     initAuth();
   }, []);
 
-  const login = (newToken: string, newUser: User) => {
-    setToken(newToken);
+  const login = (newUser: User) => {
+    setToken('cookie-auth');
     setUser(newUser);
   };
 
-  const logout = () => {
-    // Clear refresh timer
-    if (refreshTimeoutRef.current) {
-      clearTimeout(refreshTimeoutRef.current);
-      refreshTimeoutRef.current = null;
+  const logout = async () => {
+    if (refreshIntervalRef.current) {
+      clearInterval(refreshIntervalRef.current);
+      refreshIntervalRef.current = null;
     }
 
-    // Broadcast logout to all tabs
     tabSync.broadcastLogout();
-
-    // Clear local state
-    authService.logout();
+    await authService.logout();
     setToken(null);
     setUser(null);
   };
@@ -172,7 +113,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     try {
       const freshUser = await authService.getCurrentUser();
       setUser(freshUser);
-      // Update stored user
       localStorage.setItem("user", JSON.stringify(freshUser));
     } catch (error) {
       console.error("Failed to refresh user:", error);
@@ -185,7 +125,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     login,
     logout,
     refreshUser,
-    isAuthenticated: !!token && !!user,
+    isAuthenticated: !!user,
     loading,
   };
 

@@ -59,14 +59,14 @@ const Register: React.FC = () => {
       const response = await authService.register(registerData);
 
       // Update auth context with initial registration response
-      login(response.tokens.access, response.user);
+      login(response.user);
 
       // Immediately fetch fresh user data to get projects
       // The registration response doesn't always include projects, but /auth/me/ does
       const freshUser = await authService.getCurrentUser();
 
       // Update auth context again with fresh data that includes projects
-      login(response.tokens.access, freshUser);
+      login(freshUser);
 
       // Navigate based on whether user has projects
       // Use the freshUser we just fetched instead of making another API call

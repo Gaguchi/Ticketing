@@ -1,13 +1,12 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from rest_framework_simplejwt.views import TokenRefreshView
 from .views import (
     TicketViewSet, ColumnViewSet, ProjectViewSet, CommentViewSet, AttachmentViewSet,
     TagViewSet, ContactViewSet, TagContactViewSet, UserTagViewSet, TicketTagViewSet,
     IssueLinkViewSet, CompanyViewSet, UserManagementViewSet, TicketSubtaskViewSet,
     NotificationViewSet, ProjectInvitationViewSet, StatusViewSet, BoardColumnViewSet,
     UserReviewViewSet,
-    register_user, login_user, get_current_user,
+    register_user, login_user, get_current_user, logout_user, refresh_token_cookie,
     # Dashboard views
     dashboard_company_health, dashboard_attention_needed, dashboard_newest_tickets,
     dashboard_live_activity, dashboard_agent_workload, dashboard_kanban_summary
@@ -42,8 +41,9 @@ urlpatterns = [
     # Authentication endpoints
     path('auth/register/', register_user, name='register'),
     path('auth/login/', login_user, name='login'),
+    path('auth/logout/', logout_user, name='logout'),
     path('auth/me/', get_current_user, name='current-user'),
-    path('auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('auth/token/refresh/', refresh_token_cookie, name='token_refresh'),
     
     # Dashboard endpoints
     path('dashboard/company-health/', dashboard_company_health, name='dashboard-company-health'),

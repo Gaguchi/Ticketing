@@ -2,19 +2,11 @@ import { API_HEADERS, API_BASE_URL } from '../config/api';
 
 class ApiService {
   private isRefreshing = false;
-  private refreshPromise: Promise<string | null> | null = null;
+  private refreshPromise: Promise<boolean> | null = null;
 
-  private getAuthHeaders(url?: string): HeadersInit {
-    // Don't send auth token for login endpoint to avoid 403 if token is invalid
-    if (url && (url.includes('/auth/login/') || url.includes('/auth/token/refresh/'))) {
-      return API_HEADERS;
-    }
-
-    const token = localStorage.getItem('access_token');
-    return {
-      ...API_HEADERS,
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-    };
+  private getHeaders(): HeadersInit {
+    // Auth is handled via httpOnly cookies sent with credentials: 'include'
+    return API_HEADERS;
   }
 
   /**
@@ -28,18 +20,22 @@ class ApiService {
   }
 
   /**
-   * Attempt to refresh the access token using the refresh token
+   * Get the logout endpoint URL
    */
-  private async refreshToken(): Promise<string | null> {
+  private getLogoutEndpoint(): string {
+    if (API_BASE_URL) {
+      return `${API_BASE_URL}/api/tickets/auth/logout/`;
+    }
+    return '/api/tickets/auth/logout/';
+  }
+
+  /**
+   * Attempt to refresh the access token using the httpOnly refresh cookie
+   */
+  private async refreshToken(): Promise<boolean> {
     // If already refreshing, wait for that to complete
     if (this.isRefreshing && this.refreshPromise) {
       return this.refreshPromise;
-    }
-
-    const refreshToken = localStorage.getItem('refresh_token');
-    if (!refreshToken) {
-      console.error('❌ [ApiService] No refresh token available');
-      return null;
     }
 
     this.isRefreshing = true;
@@ -49,27 +45,19 @@ class ApiService {
         const response = await fetch(this.getRefreshEndpoint(), {
           method: 'POST',
           headers: API_HEADERS,
-          body: JSON.stringify({ refresh: refreshToken }),
+          credentials: 'include',
         });
 
         if (!response.ok) {
           console.error('❌ [ApiService] Token refresh failed:', response.status);
-          return null;
+          return false;
         }
 
-        const data = await response.json();
-        const newAccessToken = data.access;
-
-        if (newAccessToken) {
-          localStorage.setItem('access_token', newAccessToken);
-          console.log('✅ [ApiService] Token refreshed successfully');
-          return newAccessToken;
-        }
-
-        return null;
+        console.log('✅ [ApiService] Token refreshed successfully');
+        return true;
       } catch (error) {
         console.error('❌ [ApiService] Token refresh error:', error);
-        return null;
+        return false;
       } finally {
         this.isRefreshing = false;
         this.refreshPromise = null;
@@ -82,10 +70,17 @@ class ApiService {
   /**
    * Clear auth and redirect to login
    */
-  private handleAuthFailure(): void {
+  private async handleAuthFailure(): Promise<void> {
     console.log('🔒 [ApiService] Auth failure, redirecting to login...');
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
+    try {
+      await fetch(this.getLogoutEndpoint(), {
+        method: 'POST',
+        headers: API_HEADERS,
+        credentials: 'include',
+      });
+    } catch {
+      // Ignore logout errors
+    }
     localStorage.removeItem('user');
     window.location.href = '/login';
   }
@@ -94,9 +89,10 @@ class ApiService {
     const response = await fetch(url, {
       ...options,
       headers: {
-        ...this.getAuthHeaders(url),
+        ...this.getHeaders(),
         ...options.headers,
       },
+      credentials: 'include',
     });
 
     // Check for auth errors (401 or 403 with token_not_valid)
@@ -108,23 +104,21 @@ class ApiService {
         // Check if it's a token error (try to parse response)
         const errorData = await response.clone().json().catch(() => ({}));
 
-        // 401 is almost always a token error. 
-        // 403 is only a token error if specifically stated (e.g. token_not_valid).
         const isTokenError = response.status === 401 ||
           errorData.code === 'token_not_valid' ||
           errorData.detail?.includes('token');
 
         if (isTokenError) {
           // Try to refresh the token
-          const newToken = await this.refreshToken();
+          const success = await this.refreshToken();
 
-          if (newToken) {
-            // Retry the original request with new token
+          if (success) {
+            // Retry the original request with new cookie
             console.log('🔄 [ApiService] Retrying request after token refresh');
             return this.request<T>(url, options, true);
           }
           // Refresh failed - logout
-          this.handleAuthFailure();
+          await this.handleAuthFailure();
           throw new Error('Unauthorized');
         }
       }
@@ -136,7 +130,7 @@ class ApiService {
 
       // 401 (refresh failed or not applicable) - logout
       if (response.status === 401) {
-        this.handleAuthFailure();
+        await this.handleAuthFailure();
         throw new Error('Unauthorized');
       }
     }
@@ -151,7 +145,6 @@ class ApiService {
 
       const error = await response.json().catch(() => ({ error: 'Request failed' }));
       console.error('API Error Response:', error);
-      // Try to extract the most helpful error message
       const errorMessage = error.error || error.detail || error.message ||
         (typeof error === 'object' ? JSON.stringify(error) : 'Request failed');
       throw new Error(errorMessage);
@@ -190,7 +183,6 @@ class ApiService {
   }
 
   async uploadFile<T>(url: string, file: File, additionalData?: Record<string, any>): Promise<T> {
-    const token = localStorage.getItem('access_token');
     const formData = new FormData();
     formData.append('file', file);
 
@@ -202,10 +194,8 @@ class ApiService {
 
     const response = await fetch(url, {
       method: 'POST',
-      headers: {
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-      },
       body: formData,
+      credentials: 'include',
     });
 
     if (!response.ok) {
@@ -217,14 +207,10 @@ class ApiService {
   }
 
   async postFormData<T>(url: string, formData: FormData): Promise<T> {
-    const token = localStorage.getItem('access_token');
-
     const response = await fetch(url, {
       method: 'POST',
-      headers: {
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-      },
       body: formData,
+      credentials: 'include',
     });
 
     if (!response.ok) {

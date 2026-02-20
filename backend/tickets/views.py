@@ -36,6 +36,45 @@ from .email_service import send_invitation_email
 from .services import auto_archive_completed_tickets
 
 
+def _set_auth_cookies(response, access_token, refresh_token):
+    """Set httpOnly JWT cookies on response."""
+    from django.conf import settings as s
+    from datetime import timedelta
+
+    access_max_age = int(s.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'].total_seconds())
+    refresh_max_age = int(s.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'].total_seconds())
+
+    response.set_cookie(
+        s.JWT_AUTH_COOKIE,
+        access_token,
+        httponly=True,
+        secure=s.JWT_AUTH_COOKIE_SECURE,
+        samesite=s.JWT_AUTH_COOKIE_SAMESITE,
+        max_age=access_max_age,
+        path='/',
+    )
+    response.set_cookie(
+        s.JWT_AUTH_REFRESH_COOKIE,
+        refresh_token,
+        httponly=True,
+        secure=s.JWT_AUTH_COOKIE_SECURE,
+        samesite=s.JWT_AUTH_COOKIE_SAMESITE,
+        max_age=refresh_max_age,
+        path='/',
+    )
+    # Non-httpOnly flag so frontend JS can detect auth state
+    response.set_cookie(
+        'is_authenticated',
+        'true',
+        httponly=False,
+        secure=s.JWT_AUTH_COOKIE_SECURE,
+        samesite=s.JWT_AUTH_COOKIE_SAMESITE,
+        max_age=refresh_max_age,
+        path='/',
+    )
+    return response
+
+
 TRUE_VALUES = {'true', '1', 'yes', 'on'}
 FALSE_VALUES = {'false', '0', 'no', 'off'}
 
@@ -84,8 +123,8 @@ def register_user(request):
     
     # Generate tokens
     refresh = RefreshToken.for_user(user)
-    
-    return Response({
+
+    response = Response({
         'user': {
             'id': user.id,
             'username': user.username,
@@ -93,9 +132,10 @@ def register_user(request):
             'first_name': user.first_name,
             'last_name': user.last_name,
         },
-        'access': str(refresh.access_token),
-        'refresh': str(refresh),
     }, status=status.HTTP_201_CREATED)
+
+    _set_auth_cookies(response, str(refresh.access_token), str(refresh))
+    return response
 
 
 @api_view(['POST'])
@@ -123,8 +163,8 @@ def login_user(request):
     
     # Generate tokens
     refresh = RefreshToken.for_user(user)
-    
-    return Response({
+
+    response = Response({
         'user': {
             'id': user.id,
             'username': user.username,
@@ -132,9 +172,10 @@ def login_user(request):
             'first_name': user.first_name,
             'last_name': user.last_name,
         },
-        'access': str(refresh.access_token),
-        'refresh': str(refresh),
     })
+
+    _set_auth_cookies(response, str(refresh.access_token), str(refresh))
+    return response
 
 
 @api_view(['GET'])
@@ -197,6 +238,58 @@ def get_current_user(request):
         'has_companies': all_companies.exists(),
         'is_it_admin': admin_companies.exists(),
     })
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def logout_user(request):
+    """Clear auth cookies to log out user."""
+    response = Response({'status': 'logged out'})
+    response.delete_cookie('access_token', path='/')
+    response.delete_cookie('refresh_token', path='/')
+    response.delete_cookie('is_authenticated', path='/')
+    return response
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def refresh_token_cookie(request):
+    """Refresh JWT tokens using httpOnly cookie."""
+    from rest_framework_simplejwt.tokens import RefreshToken as RefToken
+    from rest_framework_simplejwt.exceptions import TokenError as TError
+
+    refresh_token_str = request.COOKIES.get('refresh_token')
+    if not refresh_token_str:
+        return Response(
+            {'error': 'No refresh token cookie'},
+            status=status.HTTP_401_UNAUTHORIZED
+        )
+
+    try:
+        refresh = RefToken(refresh_token_str)
+        new_access = str(refresh.access_token)
+
+        # Rotate refresh token if configured
+        from django.conf import settings as s
+        if s.SIMPLE_JWT.get('ROTATE_REFRESH_TOKENS', False):
+            refresh.set_jti()
+            refresh.set_exp()
+            new_refresh = str(refresh)
+        else:
+            new_refresh = refresh_token_str
+
+        response = Response({'status': 'refreshed'})
+        _set_auth_cookies(response, new_access, new_refresh)
+        return response
+    except TError:
+        response = Response(
+            {'error': 'Invalid refresh token'},
+            status=status.HTTP_401_UNAUTHORIZED
+        )
+        response.delete_cookie('access_token', path='/')
+        response.delete_cookie('refresh_token', path='/')
+        response.delete_cookie('is_authenticated', path='/')
+        return response
 
 
 # ==================== ViewSets ====================
@@ -2489,6 +2582,7 @@ class ColumnViewSet(viewsets.ModelViewSet):
     """
     ViewSet for Column CRUD operations
     """
+    permission_classes = [IsAuthenticated]
     queryset = Column.objects.all()
     serializer_class = ColumnSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
@@ -2570,6 +2664,7 @@ class CommentViewSet(viewsets.ModelViewSet):
     """
     ViewSet for Comment CRUD operations
     """
+    permission_classes = [IsAuthenticated]
     queryset = Comment.objects.select_related('user', 'ticket')
     serializer_class = CommentSerializer
     filter_backends = [DjangoFilterBackend]
@@ -2617,6 +2712,7 @@ class AttachmentViewSet(viewsets.ModelViewSet):
     """
     ViewSet for Attachment CRUD operations
     """
+    permission_classes = [IsAuthenticated]
     queryset = Attachment.objects.select_related('ticket', 'uploaded_by')
     serializer_class = AttachmentSerializer
     filter_backends = [DjangoFilterBackend]
@@ -2652,6 +2748,7 @@ class TagViewSet(viewsets.ModelViewSet):
     ViewSet for Tag CRUD operations.
     Only superadmins can create, edit, or delete tags.
     """
+    permission_classes = [IsAuthenticated]
     queryset = Tag.objects.select_related('project', 'created_by').prefetch_related(
         'tag_contacts__contact', 'tickets'
     )
@@ -2738,6 +2835,7 @@ class ContactViewSet(viewsets.ModelViewSet):
     """
     ViewSet for Contact CRUD operations
     """
+    permission_classes = [IsAuthenticated]
     queryset = Contact.objects.all()
     serializer_class = ContactSerializer
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
@@ -2758,6 +2856,7 @@ class TagContactViewSet(viewsets.ModelViewSet):
     """
     ViewSet for TagContact relationship management
     """
+    permission_classes = [IsAuthenticated]
     queryset = TagContact.objects.select_related('tag', 'contact', 'added_by')
     serializer_class = TagContactSerializer
     filter_backends = [DjangoFilterBackend]
@@ -2771,6 +2870,7 @@ class UserTagViewSet(viewsets.ModelViewSet):
     """
     ViewSet for UserTag relationship (team membership)
     """
+    permission_classes = [IsAuthenticated]
     queryset = UserTag.objects.select_related('user', 'tag', 'added_by')
     serializer_class = UserTagSerializer
     filter_backends = [DjangoFilterBackend]
@@ -2784,6 +2884,7 @@ class TicketTagViewSet(viewsets.ModelViewSet):
     """
     ViewSet for TicketTag relationship
     """
+    permission_classes = [IsAuthenticated]
     queryset = TicketTag.objects.select_related('ticket', 'tag', 'added_by')
     serializer_class = TicketTagSerializer
     filter_backends = [DjangoFilterBackend]
@@ -2797,6 +2898,7 @@ class IssueLinkViewSet(viewsets.ModelViewSet):
     """
     ViewSet for IssueLink (ticket relationships like 'blocks', 'relates to', etc.)
     """
+    permission_classes = [IsAuthenticated]
     queryset = IssueLink.objects.select_related(
         'source_ticket', 'target_ticket', 
         'source_ticket__project', 'target_ticket__project',
@@ -2814,6 +2916,7 @@ class TicketSubtaskViewSet(viewsets.ModelViewSet):
     """
     ViewSet for TicketSubtask - subtasks within tickets
     """
+    permission_classes = [IsAuthenticated]
     queryset = TicketSubtask.objects.select_related('ticket', 'assignee', 'created_by')
     serializer_class = TicketSubtaskSerializer
     filter_backends = [DjangoFilterBackend]
@@ -2871,6 +2974,7 @@ class IssueLinkViewSet(viewsets.ModelViewSet):
     """
     ViewSet for IssueLink - linked work items between tickets
     """
+    permission_classes = [IsAuthenticated]
     queryset = IssueLink.objects.select_related(
         'source_ticket', 'target_ticket', 'created_by',
         'source_ticket__project', 'target_ticket__project'

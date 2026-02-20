@@ -5,6 +5,7 @@ import secrets
 import os
 from datetime import timedelta
 from django.utils import timezone
+from .utils.validators import validate_file
 
 
 class UserRole(models.Model):
@@ -1157,6 +1158,7 @@ class Attachment(models.Model):
     ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name='attachments')
     file = models.FileField(
         upload_to='attachments/%Y/%m/%d/',
+        validators=[validate_file],
         help_text='Max 10MB. Allowed: images, PDF, Office docs, text, archives.'
     )
     filename = models.CharField(max_length=255)

@@ -1,6 +1,7 @@
 /**
  * Token Interceptor
  * Handles automatic token refresh on 401 errors with request retry
+ * Tokens are managed via httpOnly cookies
  */
 
 import { authService } from '../services/auth.service';
@@ -17,12 +18,12 @@ class TokenInterceptor {
   /**
    * Process queued requests after token refresh
    */
-  private processQueue(error: any = null, token: string | null = null) {
+  private processQueue(error: any = null) {
     this.failedQueue.forEach((prom) => {
       if (error) {
         prom.reject(error);
       } else {
-        prom.resolve(token);
+        prom.resolve(undefined);
       }
     });
 
@@ -43,7 +44,7 @@ class TokenInterceptor {
       url.includes('/auth/register/')
     ) {
       console.error('❌ [TokenInterceptor] Auth endpoint failed, logging out');
-      authService.logout();
+      authService.logout().catch(() => {});
       window.location.href = '/login';
       throw new Error('Authentication failed');
     }
@@ -65,29 +66,30 @@ class TokenInterceptor {
     this.isRefreshing = true;
 
     try {
-      const newToken = await authService.refreshToken();
-      
+      // Refresh token via httpOnly cookie - no body needed
+      await authService.refreshToken();
+
       // Process all queued requests
-      this.processQueue(null, newToken);
+      this.processQueue();
       this.isRefreshing = false;
 
-      // Retry the original request with new token
+      // Retry the original request (cookies updated automatically)
       return originalRequest();
     } catch (error) {
       console.error('❌ [TokenInterceptor] Token refresh failed:', error);
-      
+
       // Process queue with error
-      this.processQueue(error, null);
+      this.processQueue(error);
       this.isRefreshing = false;
 
       // Logout and redirect to login
-      authService.logout();
-      
+      authService.logout().catch(() => {});
+
       // Force immediate redirect
       setTimeout(() => {
         window.location.href = '/login';
       }, 100);
-      
+
       throw error;
     }
   }

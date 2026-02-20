@@ -155,11 +155,12 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # REST Framework settings
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
+        'tickets.authentication.CookieJWTAuthentication',  # Cookie-based JWT (httpOnly)
         'tickets.authentication.SuperSecretKeyAuthentication',  # Check super secret key first
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',  # Fallback to Authorization header
     ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',  # Change to IsAuthenticated in production
+        'rest_framework.permissions.IsAuthenticated',
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
@@ -170,6 +171,14 @@ REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': [
         'config.renderers.UnicodeJSONRenderer',
     ],
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '20/minute',
+        'user': '60/minute',
+    },
 }
 
 # Simple JWT settings
@@ -264,6 +273,15 @@ else:
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_BROWSER_XSS_FILTER = True
 X_FRAME_OPTIONS = 'SAMEORIGIN'  # Allow same origin for admin
+
+# ============================================
+# JWT COOKIE CONFIGURATION
+# ============================================
+JWT_AUTH_COOKIE = 'access_token'
+JWT_AUTH_REFRESH_COOKIE = 'refresh_token'
+JWT_AUTH_COOKIE_HTTPONLY = True
+JWT_AUTH_COOKIE_SAMESITE = 'None' if USE_HTTPS else 'Lax'
+JWT_AUTH_COOKIE_SECURE = USE_HTTPS
 
 # drf-spectacular settings for API documentation
 SPECTACULAR_SETTINGS = {

@@ -9,6 +9,12 @@ import { User } from "../types";
 import { API_ENDPOINTS } from "../config/api";
 import apiService from "../services/api.service";
 
+// Helper to read a specific cookie value
+function getCookie(name: string): string | null {
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return match ? decodeURIComponent(match[2]) : null;
+}
+
 interface AuthContextType {
   user: User | null;
   loading: boolean;
@@ -30,14 +36,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   }, []);
 
   const checkAuth = async () => {
-    const token = localStorage.getItem("access_token");
+    // Check if is_authenticated cookie exists (set by backend, non-httpOnly)
+    const isAuth = getCookie('is_authenticated');
     const storedUser = localStorage.getItem("user");
 
-    if (token && storedUser) {
+    if (isAuth === 'true' && storedUser) {
       try {
         setUser(JSON.parse(storedUser));
       } catch (error) {
         console.error("Failed to parse stored user:", error);
+        logout();
+      }
+    } else if (isAuth === 'true') {
+      // Cookie exists but no local user data - fetch from API
+      try {
+        const userData = await apiService.get<User>(API_ENDPOINTS.AUTH_ME);
+        setUser(userData);
+        localStorage.setItem("user", JSON.stringify(userData));
+      } catch {
         logout();
       }
     }
@@ -47,19 +63,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const login = async (username: string, password: string) => {
     const response = await apiService.post<{
       user: User;
-      access: string;
-      refresh: string;
     }>(API_ENDPOINTS.AUTH_LOGIN, { username, password });
 
-    localStorage.setItem("access_token", response.access);
-    localStorage.setItem("refresh_token", response.refresh);
+    // Tokens are set as httpOnly cookies by the backend
     localStorage.setItem("user", JSON.stringify(response.user));
     setUser(response.user);
   };
 
   const logout = () => {
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("refresh_token");
+    // Call backend to clear httpOnly cookies
+    apiService.post('/api/tickets/auth/logout/').catch(() => {});
     localStorage.removeItem("user");
     setUser(null);
   };

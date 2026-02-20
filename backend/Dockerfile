@@ -29,6 +29,11 @@ RUN chmod +x entrypoint.sh && \
 # Create static and media directories
 RUN mkdir -p /app/staticfiles /app/media
 
+# Create non-root user for security
+RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser && \
+    chown -R appuser:appgroup /app
+USER appuser
+
 # Expose port for Daphne (ASGI server for WebSockets)
 EXPOSE 8000
 

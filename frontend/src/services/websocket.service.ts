@@ -3,7 +3,7 @@
  * Manages WebSocket connections with automatic reconnection
  */
 
-import { authService } from './auth.service';
+// Auth handled via httpOnly cookies - no token needed in URL
 
 export type WebSocketMessageHandler = (data: any) => void;
 export type WebSocketErrorHandler = (error: Event) => void;
@@ -77,19 +77,11 @@ class WebSocketService {
       }
     }
 
-    // Get authentication token
-    const token = authService.getAccessToken();
-    if (!token) {
-      console.error('❌ [WebSocket] No authentication token available');
-      return null;
-    }
-
-    // Build WebSocket URL with token
+    // Build WebSocket URL - auth is handled via httpOnly cookies
     const wsUrl = this.getWebSocketUrl(path);
-    const urlWithToken = `${wsUrl}?token=${token}`;
 
     try {
-      const ws = new WebSocket(urlWithToken);
+      const ws = new WebSocket(wsUrl);
 
       // Connection opened
       ws.onopen = () => {

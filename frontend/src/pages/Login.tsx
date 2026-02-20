@@ -27,10 +27,9 @@ const Login: React.FC = () => {
   const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY;
   const turnstileEnabled = import.meta.env.VITE_TURNSTILE_ENABLED === "true";
 
-  // Clear any invalid tokens when login page loads
+  // Clear any local state when login page loads
   React.useEffect(() => {
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("refresh_token");
+    localStorage.removeItem("user");
   }, []);
 
   const onFinish = async (values: LoginFormValues) => {
@@ -56,14 +55,14 @@ const Login: React.FC = () => {
       const response = await authService.login(loginData);
 
       // Update auth context with initial login response
-      login(response.tokens.access, response.user);
+      login(response.user);
 
       // Immediately fetch fresh user data to get projects
       // The login response doesn't always include projects, but /auth/me/ does
       const freshUser = await authService.getCurrentUser();
 
       // Update auth context again with fresh data that includes projects
-      login(response.tokens.access, freshUser);
+      login(freshUser);
 
       if (values.remember) {
         localStorage.setItem("remember", "true");

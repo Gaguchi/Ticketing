@@ -35,7 +35,7 @@ interface AppState {
 
 interface AppActions {
   // Auth actions
-  login: (token: string, user: User) => void;
+  login: (user: User) => void;
   logout: () => void;
   refreshUser: () => Promise<void>;
 
@@ -68,7 +68,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
   const fetchInProgressRef = useRef(false);
 
   // ===== Derived state (memoized) =====
-  const isAuthenticated = useMemo(() => !!token && !!user, [token, user]);
+  const isAuthenticated = useMemo(() => !!user, [user]);
   const hasProjects = useMemo(
     () => user?.has_projects || availableProjects.length > 0,
     [user?.has_projects, availableProjects.length]
@@ -158,17 +158,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
   }, [user?.id, authLoading, selectedProject?.id, user?.projects?.length]); // Added projects.length to detect when projects load
 
   // ===== Memoized actions =====
-  const login = useCallback((newToken: string, newUser: User) => {
+  const login = useCallback((newUser: User) => {
     debug.auth("Login:", newUser.username);
-    setToken(newToken);
+    setToken('cookie-auth'); // Placeholder since tokens are in httpOnly cookies
     setUser(newUser);
-    storage.setAccessToken(newToken);
     storage.setUser(newUser);
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
     debug.auth("Logout");
-    authService.logout();
+    await authService.logout();
     setToken(null);
     setUser(null);
     setSelectedProjectState(null);

@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from tickets.models import Project
+from tickets.utils.validators import validate_file
 
 
 class ChatRoom(models.Model):
@@ -142,7 +143,7 @@ class ChatMessage(models.Model):
     is_system = models.BooleanField(default=False)
     
     # File attachments
-    attachment = models.FileField(upload_to='chat_attachments/%Y/%m/%d/', null=True, blank=True)
+    attachment = models.FileField(upload_to='chat_attachments/%Y/%m/%d/', validators=[validate_file], null=True, blank=True)
     attachment_name = models.CharField(max_length=255, blank=True)  # Original filename
     attachment_size = models.IntegerField(null=True, blank=True)  # File size in bytes
     
