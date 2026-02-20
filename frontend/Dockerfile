@@ -26,14 +26,7 @@ ENV VITE_WS_BASE_URL=$VITE_WS_BASE_URL
 ENV VITE_APP_NAME=$VITE_APP_NAME
 ENV VITE_APP_VERSION=$VITE_APP_VERSION
 
-# Ensure node_modules binaries are executable
-RUN chmod -R a+rx node_modules/.bin || true
-
-# Make sure files are owned by the non-root `node` user and switch to it
-RUN chown -R node:node /app
-USER node
-
-# Build the app as non-root
+# Build the app
 RUN npm run build
 
 # Stage 2: Serve the compiled application with Nginx

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
-import type { ThemeConfig } from 'antd';
+import type { ThemeConfig, MappingAlgorithm } from 'antd';
 import { theme as antdTheme } from 'antd';
 import { themeLight, darkThemes } from '../theme/antd-theme-v2';
 import { injectThemeVars, injectFontSizeVars, type ThemeMode, type DarkVariant } from '../theme/theme-vars';
@@ -103,7 +103,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const activeTheme = useMemo((): ThemeConfig => {
     const base = resolvedMode === 'light' ? themeLight : darkThemes[darkVariant];
     const fontTokens = FONT_SIZE_TOKENS[fontSize];
-    const algorithms: ThemeConfig['algorithm'][] = [];
+    const algorithms: MappingAlgorithm[] = [];
 
     if (resolvedMode === 'dark') {
       algorithms.push(antdTheme.darkAlgorithm);
