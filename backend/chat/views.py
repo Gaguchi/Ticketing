@@ -2,7 +2,7 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from django.db.models import Q, OuterRef, Subquery, Count, F, DateTimeField
+from django.db.models import Q, OuterRef, Subquery, Count, F, Prefetch, Max
 from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404
 from .models import ChatRoom, ChatMessage, ChatParticipant, MessageReaction
@@ -18,51 +18,93 @@ class ChatRoomViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     filter_backends = [filters.SearchFilter]
     search_fields = ['name']
-    
+
     def get_queryset(self):
         """Get rooms for current user and project."""
         user = self.request.user
         queryset = ChatRoom.objects.filter(participants__user=user)
-        
+
         # Filter by project if specified
         project_id = self.request.query_params.get('project')
         if project_id:
             queryset = queryset.filter(project_id=project_id)
-        
+
         # Filter by room type if specified (e.g., 'ticket', 'direct', 'group')
         room_type = self.request.query_params.get('type')
         if room_type:
             queryset = queryset.filter(type=room_type)
-        
-        # Optimize queries with select_related for ticket info
-        queryset = queryset.select_related('ticket')
-            
-        # Optimize unread count calculation
-        # 1. Get the user's last_read_at for each room
+
+        # ===== QUERY OPTIMIZATION =====
+        # select_related: single-object FK joins (1 query instead of N)
+        queryset = queryset.select_related('ticket', 'created_by', 'project')
+
+        # prefetch_related: participants with their users (2 queries instead of N*M)
+        queryset = queryset.prefetch_related(
+            Prefetch(
+                'participants',
+                queryset=ChatParticipant.objects.select_related('user').order_by('joined_at'),
+            ),
+        )
+
+        # Annotate last message ID for bulk fetch in list()
+        last_msg_id_subquery = ChatMessage.objects.filter(
+            room=OuterRef('pk')
+        ).order_by('-created_at').values('id')[:1]
+
+        queryset = queryset.annotate(
+            _last_message_id=Subquery(last_msg_id_subquery)
+        )
+
+        # Optimize unread count calculation via annotation (1 query instead of N)
         last_read_subquery = ChatParticipant.objects.filter(
             room=OuterRef('pk'),
             user=user
         ).values('last_read_at')[:1]
-        
+
         queryset = queryset.annotate(
             user_last_read=Subquery(last_read_subquery)
         )
-        
-        # 2. Count messages created after user_last_read
-        # If user_last_read is null, count all messages
-        # EXCLUDE messages sent by the current user
+
         queryset = queryset.annotate(
             unread_count_annotated=Count(
                 'messages',
                 filter=(
-                    (Q(messages__created_at__gt=F('user_last_read')) | Q(user_last_read__isnull=True)) & 
+                    (Q(messages__created_at__gt=F('user_last_read')) | Q(user_last_read__isnull=True)) &
                     ~Q(messages__user=user)
                 )
             )
         )
-        
+
         return queryset.distinct().order_by('-updated_at')
-    
+
+    def list(self, request, *args, **kwargs):
+        """List rooms with bulk-fetched last messages to avoid N+1 queries."""
+        # Let DRF handle pagination and queryset evaluation
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        rooms = page if page is not None else list(queryset)
+
+        # Bulk-fetch last messages for all rooms in 1 query (instead of N)
+        last_msg_ids = [r._last_message_id for r in rooms if getattr(r, '_last_message_id', None)]
+        last_messages_map = {}
+        if last_msg_ids:
+            last_msgs = ChatMessage.objects.filter(
+                id__in=last_msg_ids
+            ).select_related('user').prefetch_related(
+                Prefetch('reactions', queryset=MessageReaction.objects.select_related('user'))
+            )
+            last_messages_map = {msg.id: msg for msg in last_msgs}
+
+        # Attach last message to each room for the serializer
+        for room in rooms:
+            msg_id = getattr(room, '_last_message_id', None)
+            room._prefetched_last_message = last_messages_map.get(msg_id) if msg_id else None
+
+        serializer = self.get_serializer(rooms, many=True)
+        if page is not None:
+            return self.get_paginated_response(serializer.data)
+        return Response(serializer.data)
+
     def get_serializer_class(self):
         """Use different serializer for creation."""
         if self.action == 'create':

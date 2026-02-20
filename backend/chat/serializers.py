@@ -74,33 +74,52 @@ class ChatRoomSerializer(serializers.ModelSerializer):
     ticket_id = serializers.IntegerField(source='ticket.id', read_only=True, allow_null=True)
     ticket_key = serializers.CharField(source='ticket.ticket_key', read_only=True, allow_null=True)
     ticket_name = serializers.CharField(source='ticket.name', read_only=True, allow_null=True)
-    
+
     class Meta:
         model = ChatRoom
         fields = [
             'id', 'name', 'type', 'project', 'created_by',
-            'ticket_id', 'ticket_key', 'ticket_name',  # NEW: ticket info
+            'ticket_id', 'ticket_key', 'ticket_name',
             'participants', 'last_message', 'unread_count', 'display_name',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['created_by', 'created_at', 'updated_at']
-    
+
     def get_display_name(self, obj):
-        """Get room display name for current user."""
+        """Get room display name for current user (uses prefetched participants)."""
         request = self.context.get('request')
-        if request and request.user:
-            return obj.get_display_name(request.user)
+        if not request or not request.user:
+            return obj.name or f"Chat {obj.id}"
+
+        if obj.type == 'direct':
+            # Use prefetched participants (no extra query)
+            participants = obj.participants.all()  # hits prefetch cache
+            for p in participants:
+                if p.user_id != request.user.id:
+                    full_name = p.user.get_full_name()
+                    return full_name if full_name else p.user.username
+        elif obj.type == 'ticket' and obj.ticket:
+            return f"{obj.ticket.ticket_key}: {obj.ticket.name[:30]}"
         return obj.name or f"Chat {obj.id}"
-    
+
     def get_last_message(self, obj):
-        """Get the last message in the room."""
-        last_msg = obj.messages.order_by('-created_at').first()
+        """Get the last message in the room (uses prefetched data, no extra query)."""
+        # Use prefetched last message if available (set by ViewSet.list())
+        if hasattr(obj, '_prefetched_last_message'):
+            msg = obj._prefetched_last_message
+            if msg:
+                return ChatMessageSerializer(msg, context=self.context).data
+            return None
+        # Fallback for non-list views (single room serialization)
+        last_msg = obj.messages.select_related('user').prefetch_related(
+            'reactions', 'reactions__user'
+        ).order_by('-created_at').first()
         if last_msg:
             return ChatMessageSerializer(last_msg, context=self.context).data
         return None
-    
+
     def get_unread_count(self, obj):
-        """Get unread message count for current user."""
+        """Get unread message count for current user (uses annotated value)."""
         # Use annotated value if available (from ViewSet optimization)
         if hasattr(obj, 'unread_count_annotated'):
             return obj.unread_count_annotated
@@ -108,11 +127,16 @@ class ChatRoomSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if not request or not request.user:
             return 0
-        
-        participant = obj.participants.filter(user=request.user).first()
+
+        # Fallback: use prefetched participants to avoid extra query
+        participant = None
+        for p in obj.participants.all():  # hits prefetch cache
+            if p.user_id == request.user.id:
+                participant = p
+                break
         if not participant:
             return 0
-        
+
         if participant.last_read_at:
             return obj.messages.filter(created_at__gt=participant.last_read_at).exclude(user=request.user).count()
         return obj.messages.exclude(user=request.user).count()
