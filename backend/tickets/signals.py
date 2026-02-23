@@ -6,11 +6,15 @@ via WebSocket channels when tickets, comments, and other models are created/upda
 Also handles auto-creation of board columns for new projects.
 """
 
+import logging
+
 from django.db.models.signals import post_save, post_delete, pre_delete
 from django.dispatch import receiver
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from django.utils import timezone
+
+logger = logging.getLogger(__name__)
 from .models import Ticket, Comment, Notification, Project, BoardColumn, Status
 
 
@@ -43,7 +47,7 @@ def create_default_board_columns(sender, instance, created, **kwargs):
         statuses = Status.objects.filter(key__in=col_data['statuses'])
         column.statuses.set(statuses)
     
-    print(f"✅ Created default board columns for project {instance.key}")
+    logger.debug("Created default board columns for project %s", instance.key)
 
 
 def send_to_channel_layer(group_name: str, message_type: str, data: dict):
@@ -67,7 +71,7 @@ def send_to_channel_layer(group_name: str, message_type: str, data: dict):
             )
     except Exception as e:
         # Log error but don't break the request
-        print(f"❌ [WebSocket] Error sending to channel {group_name}: {e}")
+        logger.error("[WebSocket] Error sending to channel %s: %s", group_name, e)
 
 
 def send_notification(user_id: int, notification_data: dict):
@@ -131,10 +135,10 @@ def create_and_send_notification(user_id: int, notification_type: str, title: st
         
         return notification
     except User.DoesNotExist:
-        print(f"❌ [Notification] User {user_id} not found")
+        logger.error("[Notification] User %s not found", user_id)
         return None
     except Exception as e:
-        print(f"❌ [Notification] Error creating notification: {e}")
+        logger.error("[Notification] Error creating notification: %s", e)
         return None
 
 
@@ -211,9 +215,8 @@ def ticket_saved(sender, instance, created, **kwargs):
     # Broadcast to project ticket channel
     project_group = f'project_{instance.project_id}_tickets'
     
-    print(f"📡 Broadcasting {action} for {ticket_key}:")
-    print(f"   column={instance.column_id}, column_order={instance.column_order}")
-    print(f"   to group: {project_group}")
+    logger.debug("Broadcasting %s for %s: column=%s, column_order=%s, group=%s",
+                 action, ticket_key, instance.column_id, instance.column_order, project_group)
     
     send_to_channel_layer(
         project_group,

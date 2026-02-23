@@ -1,9 +1,13 @@
+import logging
+
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from .models import ChatMessage
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from django.utils import timezone
+
+logger = logging.getLogger(__name__)
 
 @receiver(post_save, sender=ChatMessage)
 def chat_message_saved(sender, instance, created, **kwargs):
@@ -66,4 +70,4 @@ def chat_message_saved(sender, instance, created, **kwargs):
                     }
                 )
             except Exception as e:
-                print(f"❌ Error sending chat notification to user {participant.user.id}: {e}")
+                logger.error("Error sending chat notification to user %s: %s", participant.user.id, e)

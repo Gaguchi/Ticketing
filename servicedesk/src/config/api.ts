@@ -18,8 +18,6 @@ export const API_ENDPOINTS = {
   // Authentication
   AUTH_LOGIN: getEndpoint('/auth/login/'),
   AUTH_ME: getEndpoint('/auth/me/'),
-  AUTH_LOGOUT: getEndpoint('/auth/logout/'),
-  AUTH_TOKEN_REFRESH: getEndpoint('/auth/token/refresh/'),
   AUTH_CHANGE_PASSWORD: getEndpoint('/auth/change-password/'),
 
   // Tickets

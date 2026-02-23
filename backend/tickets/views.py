@@ -1,3 +1,5 @@
+import logging
+
 from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
@@ -34,6 +36,8 @@ from .serializers import (
 )
 from .email_service import send_invitation_email
 from .services import auto_archive_completed_tickets
+
+logger = logging.getLogger(__name__)
 
 
 def _set_auth_cookies(response, access_token, refresh_token):
@@ -1422,7 +1426,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 role='superadmin',
                 assigned_by=user  # Self-assigned during project creation
             )
-            print(f"✅ Created UserRole: {user.username} as superadmin of {project.name}")
+            logger.debug("Created UserRole: %s as superadmin of %s", user.username, project.name)
             
             # Define default columns
             default_columns = [
@@ -1470,7 +1474,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         
         # Log what's being deleted for audit purposes
         ticket_count = project.tickets.count()
-        print(f"🗑️ Deleting project '{project.name}' (key: {project.key}) with {ticket_count} tickets")
+        logger.debug("Deleting project '%s' (key: %s) with %d tickets", project.name, project.key, ticket_count)
         
         # Delete all related user roles for this project
         UserRole.objects.filter(project=project).delete()
@@ -1651,16 +1655,12 @@ class TicketViewSet(viewsets.ModelViewSet):
         if user.is_superuser:
             return base_queryset
 
-        # Check if user is a regular company user (not admin, not IT staff)
-        # Regular company users should only see tickets they created
+        # Company users (clients) should only see tickets belonging to their company
         user_companies = Company.objects.filter(users=user)
-        is_company_admin = Company.objects.filter(admins=user).exists()
-        
-        # If user is a company user but NOT an admin and NOT staff, show only their created tickets
-        if user_companies.exists() and not is_company_admin and not user.is_staff:
-            # Regular company user accessing via servicedesk - only see their tickets OR tickets assigned to their company
+
+        if user_companies.exists() and not user.is_staff:
             return base_queryset.filter(
-                Q(reporter=user) | Q(company__in=user_companies)
+                company__in=user_companies
             ).distinct()
 
         # For IT staff, admins, and project members, use the original logic
@@ -1769,24 +1769,20 @@ class TicketViewSet(viewsets.ModelViewSet):
         3. If no column is provided but ticket_status_key is, use the new status system
         """
         user = self.request.user
-        print(f"🎫 Creating ticket for user: {user.username}")
-        
-        # Check if user is a regular company user (servicedesk user)
+        logger.debug("Creating ticket for user: %s", user.username)
+
+        # Check if user is a company user (servicedesk/client user)
         user_companies = Company.objects.filter(users=user)
-        is_company_admin = Company.objects.filter(admins=user).exists()
-        
-        print(f"   User companies: {user_companies.count()}")
-        print(f"   Is company admin: {is_company_admin}")
-        print(f"   Is staff: {user.is_staff}")
-        print(f"   Request data: {self.request.data}")
-        
+
+        logger.debug("  User companies: %d, is_staff: %s", user_companies.count(), user.is_staff)
+
         # Check if using new status system (ticket_status_key provided, no column)
         has_status_key = 'ticket_status_key' in self.request.data
         has_column = serializer.validated_data.get('column') is not None
-        
-        # If this is a servicedesk user (company member, not admin, not staff)
-        if user_companies.exists() and not is_company_admin and not user.is_staff:
-            print("   📋 Servicedesk user detected - auto-assigning project/company")
+
+        # If this is a company user (client), auto-assign company and project
+        if user_companies.exists() and not user.is_staff:
+            logger.debug("  Servicedesk user detected - auto-assigning project/company")
             # Get the user's company
             user_company = user_companies.first()
             
@@ -1795,7 +1791,7 @@ class TicketViewSet(viewsets.ModelViewSet):
             
             if company_projects.exists():
                 support_project = company_projects.first()
-                print(f"   ✅ Using existing project: {support_project.name}")
+                logger.debug("  Using existing project: %s", support_project.name)
             else:
                 # Create a default support project if none exists
                 support_project = Project.objects.create(
@@ -1815,18 +1811,18 @@ class TicketViewSet(viewsets.ModelViewSet):
                         project=support_project,
                         defaults={'role': 'admin', 'assigned_by': admin}
                     )
-                print(f"   👥 Added {company_admins.count()} company admin(s) to project")
+                logger.debug("  Added %d company admin(s) to project", company_admins.count())
                 
                 # Create default columns for the new project
                 Column.objects.create(project=support_project, name='New', order=1)
                 Column.objects.create(project=support_project, name='In Progress', order=2)
                 Column.objects.create(project=support_project, name='Resolved', order=3)
                 Column.objects.create(project=support_project, name='Closed', order=4)
-                print(f"   ✅ Created new project: {support_project.name}")
+                logger.debug("  Created new project: %s", support_project.name)
             
             # Get the first column for this project
             first_column = Column.objects.filter(project=support_project).order_by('order').first()
-            print(f"   📌 Assigning to column: {first_column.name if first_column else 'None'}")
+            logger.debug("  Assigning to column: %s", first_column.name if first_column else 'None')
             
             # Save with auto-assigned company, project, and column
             ticket = serializer.save(
@@ -1837,11 +1833,11 @@ class TicketViewSet(viewsets.ModelViewSet):
             )
             # Set rank at bottom of status group
             self._set_bottom_rank(ticket)
-            print(f"   ✅ Ticket created: {ticket.id}")
+            logger.debug("  Ticket created: %d", ticket.id)
         elif has_status_key and not has_column:
             # New status system: create ticket without legacy column specified
             # But we still need to assign a column for backward compatibility (column is NOT NULL)
-            print("   📋 Using new status system (ticket_status_key provided, no column)")
+            logger.debug("  Using new status system (ticket_status_key provided, no column)")
             
             # Get the project from the request data
             project = serializer.validated_data.get('project')
@@ -1849,11 +1845,11 @@ class TicketViewSet(viewsets.ModelViewSet):
                 # Find the first column for this project (usually "To Do")
                 first_column = Column.objects.filter(project=project).order_by('order').first()
                 if first_column:
-                    print(f"   📌 Auto-assigning to first column: {first_column.name} (id={first_column.id})")
+                    logger.debug("  Auto-assigning to first column: %s (id=%d)", first_column.name, first_column.id)
                     ticket = serializer.save(reporter=user, column=first_column)
                 else:
                     # No columns exist - create default ones
-                    print("   ⚠️ No columns found, creating defaults...")
+                    logger.debug("  No columns found, creating defaults...")
                     Column.objects.create(project=project, name='To Do', order=1)
                     Column.objects.create(project=project, name='In Progress', order=2)
                     Column.objects.create(project=project, name='Review', order=3)
@@ -1865,9 +1861,9 @@ class TicketViewSet(viewsets.ModelViewSet):
                 ticket = serializer.save(reporter=user)
             # Set rank at bottom of status group
             self._set_bottom_rank(ticket)
-            print(f"   ✅ Ticket created with status system: {ticket.id}, status={ticket.ticket_status}, rank={ticket.rank}")
+            logger.debug("  Ticket created with status system: %d, status=%s, rank=%s", ticket.id, ticket.ticket_status, ticket.rank)
         else:
-            print("   ⚠️ Standard ticket creation")
+            logger.debug("  Standard ticket creation")
             # For staff/admin users, save normally
             ticket = serializer.save(reporter=user)
             # Set rank at bottom of status group
@@ -1878,7 +1874,7 @@ class TicketViewSet(viewsets.ModelViewSet):
             company_admins = ticket.company.admins.all()
             if company_admins.exists():
                 ticket.assignees.set(company_admins)
-                print(f"   👥 Auto-assigned to {company_admins.count()} company admin(s)")
+                logger.debug("  Auto-assigned to %d company admin(s)", company_admins.count())
         
         # Create chat room for ALL tickets with a reporter
         # This enables communication on any ticket, not just servicedesk ones
@@ -1886,7 +1882,7 @@ class TicketViewSet(viewsets.ModelViewSet):
             from chat.models import ChatRoom
             chat_room, created = ChatRoom.get_or_create_for_ticket(ticket, created_by=user)
             if created:
-                print(f"   💬 Created chat room for ticket: {chat_room.id}")
+                logger.debug("  Created chat room for ticket: %d", chat_room.id)
     
     def _assign_status_from_column(self, ticket):
         """
@@ -1921,7 +1917,7 @@ class TicketViewSet(viewsets.ModelViewSet):
             if first_status:
                 ticket.ticket_status = first_status
                 ticket.save(update_fields=['ticket_status'])
-                print(f"   📋 Auto-assigned ticket_status: {first_status.key} (from BoardColumn: {matching_board_column.name})")
+                logger.debug("  Auto-assigned ticket_status: %s (from BoardColumn: %s)", first_status.key, matching_board_column.name)
     
     def _set_bottom_rank(self, ticket):
         """Set the ticket's rank to be at the bottom of its status group."""
@@ -1951,7 +1947,7 @@ class TicketViewSet(viewsets.ModelViewSet):
         
         ticket.rank = new_rank
         ticket.save(update_fields=['rank'])
-        print(f"   📊 Set rank to '{new_rank}' (after: {last_ticket.rank if last_ticket else 'none'})")
+        logger.debug("  Set rank to '%s' (after: %s)", new_rank, last_ticket.rank if last_ticket else 'none')
     
     def _capture_state(self, instance):
         """Capture current state of ticket for history tracking"""
@@ -2100,18 +2096,12 @@ class TicketViewSet(viewsets.ModelViewSet):
         column_id = request.data.get('column')
         order = request.data.get('order')
         
-        print(f"📥 PATCH /api/tickets/{instance.id}/ received:", {
-            'ticket': instance.ticket_key,
-            'current_column': instance.column_id,
-            'current_order': instance.column_order,
-            'requested_column': column_id,
-            'requested_order': order,
-            'full_data': request.data,
-        })
-        
+        logger.debug("PATCH /api/tickets/%d/ received: ticket=%s, current_column=%s, requested_column=%s, requested_order=%s",
+                     instance.id, instance.ticket_key, instance.column_id, column_id, order)
+
         if column_id is not None and order is not None:
             # Use move_to_position for atomic column+order update
-            print(f"🎯 Using move_to_position: ticket={instance.ticket_key}, column={column_id}, order={order}")
+            logger.debug("Using move_to_position: ticket=%s, column=%s, order=%s", instance.ticket_key, column_id, order)
             instance.move_to_position(column_id, order)
             
             # Refresh and serialize the updated instance
@@ -2122,16 +2112,13 @@ class TicketViewSet(viewsets.ModelViewSet):
             
             serializer = self.get_serializer(instance)
             
-            print(f"📤 Returning updated ticket:", {
-                'ticket': instance.ticket_key,
-                'final_column': instance.column_id,
-                'final_order': instance.column_order,
-            })
+            logger.debug("Returning updated ticket: %s, final_column=%s, final_order=%s",
+                         instance.ticket_key, instance.column_id, instance.column_order)
             
             return Response(serializer.data)
         
         # Otherwise, use standard update logic
-        print(f"⚙️ Using standard update (no order provided)")
+        logger.debug("Using standard update (no order provided)")
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
@@ -2682,29 +2669,29 @@ class CommentViewSet(viewsets.ModelViewSet):
         # Set the user to the current user (when authentication is enabled)
         # Support nested route by setting ticket from URL parameter
         ticket_id = self.kwargs.get('ticket_id')
-        print(f"💬 [CommentViewSet] Creating comment for ticket_id={ticket_id}")
+        logger.debug("[CommentViewSet] Creating comment for ticket_id=%s", ticket_id)
         
         if ticket_id:
             from .models import Ticket
             try:
                 ticket = Ticket.objects.get(id=ticket_id)
-                print(f"✅ [CommentViewSet] Found ticket: {ticket}")
+                logger.debug("[CommentViewSet] Found ticket: %s", ticket)
                 user = self.request.user if self.request.user.is_authenticated else None
-                print(f"👤 [CommentViewSet] User: {user}")
+                logger.debug("[CommentViewSet] User: %s", user)
                 
                 serializer.save(
                     user=user,
                     ticket=ticket
                 )
-                print(f"✅ [CommentViewSet] Comment saved successfully")
+                logger.debug("[CommentViewSet] Comment saved successfully")
             except Ticket.DoesNotExist:
-                print(f"❌ [CommentViewSet] Ticket {ticket_id} not found")
+                logger.error("[CommentViewSet] Ticket %s not found", ticket_id)
                 raise
             except Exception as e:
-                print(f"❌ [CommentViewSet] Error saving comment: {e}")
+                logger.error("[CommentViewSet] Error saving comment: %s", e)
                 raise
         else:
-            print(f"⚠️ [CommentViewSet] No ticket_id in URL kwargs")
+            logger.warning("[CommentViewSet] No ticket_id in URL kwargs")
             serializer.save(user=self.request.user if self.request.user.is_authenticated else None)
 
 

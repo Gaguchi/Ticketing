@@ -1,11 +1,15 @@
-from django.db import models
-from django.contrib.auth.models import User
-from django.core.validators import MinValueValidator, MaxValueValidator
+import logging
 import secrets
 import os
 from datetime import timedelta
+
+from django.db import models
+from django.contrib.auth.models import User
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
 from .utils.validators import validate_file
+
+logger = logging.getLogger(__name__)
 
 
 class UserRole(models.Model):
@@ -422,7 +426,7 @@ class TicketPosition(models.Model):
         from asgiref.sync import async_to_sync
         import time
         
-        print(f"🔄 TicketPosition.move_ticket: Moving {ticket.id} to col {target_column_id} pos {target_order}")
+        logger.debug("TicketPosition.move_ticket: Moving %d to col %s pos %s", ticket.id, target_column_id, target_order)
         
         # Get or create position for this ticket
         # IMPORTANT: Use ticket's ACTUAL column as default, not target column!
@@ -438,8 +442,7 @@ class TicketPosition(models.Model):
         # 2. Position was updated outside of move_ticket
         # 3. Previous moves failed to sync
         if position.column_id != ticket.column_id:
-            print(f"⚠️ Position sync issue detected: position.column_id={position.column_id}, ticket.column_id={ticket.column_id}")
-            print(f"⚠️ Syncing position to match ticket's actual column")
+            logger.warning("Position sync issue: position.column_id=%s, ticket.column_id=%s - syncing", position.column_id, ticket.column_id)
             position.column_id = ticket.column_id
             position.order = ticket.column_order or 0
             position.save(update_fields=['column_id', 'order'])
@@ -470,7 +473,7 @@ class TicketPosition(models.Model):
                     
                     if old_column_id != target_column_id:
                         # CROSS-COLUMN MOVE
-                        print(f"🔄 Cross-column move: {old_column_id} -> {target_column_id}")
+                        logger.debug("Cross-column move: %s -> %s", old_column_id, target_column_id)
                         affected_columns.add(old_column_id)
                         affected_columns.add(target_column_id)
                         
@@ -512,7 +515,7 @@ class TicketPosition(models.Model):
                         
                     else:
                         # SAME-COLUMN MOVE
-                        print(f"🔄 Same-column move in {old_column_id}: {old_order} -> {target_order}")
+                        logger.debug("Same-column move in %s: %s -> %s", old_column_id, old_order, target_order)
                         affected_columns.add(old_column_id)
                         
                         if target_order < old_order:
@@ -556,7 +559,7 @@ class TicketPosition(models.Model):
                         ticket.save(update_fields=['column_order'])
                     
                     # Success - break retry loop
-                    print("✅ Move transaction completed successfully")
+                    logger.debug("Move transaction completed successfully")
                     break
                     
             except OperationalError as e:
@@ -578,7 +581,7 @@ class TicketPosition(models.Model):
                 broadcast_column_refresh.delay(ticket.project_id, list(affected_columns))
             except Exception as e:
                 # Fallback to threading if Celery is not available
-                print(f"⚠️ Celery not available, using thread fallback: {e}")
+                logger.warning("Celery not available, using thread fallback: %s", e)
                 import threading
                 
                 def _broadcast():
@@ -926,8 +929,7 @@ class Ticket(models.Model):
         Returns:
             TicketPosition instance
         """
-        print(f"🎯 move_to_position called for {self.ticket_key}:")
-        print(f"   Delegating to TicketPosition.move_ticket() (lightweight)")
+        logger.debug("move_to_position called for %s: delegating to TicketPosition.move_ticket()", self.ticket_key)
         
         # Delegate to the new lightweight TicketPosition.move_ticket method
         return TicketPosition.move_ticket(self, target_column_id, target_order, max_retries, broadcast)
@@ -952,10 +954,10 @@ class Ticket(models.Model):
         from channels.layers import get_channel_layer
         from asgiref.sync import async_to_sync
         
-        print(f"🎯 [move_to_status] Ticket {self.id} ({self.ticket_key}):")
-        print(f"   new_status_key: {new_status_key}")
-        print(f"   before_ticket: {before_ticket.id if before_ticket else None} (rank: {before_ticket.rank if before_ticket else None})")
-        print(f"   after_ticket: {after_ticket.id if after_ticket else None} (rank: {after_ticket.rank if after_ticket else None})")
+        logger.debug("[move_to_status] Ticket %d (%s): new_status=%s, before=%s, after=%s",
+                     self.id, self.ticket_key, new_status_key,
+                     before_ticket.id if before_ticket else None,
+                     after_ticket.id if after_ticket else None)
         
         # Get new status
         new_status = Status.objects.get(key=new_status_key)
@@ -966,9 +968,8 @@ class Ticket(models.Model):
         after_rank = after_ticket.rank if after_ticket else None
         new_rank = rank_between(before_rank, after_rank)
         
-        print(f"   old_rank: {self.rank}")
-        print(f"   new_rank: {new_rank}")
-        print(f"   old_status: {old_status.key if old_status else None} -> new_status: {new_status.key}")
+        logger.debug("  old_rank=%s, new_rank=%s, old_status=%s -> new_status=%s",
+                     self.rank, new_rank, old_status.key if old_status else None, new_status.key)
         
         # Update done_at based on status category change
         update_fields = ['ticket_status', 'rank', 'updated_at']
@@ -979,7 +980,7 @@ class Ticket(models.Model):
             # Entering done state - set done_at timestamp
             self.done_at = timezone.now()
             update_fields.append('done_at')
-            print(f"   Setting done_at={self.done_at}")
+            logger.debug("  Setting done_at=%s", self.done_at)
             
             # Resolution status transition: when entering Done, set to awaiting_review
             # (unless already accepted - accepted tickets stay accepted)
@@ -988,13 +989,13 @@ class Ticket(models.Model):
                 old_resolution_status = self.resolution_status
                 self.resolution_status = 'awaiting_review'
                 update_fields.append('resolution_status')
-                print(f"   Resolution status: {old_resolution_status} -> awaiting_review")
+                logger.debug("  Resolution status: %s -> awaiting_review", old_resolution_status)
                 
         elif old_is_done and not new_is_done:
             # Leaving done state - clear done_at
             self.done_at = None
             update_fields.append('done_at')
-            print(f"   Clearing done_at")
+            logger.debug("  Clearing done_at")
         
         # Update ticket
         self.ticket_status = new_status
@@ -1025,7 +1026,7 @@ class Ticket(models.Model):
                     self._broadcast_resolution_status_change()
                     
             except Exception as e:
-                print(f"⚠️ Failed to broadcast ticket move: {e}")
+                logger.warning("Failed to broadcast ticket move: %s", e)
         
         return self
 
