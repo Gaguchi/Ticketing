@@ -125,7 +125,7 @@ const KanbanFlowOverview: React.FC<Props> = ({
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        color: "#fff",
+                        color: "#fff", /* intentional: white text on colored column bars */
                         fontWeight: 600,
                         fontSize: 'var(--fs-base)',
                         minHeight: 24,

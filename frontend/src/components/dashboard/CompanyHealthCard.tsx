@@ -39,14 +39,14 @@ const getColumnColor = (columnName: string): string => {
     return "var(--color-primary)";
   }
   if (name.includes("review") || name.includes("test") || name.includes("qa")) {
-    return "#faad14";
+    return "var(--color-status-warning)";
   }
   if (
     name.includes("done") ||
     name.includes("complete") ||
     name.includes("closed")
   ) {
-    return "#52c41a";
+    return "var(--color-status-success)";
   }
   return "var(--color-border)";
 };
@@ -134,7 +134,7 @@ const CompanyHealthCard: React.FC<Props> = ({
       onClick={() => onClick?.(company.id)}
       style={{
         borderRadius: 8,
-        border: hasIssues ? "1px solid #ff4d4f40" : "1px solid var(--color-border-light)",
+        border: hasIssues ? "1px solid var(--color-tint-danger-border)" : "1px solid var(--color-border-light)",
         height: isExpanded ? "auto" : 160,
       }}
       styles={{

@@ -66,6 +66,12 @@ interface ThemeVars {
   '--color-tint-info-bg': string;
   '--color-tint-info-border': string;
 
+  // Status colors (semantic foreground colors for status indicators)
+  '--color-status-danger': string;
+  '--color-status-success': string;
+  '--color-status-warning': string;
+  '--color-status-info': string;
+
   // Overlay (for drag, drop zones, shadows on cards)
   '--color-overlay-light': string;
   '--color-overlay-medium': string;
@@ -123,6 +129,11 @@ const lightVars: ThemeVars = {
   '--color-tint-info-bg': '#E3F2FD',
   '--color-tint-info-border': '#64B5F6',
 
+  '--color-status-danger': '#ff4d4f',
+  '--color-status-success': '#52c41a',
+  '--color-status-warning': '#faad14',
+  '--color-status-info': '#722ed1',
+
   '--color-overlay-light': 'rgba(9,30,66,0.04)',
   '--color-overlay-medium': 'rgba(9,30,66,0.08)',
   '--color-overlay-heavy': 'rgba(9,30,66,0.25)',
@@ -178,6 +189,11 @@ const midnightVars: ThemeVars = {
   '--color-tint-success-border': 'rgba(63,185,80,0.40)',
   '--color-tint-info-bg': 'rgba(88,166,255,0.12)',
   '--color-tint-info-border': 'rgba(88,166,255,0.40)',
+
+  '--color-status-danger': '#f85149',
+  '--color-status-success': '#3fb950',
+  '--color-status-warning': '#d29922',
+  '--color-status-info': '#a371f7',
 
   '--color-overlay-light': 'rgba(255,255,255,0.04)',
   '--color-overlay-medium': 'rgba(255,255,255,0.08)',
@@ -235,6 +251,11 @@ const slateVars: ThemeVars = {
   '--color-tint-info-bg': 'rgba(110,159,255,0.12)',
   '--color-tint-info-border': 'rgba(110,159,255,0.35)',
 
+  '--color-status-danger': '#ef5350',
+  '--color-status-success': '#4caf50',
+  '--color-status-warning': '#ffb74d',
+  '--color-status-info': '#ab47bc',
+
   '--color-overlay-light': 'rgba(255,255,255,0.04)',
   '--color-overlay-medium': 'rgba(255,255,255,0.07)',
   '--color-overlay-heavy': 'rgba(0,0,0,0.35)',
@@ -290,6 +311,11 @@ const warmVars: ThemeVars = {
   '--color-tint-success-border': 'rgba(87,202,120,0.40)',
   '--color-tint-info-bg': 'rgba(114,137,218,0.14)',
   '--color-tint-info-border': 'rgba(114,137,218,0.40)',
+
+  '--color-status-danger': '#ed4245',
+  '--color-status-success': '#57ca78',
+  '--color-status-warning': '#faa61a',
+  '--color-status-info': '#9b59b6',
 
   '--color-overlay-light': 'rgba(255,255,255,0.04)',
   '--color-overlay-medium': 'rgba(255,255,255,0.08)',

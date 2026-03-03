@@ -18,17 +18,17 @@ interface Props {
 // Get color based on workload percentage
 const getWorkloadColor = (count: number, maxCount: number): string => {
   const ratio = count / Math.max(maxCount, 1);
-  if (ratio > 0.8) return "#ff4d4f";
-  if (ratio > 0.6) return "#faad14";
-  return "#52c41a";
+  if (ratio > 0.8) return "var(--color-status-danger)";
+  if (ratio > 0.6) return "var(--color-status-warning)";
+  return "var(--color-status-success)";
 };
 
 // Get status color
 const getStatusColor = (status: string): string => {
   const s = status.toLowerCase();
-  if (s.includes("done") || s.includes("complete")) return "#52c41a";
+  if (s.includes("done") || s.includes("complete")) return "var(--color-status-success)";
   if (s.includes("progress") || s.includes("doing")) return "var(--color-primary)";
-  if (s.includes("review") || s.includes("test")) return "#faad14";
+  if (s.includes("review") || s.includes("test")) return "var(--color-status-warning)";
   return "var(--color-text-muted)";
 };
 
@@ -98,9 +98,9 @@ const TeamWorkloadCards: React.FC<Props> = ({
                   padding: 12,
                   borderRadius: 8,
                   border: hasOverdue
-                    ? "1px solid #ff4d4f40"
+                    ? "1px solid var(--color-tint-danger-border)"
                     : "1px solid var(--color-border-light)",
-                  backgroundColor: hasOverdue ? "#fff1f0" : "var(--color-bg-surface)",
+                  backgroundColor: hasOverdue ? "var(--color-tint-danger-bg)" : "var(--color-bg-surface)",
                   cursor: onUserClick ? "pointer" : "default",
                   transition: "all 0.2s ease",
                 }}

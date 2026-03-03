@@ -77,7 +77,7 @@ const CompanyFilterBar: React.FC<Props> = ({
                   <div style={{ fontWeight: 600 }}>{company.name}</div>
                   <div>{t('company.tickets', { count: company.total_tickets })}</div>
                   {company.overdue_count > 0 && (
-                    <div style={{ color: "#ff7875" }}>
+                    <div style={{ color: "var(--color-status-danger)" }}>
                       {t('company.overdue', { count: company.overdue_count })}
                     </div>
                   )}
@@ -87,7 +87,7 @@ const CompanyFilterBar: React.FC<Props> = ({
               <Badge
                 dot={hasIssues}
                 offset={[-4, 4]}
-                color="#ff4d4f"
+                color="var(--color-status-danger)"
               >
                 <Tag
                   onClick={() => onToggle(company.id)}
@@ -222,12 +222,12 @@ const CompanyFilterBar: React.FC<Props> = ({
               <div>
                 <div>{company.name}</div>
                 {company.overdue_count > 0 && (
-                  <div style={{ color: "#ff4d4f" }}>
+                  <div style={{ color: "var(--color-status-danger)" }}>
                     {t('company.overdue', { count: company.overdue_count })}
                   </div>
                 )}
                 {company.unassigned_count > 0 && (
-                  <div style={{ color: "#faad14" }}>
+                  <div style={{ color: "var(--color-status-warning)" }}>
                     {t('company.unassigned', { count: company.unassigned_count })}
                   </div>
                 )}
@@ -253,7 +253,7 @@ const CompanyFilterBar: React.FC<Props> = ({
                   border: isSelected
                     ? "2px solid var(--color-primary)"
                     : hasIssues
-                    ? "1px solid #ff4d4f40"
+                    ? "1px solid var(--color-tint-danger-border)"
                     : "1px solid var(--color-border)",
                   cursor: "pointer",
                   minWidth: 120,

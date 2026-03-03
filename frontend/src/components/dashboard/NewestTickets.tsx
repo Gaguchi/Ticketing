@@ -203,7 +203,7 @@ const NewestTickets: React.FC<Props> = ({
                     >
                       <Avatar
                         size={24}
-                        style={{ backgroundColor: "#722ed1", flexShrink: 0 }}
+                        style={{ backgroundColor: "var(--color-status-info)", flexShrink: 0 }}
                       >
                         {ticket.reporter.first_name?.[0] ||
                           ticket.reporter.username[0]}

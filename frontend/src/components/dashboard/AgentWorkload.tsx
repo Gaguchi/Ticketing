@@ -19,9 +19,9 @@ interface Props {
 // Get color based on workload
 const getWorkloadColor = (count: number, maxCount: number): string => {
   const ratio = count / Math.max(maxCount, 1);
-  if (ratio > 0.8) return "#ff4d4f";
-  if (ratio > 0.6) return "#faad14";
-  return "#52c41a";
+  if (ratio > 0.8) return "var(--color-status-danger)";
+  if (ratio > 0.6) return "var(--color-status-warning)";
+  return "var(--color-status-success)";
 };
 
 const AgentWorkload: React.FC<Props> = ({

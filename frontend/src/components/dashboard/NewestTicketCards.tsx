@@ -36,10 +36,10 @@ const formatRelativeTime = (dateString: string): string => {
 const getPriorityColor = (priority: string | null): string => {
   if (!priority) return "default";
   const p = priority.toLowerCase();
-  if (p.includes("critical") || p.includes("highest")) return "#ff4d4f";
-  if (p.includes("high")) return "#fa8c16";
+  if (p.includes("critical") || p.includes("highest")) return "var(--color-status-danger)";
+  if (p.includes("high")) return "var(--color-status-warning)";
   if (p.includes("medium")) return "var(--color-primary)";
-  if (p.includes("low")) return "#52c41a";
+  if (p.includes("low")) return "var(--color-status-success)";
   return "var(--color-text-muted)";
 };
 

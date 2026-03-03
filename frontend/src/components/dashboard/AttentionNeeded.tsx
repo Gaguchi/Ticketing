@@ -171,7 +171,7 @@ const TicketListItem: React.FC<{
           >
             <Avatar
               size={22}
-              style={{ backgroundColor: "#52c41a", flexShrink: 0 }}
+              style={{ backgroundColor: "var(--color-status-success)", flexShrink: 0 }}
             >
               {ticket.assignee.first_name?.[0] || ticket.assignee.username[0]}
             </Avatar>
@@ -225,12 +225,12 @@ const AttentionNeeded: React.FC<Props> = ({
         >
           <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <WarningOutlined
-              style={{ color: totalCount > 0 ? "#ff4d4f" : "#52c41a" }}
+              style={{ color: totalCount > 0 ? "var(--color-status-danger)" : "var(--color-status-success)" }}
             />
             {t('attention.needsAttention')}
           </span>
           {totalCount > 0 && (
-            <Badge count={totalCount} style={{ backgroundColor: "#ff4d4f" }} />
+            <Badge count={totalCount} style={{ backgroundColor: "var(--color-status-danger)" }} />
           )}
         </div>
       }

@@ -34,11 +34,11 @@ const getActivityIcon = (field: string) => {
 // Get color based on field changed
 const getActivityColor = (field: string): string => {
   const f = field.toLowerCase();
-  if (f.includes("assignee")) return "#722ed1";
+  if (f.includes("assignee")) return "var(--color-status-info)";
   if (f.includes("status") || f.includes("column")) return "var(--color-primary)";
-  if (f.includes("created") || f === "new") return "#52c41a";
-  if (f.includes("priority")) return "#fa8c16";
-  if (f.includes("delete")) return "#ff4d4f";
+  if (f.includes("created") || f === "new") return "var(--color-status-success)";
+  if (f.includes("priority")) return "var(--color-status-warning)";
+  if (f.includes("delete")) return "var(--color-status-danger)";
   return "var(--color-text-muted)";
 };
 
@@ -122,7 +122,7 @@ const TimelineActivityFeed: React.FC<Props> = ({
             style={{
               width: 8,
               height: 8,
-              backgroundColor: "#52c41a",
+              backgroundColor: "var(--color-status-success)",
               borderRadius: "50%",
               animation: "pulse 2s infinite",
             }}
@@ -331,7 +331,7 @@ const TimelineActivityFeed: React.FC<Props> = ({
                             >
                               {activity.old_value || t('activity.empty')}
                             </span>
-                            <span style={{ color: "#bfbfbf" }}>→</span>
+                            <span style={{ color: "var(--color-text-muted)" }}>→</span>
                             <span
                               style={{
                                 padding: "2px 6px",
@@ -358,7 +358,7 @@ const TimelineActivityFeed: React.FC<Props> = ({
                         <span
                           style={{
                             fontSize: 'var(--fs-2xs)',
-                            color: "#bfbfbf",
+                            color: "var(--color-text-muted)",
                             flexShrink: 0,
                             marginLeft: 8,
                           }}
