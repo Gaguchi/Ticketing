@@ -247,7 +247,17 @@ def get_current_user(request):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def logout_user(request):
-    """Clear auth cookies to log out user."""
+    """Blacklist the refresh token and clear auth cookies to log out user."""
+    # Attempt to blacklist the refresh token so it cannot be reused
+    refresh_token_str = request.COOKIES.get('refresh_token')
+    if refresh_token_str:
+        try:
+            token = RefreshToken(refresh_token_str)
+            token.blacklist()
+        except Exception:
+            # Token may already be invalid, expired, or blacklisted - ignore
+            pass
+
     response = Response({'status': 'logged out'})
     response.delete_cookie('access_token', path='/')
     response.delete_cookie('refresh_token', path='/')
@@ -276,6 +286,13 @@ def refresh_token_cookie(request):
         # Rotate refresh token if configured
         from django.conf import settings as s
         if s.SIMPLE_JWT.get('ROTATE_REFRESH_TOKENS', False):
+            # Blacklist the old refresh token before rotating
+            if s.SIMPLE_JWT.get('BLACKLIST_AFTER_ROTATION', False):
+                try:
+                    refresh.blacklist()
+                except AttributeError:
+                    pass  # Blacklist app not installed
+
             refresh.set_jti()
             refresh.set_exp()
             new_refresh = str(refresh)

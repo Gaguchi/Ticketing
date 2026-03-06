@@ -99,10 +99,12 @@ class APIService {
 
   /**
    * Generic fetch wrapper with error handling
+   * @param isRetry - When true, skip token refresh on 401 to prevent infinite retry loops
    */
   private async request<T>(
     url: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    isRetry = false
   ): Promise<T> {
     const startTime = performance.now();
 
@@ -140,15 +142,18 @@ class APIService {
 
         // Handle 401 Unauthorized or 403 Forbidden (invalid/expired token)
         // Django can return 403 with "token_not_valid" error code
+        // Skip if this is already a retry to prevent infinite refresh loops
         if (
           (response.status === 401 ||
             (response.status === 403 && errorData.code === 'token_not_valid')) &&
           !isRefreshEndpoint &&
-          !isLoginEndpoint
+          !isLoginEndpoint &&
+          !isRetry
         ) {
           // Use token interceptor to handle refresh and retry
+          // Pass isRetry=true so the retried request won't trigger another refresh
           return await tokenInterceptor.handle401Error(
-            () => this.request<T>(url, options),
+            () => this.request<T>(url, options, true),
             url
           );
         }
