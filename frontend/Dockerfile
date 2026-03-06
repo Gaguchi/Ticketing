@@ -1,5 +1,5 @@
-# Single stage - forces build to actually run
-FROM node:20-alpine
+# Diagnostic: capture build error and serve it
+FROM node:20-alpine AS build
 
 WORKDIR /app
 COPY package*.json ./
@@ -16,8 +16,13 @@ ENV VITE_WS_BASE_URL=${VITE_WS_BASE_URL}
 ENV VITE_APP_NAME=${VITE_APP_NAME}
 ENV VITE_APP_VERSION=${VITE_APP_VERSION}
 
-# Capture build output - continue even if build fails
-RUN npm run build 2>&1 > /tmp/build.log; echo "EXIT_CODE=$?" >> /tmp/build.log; cat /tmp/build.log; test -d dist
+RUN mkdir -p /app/dist && \
+    (npm run build 2>&1 && echo "BUILD_SUCCESS" > /app/dist/build_status.txt || \
+    (echo "BUILD_FAILED" > /app/dist/build_status.txt && \
+     npm run build 2>&1 > /app/dist/error.html; true))
 
+# Production stage
+FROM nginx:1.26.2-alpine
+COPY --from=build /app/dist /usr/share/nginx/html
 EXPOSE 80
-CMD ["cat", "/tmp/build.log"]
+CMD ["nginx", "-g", "daemon off;"]
