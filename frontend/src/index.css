@@ -90,3 +90,33 @@ code {
 .kanban-column__scroll::-webkit-scrollbar-thumb:hover {
   background-color: var(--color-scrollbar-hover);
 }
+
+/* Modern minimal scrollbars for dashboard widgets */
+.dashboard-grid-container,
+.dashboard-grid-item,
+.dashboard-grid-item * {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-scrollbar) transparent;
+}
+
+.dashboard-grid-container::-webkit-scrollbar,
+.dashboard-grid-item ::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.dashboard-grid-container::-webkit-scrollbar-track,
+.dashboard-grid-item ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dashboard-grid-container::-webkit-scrollbar-thumb,
+.dashboard-grid-item ::-webkit-scrollbar-thumb {
+  background-color: var(--color-scrollbar);
+  border-radius: 4px;
+}
+
+.dashboard-grid-container::-webkit-scrollbar-thumb:hover,
+.dashboard-grid-item ::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-scrollbar-hover);
+}

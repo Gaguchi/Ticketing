@@ -179,6 +179,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
       {/* Grid Content */}
       <div
         ref={containerRef}
+        className="dashboard-grid-container"
         style={{
           flex: 1,
           overflow: "auto",
