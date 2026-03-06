@@ -145,6 +145,7 @@ const CompanyFilterBar: React.FC<Props> = ({
   // Original card-based layout for Dashboard
   return (
     <div
+      className="company-filter-bar-scroll"
       style={{
         display: "flex",
         gap: 10,
@@ -320,6 +321,26 @@ const CompanyFilterBar: React.FC<Props> = ({
           .company-filter-card:hover {
             transform: translateY(-1px);
             box-shadow: 0 3px 8px rgba(0, 0, 0, 0.06) !important;
+          }
+          @media (max-width: 767px) {
+            .company-filter-bar-scroll {
+              -webkit-overflow-scrolling: touch;
+              scrollbar-width: none;
+              padding-bottom: 4px;
+            }
+            .company-filter-bar-scroll::-webkit-scrollbar {
+              display: none;
+            }
+            .company-filter-card {
+              min-width: 100px !important;
+              padding: 6px 10px !important;
+            }
+            .company-filter-card .ant-avatar {
+              width: 26px !important;
+              height: 26px !important;
+              line-height: 26px !important;
+              font-size: 12px !important;
+            }
           }
         `}
       </style>

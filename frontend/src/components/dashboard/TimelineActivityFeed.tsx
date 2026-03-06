@@ -150,6 +150,11 @@ const TimelineActivityFeed: React.FC<Props> = ({
           .timeline-item:hover {
             background-color: var(--color-bg-sidebar);
           }
+          @media (max-width: 767px) {
+            .timeline-item {
+              padding: 8px 10px !important;
+            }
+          }
         `}
       </style>
 

@@ -1,0 +1,94 @@
+/* Chat page layout */
+.chat-page {
+  height: calc(100vh - 64px);
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-bg-inset);
+}
+
+.chat-page-header {
+  padding: 16px 24px;
+  background-color: var(--color-bg-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.chat-main-content {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* Sidebar */
+.chat-sidebar {
+  width: 320px;
+  background-color: var(--color-bg-surface);
+  border-right: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Chat area */
+.chat-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-bg-surface);
+}
+
+.chat-area-placeholder {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Chat header with back button */
+.chat-header-back-btn {
+  display: none;
+}
+
+/* Mobile breakpoint */
+@media (max-width: 768px) {
+  .chat-page-header {
+    padding: 12px 16px;
+  }
+
+  .chat-sidebar {
+    width: 100%;
+    border-right: none;
+  }
+
+  /* When a room is active on mobile, hide the sidebar */
+  .chat-main-content.mobile-chat-active .chat-sidebar {
+    display: none;
+  }
+
+  /* When no room is active on mobile, hide the chat area */
+  .chat-main-content:not(.mobile-chat-active) .chat-area,
+  .chat-main-content:not(.mobile-chat-active) .chat-area-placeholder {
+    display: none;
+  }
+
+  /* Show back button on mobile */
+  .chat-header-back-btn {
+    display: inline-flex;
+  }
+
+  /* Reduce message bubble max-width on mobile */
+  .chat-message-bubble-wrapper {
+    max-width: 85% !important;
+  }
+
+  /* Reduce chat padding on mobile */
+  .chat-messages-container {
+    padding: 12px !important;
+  }
+
+  .chat-input-area {
+    padding: 12px 16px !important;
+  }
+
+  .chat-header-area {
+    padding: 10px 16px !important;
+  }
+}

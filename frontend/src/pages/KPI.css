@@ -1,0 +1,27 @@
+/* KPI page responsive styles */
+
+@media (max-width: 768px) {
+  .kpi-page {
+    padding: 12px !important;
+  }
+
+  /* Make tables horizontally scrollable */
+  .kpi-page .ant-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .kpi-page .ant-table {
+    min-width: 600px;
+  }
+
+  /* Filters row - stack on mobile */
+  .kpi-page .kpi-filters {
+    justify-content: flex-start !important;
+  }
+
+  /* Nightingale chart sizing */
+  .kpi-page .ant-card {
+    border-radius: 8px !important;
+  }
+}

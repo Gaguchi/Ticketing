@@ -82,6 +82,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
   const { t: tCommon } = useTranslation('common');
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(1200);
+  const [isMobile, setIsMobile] = useState(false);
 
   // User-specific storage key
   const storageKey = useMemo(
@@ -89,11 +90,14 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
     [userId]
   );
 
-  // Measure container width for responsive grid
+  // Measure container width for responsive grid and detect mobile
   useEffect(() => {
     const updateWidth = () => {
       if (containerRef.current) {
-        setContainerWidth(containerRef.current.offsetWidth - 40); // Account for padding
+        const width = containerRef.current.offsetWidth;
+        const mobilePadding = width < 768 ? 24 : 40;
+        setContainerWidth(width - mobilePadding); // Account for padding
+        setIsMobile(width < 768);
       }
     };
 
@@ -104,6 +108,22 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
 
   const defaultLayout = useMemo(
     () => generateDefaultLayout(widgets),
+    [widgets]
+  );
+
+  // Generate a stacked layout for mobile: full width, vertically stacked
+  const mobileLayout = useMemo(
+    () =>
+      widgets.map((w, index) => ({
+        i: w.i,
+        x: 0,
+        y: index * 4,
+        w: 12,
+        h: w.defaultLayout.h,
+        minW: 12,
+        minH: w.defaultLayout.minH || 2,
+        static: true, // Disable drag on mobile
+      })),
     [widgets]
   );
 
@@ -143,6 +163,9 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
     message.success(t('grid.layoutReset'));
   }, [defaultLayout, storageKey]);
 
+  // Use mobile layout when on small screens, otherwise use saved/default layout
+  const activeLayout = isMobile ? mobileLayout : layout;
+
   return (
     <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
       {/* Header */}
@@ -151,20 +174,22 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "12px 20px",
+          padding: isMobile ? "12px 12px" : "12px 20px",
           borderBottom: "1px solid var(--color-border-light)",
           backgroundColor: "var(--color-bg-surface)",
         }}
       >
         <h1 style={{ fontSize: 'var(--fs-lg)', fontWeight: 600, margin: 0 }}>{t('grid.dashboard')}</h1>
         <div style={{ display: "flex", gap: 8 }}>
-          <Tooltip title={t('grid.resetLayout')}>
-            <Button
-              icon={<UndoOutlined />}
-              onClick={handleResetLayout}
-              size="small"
-            />
-          </Tooltip>
+          {!isMobile && (
+            <Tooltip title={t('grid.resetLayout')}>
+              <Button
+                icon={<UndoOutlined />}
+                onClick={handleResetLayout}
+                size="small"
+              />
+            </Tooltip>
+          )}
           <Button
             icon={<ReloadOutlined spin={loading} />}
             onClick={onRefresh}
@@ -183,23 +208,23 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
         style={{
           flex: 1,
           overflow: "auto",
-          padding: "16px 20px",
+          padding: isMobile ? "12px 12px" : "16px 20px",
           backgroundColor: "var(--color-bg-inset)",
         }}
       >
         <GridLayoutAny
           className="dashboard-grid"
-          layout={layout}
+          layout={activeLayout}
           cols={12}
-          rowHeight={80}
+          rowHeight={isMobile ? 70 : 80}
           width={containerWidth}
-          margin={[16, 16]}
+          margin={isMobile ? [12, 12] : [16, 16]}
           containerPadding={[0, 0]}
-          onLayoutChange={handleLayoutChange}
+          onLayoutChange={isMobile ? undefined : handleLayoutChange}
           draggableHandle=".drag-handle"
           useCSSTransforms={true}
-          isResizable={true}
-          isDraggable={true}
+          isResizable={!isMobile}
+          isDraggable={!isMobile}
           compactType="vertical"
         >
           {widgets.map((widget) => (
@@ -250,6 +275,29 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
         .react-grid-item.react-draggable-dragging {
           z-index: 100;
           box-shadow: var(--shadow-lg);
+        }
+        @media (max-width: 767px) {
+          .react-grid-item > .react-resizable-handle {
+            display: none !important;
+          }
+          .drag-handle {
+            cursor: default !important;
+          }
+          .dashboard-widget .ant-card-body {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 8px !important;
+          }
+          .dashboard-widget .ant-card-head {
+            padding: 6px 10px !important;
+            min-height: auto !important;
+          }
+          .dashboard-grid-item {
+            overflow: hidden;
+          }
+          .dashboard-grid-container {
+            -webkit-overflow-scrolling: touch;
+          }
         }
       `}</style>
     </div>

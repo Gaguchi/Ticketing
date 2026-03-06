@@ -52,6 +52,7 @@ import KPIScoreboard from "../components/kpi/KPIScoreboard";
 import NightingaleChart from "../components/kpi/NightingaleChart";
 import IndicatorSummaryList from "../components/kpi/IndicatorSummaryList";
 import IndicatorDrillDown from "../components/kpi/IndicatorDrillDown";
+import "./KPI.css";
 
 dayjs.extend(relativeTime);
 
@@ -357,6 +358,7 @@ const MyPerformance: React.FC<MyPerformanceProps> = ({ userRole }) => {
     <div style={{ animation: "fadeIn 0.5s ease" }}>
       {/* Filters & Actions */}
       <div
+        className="kpi-filters"
         style={{
           marginBottom: 24,
           display: "flex",
@@ -644,7 +646,7 @@ const KPIPage: React.FC = () => {
   }
 
   return (
-    <div style={{ padding: 24 }}>
+    <div className="kpi-page" style={{ padding: 24 }}>
       <Title level={3} style={{ marginBottom: 16 }}>
         <BarChartOutlined style={{ marginRight: 8 }} />
         KPI

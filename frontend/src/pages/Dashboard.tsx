@@ -3,7 +3,7 @@
  * Customizable dashboard with drag-and-drop widgets using react-grid-layout
  */
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef, useLayoutEffect } from "react";
 import { Spin, message, Empty } from "antd";
 import { useProject, useAuth } from "../contexts/AppContext";
 import { useTranslation } from "react-i18next";
@@ -55,6 +55,15 @@ const Dashboard: React.FC = () => {
   // Modal states
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+  // Responsive state
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+  useEffect(() => {
+    const mql = window.matchMedia("(max-width: 767px)");
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, []);
 
   // Calculate total tickets across all companies
   const totalTickets = kanbanSummary?.total_tickets || 0;
@@ -290,7 +299,7 @@ const Dashboard: React.FC = () => {
   return (
     <>
       {/* Company Filter Header - Fixed position, not draggable */}
-      <div style={{ padding: "0 20px", marginBottom: 0, backgroundColor: "var(--color-bg-surface)" }}>
+      <div style={{ padding: isMobile ? "0 12px" : "0 20px", marginBottom: 0, backgroundColor: "var(--color-bg-surface)" }}>
         <CompanyFilterBar
           companies={companyHealth}
           selectedCompanyIds={selectedCompanyIds}

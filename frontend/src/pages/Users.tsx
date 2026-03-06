@@ -41,6 +41,7 @@ import apiService from "../services/api.service";
 import { debug, LogLevel, LogCategory } from "../utils/debug";
 import { InviteUserModal } from "../components/InviteUserModal";
 import { useApp } from "../contexts/AppContext";
+import "./Users.css";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -584,8 +585,9 @@ const Users: React.FC = () => {
   });
 
   return (
-    <div style={{ padding: 24 }}>
+    <div className="users-page" style={{ padding: 24 }}>
       <div
+        className="users-header"
         style={{
           marginBottom: 24,
           display: "flex",

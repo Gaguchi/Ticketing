@@ -36,3 +36,32 @@
 .modern-sider::-webkit-scrollbar-thumb:hover {
   background: var(--color-scrollbar-hover);
 }
+
+/* Mobile overlay backdrop */
+.mobile-sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Mobile header adjustments */
+@media (max-width: 768px) {
+  .mobile-header-actions {
+    gap: 4px !important;
+  }
+
+  .mobile-header-actions .ant-select {
+    min-width: 120px !important;
+  }
+
+  .modern-sider {
+    transition: transform 0.25s ease !important;
+  }
+}

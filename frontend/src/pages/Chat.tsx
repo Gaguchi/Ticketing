@@ -24,6 +24,7 @@ import {
   SmileOutlined,
   CloseOutlined,
   CustomerServiceOutlined,
+  ArrowLeftOutlined,
 } from "@ant-design/icons";
 import EmojiPicker from "emoji-picker-react";
 import { useProject, useAuth } from "../contexts/AppContext";
@@ -31,6 +32,7 @@ import { chatService } from "../services/chat.service";
 import { webSocketService } from "../services/websocket.service";
 import type { ChatRoom, ChatMessage, ChatWebSocketEvent } from "../types/chat";
 import type { ProjectMember } from "../types/api";
+import "./Chat.css";
 
 const { Text } = Typography;
 
@@ -654,39 +656,18 @@ const Chat: React.FC = () => {
   }
 
   return (
-    <div
-      style={{
-        height: "calc(100vh - 64px)",
-        display: "flex",
-        flexDirection: "column",
-        backgroundColor: "var(--color-bg-inset)",
-      }}
-    >
+    <div className="chat-page">
       {/* Header */}
-      <div
-        style={{
-          padding: "16px 24px",
-          backgroundColor: "var(--color-bg-surface)",
-          borderBottom: "1px solid var(--color-border)",
-        }}
-      >
+      <div className="chat-page-header">
         <Text style={{ fontSize: 'var(--fs-2xl)', fontWeight: 600, color: "var(--color-text-heading)" }}>
           Messages
         </Text>
       </div>
 
       {/* Main Content */}
-      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+      <div className={`chat-main-content${activeRoom ? ' mobile-chat-active' : ''}`}>
         {/* Sidebar */}
-        <div
-          style={{
-            width: 320,
-            backgroundColor: "var(--color-bg-surface)",
-            borderRight: "1px solid var(--color-border)",
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
+        <div className="chat-sidebar">
           {/* Tabs */}
           <Tabs
             activeKey={sidebarTab}
@@ -964,16 +945,10 @@ const Chat: React.FC = () => {
 
         {/* Chat Area */}
         {activeRoom ? (
-          <div
-            style={{
-              flex: 1,
-              display: "flex",
-              flexDirection: "column",
-              backgroundColor: "var(--color-bg-surface)",
-            }}
-          >
+          <div className="chat-area">
             {/* Chat Header */}
             <div
+              className="chat-header-area"
               style={{
                 padding: "12px 24px",
                 borderBottom: "1px solid var(--color-border)",
@@ -981,6 +956,12 @@ const Chat: React.FC = () => {
               }}
             >
               <Space size={12}>
+                <Button
+                  className="chat-header-back-btn"
+                  type="text"
+                  icon={<ArrowLeftOutlined />}
+                  onClick={() => setActiveRoom(null)}
+                />
                 <Avatar
                   size={36}
                   icon={<UserOutlined />}
@@ -1006,6 +987,7 @@ const Chat: React.FC = () => {
             <div
               ref={messagesContainerRef}
               onScroll={handleScroll}
+              className="chat-messages-container"
               style={{
                 flex: 1,
                 overflowY: "auto",
@@ -1068,6 +1050,7 @@ const Chat: React.FC = () => {
                           }}
                         >
                           <div
+                            className="chat-message-bubble-wrapper"
                             style={{
                               display: "flex",
                               gap: 8,
@@ -1394,6 +1377,7 @@ const Chat: React.FC = () => {
 
             {/* Message Input */}
             <div
+              className="chat-input-area"
               style={{
                 padding: "16px 24px",
                 borderTop: "1px solid var(--color-border)",
@@ -1474,14 +1458,7 @@ const Chat: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div
-            style={{
-              flex: 1,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
+          <div className="chat-area-placeholder">
             <Text type="secondary">
               Select a conversation to start chatting
             </Text>

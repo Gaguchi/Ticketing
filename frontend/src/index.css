@@ -10,6 +10,8 @@ body {
     'Segoe UI Symbol', 'Noto Color Emoji';
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+  touch-action: manipulation;
 }
 
 code {
@@ -119,4 +121,24 @@ code {
 .dashboard-grid-container::-webkit-scrollbar-thumb:hover,
 .dashboard-grid-item ::-webkit-scrollbar-thumb:hover {
   background-color: var(--color-scrollbar-hover);
+}
+
+/* Mobile-friendly overrides */
+@media (max-width: 768px) {
+  .ant-modal {
+    max-width: calc(100vw - 16px) !important;
+    margin: 8px auto !important;
+  }
+
+  .ant-modal-body {
+    padding: 16px;
+  }
+
+  .ant-select-dropdown {
+    max-height: 200px;
+  }
+
+  .ant-table-wrapper {
+    overflow-x: auto;
+  }
 }

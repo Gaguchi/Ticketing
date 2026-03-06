@@ -971,6 +971,7 @@ const Tickets: React.FC = () => {
     <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
       {/* Simplified Header - Jira Style */}
       <div
+        className="tickets-toolbar"
         style={{
           display: "flex",
           alignItems: "center",
@@ -980,7 +981,7 @@ const Tickets: React.FC = () => {
           backgroundColor: "var(--color-bg-surface)",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+        <div className="tickets-toolbar-left" style={{ display: "flex", alignItems: "center", gap: "16px" }}>
           <h1 style={{ fontSize: 'var(--fs-lg)', fontWeight: 600, margin: 0 }}>Board</h1>
           {/* Company Filter Pills */}
           {companies.length > 0 && (
@@ -1032,7 +1033,7 @@ const Tickets: React.FC = () => {
           </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        <div className="tickets-toolbar-right" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           <Segmented
             value={viewMode}
             onChange={(value) =>

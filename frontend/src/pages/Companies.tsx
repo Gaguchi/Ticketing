@@ -61,6 +61,7 @@ import { useCompaniesStats } from "../hooks/useCompanyStats";
 import type { TicketColumn } from "../types/api";
 import { debug, LogLevel, LogCategory } from "../utils/debug";
 import { useApp } from "../contexts/AppContext";
+import "./Companies.css";
 
 const { Title, Text } = Typography;
 
@@ -665,7 +666,7 @@ const Companies: React.FC = () => {
         <EmptyState />
       ) : selectedCompany ? (
         // Detailed Company View
-        <div style={{ padding: 24 }}>
+        <div className="companies-page" style={{ padding: 24 }}>
           {/* Back Button */}
           <Button
             icon={<ArrowLeftOutlined />}
@@ -935,9 +936,10 @@ const Companies: React.FC = () => {
         </div>
       ) : (
         // Card Grid View (Default)
-        <div style={{ padding: 24 }}>
+        <div className="companies-page" style={{ padding: 24 }}>
           {/* Header */}
           <div
+            className="companies-header"
             style={{
               marginBottom: 24,
               display: "flex",

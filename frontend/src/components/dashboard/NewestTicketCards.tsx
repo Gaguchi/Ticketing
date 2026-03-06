@@ -103,7 +103,7 @@ const NewestTicketCards: React.FC<Props> = ({
           style={{ padding: 24 }}
         />
       ) : (
-        <div style={{ fontSize: 'var(--fs-sm)' }}>
+        <div className="newest-tickets-table" style={{ fontSize: 'var(--fs-sm)', overflowX: "auto" }}>
           {/* Table Header */}
           <div
             style={{
@@ -213,6 +213,11 @@ const NewestTicketCards: React.FC<Props> = ({
         {`
           .newest-ticket-row:hover {
             background-color: var(--color-bg-inset) !important;
+          }
+          @media (max-width: 767px) {
+            .newest-tickets-table {
+              min-width: 400px;
+            }
           }
         `}
       </style>

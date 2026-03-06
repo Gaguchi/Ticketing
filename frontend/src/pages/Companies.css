@@ -1,0 +1,38 @@
+/* Companies page responsive styles */
+
+@media (max-width: 768px) {
+  .companies-page {
+    padding: 12px !important;
+  }
+
+  .companies-page .companies-header {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 12px;
+  }
+
+  /* Make tables horizontally scrollable */
+  .companies-page .ant-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .companies-page .ant-table {
+    min-width: 600px;
+  }
+
+  /* Company detail header - stack vertically */
+  .companies-page .ant-row {
+    gap: 12px;
+  }
+
+  /* Ticket view mode buttons - wrap on mobile */
+  .companies-page .ant-card-extra .ant-space {
+    flex-wrap: wrap;
+  }
+
+  .companies-page .ant-card-extra .ant-space .ant-btn {
+    font-size: 12px;
+    padding: 0 8px;
+  }
+}

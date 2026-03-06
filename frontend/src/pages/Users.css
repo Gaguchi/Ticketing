@@ -1,0 +1,28 @@
+/* Users page responsive styles */
+
+@media (max-width: 768px) {
+  .users-page {
+    padding: 12px !important;
+  }
+
+  .users-page .users-header {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 12px;
+  }
+
+  /* Make tables horizontally scrollable */
+  .users-page .ant-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .users-page .ant-table {
+    min-width: 700px;
+  }
+
+  /* Search input full width */
+  .users-page .ant-input-search {
+    max-width: 100% !important;
+  }
+}

@@ -64,6 +64,7 @@ const TeamWorkloadCards: React.FC<Props> = ({
         />
       ) : (
         <div
+          className="workload-grid-container"
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
@@ -240,6 +241,14 @@ const TeamWorkloadCards: React.FC<Props> = ({
           .workload-card:hover {
             border-color: var(--color-primary) !important;
             box-shadow: 0 2px 8px rgba(24, 144, 255, 0.1);
+          }
+          @media (max-width: 767px) {
+            .workload-grid-container {
+              grid-template-columns: 1fr !important;
+            }
+            .workload-card {
+              padding: 10px !important;
+            }
           }
         `}
       </style>

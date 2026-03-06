@@ -116,3 +116,65 @@
   color: var(--color-primary);
   font-weight: 500;
 }
+
+/* ── Mobile Breakpoints ── */
+@media (max-width: 768px) {
+  .kanban {
+    height: calc(100vh - 110px);
+    /* Enable momentum scrolling on iOS */
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory;
+  }
+
+  .kanban-container {
+    padding: 8px 8px;
+    gap: 0;
+  }
+
+  /* Toolbar: allow wrapping and reduce spacing */
+  .tickets-toolbar {
+    flex-wrap: wrap;
+    padding: 10px 12px !important;
+    gap: 8px;
+  }
+
+  .tickets-toolbar-left {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .tickets-toolbar-right {
+    flex-wrap: wrap;
+    gap: 8px;
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  /* Kanban columns: narrower + snap */
+  .kanban-column {
+    min-width: 280px !important;
+    max-width: 280px !important;
+    scroll-snap-align: start;
+    height: calc(100vh - 150px) !important;
+  }
+
+  /* Ticket cards: ensure adequate touch targets */
+  .ticket-card {
+    min-height: 44px;
+    padding: 10px 10px !important;
+  }
+
+  .archive-panel {
+    margin: 8px 8px;
+  }
+
+  .archive-panel__header {
+    padding: 10px 12px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .archive-panel__body {
+    padding: 10px 12px;
+  }
+}

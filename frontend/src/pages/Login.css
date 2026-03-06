@@ -87,6 +87,20 @@
 }
 
 /* Responsive */
+@media (max-width: 768px) {
+  .login-container {
+    padding: 12px;
+  }
+
+  .login-card-wrapper {
+    max-width: 100%;
+  }
+
+  .login-header {
+    margin-bottom: 24px;
+  }
+}
+
 @media (max-width: 576px) {
   .login-card {
     padding: 16px;

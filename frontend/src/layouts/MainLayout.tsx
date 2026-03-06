@@ -47,12 +47,29 @@ interface NavItem {
   path: string;
 }
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() =>
+    window.matchMedia("(max-width: 768px)").matches
+  );
+
+  useEffect(() => {
+    const mql = window.matchMedia("(max-width: 768px)");
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, []);
+
+  return isMobile;
+}
+
 const MainLayout: React.FC = () => {
   const { t } = useTranslation('common');
   const [collapsed, setCollapsed] = useState(true);
   const [isCreateProjectModalOpen, setIsCreateProjectModalOpen] =
     useState(false);
   const [unreadChatCount, setUnreadChatCount] = useState(0);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const isMobile = useIsMobile();
   const navigate = useNavigate();
   const location = useLocation();
   const { logout, user, loading: authLoading } = useAuth();
@@ -172,6 +189,13 @@ const MainLayout: React.FC = () => {
     };
   }, [selectedProject?.id]);
 
+  // Close mobile menu when switching away from mobile
+  useEffect(() => {
+    if (!isMobile) {
+      setMobileMenuOpen(false);
+    }
+  }, [isMobile]);
+
   const handleMenuClick: MenuProps["onClick"] = ({ key }) => {
     if (key === "logout") {
       logout();
@@ -180,6 +204,13 @@ const MainLayout: React.FC = () => {
       navigate("/profile");
     } else if (key === "settings") {
       navigate("/settings");
+    }
+  };
+
+  const handleNavClick = (path: string) => {
+    navigate(path);
+    if (isMobile) {
+      setMobileMenuOpen(false);
     }
   };
 
@@ -250,12 +281,24 @@ const MainLayout: React.FC = () => {
     },
   ];
 
+  // On mobile, sidebar is always "expanded" (not icon-collapsed) but visibility
+  // is controlled via transform. On desktop, use the existing collapsed state.
+  const siderCollapsed = isMobile ? false : collapsed;
+
   return (
     <Layout style={{ minHeight: "100vh" }}>
+      {/* Mobile backdrop overlay */}
+      {isMobile && mobileMenuOpen && (
+        <div
+          className="mobile-sidebar-backdrop"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
       <Sider
         trigger={null}
         collapsible
-        collapsed={collapsed}
+        collapsed={siderCollapsed}
         collapsedWidth={88}
         width={240}
         className="modern-sider"
@@ -268,6 +311,16 @@ const MainLayout: React.FC = () => {
           bottom: 0,
           background: "var(--color-bg-sidebar)",
           borderRight: "1px solid var(--color-border)",
+          ...(isMobile
+            ? {
+                zIndex: 1000,
+                transform: mobileMenuOpen
+                  ? "translateX(0)"
+                  : "translateX(-100%)",
+                width: 240,
+                transition: "transform 0.25s ease",
+              }
+            : {}),
         }}
       >
         {/* Logo/Brand */}
@@ -276,17 +329,17 @@ const MainLayout: React.FC = () => {
             height: 48,
             display: "flex",
             alignItems: "center",
-            justifyContent: collapsed ? "center" : "flex-start",
-            padding: collapsed ? "0" : "0 16px",
+            justifyContent: siderCollapsed ? "center" : "flex-start",
+            padding: siderCollapsed ? "0" : "0 16px",
             borderBottom: "1px solid var(--color-border)",
             background: "var(--color-bg-surface)",
           }}
         >
-          {collapsed ? <LogoIcon size={20} /> : <Logo size={20} showText />}
+          {siderCollapsed ? <LogoIcon size={20} /> : <Logo size={20} showText />}
         </div>
 
         {/* Navigation Items */}
-        <div style={{ padding: collapsed ? "8px 6px" : "8px" }}>
+        <div style={{ padding: siderCollapsed ? "8px 6px" : "8px" }}>
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
             const isChatItem = item.key === "/chat";
@@ -294,17 +347,17 @@ const MainLayout: React.FC = () => {
             return (
               <div
                 key={item.key}
-                onClick={() => navigate(item.path)}
+                onClick={() => handleNavClick(item.path)}
                 className={`nav-item ${isActive ? "active" : ""} ${
-                  collapsed ? "collapsed" : ""
+                  siderCollapsed ? "collapsed" : ""
                 }`}
                 style={{
                   display: "flex",
-                  flexDirection: collapsed ? "column" : "row",
+                  flexDirection: siderCollapsed ? "column" : "row",
                   alignItems: "center",
-                  justifyContent: collapsed ? "center" : "flex-start",
-                  gap: collapsed ? 2 : 8,
-                  padding: collapsed ? "10px 4px" : "6px 12px",
+                  justifyContent: siderCollapsed ? "center" : "flex-start",
+                  gap: siderCollapsed ? 2 : 8,
+                  padding: siderCollapsed ? "10px 4px" : "6px 12px",
                   marginBottom: 2,
                   borderRadius: 2,
                   cursor: "pointer",
@@ -321,23 +374,23 @@ const MainLayout: React.FC = () => {
                   <Badge
                     count={unreadChatCount}
                     size="small"
-                    offset={collapsed ? [5, 0] : [10, 0]}
+                    offset={siderCollapsed ? [5, 0] : [10, 0]}
                     style={{
-                      fontSize: collapsed ? 'var(--fs-2xs)' : 'var(--fs-xs)',
+                      fontSize: siderCollapsed ? 'var(--fs-2xs)' : 'var(--fs-xs)',
                     }}
                   >
-                    <span style={{ fontSize: collapsed ? 'var(--fs-2xl)' : 'var(--fs-lg)' }}>
+                    <span style={{ fontSize: siderCollapsed ? 'var(--fs-2xl)' : 'var(--fs-lg)' }}>
                       {item.icon}
                     </span>
                   </Badge>
                 ) : (
-                  <span style={{ fontSize: collapsed ? 'var(--fs-2xl)' : 'var(--fs-lg)' }}>
+                  <span style={{ fontSize: siderCollapsed ? 'var(--fs-2xl)' : 'var(--fs-lg)' }}>
                     {item.icon}
                   </span>
                 )}
                 <span
                   style={{
-                    fontSize: collapsed ? 'var(--fs-2xs)' : 'var(--fs-caption)',
+                    fontSize: siderCollapsed ? 'var(--fs-2xs)' : 'var(--fs-caption)',
                     fontWeight: isActive ? 500 : 400,
                     whiteSpace: "nowrap",
                   }}
@@ -356,7 +409,7 @@ const MainLayout: React.FC = () => {
             bottom: 0,
             left: 0,
             right: 0,
-            padding: collapsed ? "8px 6px" : "8px",
+            padding: siderCollapsed ? "8px 6px" : "8px",
             borderTop: "1px solid var(--color-border)",
             background: "var(--color-bg-surface)",
           }}
@@ -365,11 +418,11 @@ const MainLayout: React.FC = () => {
             className="nav-item"
             style={{
               display: "flex",
-              flexDirection: collapsed ? "column" : "row",
+              flexDirection: siderCollapsed ? "column" : "row",
               alignItems: "center",
               justifyContent: "center",
-              gap: collapsed ? 2 : 8,
-              padding: collapsed ? "10px 4px" : "6px 12px",
+              gap: siderCollapsed ? 2 : 8,
+              padding: siderCollapsed ? "10px 4px" : "6px 12px",
               borderRadius: 2,
               cursor: "pointer",
               transition: "all 0.15s",
@@ -377,8 +430,8 @@ const MainLayout: React.FC = () => {
               color: "var(--color-chat-mine-text)",
             }}
           >
-            <PlusOutlined style={{ fontSize: collapsed ? 'var(--fs-2xl)' : 'var(--fs-lg)' }} />
-            {!collapsed && (
+            <PlusOutlined style={{ fontSize: siderCollapsed ? 'var(--fs-2xl)' : 'var(--fs-lg)' }} />
+            {!siderCollapsed && (
               <span style={{ fontSize: 'var(--fs-caption)', fontWeight: 500 }}>{t('nav.newTicket')}</span>
             )}
           </div>
@@ -386,14 +439,14 @@ const MainLayout: React.FC = () => {
       </Sider>
       <Layout
         style={{
-          marginLeft: collapsed ? 88 : 240,
+          marginLeft: isMobile ? 0 : (collapsed ? 88 : 240),
           transition: "all 0.15s",
           background: "var(--color-bg-content)",
         }}
       >
         <Header
           style={{
-            padding: "0 16px",
+            padding: isMobile ? "0 8px" : "0 16px",
             background: "var(--color-bg-surface)",
             display: "flex",
             alignItems: "center",
@@ -406,7 +459,13 @@ const MainLayout: React.FC = () => {
           }}
         >
           <div
-            onClick={() => setCollapsed(!collapsed)}
+            onClick={() => {
+              if (isMobile) {
+                setMobileMenuOpen(!mobileMenuOpen);
+              } else {
+                setCollapsed(!collapsed);
+              }
+            }}
             style={{
               cursor: "pointer",
               padding: "6px 8px",
@@ -424,13 +483,13 @@ const MainLayout: React.FC = () => {
               e.currentTarget.style.background = "transparent";
             }}
           >
-            {collapsed ? (
+            {(isMobile ? !mobileMenuOpen : collapsed) ? (
               <MenuUnfoldOutlined style={{ fontSize: 'var(--fs-lg)' }} />
             ) : (
               <MenuFoldOutlined style={{ fontSize: 'var(--fs-lg)' }} />
             )}
           </div>
-          <Space size="middle">
+          <Space size={isMobile ? "small" : "middle"} className={isMobile ? "mobile-header-actions" : ""}>
             {/* Project Selector - Show loading or data based on state */}
             {authLoading || projectLoading ? (
               <Space size="small">
@@ -438,7 +497,7 @@ const MainLayout: React.FC = () => {
                 <Select
                   loading={true}
                   disabled={true}
-                  style={{ minWidth: 150 }}
+                  style={{ minWidth: isMobile ? 120 : 150 }}
                   size="small"
                   placeholder={t('nav.loadingProjects')}
                 />
@@ -456,7 +515,7 @@ const MainLayout: React.FC = () => {
                       setSelectedProject(project);
                     }
                   }}
-                  style={{ minWidth: 150 }}
+                  style={{ minWidth: isMobile ? 120 : 150 }}
                   size="small"
                   placeholder={t('nav.selectProject')}
                   options={availableProjects.map((project) => ({
@@ -470,7 +529,7 @@ const MainLayout: React.FC = () => {
                   icon={<PlusOutlined />}
                   onClick={() => setIsCreateProjectModalOpen(true)}
                 >
-                  {t('nav.newProject')}
+                  {!isMobile && t('nav.newProject')}
                 </Button>
               </Space>
             ) : (
@@ -481,7 +540,7 @@ const MainLayout: React.FC = () => {
                 icon={<PlusOutlined />}
                 onClick={() => setIsCreateProjectModalOpen(true)}
               >
-                {t('nav.createFirstProject')}
+                {!isMobile && t('nav.createFirstProject')}
               </Button>
             )}
 
@@ -507,9 +566,11 @@ const MainLayout: React.FC = () => {
                   }}
                   icon={<UserOutlined />}
                 />
-                <Text strong style={{ fontSize: 'var(--fs-caption)' }}>
-                  {user?.username || "Admin"}
-                </Text>
+                {!isMobile && (
+                  <Text strong style={{ fontSize: 'var(--fs-caption)' }}>
+                    {user?.username || "Admin"}
+                  </Text>
+                )}
               </Space>
             </Dropdown>
           </Space>

@@ -429,6 +429,16 @@ const AttentionNeededCards: React.FC<Props> = ({
           .category-header-hover:hover {
             filter: brightness(0.97);
           }
+          @media (max-width: 767px) {
+            .attention-ticket-item {
+              margin-left: 8px !important;
+              padding: 6px 8px !important;
+              gap: 6px !important;
+            }
+            .attention-ticket-item .ant-tag {
+              display: none;
+            }
+          }
         `}
       </style>
     </Card>

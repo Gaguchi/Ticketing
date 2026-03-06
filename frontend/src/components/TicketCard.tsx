@@ -355,6 +355,7 @@ const TicketCardComponent: React.FC<TicketCardProps> = ({
     <div
       ref={disabled ? null : setNodeRef}
       style={style}
+      className="ticket-card"
       {...attributes}
       {...listeners}
       onClick={(e) => {
