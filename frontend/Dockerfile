@@ -1,4 +1,4 @@
-# Stage 1: Build the Vite application
+# Build stage
 FROM node:20-alpine AS build
 
 WORKDIR /app
@@ -13,8 +13,8 @@ RUN npm ci
 COPY . .
 
 # Build arguments (can be overridden at build time)
-ARG VITE_API_BASE_URL=http://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me
-ARG VITE_WS_BASE_URL=ws://tickets-backend-lfffka-3700fb-31-97-181-167.traefik.me
+ARG VITE_API_BASE_URL
+ARG VITE_WS_BASE_URL
 ARG VITE_APP_NAME="Ticketing System"
 ARG VITE_APP_VERSION=1.0.0
 
@@ -26,7 +26,7 @@ ENV VITE_APP_VERSION=${VITE_APP_VERSION}
 # Build the application
 RUN npm run build
 
-# Stage 2: Serve with Nginx
+# Production stage
 FROM nginx:1.26.2-alpine
 
 # Copy built files from build stage
@@ -35,6 +35,8 @@ COPY --from=build /app/dist /usr/share/nginx/html
 # Copy nginx configuration
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
+# Expose port 80
 EXPOSE 80
 
+# Start nginx
 CMD ["nginx", "-g", "daemon off;"]
