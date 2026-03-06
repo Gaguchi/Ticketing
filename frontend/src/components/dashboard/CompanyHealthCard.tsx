@@ -134,7 +134,7 @@ const CompanyHealthCard: React.FC<Props> = ({
       onClick={() => onClick?.(company.id)}
       style={{
         borderRadius: 8,
-        border: hasIssues ? "1px solid #ff4d4f40" : "1px solid var(--color-border-light)",
+        border: hasIssues ? "1px solid var(--color-tint-danger-border)" : "1px solid var(--color-border-light)",
         height: isExpanded ? "auto" : 160,
       }}
       styles={{

@@ -268,7 +268,7 @@ const LiveActivityFeed: React.FC<Props> = ({
                     title={new Date(activity.changed_at).toLocaleString()}
                   >
                     <span
-                      style={{ fontSize: 'var(--fs-2xs)', color: "#bfbfbf", flexShrink: 0 }}
+                      style={{ fontSize: 'var(--fs-2xs)', color: "var(--color-text-muted)", flexShrink: 0 }}
                     >
                       {formatRelativeTime(activity.changed_at)}
                     </span>

@@ -98,9 +98,9 @@ const TeamWorkloadCards: React.FC<Props> = ({
                   padding: 12,
                   borderRadius: 8,
                   border: hasOverdue
-                    ? "1px solid #ff4d4f40"
+                    ? "1px solid var(--color-tint-danger-border)"
                     : "1px solid var(--color-border-light)",
-                  backgroundColor: hasOverdue ? "#fff1f0" : "var(--color-bg-surface)",
+                  backgroundColor: hasOverdue ? "var(--color-tint-danger-bg)" : "var(--color-bg-surface)",
                   cursor: onUserClick ? "pointer" : "default",
                   transition: "all 0.2s ease",
                 }}

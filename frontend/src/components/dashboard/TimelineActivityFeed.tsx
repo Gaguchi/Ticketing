@@ -331,7 +331,7 @@ const TimelineActivityFeed: React.FC<Props> = ({
                             >
                               {activity.old_value || t('activity.empty')}
                             </span>
-                            <span style={{ color: "#bfbfbf" }}>→</span>
+                            <span style={{ color: "var(--color-text-muted)" }}>→</span>
                             <span
                               style={{
                                 padding: "2px 6px",
@@ -358,7 +358,7 @@ const TimelineActivityFeed: React.FC<Props> = ({
                         <span
                           style={{
                             fontSize: 'var(--fs-2xs)',
-                            color: "#bfbfbf",
+                            color: "var(--color-text-muted)",
                             flexShrink: 0,
                             marginLeft: 8,
                           }}

@@ -66,12 +66,12 @@ const categoryStyleConfig: Record<
   overdue: {
     icon: <ClockCircleOutlined />,
     color: "#ff4d4f",
-    bgColor: "#fff1f0",
+    bgColor: "var(--color-tint-danger-bg)",
   },
   unassigned: {
     icon: <UserDeleteOutlined />,
     color: "#faad14",
-    bgColor: "#fffbe6",
+    bgColor: "var(--color-tint-warning-bg)",
   },
   stale: {
     icon: <FieldTimeOutlined />,
@@ -188,7 +188,7 @@ const TicketItem: React.FC<{
     </span>
 
     {/* View arrow */}
-    <RightOutlined style={{ fontSize: 'var(--fs-2xs)', color: "#bfbfbf" }} />
+    <RightOutlined style={{ fontSize: 'var(--fs-2xs)', color: "var(--color-text-muted)" }} />
   </div>
   );
 };
@@ -359,7 +359,7 @@ const AttentionNeededCards: React.FC<Props> = ({
                       style={{
                         fontSize: 'var(--fs-xs)',
                         fontWeight: 600,
-                        color: hasTickets ? config.color : "#bfbfbf",
+                        color: hasTickets ? config.color : "var(--color-text-muted)",
                         letterSpacing: "0.5px",
                         flex: 1,
                       }}

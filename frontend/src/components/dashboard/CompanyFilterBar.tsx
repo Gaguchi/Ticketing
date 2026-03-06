@@ -253,7 +253,7 @@ const CompanyFilterBar: React.FC<Props> = ({
                   border: isSelected
                     ? "2px solid var(--color-primary)"
                     : hasIssues
-                    ? "1px solid #ff4d4f40"
+                    ? "1px solid var(--color-tint-danger-border)"
                     : "1px solid var(--color-border)",
                   cursor: "pointer",
                   minWidth: 120,
