@@ -1,5 +1,5 @@
-# Build stage
-FROM node:20-alpine AS build
+# Single stage - forces build to actually run
+FROM node:20-alpine
 
 WORKDIR /app
 COPY package*.json ./
@@ -16,10 +16,8 @@ ENV VITE_WS_BASE_URL=${VITE_WS_BASE_URL}
 ENV VITE_APP_NAME=${VITE_APP_NAME}
 ENV VITE_APP_VERSION=${VITE_APP_VERSION}
 
-RUN npm run build
+# Capture build output - continue even if build fails
+RUN npm run build 2>&1 > /tmp/build.log; echo "EXIT_CODE=$?" >> /tmp/build.log; cat /tmp/build.log; test -d dist
 
-# Production stage - test COPY --from=build only (no nginx.conf)
-FROM nginx:1.26.2-alpine
-COPY --from=build /app/dist /usr/share/nginx/html
 EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["cat", "/tmp/build.log"]
