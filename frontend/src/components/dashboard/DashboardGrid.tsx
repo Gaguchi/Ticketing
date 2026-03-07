@@ -5,7 +5,9 @@
  */
 
 import React, { useState, useCallback, useMemo } from "react";
-import RGL, { type Layout } from "react-grid-layout";
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import RGLDefault from "react-grid-layout";
+import type { Layout } from "react-grid-layout";
 import { Button, Tooltip, message } from "antd";
 import { ReloadOutlined, UndoOutlined } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
@@ -13,9 +15,11 @@ import { useIsMobile } from "../../hooks/useIsMobile";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 
-const ResponsiveGridLayout = (RGL as any).WidthProvider(
-  (RGL as any).Responsive
-);
+// CJS interop: WidthProvider and Responsive live on the default export object
+const _RGL = RGLDefault as any;
+const WidthProvider = _RGL.WidthProvider ?? _RGL.default?.WidthProvider;
+const Responsive = _RGL.Responsive ?? _RGL.default?.Responsive;
+const ResponsiveGridLayout = WidthProvider(Responsive);
 
 // Storage key prefix for layout persistence (user ID appended at runtime)
 const LAYOUT_STORAGE_KEY_PREFIX = "dashboard_layout_v2_user_";
