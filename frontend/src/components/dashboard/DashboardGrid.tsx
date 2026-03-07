@@ -5,9 +5,8 @@
  */
 
 import React, { useState, useCallback, useMemo } from "react";
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-import RGLDefault from "react-grid-layout";
-import type { Layout } from "react-grid-layout";
+import { ResponsiveGridLayout, verticalCompactor, useContainerWidth } from "react-grid-layout";
+import type { Layout, LayoutItem, ResponsiveLayouts } from "react-grid-layout";
 import { Button, Tooltip, message } from "antd";
 import { ReloadOutlined, UndoOutlined } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
@@ -15,28 +14,8 @@ import { useIsMobile } from "../../hooks/useIsMobile";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 
-// CJS interop: WidthProvider and Responsive live on the default export object
-const _RGL = RGLDefault as any;
-const WidthProvider = _RGL.WidthProvider ?? _RGL.default?.WidthProvider;
-const Responsive = _RGL.Responsive ?? _RGL.default?.Responsive;
-const ResponsiveGridLayout = WidthProvider(Responsive);
-
 // Storage key prefix for layout persistence (user ID appended at runtime)
 const LAYOUT_STORAGE_KEY_PREFIX = "dashboard_layout_v2_user_";
-
-// Layout item type (matches react-grid-layout's internal type)
-interface LayoutItem {
-  i: string;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  minW?: number;
-  minH?: number;
-  maxW?: number;
-  maxH?: number;
-  static?: boolean;
-}
 
 // Widget definitions with default positions
 export interface WidgetConfig {
@@ -57,8 +36,8 @@ export interface WidgetConfig {
 }
 
 // Generate responsive layouts from widget configs
-const generateResponsiveLayouts = (widgets: WidgetConfig[]) => {
-  const lg = widgets.map((w) => ({
+const generateResponsiveLayouts = (widgets: WidgetConfig[]): ResponsiveLayouts => {
+  const lg: LayoutItem[] = widgets.map((w) => ({
     i: w.i,
     x: w.defaultLayout.x,
     y: w.defaultLayout.y,
@@ -72,7 +51,7 @@ const generateResponsiveLayouts = (widgets: WidgetConfig[]) => {
   }));
 
   // Single column stacked layout for small screens
-  const sm = widgets.map((w, idx) => ({
+  const sm: LayoutItem[] = widgets.map((w, idx) => ({
     i: w.i,
     x: 0,
     y: idx * 3,
@@ -100,6 +79,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
   const { t } = useTranslation('dashboard');
   const { t: tCommon } = useTranslation('common');
   const isMobile = useIsMobile();
+  const { width, containerRef } = useContainerWidth();
 
   // User-specific storage key
   const storageKey = useMemo(
@@ -113,7 +93,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
   );
 
   // Load saved layouts from localStorage (user-specific)
-  const [layouts, setLayouts] = useState<Record<string, LayoutItem[]>>(() => {
+  const [layouts, setLayouts] = useState<ResponsiveLayouts>(() => {
     try {
       const saved = localStorage.getItem(storageKey);
       if (saved) {
@@ -133,8 +113,8 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
   });
 
   // Save layouts on change
-  const handleLayoutChange = useCallback((_currentLayout: Layout, allLayouts: Record<string, Layout[]>) => {
-    setLayouts(allLayouts as unknown as Record<string, LayoutItem[]>);
+  const handleLayoutChange = useCallback((_currentLayout: Layout, allLayouts: ResponsiveLayouts) => {
+    setLayouts(allLayouts);
     try {
       localStorage.setItem(storageKey, JSON.stringify(allLayouts));
     } catch (e) {
@@ -186,6 +166,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
 
       {/* Grid Content */}
       <div
+        ref={containerRef}
         className="dashboard-grid-container"
         style={{
           flex: 1,
@@ -194,27 +175,26 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
           backgroundColor: "var(--color-bg-inset)",
         }}
       >
-        <ResponsiveGridLayout
+        {width > 0 && <ResponsiveGridLayout
           className="dashboard-grid"
+          width={width}
           layouts={layouts}
           breakpoints={{ lg: 992, md: 768, sm: 480, xs: 0 }}
           cols={{ lg: 12, md: 12, sm: 1, xs: 1 }}
           rowHeight={80}
-          margin={isMobile ? [0, 12] : [16, 16]}
-          containerPadding={[0, 0]}
+          margin={isMobile ? [0, 12] as const : [16, 16] as const}
+          containerPadding={[0, 0] as const}
           onLayoutChange={handleLayoutChange}
-          draggableHandle=".drag-handle"
-          useCSSTransforms={true}
-          isResizable={!isMobile}
-          isDraggable={!isMobile}
-          compactType="vertical"
+          dragConfig={{ enabled: !isMobile, handle: ".drag-handle", bounded: false, threshold: 3 }}
+          resizeConfig={{ enabled: !isMobile, handles: ["se"] }}
+          compactor={verticalCompactor}
         >
           {widgets.map((widget) => (
             <div key={widget.i} className="dashboard-grid-item">
               {widget.component}
             </div>
           ))}
-        </ResponsiveGridLayout>
+        </ResponsiveGridLayout>}
       </div>
 
       {/* Custom styles for grid */}
