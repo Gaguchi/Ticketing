@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useCallback, useMemo } from "react";
-import { ResponsiveGridLayout as RGL, type Layout } from "react-grid-layout";
+import RGL, { type Layout } from "react-grid-layout";
 import { Button, Tooltip, message } from "antd";
 import { ReloadOutlined, UndoOutlined } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
@@ -13,7 +13,9 @@ import { useIsMobile } from "../../hooks/useIsMobile";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 
-const ResponsiveGridLayout = RGL as any;
+const ResponsiveGridLayout = (RGL as any).WidthProvider(
+  (RGL as any).Responsive
+);
 
 // Storage key prefix for layout persistence (user ID appended at runtime)
 const LAYOUT_STORAGE_KEY_PREFIX = "dashboard_layout_v2_user_";
