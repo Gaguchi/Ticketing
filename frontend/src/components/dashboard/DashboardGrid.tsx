@@ -128,7 +128,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
 
   // Save layouts on change
   const handleLayoutChange = useCallback((_currentLayout: Layout, allLayouts: Record<string, Layout[]>) => {
-    setLayouts(allLayouts as Record<string, LayoutItem[]>);
+    setLayouts(allLayouts as unknown as Record<string, LayoutItem[]>);
     try {
       localStorage.setItem(storageKey, JSON.stringify(allLayouts));
     } catch (e) {
