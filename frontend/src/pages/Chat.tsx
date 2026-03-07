@@ -603,7 +603,7 @@ const Chat: React.FC = () => {
     try {
       // Check if direct chat already exists
       const existingChat = directChats.find((room) =>
-        room.participants.some((p) => p.user.id === member.id)
+        room.participants?.some((p) => p.user.id === member.id)
       );
 
       if (existingChat) {
@@ -780,7 +780,7 @@ const Chat: React.FC = () => {
                 )}
                 renderItem={(member) => {
                   const existingChat = directChats.find((room) =>
-                    room.participants.some((p) => p.user.id === member.id)
+                    room.participants?.some((p) => p.user.id === member.id)
                   );
                   const isActive = activeRoom?.id === existingChat?.id;
                   const unreadCount = existingChat?.unread_count || 0;
