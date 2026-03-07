@@ -60,6 +60,7 @@ import { CompanyCard } from "../components/companies/CompanyCard";
 import { useCompaniesStats } from "../hooks/useCompanyStats";
 import type { TicketColumn } from "../types/api";
 import { debug, LogLevel, LogCategory } from "../utils/debug";
+import { useIsMobile } from "../hooks/useIsMobile";
 import { useApp } from "../contexts/AppContext";
 
 const { Title, Text } = Typography;
@@ -100,6 +101,7 @@ interface User {
 }
 
 const Companies: React.FC = () => {
+  const isMobile = useIsMobile();
   const { selectedProject, projectLoading } = useApp();
   const navigate = useNavigate();
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -665,11 +667,12 @@ const Companies: React.FC = () => {
         <EmptyState />
       ) : selectedCompany ? (
         // Detailed Company View
-        <div style={{ padding: 24 }}>
+        <div style={{ padding: isMobile ? 12 : 24 }}>
           {/* Back Button */}
           <Button
             icon={<ArrowLeftOutlined />}
             onClick={handleBackToList}
+            size="small"
             style={{ marginBottom: 16 }}
           >
             Back to Companies
@@ -730,7 +733,7 @@ const Companies: React.FC = () => {
                     menu={{ items: getActionMenu(selectedCompany) }}
                     trigger={["click"]}
                   >
-                    <Button icon={<MoreOutlined />}>Actions</Button>
+                    <Button icon={<MoreOutlined />} size="small">Actions</Button>
                   </Dropdown>
                 </Space>
               </Col>
@@ -751,6 +754,7 @@ const Companies: React.FC = () => {
                 <Button
                   type={ticketViewMode === "table" ? "primary" : "default"}
                   icon={<TableOutlined />}
+                  size="small"
                   onClick={() => setTicketViewMode("table")}
                 >
                   Table
@@ -758,6 +762,7 @@ const Companies: React.FC = () => {
                 <Button
                   type={ticketViewMode === "kanban" ? "primary" : "default"}
                   icon={<AppstoreOutlined />}
+                  size="small"
                   onClick={() => setTicketViewMode("kanban")}
                 >
                   Kanban
@@ -765,6 +770,7 @@ const Companies: React.FC = () => {
                 <Button
                   type={ticketViewMode === "deadline" ? "primary" : "default"}
                   icon={<ClockCircleOutlined />}
+                  size="small"
                   onClick={() => setTicketViewMode("deadline")}
                 >
                   Deadlines
@@ -772,6 +778,7 @@ const Companies: React.FC = () => {
                 <Button
                   type={ticketViewMode === "archive" ? "primary" : "default"}
                   icon={<InboxOutlined />}
+                  size="small"
                   onClick={() => setTicketViewMode("archive")}
                 >
                   Archive
@@ -935,28 +942,33 @@ const Companies: React.FC = () => {
         </div>
       ) : (
         // Card Grid View (Default)
-        <div style={{ padding: 24 }}>
+        <div style={{ padding: isMobile ? 12 : 24 }}>
           {/* Header */}
           <div
             style={{
-              marginBottom: 24,
+              marginBottom: isMobile ? 16 : 24,
               display: "flex",
+              flexDirection: isMobile ? "column" : "row",
               justifyContent: "space-between",
-              alignItems: "center",
+              alignItems: isMobile ? "stretch" : "center",
+              gap: isMobile ? 12 : 0,
             }}
           >
             <div>
-              <Title level={3} style={{ margin: 0 }}>
+              <Title level={isMobile ? 4 : 3} style={{ margin: 0 }}>
                 Companies
               </Title>
-              <Text type="secondary">
-                Manage your client organizations and their teams
-              </Text>
+              {!isMobile && (
+                <Text type="secondary">
+                  Manage your client organizations and their teams
+                </Text>
+              )}
             </div>
             <Button
               type="primary"
               icon={<PlusOutlined />}
               onClick={handleCreateCompany}
+              size="small"
             >
               Create Company
             </Button>

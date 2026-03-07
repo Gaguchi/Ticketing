@@ -3,6 +3,7 @@ import {
   Layout,
   Avatar,
   Dropdown,
+  Drawer,
   Space,
   Typography,
   Select,
@@ -12,6 +13,7 @@ import {
 import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  MenuOutlined,
   DashboardOutlined,
   InboxOutlined,
   ShopOutlined,
@@ -24,6 +26,7 @@ import {
   ProjectOutlined,
   BarChartOutlined,
 } from "@ant-design/icons";
+import { useIsMobile } from "../hooks/useIsMobile";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AppContext";
 import { useProject } from "../contexts/AppContext";
@@ -49,7 +52,9 @@ interface NavItem {
 
 const MainLayout: React.FC = () => {
   const { t } = useTranslation('common');
+  const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState(true);
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [isCreateProjectModalOpen, setIsCreateProjectModalOpen] =
     useState(false);
   const [unreadChatCount, setUnreadChatCount] = useState(0);
@@ -250,143 +255,168 @@ const MainLayout: React.FC = () => {
     },
   ];
 
-  return (
-    <Layout style={{ minHeight: "100vh" }}>
-      <Sider
-        trigger={null}
-        collapsible
-        collapsed={collapsed}
-        collapsedWidth={88}
-        width={240}
-        className="modern-sider"
+  // Whether sidebar content should show expanded (not collapsed icon mode)
+  const sidebarExpanded = isMobile || !collapsed;
+
+  const sidebarContent = (
+    <>
+      {/* Logo/Brand */}
+      <div
         style={{
-          overflow: "auto",
-          height: "100vh",
-          position: "fixed",
-          left: 0,
-          top: 0,
-          bottom: 0,
-          background: "var(--color-bg-sidebar)",
-          borderRight: "1px solid var(--color-border)",
+          height: 48,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: sidebarExpanded ? "flex-start" : "center",
+          padding: sidebarExpanded ? "0 16px" : "0",
+          borderBottom: "1px solid var(--color-border)",
+          background: "var(--color-bg-surface)",
         }}
       >
-        {/* Logo/Brand */}
-        <div
-          style={{
-            height: 48,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: collapsed ? "center" : "flex-start",
-            padding: collapsed ? "0" : "0 16px",
-            borderBottom: "1px solid var(--color-border)",
-            background: "var(--color-bg-surface)",
-          }}
-        >
-          {collapsed ? <LogoIcon size={20} /> : <Logo size={20} showText />}
-        </div>
+        {sidebarExpanded ? <Logo size={20} showText /> : <LogoIcon size={20} />}
+      </div>
 
-        {/* Navigation Items */}
-        <div style={{ padding: collapsed ? "8px 6px" : "8px" }}>
-          {navItems.map((item) => {
-            const isActive = location.pathname === item.path;
-            const isChatItem = item.key === "/chat";
+      {/* Navigation Items */}
+      <div style={{ padding: sidebarExpanded ? "8px" : "8px 6px" }}>
+        {navItems.map((item) => {
+          const isActive = location.pathname === item.path;
+          const isChatItem = item.key === "/chat";
 
-            return (
-              <div
-                key={item.key}
-                onClick={() => navigate(item.path)}
-                className={`nav-item ${isActive ? "active" : ""} ${
-                  collapsed ? "collapsed" : ""
-                }`}
-                style={{
-                  display: "flex",
-                  flexDirection: collapsed ? "column" : "row",
-                  alignItems: "center",
-                  justifyContent: collapsed ? "center" : "flex-start",
-                  gap: collapsed ? 2 : 8,
-                  padding: collapsed ? "10px 4px" : "6px 12px",
-                  marginBottom: 2,
-                  borderRadius: 2,
-                  cursor: "pointer",
-                  transition: "all 0.15s",
-                  background: isActive ? "var(--color-nav-active-bg)" : "transparent",
-                  borderLeft: isActive
-                    ? "2px solid var(--color-nav-active-border)"
-                    : "2px solid transparent",
-                  color: isActive ? "var(--color-nav-active-text)" : "var(--color-text-secondary)",
-                  position: "relative",
-                }}
-              >
-                {isChatItem && unreadChatCount > 0 ? (
-                  <Badge
-                    count={unreadChatCount}
-                    size="small"
-                    offset={collapsed ? [5, 0] : [10, 0]}
-                    style={{
-                      fontSize: collapsed ? 'var(--fs-2xs)' : 'var(--fs-xs)',
-                    }}
-                  >
-                    <span style={{ fontSize: collapsed ? 'var(--fs-2xl)' : 'var(--fs-lg)' }}>
-                      {item.icon}
-                    </span>
-                  </Badge>
-                ) : (
-                  <span style={{ fontSize: collapsed ? 'var(--fs-2xl)' : 'var(--fs-lg)' }}>
-                    {item.icon}
-                  </span>
-                )}
-                <span
+          return (
+            <div
+              key={item.key}
+              onClick={() => {
+                navigate(item.path);
+                if (isMobile) setMobileDrawerOpen(false);
+              }}
+              className={`nav-item ${isActive ? "active" : ""} ${
+                !sidebarExpanded ? "collapsed" : ""
+              }`}
+              style={{
+                display: "flex",
+                flexDirection: sidebarExpanded ? "row" : "column",
+                alignItems: "center",
+                justifyContent: sidebarExpanded ? "flex-start" : "center",
+                gap: sidebarExpanded ? 8 : 2,
+                padding: sidebarExpanded ? "6px 12px" : "10px 4px",
+                marginBottom: 2,
+                borderRadius: 2,
+                cursor: "pointer",
+                transition: "all 0.15s",
+                background: isActive ? "var(--color-nav-active-bg)" : "transparent",
+                borderLeft: isActive
+                  ? "2px solid var(--color-nav-active-border)"
+                  : "2px solid transparent",
+                color: isActive ? "var(--color-nav-active-text)" : "var(--color-text-secondary)",
+                position: "relative",
+              }}
+            >
+              {isChatItem && unreadChatCount > 0 ? (
+                <Badge
+                  count={unreadChatCount}
+                  size="small"
+                  offset={sidebarExpanded ? [10, 0] : [5, 0]}
                   style={{
-                    fontSize: collapsed ? 'var(--fs-2xs)' : 'var(--fs-caption)',
-                    fontWeight: isActive ? 500 : 400,
-                    whiteSpace: "nowrap",
+                    fontSize: sidebarExpanded ? 'var(--fs-xs)' : 'var(--fs-2xs)',
                   }}
                 >
-                  {item.label}
+                  <span style={{ fontSize: sidebarExpanded ? 'var(--fs-lg)' : 'var(--fs-2xl)' }}>
+                    {item.icon}
+                  </span>
+                </Badge>
+              ) : (
+                <span style={{ fontSize: sidebarExpanded ? 'var(--fs-lg)' : 'var(--fs-2xl)' }}>
+                  {item.icon}
                 </span>
-              </div>
-            );
-          })}
-        </div>
+              )}
+              <span
+                style={{
+                  fontSize: sidebarExpanded ? 'var(--fs-caption)' : 'var(--fs-2xs)',
+                  fontWeight: isActive ? 500 : 400,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {item.label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
 
-        {/* Bottom Actions */}
+      {/* Bottom Actions */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          padding: sidebarExpanded ? "8px" : "8px 6px",
+          borderTop: "1px solid var(--color-border)",
+          background: "var(--color-bg-surface)",
+        }}
+      >
         <div
+          className="nav-item"
           style={{
-            position: "absolute",
-            bottom: 0,
-            left: 0,
-            right: 0,
-            padding: collapsed ? "8px 6px" : "8px",
-            borderTop: "1px solid var(--color-border)",
-            background: "var(--color-bg-surface)",
+            display: "flex",
+            flexDirection: sidebarExpanded ? "row" : "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: sidebarExpanded ? 8 : 2,
+            padding: sidebarExpanded ? "6px 12px" : "10px 4px",
+            borderRadius: 2,
+            cursor: "pointer",
+            transition: "all 0.15s",
+            background: "var(--color-primary)",
+            color: "var(--color-chat-mine-text)",
           }}
         >
-          <div
-            className="nav-item"
-            style={{
-              display: "flex",
-              flexDirection: collapsed ? "column" : "row",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: collapsed ? 2 : 8,
-              padding: collapsed ? "10px 4px" : "6px 12px",
-              borderRadius: 2,
-              cursor: "pointer",
-              transition: "all 0.15s",
-              background: "var(--color-primary)",
-              color: "var(--color-chat-mine-text)",
-            }}
-          >
-            <PlusOutlined style={{ fontSize: collapsed ? 'var(--fs-2xl)' : 'var(--fs-lg)' }} />
-            {!collapsed && (
-              <span style={{ fontSize: 'var(--fs-caption)', fontWeight: 500 }}>{t('nav.newTicket')}</span>
-            )}
-          </div>
+          <PlusOutlined style={{ fontSize: sidebarExpanded ? 'var(--fs-lg)' : 'var(--fs-2xl)' }} />
+          {sidebarExpanded && (
+            <span style={{ fontSize: 'var(--fs-caption)', fontWeight: 500 }}>{t('nav.newTicket')}</span>
+          )}
         </div>
-      </Sider>
+      </div>
+    </>
+  );
+
+  return (
+    <Layout style={{ minHeight: "100vh" }}>
+      {isMobile ? (
+        <Drawer
+          placement="left"
+          open={mobileDrawerOpen}
+          onClose={() => setMobileDrawerOpen(false)}
+          width={240}
+          styles={{ body: { padding: 0, background: "var(--color-bg-sidebar)", position: "relative", height: "100%" } }}
+          closable={false}
+        >
+          {sidebarContent}
+        </Drawer>
+      ) : (
+        <Sider
+          trigger={null}
+          collapsible
+          collapsed={collapsed}
+          collapsedWidth={88}
+          width={240}
+          className="modern-sider"
+          style={{
+            overflow: "auto",
+            height: "100vh",
+            position: "fixed",
+            left: 0,
+            top: 0,
+            bottom: 0,
+            background: "var(--color-bg-sidebar)",
+            borderRight: "1px solid var(--color-border)",
+          }}
+        >
+          {sidebarContent}
+        </Sider>
+      )}
       <Layout
         style={{
-          marginLeft: collapsed ? 88 : 240,
+          marginLeft: isMobile ? 0 : (collapsed ? 88 : 240),
           transition: "all 0.15s",
           background: "var(--color-bg-content)",
         }}
@@ -406,7 +436,7 @@ const MainLayout: React.FC = () => {
           }}
         >
           <div
-            onClick={() => setCollapsed(!collapsed)}
+            onClick={() => isMobile ? setMobileDrawerOpen(!mobileDrawerOpen) : setCollapsed(!collapsed)}
             style={{
               cursor: "pointer",
               padding: "6px 8px",
@@ -424,28 +454,30 @@ const MainLayout: React.FC = () => {
               e.currentTarget.style.background = "transparent";
             }}
           >
-            {collapsed ? (
+            {isMobile ? (
+              <MenuOutlined style={{ fontSize: 'var(--fs-lg)' }} />
+            ) : collapsed ? (
               <MenuUnfoldOutlined style={{ fontSize: 'var(--fs-lg)' }} />
             ) : (
               <MenuFoldOutlined style={{ fontSize: 'var(--fs-lg)' }} />
             )}
           </div>
-          <Space size="middle">
+          <Space size="small">
             {/* Project Selector - Show loading or data based on state */}
             {authLoading || projectLoading ? (
               <Space size="small">
-                <ProjectOutlined style={{ fontSize: 'var(--fs-lg)', color: "var(--color-text-secondary)" }} />
+                {!isMobile && <ProjectOutlined style={{ fontSize: 'var(--fs-lg)', color: "var(--color-text-secondary)" }} />}
                 <Select
                   loading={true}
                   disabled={true}
-                  style={{ minWidth: 150 }}
+                  style={{ minWidth: isMobile ? 100 : 150 }}
                   size="small"
                   placeholder={t('nav.loadingProjects')}
                 />
               </Space>
             ) : availableProjects.length > 0 ? (
               <Space size="small">
-                <ProjectOutlined style={{ fontSize: 'var(--fs-lg)', color: "var(--color-text-secondary)" }} />
+                {!isMobile && <ProjectOutlined style={{ fontSize: 'var(--fs-lg)', color: "var(--color-text-secondary)" }} />}
                 <Select
                   value={selectedProject?.id}
                   onChange={(value) => {
@@ -456,22 +488,24 @@ const MainLayout: React.FC = () => {
                       setSelectedProject(project);
                     }
                   }}
-                  style={{ minWidth: 150 }}
+                  style={{ minWidth: isMobile ? 100 : 150 }}
                   size="small"
                   placeholder={t('nav.selectProject')}
                   options={availableProjects.map((project) => ({
-                    label: `${project.key} - ${project.name}`,
+                    label: isMobile ? project.key : `${project.key} - ${project.name}`,
                     value: project.id,
                   }))}
                 />
-                <Button
-                  type="primary"
-                  size="small"
-                  icon={<PlusOutlined />}
-                  onClick={() => setIsCreateProjectModalOpen(true)}
-                >
-                  {t('nav.newProject')}
-                </Button>
+                {!isMobile && (
+                  <Button
+                    type="primary"
+                    size="small"
+                    icon={<PlusOutlined />}
+                    onClick={() => setIsCreateProjectModalOpen(true)}
+                  >
+                    {t('nav.newProject')}
+                  </Button>
+                )}
               </Space>
             ) : (
               /* Show Create Project button if no projects */
@@ -481,11 +515,11 @@ const MainLayout: React.FC = () => {
                 icon={<PlusOutlined />}
                 onClick={() => setIsCreateProjectModalOpen(true)}
               >
-                {t('nav.createFirstProject')}
+                {isMobile ? null : t('nav.createFirstProject')}
               </Button>
             )}
 
-            <LanguageSwitcher />
+            {!isMobile && <LanguageSwitcher />}
 
             {/* Notification Bell */}
             <NotificationBell
@@ -507,9 +541,11 @@ const MainLayout: React.FC = () => {
                   }}
                   icon={<UserOutlined />}
                 />
-                <Text strong style={{ fontSize: 'var(--fs-caption)' }}>
-                  {user?.username || "Admin"}
-                </Text>
+                {!isMobile && (
+                  <Text strong style={{ fontSize: 'var(--fs-caption)' }}>
+                    {user?.username || "Admin"}
+                  </Text>
+                )}
               </Space>
             </Dropdown>
           </Space>

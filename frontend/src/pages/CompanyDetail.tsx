@@ -56,6 +56,7 @@ import { API_ENDPOINTS } from "../config/api";
 import apiService from "../services/api.service";
 import { ticketService } from "../services";
 import { useCompanyStats } from "../hooks/useCompanyStats";
+import { useIsMobile } from "../hooks/useIsMobile";
 import { useApp } from "../contexts/AppContext";
 import { KanbanBoard } from "../components/KanbanBoard";
 import { DeadlineView } from "../components/DeadlineView";
@@ -138,6 +139,7 @@ const healthConfig = {
 };
 
 const CompanyDetail: React.FC = () => {
+  const isMobile = useIsMobile();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -602,7 +604,7 @@ const CompanyDetail: React.FC = () => {
       <div style={{ padding: 24 }}>
         <Empty description="Company not found" />
         <div style={{ textAlign: "center", marginTop: 16 }}>
-          <Button onClick={() => navigate("/companies")}>
+          <Button size="small" onClick={() => navigate("/companies")}>
             Back to Companies
           </Button>
         </div>
@@ -670,11 +672,12 @@ const CompanyDetail: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: 24 }}>
+    <div style={{ padding: isMobile ? 12 : 24 }}>
       {/* Header */}
-      <div style={{ marginBottom: 24 }}>
+      <div style={{ marginBottom: isMobile ? 16 : 24 }}>
         <Button
           type="text"
+          size="small"
           icon={<ArrowLeftOutlined />}
           onClick={() => navigate("/companies")}
           style={{ marginBottom: 16, padding: 0 }}
@@ -826,10 +829,11 @@ const CompanyDetail: React.FC = () => {
           </div>
 
           <Space>
-            <Button icon={<EditOutlined />} onClick={handleEditCompany}>
+            <Button size="small" icon={<EditOutlined />} onClick={handleEditCompany}>
               Edit
             </Button>
             <Button
+              size="small"
               type="primary"
               icon={<PlusOutlined />}
               onClick={() => setCreateTicketOpen(true)}
@@ -837,7 +841,7 @@ const CompanyDetail: React.FC = () => {
               Create Ticket
             </Button>
             <Dropdown menu={{ items: moreMenu }} trigger={["click"]}>
-              <Button icon={<MoreOutlined />} />
+              <Button size="small" icon={<MoreOutlined />} />
             </Dropdown>
           </Space>
         </div>
@@ -1292,6 +1296,7 @@ const CompanyDetail: React.FC = () => {
                   extra={
                     <Button
                       type="link"
+                      size="small"
                       onClick={() => handleTabChange("users")}
                     >
                       Manage
@@ -1327,6 +1332,7 @@ const CompanyDetail: React.FC = () => {
                   {(company.users?.length ?? 0) > 5 && (
                     <Button
                       type="link"
+                      size="small"
                       onClick={() => handleTabChange("users")}
                     >
                       View all {company.users?.length} users
@@ -1341,6 +1347,7 @@ const CompanyDetail: React.FC = () => {
                   extra={
                     <Button
                       type="link"
+                      size="small"
                       onClick={() => handleTabChange("users")}
                     >
                       Manage
@@ -1387,6 +1394,7 @@ const CompanyDetail: React.FC = () => {
             <div style={{ marginBottom: 16 }}>
               <Space>
                 <Button
+                  size="small"
                   type={ticketViewMode === "table" ? "primary" : "default"}
                   icon={<TableOutlined />}
                   onClick={() => setTicketViewMode("table")}
@@ -1394,6 +1402,7 @@ const CompanyDetail: React.FC = () => {
                   Table
                 </Button>
                 <Button
+                  size="small"
                   type={ticketViewMode === "kanban" ? "primary" : "default"}
                   icon={<AppstoreOutlined />}
                   onClick={() => setTicketViewMode("kanban")}
@@ -1401,6 +1410,7 @@ const CompanyDetail: React.FC = () => {
                   Kanban
                 </Button>
                 <Button
+                  size="small"
                   type={ticketViewMode === "deadline" ? "primary" : "default"}
                   icon={<CalendarOutlined />}
                   onClick={() => setTicketViewMode("deadline")}
@@ -1408,6 +1418,7 @@ const CompanyDetail: React.FC = () => {
                   Deadline
                 </Button>
                 <Button
+                  size="small"
                   type={ticketViewMode === "archive" ? "primary" : "default"}
                   icon={<InboxOutlined />}
                   onClick={() => setTicketViewMode("archive")}
@@ -1415,6 +1426,7 @@ const CompanyDetail: React.FC = () => {
                   Archive
                 </Button>
                 <Button
+                  size="small"
                   type={ticketViewMode === "resolved" ? "primary" : "default"}
                   icon={<CheckCircleOutlined />}
                   onClick={() => setTicketViewMode("resolved")}
@@ -1493,6 +1505,7 @@ const CompanyDetail: React.FC = () => {
                     render: (_: any, record: any) => (
                       <Button
                         type="link"
+                        size="small"
                         icon={<RollbackOutlined />}
                         onClick={async () => {
                           try {
@@ -1561,6 +1574,7 @@ const CompanyDetail: React.FC = () => {
                       />
                       <Button
                         type="primary"
+                        size="small"
                         icon={<PlusOutlined />}
                         onClick={handleAssignAdmin}
                         loading={assigningAdmin}
@@ -1584,6 +1598,7 @@ const CompanyDetail: React.FC = () => {
                             >
                               <Button
                                 type="text"
+                                size="small"
                                 danger
                                 icon={<DeleteOutlined />}
                                 loading={removingAdminId === admin.id}
@@ -1632,6 +1647,7 @@ const CompanyDetail: React.FC = () => {
                   extra={
                     <Button
                       type="primary"
+                      size="small"
                       icon={<PlusOutlined />}
                       onClick={() => setShowCreateUser(!showCreateUser)}
                     >
@@ -1699,12 +1715,14 @@ const CompanyDetail: React.FC = () => {
                               <Space>
                                 <Button
                                   type="primary"
+                                  size="small"
                                   htmlType="submit"
                                   loading={creatingUser}
                                 >
                                   Create User
                                 </Button>
                                 <Button
+                                  size="small"
                                   onClick={() => setShowCreateUser(false)}
                                 >
                                   Cancel
@@ -1754,6 +1772,7 @@ const CompanyDetail: React.FC = () => {
                             >
                               <Button
                                 type="text"
+                                size="small"
                                 danger
                                 icon={<DeleteOutlined />}
                                 loading={removingUserId === user.id}
@@ -1797,7 +1816,7 @@ const CompanyDetail: React.FC = () => {
                       />
                     </Form.Item>
                   </Form>
-                  <Button onClick={handleEditCompany}>
+                  <Button size="small" onClick={handleEditCompany}>
                     Edit Company Details
                   </Button>
                 </Card>
@@ -1847,7 +1866,7 @@ const CompanyDetail: React.FC = () => {
                           data
                         </Text>
                       </div>
-                      <Button danger onClick={handleDeleteCompany}>
+                      <Button size="small" danger onClick={handleDeleteCompany}>
                         Delete Company
                       </Button>
                     </div>

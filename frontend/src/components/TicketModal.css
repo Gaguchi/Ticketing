@@ -246,6 +246,7 @@
   .ticket-left-panel {
     flex: none;
     width: 100%;
+    min-width: unset;
     border-right: none;
   }
 
@@ -258,5 +259,28 @@
 
   .ticket-meta-row {
     gap: 16px;
+  }
+}
+
+@media (max-width: 767px) {
+  .ticket-modal-header {
+    padding: 0 12px;
+    height: 48px;
+  }
+
+  .left-panel-scroll {
+    padding: 16px;
+  }
+
+  .ticket-meta-row {
+    gap: 12px;
+  }
+
+  .v3-ticket-title {
+    font-size: var(--fs-xl);
+  }
+
+  .ticket-right-panel {
+    height: 400px;
   }
 }

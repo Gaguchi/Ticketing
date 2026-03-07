@@ -63,6 +63,25 @@
   background: var(--color-scrollbar-hover);
 }
 
+/* Mobile kanban: snap-scroll columns */
+@media (max-width: 767px) {
+  .kanban {
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory;
+    scroll-padding-left: 12px;
+    height: calc(100vh - 160px);
+  }
+  .kanban-container {
+    padding: 12px;
+    gap: 12px;
+  }
+  .kanban-column {
+    scroll-snap-align: start;
+    min-width: 260px !important;
+    max-width: 260px !important;
+  }
+}
+
 .archive-panel {
   margin: 16px 20px;
   background: var(--color-bg-surface);

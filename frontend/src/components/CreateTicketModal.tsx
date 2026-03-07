@@ -21,6 +21,7 @@ import {
 import dayjs from "dayjs";
 import { useTranslation } from 'react-i18next';
 import { getPriorityIcon } from "./PriorityIcons";
+import { useIsMobile } from "../hooks/useIsMobile";
 import { useProject } from "../contexts/AppContext";
 import {
   ticketService,
@@ -65,6 +66,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
 }) => {
   const { t } = useTranslation('tickets');
   const { t: tCommon } = useTranslation('common');
+  const isMobile = useIsMobile();
   const [form] = Form.useForm();
   const [saving, setSaving] = useState(false);
   const [createAnother, setCreateAnother] = useState(false);
@@ -370,20 +372,20 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
     <Modal
       open={open}
       onCancel={handleClose}
-      width={600}
+      width={isMobile ? "100%" : 600}
       footer={null}
       closeIcon={null}
-      style={{ top: 20, borderRadius: 8 }}
+      style={isMobile ? { top: 0, maxWidth: "100vw", margin: 0, paddingBottom: 0 } : { top: 20, borderRadius: 8 }}
       styles={{
         body: {
           padding: 0,
-          maxHeight: "calc(100vh - 80px)",
+          maxHeight: isMobile ? "100vh" : "calc(100vh - 80px)",
           overflow: "hidden",
           display: "flex",
           flexDirection: "column",
         },
         content: {
-          borderRadius: 8,
+          borderRadius: isMobile ? 0 : 8,
           padding: 0,
         },
       }}

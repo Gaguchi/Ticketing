@@ -40,6 +40,7 @@ import { API_ENDPOINTS } from "../config/api";
 import apiService from "../services/api.service";
 import { debug, LogLevel, LogCategory } from "../utils/debug";
 import { InviteUserModal } from "../components/InviteUserModal";
+import { useIsMobile } from "../hooks/useIsMobile";
 import { useApp } from "../contexts/AppContext";
 
 const { Title, Text } = Typography;
@@ -88,6 +89,7 @@ interface Project {
 }
 
 const Users: React.FC = () => {
+  const isMobile = useIsMobile();
   const { selectedProject, user: currentUser } = useApp();
   const [users, setUsers] = useState<User[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -451,6 +453,7 @@ const Users: React.FC = () => {
       title: "Project Roles",
       dataIndex: "project_roles",
       key: "project_roles",
+      responsive: ["md"] as any,
       render: (roles: UserRole[]) => (
         <Space size={[0, 8]} wrap>
           {roles.length > 0 ? (
@@ -472,6 +475,7 @@ const Users: React.FC = () => {
     {
       title: "Companies",
       key: "companies",
+      responsive: ["lg"] as any,
       render: (_, record) => {
         const totalCompanies =
           record.administered_companies.length + record.member_companies.length;
@@ -514,6 +518,7 @@ const Users: React.FC = () => {
       dataIndex: "ticket_count",
       key: "ticket_count",
       width: 100,
+      responsive: ["md"] as any,
       render: (count: number) => <Text>{count}</Text>,
     },
     {
@@ -532,6 +537,7 @@ const Users: React.FC = () => {
       dataIndex: "last_login_display",
       key: "last_login",
       width: 120,
+      responsive: ["lg"] as any,
       render: (text: string) => <Text type="secondary">{text}</Text>,
     },
     {
@@ -584,45 +590,51 @@ const Users: React.FC = () => {
   });
 
   return (
-    <div style={{ padding: 24 }}>
+    <div style={{ padding: isMobile ? 12 : 24 }}>
       <div
         style={{
-          marginBottom: 24,
+          marginBottom: isMobile ? 16 : 24,
           display: "flex",
+          flexDirection: isMobile ? "column" : "row",
           justifyContent: "space-between",
-          alignItems: "center",
+          alignItems: isMobile ? "stretch" : "center",
+          gap: isMobile ? 8 : 0,
         }}
       >
         <div>
-          <Title level={3} style={{ margin: 0 }}>
+          <Title level={isMobile ? 4 : 3} style={{ margin: 0 }}>
             User Management
             {selectedProject && (
               <Tag color="blue" style={{ marginLeft: 12, fontSize: 'var(--fs-base)' }}>
-                {selectedProject.name}
+                {isMobile ? selectedProject.key : selectedProject.name}
               </Tag>
             )}
           </Title>
-          <Text type="secondary">
-            {selectedProject
-              ? `Showing ${filteredUsers.length} members of ${selectedProject.name}`
-              : "Manage users, roles, and permissions"}
-          </Text>
+          {!isMobile && (
+            <Text type="secondary">
+              {selectedProject
+                ? `Showing ${filteredUsers.length} members of ${selectedProject.name}`
+                : "Manage users, roles, and permissions"}
+            </Text>
+          )}
         </div>
         <Space>
           {selectedProject && (
             <Button
               icon={<TeamOutlined />}
               onClick={() => setIsInviteModalOpen(true)}
+              size="small"
             >
-              Add to Project
+              {!isMobile && "Add to Project"}
             </Button>
           )}
           <Button
             type="primary"
             icon={<PlusOutlined />}
             onClick={handleCreateUser}
+            size="small"
           >
-            Create User
+            {!isMobile && "Create User"}
           </Button>
         </Space>
       </div>
@@ -630,9 +642,9 @@ const Users: React.FC = () => {
       {/* Search */}
       <Card style={{ marginBottom: 16 }}>
         <Search
-          placeholder="Search users by name, username, or email..."
+          placeholder={isMobile ? "Search users..." : "Search users by name, username, or email..."}
           allowClear
-          size="large"
+          size="small"
           prefix={<SearchOutlined />}
           onChange={(e) => setSearchText(e.target.value)}
           style={{ maxWidth: 600 }}

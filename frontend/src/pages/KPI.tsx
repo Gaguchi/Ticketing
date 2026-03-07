@@ -47,6 +47,7 @@ import type {
 import type { ScoreboardMember } from "../services/kpi.service";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
+import { useIsMobile } from "../hooks/useIsMobile";
 import KPIBuilder from "../components/kpi/KPIBuilder";
 import KPIScoreboard from "../components/kpi/KPIScoreboard";
 import NightingaleChart from "../components/kpi/NightingaleChart";
@@ -367,6 +368,7 @@ const MyPerformance: React.FC<MyPerformanceProps> = ({ userRole }) => {
       >
         {isManagerOrAbove && teamMembers.length > 0 && (
           <Select
+            size="small"
             value={selectedUserId ?? "me"}
             onChange={(val) =>
               setSelectedUserId(val === "me" ? undefined : (val as number))
@@ -388,6 +390,7 @@ const MyPerformance: React.FC<MyPerformanceProps> = ({ userRole }) => {
           </Select>
         )}
         <DatePicker
+          size="small"
           picker="month"
           value={selectedMonth}
           onChange={(date) => {
@@ -399,6 +402,7 @@ const MyPerformance: React.FC<MyPerformanceProps> = ({ userRole }) => {
           }
         />
         <Button
+          size="small"
           icon={<ReloadOutlined />}
           onClick={() => {
             fetchScoreData();
@@ -570,6 +574,7 @@ const MyPerformance: React.FC<MyPerformanceProps> = ({ userRole }) => {
 
 const KPIPage: React.FC = () => {
   const { selectedProject } = useProject();
+  const isMobile = useIsMobile();
   const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
@@ -595,7 +600,7 @@ const KPIPage: React.FC = () => {
 
   if (!selectedProject) {
     return (
-      <div style={{ padding: 24, textAlign: "center" }}>
+      <div style={{ padding: isMobile ? 12 : 24, textAlign: "center" }}>
         <Empty description="Please select a project to view KPI data" />
       </div>
     );
@@ -644,8 +649,8 @@ const KPIPage: React.FC = () => {
   }
 
   return (
-    <div style={{ padding: 24 }}>
-      <Title level={3} style={{ marginBottom: 16 }}>
+    <div style={{ padding: isMobile ? 12 : 24 }}>
+      <Title level={isMobile ? 4 : 3} style={{ marginBottom: 16 }}>
         <BarChartOutlined style={{ marginRight: 8 }} />
         KPI
       </Title>

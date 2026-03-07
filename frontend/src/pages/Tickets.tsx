@@ -43,6 +43,7 @@ import { CreateTicketModal } from "../components/CreateTicketModal";
 import { CompanyFilterBar } from "../components/dashboard";
 import { useProject } from "../contexts/AppContext";
 import { useTranslation } from "react-i18next";
+import { useIsMobile } from "../hooks/useIsMobile";
 import { ticketService, statusService } from "../services";
 import dashboardService from "../services/dashboard.service";
 import type { Ticket, TicketColumn, BoardColumn } from "../types/api";
@@ -83,6 +84,7 @@ const formatTicketId = (ticket: Ticket) => {
 const Tickets: React.FC = () => {
   const { t } = useTranslation('tickets');
   const { t: tCommon } = useTranslation('common');
+  const isMobile = useIsMobile();
   const [viewMode, setViewMode] = useState<
     "list" | "kanban" | "deadline" | "archive" | "calendar"
   >(() => {
@@ -642,6 +644,7 @@ const Tickets: React.FC = () => {
       dataIndex: "customer",
       key: "customer",
       width: 180,
+      responsive: ["md"] as any,
     },
     {
       title: tCommon('col.status'),
@@ -673,6 +676,7 @@ const Tickets: React.FC = () => {
       dataIndex: "due_date",
       key: "due_date",
       width: 120,
+      responsive: ["lg"] as any,
       render: (due_date: string | null) => {
         if (!due_date) return <span style={{ color: "var(--color-text-muted)" }}>--</span>;
         const dueDate = new Date(due_date);
@@ -735,6 +739,7 @@ const Tickets: React.FC = () => {
       dataIndex: "createdAt",
       key: "createdAt",
       width: 120,
+      responsive: ["xl"] as any,
     },
   ];
 
@@ -973,17 +978,19 @@ const Tickets: React.FC = () => {
       <div
         style={{
           display: "flex",
-          alignItems: "center",
+          flexDirection: isMobile ? "column" : "row",
+          alignItems: isMobile ? "stretch" : "center",
           justifyContent: "space-between",
-          padding: "16px 20px",
+          gap: isMobile ? "8px" : undefined,
+          padding: isMobile ? "12px 16px" : "16px 20px",
           borderBottom: "1px solid var(--color-border)",
           backgroundColor: "var(--color-bg-surface)",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
           <h1 style={{ fontSize: 'var(--fs-lg)', fontWeight: 600, margin: 0 }}>Board</h1>
-          {/* Company Filter Pills */}
-          {companies.length > 0 && (
+          {/* Company Filter Pills - hidden on mobile */}
+          {!isMobile && companies.length > 0 && (
             <CompanyFilterBar
               companies={companies}
               selectedCompanyIds={selectedCompanyIds}
@@ -995,7 +1002,7 @@ const Tickets: React.FC = () => {
               compact
             />
           )}
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flex: isMobile ? 1 : undefined }}>
             <Input
               placeholder="Search"
               prefix={<SearchOutlined style={{ color: "var(--color-text-muted)" }} />}
@@ -1005,34 +1012,37 @@ const Tickets: React.FC = () => {
               }
               allowClear
               style={{
-                width: 200,
+                width: isMobile ? undefined : 200,
+                flex: isMobile ? 1 : undefined,
                 backgroundColor: "var(--color-bg-inset)",
                 border: "1px solid var(--color-border)",
                 borderRadius: "3px",
               }}
               size="small"
             />
-            <Select
-              placeholder="Filter"
-              allowClear
-              value={filterStatus}
-              onChange={(value) =>
-                setFilterStatus(typeof value === "string" ? value : undefined)
-              }
-              size="small"
-              style={{ width: 140 }}
-              disabled={!selectedProject}
-            >
-              {kanbanColumns.map((col) => (
-                <Option key={col.id} value={col.name}>
-                  {col.name}
-                </Option>
-              ))}
-            </Select>
+            {!isMobile && (
+              <Select
+                placeholder="Filter"
+                allowClear
+                value={filterStatus}
+                onChange={(value) =>
+                  setFilterStatus(typeof value === "string" ? value : undefined)
+                }
+                size="small"
+                style={{ width: 140 }}
+                disabled={!selectedProject}
+              >
+                {kanbanColumns.map((col) => (
+                  <Option key={col.id} value={col.name}>
+                    {col.name}
+                  </Option>
+                ))}
+              </Select>
+            )}
           </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", justifyContent: isMobile ? "space-between" : undefined }}>
           <Segmented
             value={viewMode}
             onChange={(value) =>
@@ -1045,21 +1055,22 @@ const Tickets: React.FC = () => {
                   | "calendar",
               )
             }
+            size="small"
             options={[
-              { label: "List", value: "list", icon: <UnorderedListOutlined /> },
-              { label: "Kanban", value: "kanban", icon: <AppstoreOutlined /> },
+              { label: isMobile ? "" : "List", value: "list", icon: <UnorderedListOutlined /> },
+              { label: isMobile ? "" : "Kanban", value: "kanban", icon: <AppstoreOutlined /> },
               {
-                label: "Deadline",
+                label: isMobile ? "" : "Deadline",
                 value: "deadline",
                 icon: <ClockCircleOutlined />,
               },
               {
-                label: "Calendar",
+                label: isMobile ? "" : "Calendar",
                 value: "calendar",
                 icon: <CalendarOutlined />,
               },
               {
-                label: "Archive",
+                label: isMobile ? "" : "Archive",
                 value: "archive",
                 icon: <InboxOutlined />,
               },
@@ -1070,8 +1081,9 @@ const Tickets: React.FC = () => {
             icon={<PlusOutlined />}
             onClick={() => setIsCreateModalOpen(true)}
             disabled={!selectedProject}
+            size="small"
           >
-            Create Ticket
+            {!isMobile && "Create Ticket"}
           </Button>
         </div>
       </div>

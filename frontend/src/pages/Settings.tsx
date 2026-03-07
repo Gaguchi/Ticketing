@@ -500,6 +500,7 @@ const Settings: React.FC = () => {
           <Tooltip title="Edit">
             <Button
               type="text"
+              size="small"
               icon={<EditOutlined />}
               onClick={() => handleEditProject(record)}
             />
@@ -513,7 +514,7 @@ const Settings: React.FC = () => {
             placement="left"
           >
             <Tooltip title="Delete">
-              <Button type="text" danger icon={<DeleteOutlined />} />
+              <Button type="text" size="small" danger icon={<DeleteOutlined />} />
             </Tooltip>
           </Popconfirm>
         </Space>
@@ -536,6 +537,7 @@ const Settings: React.FC = () => {
               </span>
               <Button
                 type="primary"
+                size="small"
                 icon={<PlusOutlined />}
                 onClick={handleCreateProject}
               >
@@ -552,7 +554,7 @@ const Settings: React.FC = () => {
                   description="No projects yet"
                   style={{ padding: 48 }}
                 >
-                  <Button type="primary" onClick={handleCreateProject}>
+                  <Button type="primary" size="small" onClick={handleCreateProject}>
                     Create your first project
                   </Button>
                 </Empty>
@@ -640,6 +642,7 @@ const Settings: React.FC = () => {
                     value={fontSize}
                     onChange={(value: FontSize) => setFontSize(value)}
                     style={{ width: 120 }}
+                    size="small"
                     options={[
                       { value: "small", label: "Small" },
                       { value: "medium", label: "Medium" },
@@ -673,6 +676,7 @@ const Settings: React.FC = () => {
                   value={i18n.language}
                   onChange={(value: string) => i18n.changeLanguage(value)}
                   style={{ width: 200 }}
+                  size="small"
                   options={[
                     { value: "en", label: "English" },
                     { value: "ka", label: "\u10E5\u10D0\u10E0\u10D7\u10E3\u10DA\u10D8 (Georgian)" },
@@ -687,6 +691,7 @@ const Settings: React.FC = () => {
                 <Select
                   defaultValue="utc"
                   style={{ width: 280 }}
+                  size="small"
                   options={[
                     { value: "utc", label: "(UTC+00:00) UTC" },
                     { value: "est", label: "(UTC-05:00) Eastern Time" },
@@ -714,6 +719,7 @@ const Settings: React.FC = () => {
                 <Select
                   defaultValue="mdy"
                   style={{ width: 200 }}
+                  size="small"
                   options={[
                     { value: "mdy", label: "MM/DD/YYYY" },
                     { value: "dmy", label: "DD/MM/YYYY" },
@@ -771,6 +777,7 @@ const Settings: React.FC = () => {
                 <Select
                   defaultValue="default"
                   style={{ width: 150 }}
+                  size="small"
                   options={[
                     { value: "default", label: "Default" },
                     { value: "chime", label: "Chime" },
@@ -793,6 +800,7 @@ const Settings: React.FC = () => {
                 <Select
                   defaultValue="everyone"
                   style={{ width: 160 }}
+                  size="small"
                   options={[
                     { value: "everyone", label: "Everyone" },
                     { value: "team", label: "Team Only" },
@@ -813,6 +821,7 @@ const Settings: React.FC = () => {
                 <Select
                   defaultValue="30"
                   style={{ width: 150 }}
+                  size="small"
                   options={[
                     { value: "15", label: "15 minutes" },
                     { value: "30", label: "30 minutes" },
@@ -899,6 +908,7 @@ const Settings: React.FC = () => {
 
                 <Button
                   type="primary"
+                  size="small"
                   onClick={handleTriggerArchive}
                   loading={archiving}
                   icon={<ThunderboltOutlined />}

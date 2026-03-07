@@ -1,21 +1,22 @@
 /**
  * DashboardGrid - Drag and drop grid layout for dashboard widgets
  * Uses react-grid-layout for resizable, draggable widget management
+ * Responsive: single-column on mobile, multi-column on desktop
  */
 
-import React, { useState, useCallback, useMemo, useRef, useEffect } from "react";
-import GridLayout, { type Layout } from "react-grid-layout";
+import React, { useState, useCallback, useMemo } from "react";
+import { ResponsiveGridLayout as RGL, type Layout } from "react-grid-layout";
 import { Button, Tooltip, message } from "antd";
 import { ReloadOutlined, UndoOutlined } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
+import { useIsMobile } from "../../hooks/useIsMobile";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 
-// Cast default export to any to bypass type definition issues with props
-const GridLayoutAny = GridLayout as any;
+const ResponsiveGridLayout = RGL as any;
 
 // Storage key prefix for layout persistence (user ID appended at runtime)
-const LAYOUT_STORAGE_KEY_PREFIX = "dashboard_layout_v1_user_";
+const LAYOUT_STORAGE_KEY_PREFIX = "dashboard_layout_v2_user_";
 
 // Layout item type (matches react-grid-layout's internal type)
 interface LayoutItem {
@@ -49,9 +50,9 @@ export interface WidgetConfig {
   };
 }
 
-// Generate default layout from widget configs
-const generateDefaultLayout = (widgets: WidgetConfig[]): LayoutItem[] => {
-  return widgets.map((w) => ({
+// Generate responsive layouts from widget configs
+const generateResponsiveLayouts = (widgets: WidgetConfig[]) => {
+  const lg = widgets.map((w) => ({
     i: w.i,
     x: w.defaultLayout.x,
     y: w.defaultLayout.y,
@@ -63,6 +64,18 @@ const generateDefaultLayout = (widgets: WidgetConfig[]): LayoutItem[] => {
     maxH: w.defaultLayout.maxH,
     static: w.defaultLayout.static,
   }));
+
+  // Single column stacked layout for small screens
+  const sm = widgets.map((w, idx) => ({
+    i: w.i,
+    x: 0,
+    y: idx * 3,
+    w: 1,
+    h: w.defaultLayout.h,
+    minH: w.defaultLayout.minH || 2,
+  }));
+
+  return { lg, md: lg, sm, xs: sm };
 };
 
 interface DashboardGridProps {
@@ -80,8 +93,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
 }) => {
   const { t } = useTranslation('dashboard');
   const { t: tCommon } = useTranslation('common');
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [containerWidth, setContainerWidth] = useState(1200);
+  const isMobile = useIsMobile();
 
   // User-specific storage key
   const storageKey = useMemo(
@@ -89,48 +101,36 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
     [userId]
   );
 
-  // Measure container width for responsive grid
-  useEffect(() => {
-    const updateWidth = () => {
-      if (containerRef.current) {
-        setContainerWidth(containerRef.current.offsetWidth - 40); // Account for padding
-      }
-    };
-
-    updateWidth();
-    window.addEventListener("resize", updateWidth);
-    return () => window.removeEventListener("resize", updateWidth);
-  }, []);
-
-  const defaultLayout = useMemo(
-    () => generateDefaultLayout(widgets),
+  const defaultLayouts = useMemo(
+    () => generateResponsiveLayouts(widgets),
     [widgets]
   );
 
-  // Load saved layout from localStorage (user-specific)
-  const [layout, setLayout] = useState<LayoutItem[]>(() => {
+  // Load saved layouts from localStorage (user-specific)
+  const [layouts, setLayouts] = useState<Record<string, LayoutItem[]>>(() => {
     try {
       const saved = localStorage.getItem(storageKey);
       if (saved) {
-        const parsed = JSON.parse(saved) as LayoutItem[];
+        const parsed = JSON.parse(saved);
         // Validate that all current widgets exist in saved layout
-        const savedIds = new Set(parsed.map((l) => l.i));
+        const lgLayout = parsed.lg || parsed;
+        const savedIds = new Set((Array.isArray(lgLayout) ? lgLayout : []).map((l: LayoutItem) => l.i));
         const allExist = widgets.every((w) => savedIds.has(w.i));
-        if (allExist) {
+        if (allExist && parsed.lg) {
           return parsed;
         }
       }
     } catch (e) {
       console.warn("Failed to load saved layout:", e);
     }
-    return defaultLayout;
+    return defaultLayouts;
   });
 
-  // Save layout on change
-  const handleLayoutChange = useCallback((newLayout: Layout) => {
-    setLayout(newLayout as LayoutItem[]);
+  // Save layouts on change
+  const handleLayoutChange = useCallback((_currentLayout: Layout, allLayouts: Record<string, Layout[]>) => {
+    setLayouts(allLayouts as Record<string, LayoutItem[]>);
     try {
-      localStorage.setItem(storageKey, JSON.stringify(newLayout));
+      localStorage.setItem(storageKey, JSON.stringify(allLayouts));
     } catch (e) {
       console.warn("Failed to save layout:", e);
     }
@@ -138,10 +138,10 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
 
   // Reset to default layout
   const handleResetLayout = useCallback(() => {
-    setLayout(defaultLayout);
+    setLayouts(defaultLayouts);
     localStorage.removeItem(storageKey);
     message.success(t('grid.layoutReset'));
-  }, [defaultLayout, storageKey]);
+  }, [defaultLayouts, storageKey]);
 
   return (
     <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
@@ -151,55 +151,56 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "12px 20px",
+          padding: isMobile ? "12px 16px" : "16px 20px",
           borderBottom: "1px solid var(--color-border-light)",
           backgroundColor: "var(--color-bg-surface)",
         }}
       >
         <h1 style={{ fontSize: 'var(--fs-lg)', fontWeight: 600, margin: 0 }}>{t('grid.dashboard')}</h1>
         <div style={{ display: "flex", gap: 8 }}>
-          <Tooltip title={t('grid.resetLayout')}>
-            <Button
-              icon={<UndoOutlined />}
-              onClick={handleResetLayout}
-              size="small"
-            />
-          </Tooltip>
+          {!isMobile && (
+            <Tooltip title={t('grid.resetLayout')}>
+              <Button
+                icon={<UndoOutlined />}
+                onClick={handleResetLayout}
+                size="small"
+              />
+            </Tooltip>
+          )}
           <Button
             icon={<ReloadOutlined spin={loading} />}
             onClick={onRefresh}
             loading={loading}
             size="small"
           >
-            {tCommon('btn.refresh')}
+            {!isMobile && tCommon('btn.refresh')}
           </Button>
         </div>
       </div>
 
       {/* Grid Content */}
       <div
-        ref={containerRef}
         className="dashboard-grid-container"
         style={{
           flex: 1,
           overflow: "auto",
-          padding: "16px 20px",
+          padding: isMobile ? "12px" : "16px 20px",
           backgroundColor: "var(--color-bg-inset)",
         }}
       >
-        <GridLayoutAny
+        <ResponsiveGridLayout
           className="dashboard-grid"
-          layout={layout}
-          cols={12}
+          layouts={layouts}
+          breakpoints={{ lg: 992, md: 768, sm: 480, xs: 0 }}
+          cols={{ lg: 12, md: 12, sm: 1, xs: 1 }}
           rowHeight={80}
-          width={containerWidth}
-          margin={[16, 16]}
+          margin={isMobile ? [0, 12] : [16, 16]}
           containerPadding={[0, 0]}
           onLayoutChange={handleLayoutChange}
           draggableHandle=".drag-handle"
           useCSSTransforms={true}
-          isResizable={true}
-          isDraggable={true}
+          isResizable={!isMobile}
+          isDraggable={!isMobile}
           compactType="vertical"
         >
           {widgets.map((widget) => (
@@ -207,7 +208,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
               {widget.component}
             </div>
           ))}
-        </GridLayoutAny>
+        </ResponsiveGridLayout>
       </div>
 
       {/* Custom styles for grid */}

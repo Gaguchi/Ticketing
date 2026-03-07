@@ -39,6 +39,7 @@ import dayjs from "dayjs";
 import ReactQuill from "react-quill-new";
 import "react-quill-new/dist/quill.snow.css";
 import "./TicketModal.css";
+import { useIsMobile } from "../hooks/useIsMobile";
 import { TicketChatPanel } from "./TicketChatPanel";
 import { TicketHistory } from "./TicketHistory";
 import { getPriorityIcon } from "./PriorityIcons";
@@ -123,6 +124,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
 }) => {
   const { t } = useTranslation('tickets');
   const { t: tCommon } = useTranslation('common');
+  const isMobile = useIsMobile();
   const isCreateMode = mode === "create";
 
   // Form state
@@ -442,13 +444,13 @@ export const TicketModal: React.FC<TicketModalProps> = ({
     <Modal
       open={open}
       onCancel={onClose}
-      width="90%"
-      style={{ maxWidth: "1600px", minWidth: "1000px" }}
-      centered
+      width={isMobile ? "100%" : "90%"}
+      style={isMobile ? { top: 0, maxWidth: "100vw", margin: 0, paddingBottom: 0 } : { maxWidth: "1600px", minWidth: "1000px" }}
+      centered={!isMobile}
       footer={null}
       closeIcon={null}
       className="ticket-modal-overhaul"
-      styles={{ body: { padding: 0, height: "85vh", overflow: "hidden" } }}
+      styles={{ body: { padding: 0, height: isMobile ? "100vh" : "85vh", overflow: "hidden" } }}
     >
       <div className="ticket-modal-container">
         {/* HEADER */}

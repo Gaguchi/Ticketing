@@ -463,7 +463,7 @@
 
 /* ── Responsive ── */
 
-@media (max-width: 900px) {
+@media (max-width: 767px) {
   .settings-page {
     flex-direction: column;
   }
@@ -499,6 +499,25 @@
   }
 
   .settings-content {
-    padding: 24px 16px 48px;
+    padding: 16px 12px 48px;
+  }
+
+  .setting-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .setting-row__control {
+    width: 100%;
+  }
+
+  .theme-picker,
+  .variant-picker {
+    flex-wrap: wrap;
+  }
+
+  .settings-content__title {
+    font-size: var(--fs-xl);
   }
 }

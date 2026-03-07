@@ -24,8 +24,10 @@ import {
   SmileOutlined,
   CloseOutlined,
   CustomerServiceOutlined,
+  ArrowLeftOutlined,
 } from "@ant-design/icons";
 import EmojiPicker from "emoji-picker-react";
+import { useIsMobile } from "../hooks/useIsMobile";
 import { useProject, useAuth } from "../contexts/AppContext";
 import { chatService } from "../services/chat.service";
 import { webSocketService } from "../services/websocket.service";
@@ -37,6 +39,7 @@ const { Text } = Typography;
 const Chat: React.FC = () => {
   const { selectedProject } = useProject();
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
   const [activeRoom, setActiveRoom] = useState<ChatRoom | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -665,25 +668,36 @@ const Chat: React.FC = () => {
       {/* Header */}
       <div
         style={{
-          padding: "16px 24px",
+          padding: isMobile ? "12px 16px" : "16px 20px",
           backgroundColor: "var(--color-bg-surface)",
           borderBottom: "1px solid var(--color-border)",
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
         }}
       >
+        {isMobile && activeRoom && (
+          <Button
+            type="text"
+            icon={<ArrowLeftOutlined />}
+            onClick={() => setActiveRoom(null)}
+            size="small"
+          />
+        )}
         <Text style={{ fontSize: 'var(--fs-2xl)', fontWeight: 600, color: "var(--color-text-heading)" }}>
-          Messages
+          {isMobile && activeRoom ? activeRoom.display_name : "Messages"}
         </Text>
       </div>
 
       {/* Main Content */}
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-        {/* Sidebar */}
+        {/* Sidebar - hidden on mobile when a room is active */}
         <div
           style={{
-            width: 320,
+            width: isMobile ? "100%" : 320,
             backgroundColor: "var(--color-bg-surface)",
-            borderRight: "1px solid var(--color-border)",
-            display: "flex",
+            borderRight: isMobile ? "none" : "1px solid var(--color-border)",
+            display: isMobile && activeRoom ? "none" : "flex",
             flexDirection: "column",
           }}
         >
@@ -732,6 +746,7 @@ const Chat: React.FC = () => {
                   : "Search tickets..."
               }
               prefix={<SearchOutlined style={{ color: "var(--color-text-muted)" }} />}
+              size="small"
               style={{ borderRadius: 8 }}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -967,7 +982,7 @@ const Chat: React.FC = () => {
           <div
             style={{
               flex: 1,
-              display: "flex",
+              display: isMobile && !activeRoom ? "none" : "flex",
               flexDirection: "column",
               backgroundColor: "var(--color-bg-surface)",
             }}
@@ -975,9 +990,10 @@ const Chat: React.FC = () => {
             {/* Chat Header */}
             <div
               style={{
-                padding: "12px 24px",
+                padding: isMobile ? "12px 16px" : "12px 20px",
                 borderBottom: "1px solid var(--color-border)",
                 backgroundColor: "var(--color-bg-sidebar)",
+                display: isMobile ? "none" : "block",
               }}
             >
               <Space size={12}>
@@ -1436,11 +1452,13 @@ const Chat: React.FC = () => {
                 >
                   <Button
                     icon={<PaperClipOutlined />}
+                    size="small"
                     style={{ borderRadius: 8 }}
                   />
                 </Upload>
                 <Input
                   placeholder="Type a message..."
+                  size="small"
                   value={messageInput}
                   onChange={(e) => {
                     setMessageInput(e.target.value);
@@ -1473,7 +1491,7 @@ const Chat: React.FC = () => {
               </div>
             </div>
           </div>
-        ) : (
+        ) : !isMobile ? (
           <div
             style={{
               flex: 1,
@@ -1486,7 +1504,7 @@ const Chat: React.FC = () => {
               Select a conversation to start chatting
             </Text>
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );
