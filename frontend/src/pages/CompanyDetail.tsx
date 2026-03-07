@@ -636,6 +636,7 @@ const CompanyDetail: React.FC = () => {
       dataIndex: "column_name",
       key: "column_name",
       width: 120,
+      responsive: ['md'] as any,
     },
     {
       title: "Priority",
@@ -658,6 +659,7 @@ const CompanyDetail: React.FC = () => {
       dataIndex: "assignee_ids",
       key: "assignee_ids",
       width: 150,
+      responsive: ['md'] as any,
       render: (ids: number[]) =>
         ids?.length > 0 ? `${ids.length} assigned` : "Unassigned",
     },
@@ -666,6 +668,7 @@ const CompanyDetail: React.FC = () => {
       dataIndex: "due_date",
       key: "due_date",
       width: 120,
+      responsive: ['md'] as any,
       render: (date: string) =>
         date ? new Date(date).toLocaleDateString() : "-",
     },
@@ -688,8 +691,10 @@ const CompanyDetail: React.FC = () => {
         <div
           style={{
             display: "flex",
+            flexDirection: isMobile ? "column" : "row",
             justifyContent: "space-between",
-            alignItems: "flex-start",
+            alignItems: isMobile ? "stretch" : "flex-start",
+            gap: isMobile ? 12 : 0,
           }}
         >
           <div style={{ display: "flex", alignItems: "flex-start", gap: 16 }}>
@@ -828,7 +833,7 @@ const CompanyDetail: React.FC = () => {
             </div>
           </div>
 
-          <Space>
+          <Space wrap={isMobile}>
             <Button size="small" icon={<EditOutlined />} onClick={handleEditCompany}>
               Edit
             </Button>
@@ -850,7 +855,7 @@ const CompanyDetail: React.FC = () => {
       {/* Stats Bar */}
       <Card size="small" style={{ marginBottom: 24 }}>
         <Row gutter={24}>
-          <Col span={6}>
+          <Col xs={12} sm={6}>
             <Statistic
               title="Open Tickets"
               value={stats?.open_tickets ?? 0}
@@ -858,7 +863,7 @@ const CompanyDetail: React.FC = () => {
               loading={statsLoading}
             />
           </Col>
-          <Col span={6}>
+          <Col xs={12} sm={6}>
             <Statistic
               title="Urgent"
               value={stats?.urgent_tickets ?? 0}
@@ -876,7 +881,7 @@ const CompanyDetail: React.FC = () => {
               loading={statsLoading}
             />
           </Col>
-          <Col span={6}>
+          <Col xs={12} sm={6}>
             <Statistic
               title="Overdue"
               value={stats?.overdue_tickets ?? 0}
@@ -895,7 +900,7 @@ const CompanyDetail: React.FC = () => {
               loading={statsLoading}
             />
           </Col>
-          <Col span={6}>
+          <Col xs={12} sm={6}>
             <Statistic
               title="Resolved This Month"
               value={stats?.resolved_this_month ?? 0}
@@ -913,7 +918,7 @@ const CompanyDetail: React.FC = () => {
           <TabPane tab="Overview" key="overview">
             <Row gutter={24}>
               {/* Newest Tickets with Quick Assign */}
-              <Col span={14}>
+              <Col xs={24} md={14}>
                 <Card
                   title={
                     <div
@@ -924,7 +929,7 @@ const CompanyDetail: React.FC = () => {
                     </div>
                   }
                   size="small"
-                  style={{ borderRadius: 8, height: 400 }}
+                  style={{ borderRadius: 8, height: isMobile ? 300 : 400 }}
                   styles={{
                     body: {
                       padding: 0,
@@ -959,7 +964,7 @@ const CompanyDetail: React.FC = () => {
                       <div
                         style={{
                           display: "grid",
-                          gridTemplateColumns: "70px 1fr 90px 100px",
+                          gridTemplateColumns: isMobile ? "60px 1fr 70px" : "70px 1fr 90px 100px",
                           gap: 8,
                           padding: "8px 12px",
                           fontSize: 'var(--fs-2xs)',
@@ -977,7 +982,7 @@ const CompanyDetail: React.FC = () => {
                         <span>Ticket</span>
                         <span>Title</span>
                         <span>Priority</span>
-                        <span style={{ textAlign: "center" }}>Assign</span>
+                        {!isMobile && <span style={{ textAlign: "center" }}>Assign</span>}
                       </div>
 
                       {/* Ticket rows */}
@@ -995,7 +1000,7 @@ const CompanyDetail: React.FC = () => {
                             className="newest-ticket-row"
                             style={{
                               display: "grid",
-                              gridTemplateColumns: "70px 1fr 90px 100px",
+                              gridTemplateColumns: isMobile ? "60px 1fr 70px" : "70px 1fr 90px 100px",
                               gap: 8,
                               padding: "10px 12px",
                               fontSize: 'var(--fs-sm)',
@@ -1075,6 +1080,7 @@ const CompanyDetail: React.FC = () => {
                             </span>
 
                             {/* Quick Assign */}
+                            {!isMobile && (
                             <div
                               className="assign-select"
                               onClick={(e) => e.stopPropagation()}
@@ -1127,6 +1133,7 @@ const CompanyDetail: React.FC = () => {
                                 ))}
                               </Select>
                             </div>
+                            )}
                           </div>
                         ))}
                     </div>
@@ -1135,7 +1142,7 @@ const CompanyDetail: React.FC = () => {
               </Col>
 
               {/* Live Activity Feed */}
-              <Col span={10}>
+              <Col xs={24} md={10}>
                 <Card
                   title={
                     <div
@@ -1154,7 +1161,7 @@ const CompanyDetail: React.FC = () => {
                     </div>
                   }
                   size="small"
-                  style={{ borderRadius: 8, height: 400 }}
+                  style={{ borderRadius: 8, height: isMobile ? 300 : 400 }}
                   styles={{
                     body: {
                       padding: 0,
@@ -1289,7 +1296,7 @@ const CompanyDetail: React.FC = () => {
             </Row>
 
             <Row gutter={24} style={{ marginTop: 24 }}>
-              <Col span={12}>
+              <Col xs={24} md={12}>
                 <Card
                   title={`Users (${company.users?.length ?? 0})`}
                   size="small"
@@ -1340,7 +1347,7 @@ const CompanyDetail: React.FC = () => {
                   )}
                 </Card>
               </Col>
-              <Col span={12}>
+              <Col xs={24} md={12}>
                 <Card
                   title={`IT Admins (${company.admins?.length ?? 0})`}
                   size="small"
@@ -1392,14 +1399,14 @@ const CompanyDetail: React.FC = () => {
           {/* Tickets Tab */}
           <TabPane tab="Tickets" key="tickets">
             <div style={{ marginBottom: 16 }}>
-              <Space>
+              <Space wrap>
                 <Button
                   size="small"
                   type={ticketViewMode === "table" ? "primary" : "default"}
                   icon={<TableOutlined />}
                   onClick={() => setTicketViewMode("table")}
                 >
-                  Table
+                  {!isMobile && "Table"}
                 </Button>
                 <Button
                   size="small"
@@ -1407,7 +1414,7 @@ const CompanyDetail: React.FC = () => {
                   icon={<AppstoreOutlined />}
                   onClick={() => setTicketViewMode("kanban")}
                 >
-                  Kanban
+                  {!isMobile && "Kanban"}
                 </Button>
                 <Button
                   size="small"
@@ -1415,7 +1422,7 @@ const CompanyDetail: React.FC = () => {
                   icon={<CalendarOutlined />}
                   onClick={() => setTicketViewMode("deadline")}
                 >
-                  Deadline
+                  {!isMobile && "Deadline"}
                 </Button>
                 <Button
                   size="small"
@@ -1423,7 +1430,7 @@ const CompanyDetail: React.FC = () => {
                   icon={<InboxOutlined />}
                   onClick={() => setTicketViewMode("archive")}
                 >
-                  Archive
+                  {!isMobile && "Archive"}
                 </Button>
                 <Button
                   size="small"
@@ -1431,7 +1438,7 @@ const CompanyDetail: React.FC = () => {
                   icon={<CheckCircleOutlined />}
                   onClick={() => setTicketViewMode("resolved")}
                 >
-                  Resolved
+                  {!isMobile && "Resolved"}
                 </Button>
               </Space>
             </div>
@@ -1558,10 +1565,10 @@ const CompanyDetail: React.FC = () => {
                   size="small"
                 >
                   <div style={{ marginBottom: 16 }}>
-                    <Space.Compact style={{ width: 400 }}>
+                    <Space.Compact style={{ width: isMobile ? "100%" : 400 }}>
                       <Select
                         placeholder="Select user to assign as admin"
-                        style={{ width: 300 }}
+                        style={{ flex: 1 }}
                         value={selectedAdminId}
                         onChange={setSelectedAdminId}
                         loading={loadingUsers}
@@ -1668,7 +1675,7 @@ const CompanyDetail: React.FC = () => {
                         onFinish={handleAddUser}
                       >
                         <Row gutter={16}>
-                          <Col span={8}>
+                          <Col xs={24} sm={8}>
                             <Form.Item
                               name="email"
                               label="Email"
@@ -1677,7 +1684,7 @@ const CompanyDetail: React.FC = () => {
                               <Input placeholder="user@company.com" />
                             </Form.Item>
                           </Col>
-                          <Col span={8}>
+                          <Col xs={24} sm={8}>
                             <Form.Item
                               name="username"
                               label="Username"
@@ -1686,7 +1693,7 @@ const CompanyDetail: React.FC = () => {
                               <Input placeholder="username" />
                             </Form.Item>
                           </Col>
-                          <Col span={8}>
+                          <Col xs={24} sm={8}>
                             <Form.Item
                               name="password"
                               label="Password"
@@ -1697,18 +1704,18 @@ const CompanyDetail: React.FC = () => {
                           </Col>
                         </Row>
                         <Row gutter={16}>
-                          <Col span={8}>
+                          <Col xs={24} sm={8}>
                             <Form.Item name="first_name" label="First Name">
                               <Input placeholder="First name" />
                             </Form.Item>
                           </Col>
-                          <Col span={8}>
+                          <Col xs={24} sm={8}>
                             <Form.Item name="last_name" label="Last Name">
                               <Input placeholder="Last name" />
                             </Form.Item>
                           </Col>
                           <Col
-                            span={8}
+                            xs={24} sm={8}
                             style={{ display: "flex", alignItems: "flex-end" }}
                           >
                             <Form.Item style={{ marginBottom: 0 }}>
@@ -1900,7 +1907,9 @@ const CompanyDetail: React.FC = () => {
         }}
         okText="Save"
         confirmLoading={editSubmitting}
-        width={600}
+        width={isMobile ? "100%" : 600}
+        style={isMobile ? { top: 0, maxWidth: "100vw", margin: 0, paddingBottom: 0 } : undefined}
+        styles={isMobile ? { content: { borderRadius: 0 }, body: { maxHeight: "100dvh", overflowY: "auto" } } : undefined}
       >
         <Form form={editForm} layout="vertical" style={{ marginTop: 24 }}>
           <Form.Item
