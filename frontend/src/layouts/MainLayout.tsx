@@ -435,33 +435,20 @@ const MainLayout: React.FC = () => {
             height: 48,
           }}
         >
-          <div
+          <Button
+            type="text"
+            size="small"
+            icon={
+              isMobile ? (
+                <MenuOutlined style={{ fontSize: 'var(--fs-lg)' }} />
+              ) : collapsed ? (
+                <MenuUnfoldOutlined style={{ fontSize: 'var(--fs-lg)' }} />
+              ) : (
+                <MenuFoldOutlined style={{ fontSize: 'var(--fs-lg)' }} />
+              )
+            }
             onClick={() => isMobile ? setMobileDrawerOpen(!mobileDrawerOpen) : setCollapsed(!collapsed)}
-            style={{
-              cursor: "pointer",
-              padding: "6px 8px",
-              borderRadius: 2,
-              transition: "all 0.15s",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "var(--color-text-secondary)",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "var(--color-bg-content)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "transparent";
-            }}
-          >
-            {isMobile ? (
-              <MenuOutlined style={{ fontSize: 'var(--fs-lg)' }} />
-            ) : collapsed ? (
-              <MenuUnfoldOutlined style={{ fontSize: 'var(--fs-lg)' }} />
-            ) : (
-              <MenuFoldOutlined style={{ fontSize: 'var(--fs-lg)' }} />
-            )}
-          </div>
+          />
           <Space size="small">
             {/* Project Selector - Show loading or data based on state */}
             {authLoading || projectLoading ? (

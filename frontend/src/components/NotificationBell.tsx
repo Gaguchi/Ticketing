@@ -266,14 +266,8 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
       <Badge count={displayUnreadCount} offset={[-5, 5]} size="small">
         <Button
           type="text"
-          icon={<BellOutlined style={{ fontSize: 'var(--fs-xl)' }} />}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            height: 40,
-            width: 40,
-          }}
+          size="small"
+          icon={<BellOutlined style={{ fontSize: 'var(--fs-lg)' }} />}
         />
       </Badge>
     </Dropdown>
