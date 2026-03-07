@@ -648,7 +648,7 @@ const Chat: React.FC = () => {
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          height: "calc(100vh - 64px)",
+          height: isMobile ? "calc(100dvh - 64px - 56px)" : "calc(100vh - 64px)",
         }}
       >
         <Spin size="large" />
@@ -659,7 +659,7 @@ const Chat: React.FC = () => {
   return (
     <div
       style={{
-        height: "calc(100vh - 64px)",
+        height: isMobile ? "calc(100dvh - 64px - 56px)" : "calc(100vh - 64px)",
         display: "flex",
         flexDirection: "column",
         backgroundColor: "var(--color-bg-inset)",
@@ -1011,7 +1011,7 @@ const Chat: React.FC = () => {
                   <br />
                   <Text style={{ fontSize: 'var(--fs-sm)', color: "var(--color-text-muted)" }}>
                     {activeRoom.type === "group"
-                      ? `${activeRoom.participants.length} members`
+                      ? `${activeRoom.participants?.length} members`
                       : "Direct message"}
                   </Text>
                 </div>
@@ -1025,7 +1025,7 @@ const Chat: React.FC = () => {
               style={{
                 flex: 1,
                 overflowY: "auto",
-                padding: "24px",
+                padding: isMobile ? "12px" : "24px",
                 backgroundColor: "var(--color-bg-inset)",
                 display: "flex",
                 flexDirection: "column-reverse", // Key: renders from bottom up
@@ -1087,7 +1087,7 @@ const Chat: React.FC = () => {
                             style={{
                               display: "flex",
                               gap: 8,
-                              maxWidth: "60%",
+                              maxWidth: isMobile ? "85%" : "60%",
                               flexDirection: isMine ? "row-reverse" : "row",
                             }}
                           >
@@ -1147,8 +1147,8 @@ const Chat: React.FC = () => {
                                       src={msg.attachment_url}
                                       alt={msg.attachment_name}
                                       style={{
-                                        maxWidth: "100%",
-                                        width: 400,
+                                        width: "100%",
+                                        maxWidth: 400,
                                         borderRadius: 8,
                                         cursor: "pointer",
                                       }}
@@ -1318,7 +1318,7 @@ const Chat: React.FC = () => {
                                 {/* Emoji Picker Button */}
                                 <Popover
                                   content={
-                                    <div style={{ width: 350 }}>
+                                    <div style={{ width: isMobile ? "min(350px, 90vw)" : 350, maxWidth: "90vw" }}>
                                       <EmojiPicker
                                         onEmojiClick={(emojiData) =>
                                           handleEmojiClick(msg.id, emojiData)

@@ -379,7 +379,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
       styles={{
         body: {
           padding: 0,
-          maxHeight: isMobile ? "100vh" : "calc(100vh - 80px)",
+          maxHeight: isMobile ? "100dvh" : "calc(100vh - 80px)",
           overflow: "hidden",
           display: "flex",
           flexDirection: "column",
@@ -394,7 +394,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
         style={{
           display: "flex",
           flexDirection: "column",
-          maxHeight: isMobile ? "100vh" : "calc(100vh - 80px)",
+          maxHeight: isMobile ? "100dvh" : "calc(100vh - 80px)",
         }}
       >
         {/* Header */}

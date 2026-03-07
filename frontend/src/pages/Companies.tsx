@@ -680,25 +680,25 @@ const Companies: React.FC = () => {
 
           {/* Company Header Card */}
           <Card style={{ marginBottom: 24 }}>
-            <Row gutter={24} align="middle">
-              <Col>
+            <Row gutter={[24, 16]} align="middle">
+              <Col xs={24} sm={4} style={isMobile ? { textAlign: "center" } : undefined}>
                 <Avatar
                   size={80}
                   style={{ background: "var(--color-primary)" }}
                   icon={<ShopOutlined />}
                 />
               </Col>
-              <Col flex={1}>
-                <Title level={2} style={{ margin: 0, marginBottom: 8 }}>
+              <Col xs={24} sm={14}>
+                <Title level={2} style={{ margin: 0, marginBottom: 8, textAlign: isMobile ? "center" : undefined }}>
                   {selectedCompany.name}
                 </Title>
                 <Text
                   type="secondary"
-                  style={{ display: "block", marginBottom: 16 }}
+                  style={{ display: "block", marginBottom: 16, textAlign: isMobile ? "center" : undefined }}
                 >
                   {selectedCompany.description}
                 </Text>
-                <Space size={16}>
+                <Space size={[8, 8]} wrap style={isMobile ? { justifyContent: "center", width: "100%" } : undefined}>
                   <Space>
                     <UserOutlined style={{ color: "var(--color-primary)" }} />
                     <Text>{selectedCompany.admin_count} Admins</Text>
@@ -717,8 +717,8 @@ const Companies: React.FC = () => {
                   </Space>
                 </Space>
               </Col>
-              <Col>
-                <Space direction="vertical" align="end">
+              <Col xs={24} sm={6}>
+                <Space direction="vertical" align={isMobile ? "center" : "end"} style={isMobile ? { width: "100%" } : undefined}>
                   {selectedCompany.primary_contact_email && (
                     <Text>
                       <MailOutlined /> {selectedCompany.primary_contact_email}
@@ -750,14 +750,14 @@ const Companies: React.FC = () => {
               </Space>
             }
             extra={
-              <Space>
+              <Space wrap>
                 <Button
                   type={ticketViewMode === "table" ? "primary" : "default"}
                   icon={<TableOutlined />}
                   size="small"
                   onClick={() => setTicketViewMode("table")}
                 >
-                  Table
+                  {!isMobile && "Table"}
                 </Button>
                 <Button
                   type={ticketViewMode === "kanban" ? "primary" : "default"}
@@ -765,7 +765,7 @@ const Companies: React.FC = () => {
                   size="small"
                   onClick={() => setTicketViewMode("kanban")}
                 >
-                  Kanban
+                  {!isMobile && "Kanban"}
                 </Button>
                 <Button
                   type={ticketViewMode === "deadline" ? "primary" : "default"}
@@ -773,7 +773,7 @@ const Companies: React.FC = () => {
                   size="small"
                   onClick={() => setTicketViewMode("deadline")}
                 >
-                  Deadlines
+                  {!isMobile && "Deadlines"}
                 </Button>
                 <Button
                   type={ticketViewMode === "archive" ? "primary" : "default"}
@@ -781,7 +781,7 @@ const Companies: React.FC = () => {
                   size="small"
                   onClick={() => setTicketViewMode("archive")}
                 >
-                  Archive
+                  {!isMobile && "Archive"}
                 </Button>
               </Space>
             }
@@ -1010,7 +1010,9 @@ const Companies: React.FC = () => {
         }}
         okText={editingCompany ? "Update" : "Create"}
         confirmLoading={submitting}
-        width={600}
+        width={isMobile ? "100%" : 600}
+        style={isMobile ? { top: 0, maxWidth: "100vw", margin: 0, paddingBottom: 0 } : undefined}
+        styles={{ content: isMobile ? { borderRadius: 0 } : undefined, body: isMobile ? { maxHeight: "100dvh", overflowY: "auto" } : undefined }}
       >
         <Form form={form} layout="vertical" style={{ marginTop: 24 }}>
           <Form.Item
@@ -1037,7 +1039,7 @@ const Companies: React.FC = () => {
           </Form.Item>
 
           <Row gutter={16}>
-            <Col span={12}>
+            <Col xs={24} sm={12}>
               <Form.Item
                 name="primary_contact_email"
                 label="Primary Contact Email"
@@ -1051,7 +1053,7 @@ const Companies: React.FC = () => {
                 />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} sm={12}>
               <Form.Item name="phone" label="Phone Number">
                 <Input
                   placeholder="+1 (555) 123-4567"
@@ -1118,7 +1120,9 @@ const Companies: React.FC = () => {
           createUserForm.resetFields();
         }}
         footer={null}
-        width={800}
+        width={isMobile ? "100%" : 800}
+        style={isMobile ? { top: 0, maxWidth: "100vw", margin: 0, paddingBottom: 0 } : undefined}
+        styles={{ content: isMobile ? { borderRadius: 0 } : undefined, body: isMobile ? { maxHeight: "100dvh", overflowY: "auto" } : undefined }}
       >
         <div style={{ marginTop: 24 }}>
           {/* Create New User Form */}
@@ -1133,7 +1137,7 @@ const Companies: React.FC = () => {
               onFinish={handleCreateUser}
             >
               <Row gutter={16}>
-                <Col span={12}>
+                <Col xs={24} sm={12}>
                   <Form.Item
                     name="username"
                     label="Username"
@@ -1148,7 +1152,7 @@ const Companies: React.FC = () => {
                     <Input placeholder="johndoe" />
                   </Form.Item>
                 </Col>
-                <Col span={12}>
+                <Col xs={24} sm={12}>
                   <Form.Item
                     name="email"
                     label="Email"
@@ -1163,12 +1167,12 @@ const Companies: React.FC = () => {
               </Row>
 
               <Row gutter={16}>
-                <Col span={12}>
+                <Col xs={24} sm={12}>
                   <Form.Item name="first_name" label="First Name">
                     <Input placeholder="John" />
                   </Form.Item>
                 </Col>
-                <Col span={12}>
+                <Col xs={24} sm={12}>
                   <Form.Item name="last_name" label="Last Name">
                     <Input placeholder="Doe" />
                   </Form.Item>
@@ -1284,7 +1288,9 @@ const Companies: React.FC = () => {
           setUserSearchQuery("");
         }}
         footer={null}
-        width={700}
+        width={isMobile ? "100%" : 700}
+        style={isMobile ? { top: 0, maxWidth: "100vw", margin: 0, paddingBottom: 0 } : undefined}
+        styles={{ content: isMobile ? { borderRadius: 0 } : undefined, body: isMobile ? { maxHeight: "100dvh", overflowY: "auto" } : undefined }}
       >
         <div style={{ marginTop: 24 }}>
           {/* Current Admins */}

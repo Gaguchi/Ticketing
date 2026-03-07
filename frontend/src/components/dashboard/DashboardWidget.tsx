@@ -6,6 +6,7 @@
 import React from "react";
 import { Card, Typography } from "antd";
 import { DragOutlined } from "@ant-design/icons";
+import { useIsMobile } from "../../hooks/useIsMobile";
 
 const { Text } = Typography;
 
@@ -26,6 +27,7 @@ export const DashboardWidget: React.FC<DashboardWidgetProps> = ({
   className,
   headerExtra,
 }) => {
+  const isMobile = useIsMobile();
   return (
     <Card
       className={`dashboard-widget ${className || ""}`}
@@ -55,10 +57,12 @@ export const DashboardWidget: React.FC<DashboardWidgetProps> = ({
             gap: 8,
           }}
         >
-          <DragOutlined
-            className="drag-handle"
-            style={{ cursor: "grab", color: "var(--color-text-muted)", fontSize: 'var(--fs-sm)' }}
-          />
+          {!isMobile && (
+            <DragOutlined
+              className="drag-handle"
+              style={{ cursor: "grab", color: "var(--color-text-muted)", fontSize: 'var(--fs-sm)' }}
+            />
+          )}
           <Text strong style={{ fontSize: 'var(--fs-caption)' }}>
             {title}
           </Text>

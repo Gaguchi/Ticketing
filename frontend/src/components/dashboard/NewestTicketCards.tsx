@@ -7,6 +7,7 @@
 import React from "react";
 import { Card, Spin, Empty } from "antd";
 import { useTranslation } from "react-i18next";
+import { useIsMobile } from "../../hooks/useIsMobile";
 import type { DashboardTicket } from "../../types/dashboard";
 
 interface Props {
@@ -61,7 +62,9 @@ const NewestTicketCards: React.FC<Props> = ({
   maxCards = 8,
 }) => {
   const { t } = useTranslation('dashboard');
+  const isMobile = useIsMobile();
   const displayTickets = tickets.slice(0, maxCards);
+  const gridCols = isMobile ? "60px 1fr 50px" : "70px 1fr 70px 60px 50px";
 
   return (
     <Card
@@ -108,7 +111,7 @@ const NewestTicketCards: React.FC<Props> = ({
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "70px 1fr 70px 60px 50px",
+              gridTemplateColumns: gridCols,
               gap: 8,
               padding: "8px 12px",
               backgroundColor: "var(--color-bg-sidebar)",
@@ -122,8 +125,8 @@ const NewestTicketCards: React.FC<Props> = ({
             <span>{t('newest.ticket')}</span>
             <span>{t('newest.title')}</span>
             <span>{t('newest.priority')}</span>
-            <span>{t('newest.status')}</span>
-            <span>{t('newest.age')}</span>
+            {!isMobile && <span>{t('newest.status')}</span>}
+            {!isMobile && <span>{t('newest.age')}</span>}
           </div>
 
           {/* Table Rows */}
@@ -133,7 +136,7 @@ const NewestTicketCards: React.FC<Props> = ({
               onClick={() => onTicketClick?.(ticket.id)}
               style={{
                 display: "grid",
-                gridTemplateColumns: "70px 1fr 70px 60px 50px",
+                gridTemplateColumns: gridCols,
                 gap: 8,
                 padding: "8px 12px",
                 cursor: "pointer",
@@ -182,6 +185,7 @@ const NewestTicketCards: React.FC<Props> = ({
               </span>
 
               {/* Status */}
+              {!isMobile && (
               <span
                 style={{
                   fontSize: 'var(--fs-2xs)',
@@ -193,8 +197,10 @@ const NewestTicketCards: React.FC<Props> = ({
               >
                 {ticket.status || "Open"}
               </span>
+              )}
 
               {/* Age */}
+              {!isMobile && (
               <span
                 style={{
                   fontSize: 'var(--fs-2xs)',
@@ -204,6 +210,7 @@ const NewestTicketCards: React.FC<Props> = ({
               >
                 {formatRelativeTime(ticket.created_at)}
               </span>
+              )}
             </div>
           ))}
         </div>

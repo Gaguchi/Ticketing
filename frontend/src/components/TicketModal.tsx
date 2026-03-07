@@ -445,13 +445,13 @@ export const TicketModal: React.FC<TicketModalProps> = ({
       open={open}
       onCancel={onClose}
       width={isMobile ? "100%" : "90%"}
-      style={isMobile ? { top: 0, maxWidth: "100vw", margin: 0, paddingBottom: 0 } : { maxWidth: "1600px", minWidth: "1000px" }}
+      style={isMobile ? { top: 0, maxWidth: "100vw", margin: 0, paddingBottom: 0 } : { maxWidth: "1600px" }}
       centered={!isMobile}
       footer={null}
       closeIcon={null}
       className="ticket-modal-overhaul"
       styles={{
-        body: { padding: 0, height: isMobile ? "100vh" : "85vh", overflow: "hidden" },
+        body: { padding: 0, height: isMobile ? "100dvh" : "85vh", overflow: "hidden" },
         content: isMobile ? { borderRadius: 0 } : undefined,
       }}
     >
@@ -1190,7 +1190,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
           placement="right"
           onClose={() => setHistoryOpen(false)}
           open={historyOpen}
-          width={400}
+          width={isMobile ? "100%" : 400}
         >
           {ticket && <TicketHistory ticketId={ticket.id} />}
         </Drawer>
