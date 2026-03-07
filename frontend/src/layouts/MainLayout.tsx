@@ -3,7 +3,6 @@ import {
   Layout,
   Avatar,
   Dropdown,
-  Drawer,
   Space,
   Typography,
   Select,
@@ -13,7 +12,6 @@ import {
 import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
-  MenuOutlined,
   DashboardOutlined,
   InboxOutlined,
   ShopOutlined,
@@ -25,6 +23,7 @@ import {
   UsergroupAddOutlined,
   ProjectOutlined,
   BarChartOutlined,
+  EllipsisOutlined,
 } from "@ant-design/icons";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
@@ -54,7 +53,6 @@ const MainLayout: React.FC = () => {
   const { t } = useTranslation('common');
   const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState(true);
-  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [isCreateProjectModalOpen, setIsCreateProjectModalOpen] =
     useState(false);
   const [unreadChatCount, setUnreadChatCount] = useState(0);
@@ -233,6 +231,10 @@ const MainLayout: React.FC = () => {
     },
   ];
 
+  // Bottom bar nav: first 4 items + "More"
+  const bottomBarKeys = ["/", "/tickets", "/chat", "/companies"];
+  const moreMenuKeys = ["/users", "/kpi", "/settings"];
+
   const userMenuItems: MenuProps["items"] = [
     {
       key: "profile",
@@ -284,10 +286,7 @@ const MainLayout: React.FC = () => {
           return (
             <div
               key={item.key}
-              onClick={() => {
-                navigate(item.path);
-                if (isMobile) setMobileDrawerOpen(false);
-              }}
+              onClick={() => navigate(item.path)}
               className={`nav-item ${isActive ? "active" : ""} ${
                 !sidebarExpanded ? "collapsed" : ""
               }`}
@@ -381,18 +380,7 @@ const MainLayout: React.FC = () => {
 
   return (
     <Layout style={{ minHeight: "100vh" }}>
-      {isMobile ? (
-        <Drawer
-          placement="left"
-          open={mobileDrawerOpen}
-          onClose={() => setMobileDrawerOpen(false)}
-          width={240}
-          styles={{ body: { padding: 0, background: "var(--color-bg-sidebar)", position: "relative", height: "100%" } }}
-          closable={false}
-        >
-          {sidebarContent}
-        </Drawer>
-      ) : (
+      {!isMobile && (
         <Sider
           trigger={null}
           collapsible
@@ -435,20 +423,20 @@ const MainLayout: React.FC = () => {
             height: 48,
           }}
         >
-          <Button
-            type="text"
-            size="small"
-            icon={
-              isMobile ? (
-                <MenuOutlined style={{ fontSize: 'var(--fs-lg)' }} />
-              ) : collapsed ? (
-                <MenuUnfoldOutlined style={{ fontSize: 'var(--fs-lg)' }} />
-              ) : (
-                <MenuFoldOutlined style={{ fontSize: 'var(--fs-lg)' }} />
-              )
-            }
-            onClick={() => isMobile ? setMobileDrawerOpen(!mobileDrawerOpen) : setCollapsed(!collapsed)}
-          />
+          {!isMobile && (
+            <Button
+              type="text"
+              size="small"
+              icon={
+                collapsed ? (
+                  <MenuUnfoldOutlined style={{ fontSize: 'var(--fs-lg)' }} />
+                ) : (
+                  <MenuFoldOutlined style={{ fontSize: 'var(--fs-lg)' }} />
+                )
+              }
+              onClick={() => setCollapsed(!collapsed)}
+            />
+          )}
           <Space size="small">
             {/* Project Selector - Show loading or data based on state */}
             {authLoading || projectLoading ? (
@@ -540,6 +528,7 @@ const MainLayout: React.FC = () => {
         <Content
           style={{
             padding: 0,
+            paddingBottom: isMobile ? 56 : 0,
             minHeight: "calc(100vh - 48px)",
             background: "var(--color-bg-surface)",
           }}
@@ -547,6 +536,57 @@ const MainLayout: React.FC = () => {
           <Outlet />
         </Content>
       </Layout>
+
+      {/* Mobile Bottom Navigation Bar */}
+      {isMobile && (
+        <nav className="mobile-bottom-bar">
+          {navItems
+            .filter((item) => bottomBarKeys.includes(item.key))
+            .map((item) => {
+              const isActive = location.pathname === item.path;
+              const isChatItem = item.key === "/chat";
+
+              return (
+                <div
+                  key={item.key}
+                  className={`bottom-bar-item${isActive ? " active" : ""}`}
+                  onClick={() => navigate(item.path)}
+                >
+                  {isChatItem && unreadChatCount > 0 ? (
+                    <Badge count={unreadChatCount} size="small" offset={[4, -2]}>
+                      <span className="bottom-bar-icon">{item.icon}</span>
+                    </Badge>
+                  ) : (
+                    <span className="bottom-bar-icon">{item.icon}</span>
+                  )}
+                  <span className="bottom-bar-label">{item.label}</span>
+                </div>
+              );
+            })}
+          {/* More menu */}
+          <Dropdown
+            menu={{
+              items: navItems
+                .filter((item) => moreMenuKeys.includes(item.key))
+                .map((item) => ({
+                  key: item.key,
+                  icon: item.icon,
+                  label: item.label,
+                })),
+              onClick: ({ key }) => navigate(key),
+            }}
+            placement="topRight"
+            trigger={["click"]}
+          >
+            <div
+              className={`bottom-bar-item${moreMenuKeys.includes(location.pathname) ? " active" : ""}`}
+            >
+              <span className="bottom-bar-icon"><EllipsisOutlined /></span>
+              <span className="bottom-bar-label">{t('nav.more')}</span>
+            </div>
+          </Dropdown>
+        </nav>
+      )}
 
       {/* Create Project Modal */}
       <CreateProjectModal
