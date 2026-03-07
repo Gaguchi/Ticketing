@@ -7,6 +7,7 @@ import React, { useState } from "react";
 import { Modal, Form, Input, Select, message, Alert } from "antd";
 import { invitationService } from "../services";
 import type { SendInvitationRequest } from "../services";
+import { useIsMobile } from "../hooks/useIsMobile";
 
 const { Option } = Select;
 
@@ -27,6 +28,7 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
 }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
+  const isMobile = useIsMobile();
 
   const handleSubmit = async (values: { email: string; role: string }) => {
     setLoading(true);
@@ -83,6 +85,9 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
       onCancel={handleCancel}
       okText="Add User"
       confirmLoading={loading}
+      width={isMobile ? "100%" : 520}
+      style={isMobile ? { top: 0, maxWidth: "100vw", margin: 0, paddingBottom: 0 } : undefined}
+      styles={isMobile ? { content: { borderRadius: 0 } } : undefined}
       destroyOnClose
     >
       <Form

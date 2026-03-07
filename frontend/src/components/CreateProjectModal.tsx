@@ -3,6 +3,7 @@ import { Modal, Form, Input, message } from "antd";
 import { projectService, type CreateProjectData } from "../services";
 import { useAuth } from "../contexts/AppContext";
 import { useProject } from "../contexts/AppContext";
+import { useIsMobile } from "../hooks/useIsMobile";
 
 const { TextArea } = Input;
 
@@ -21,6 +22,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
   const [saving, setSaving] = useState(false);
   const { user } = useAuth();
   const { refreshProjects } = useProject();
+  const isMobile = useIsMobile();
 
   const handleSubmit = async (values: any) => {
     setSaving(true);
@@ -71,7 +73,9 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
       onCancel={handleCancel}
       okText="Create Project"
       confirmLoading={saving}
-      width={600}
+      width={isMobile ? "100%" : 600}
+      style={isMobile ? { top: 0, maxWidth: "100vw", margin: 0, paddingBottom: 0 } : undefined}
+      styles={isMobile ? { content: { borderRadius: 0 } } : undefined}
       destroyOnHidden
     >
       <Form

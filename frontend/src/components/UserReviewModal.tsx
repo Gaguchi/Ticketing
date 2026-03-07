@@ -22,6 +22,7 @@ import {
 import { UserOutlined, StarOutlined } from '@ant-design/icons';
 import kpiService from '../services/kpi.service';
 import type { CreateUserReviewData, UserReview } from '../types/kpi';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 const { Text, Title } = Typography;
 const { TextArea } = Input;
@@ -62,6 +63,7 @@ const UserReviewModal: React.FC<UserReviewModalProps> = ({
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [rating, setRating] = useState(existingReview?.rating || 0);
+  const isMobile = useIsMobile();
   
   const isEditing = !!existingReview;
   
@@ -116,6 +118,9 @@ const UserReviewModal: React.FC<UserReviewModalProps> = ({
       onOk={handleSubmit}
       okText={isEditing ? 'Update Review' : 'Submit Review'}
       confirmLoading={loading}
+      width={isMobile ? "100%" : 520}
+      style={isMobile ? { top: 0, maxWidth: "100vw", margin: 0, paddingBottom: 0 } : undefined}
+      styles={isMobile ? { content: { borderRadius: 0 } } : undefined}
       destroyOnClose
     >
       {/* User Info Header */}

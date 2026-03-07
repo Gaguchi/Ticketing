@@ -394,7 +394,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
         style={{
           display: "flex",
           flexDirection: "column",
-          maxHeight: "calc(100vh - 80px)",
+          maxHeight: isMobile ? "100vh" : "calc(100vh - 80px)",
         }}
       >
         {/* Header */}
@@ -409,8 +409,8 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
             position: "sticky",
             top: 0,
             zIndex: 10,
-            borderTopLeftRadius: 8,
-            borderTopRightRadius: 8,
+            borderTopLeftRadius: isMobile ? 0 : 8,
+            borderTopRightRadius: isMobile ? 0 : 8,
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
@@ -680,7 +680,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "1fr 1fr",
+                gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
                 gap: "10px",
               }}
             >
@@ -793,7 +793,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                 <div
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
+                    gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
                     gap: "10px",
                   }}
                 >
@@ -1035,8 +1035,8 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
             position: "sticky",
             bottom: 0,
             zIndex: 10,
-            borderBottomLeftRadius: 8,
-            borderBottomRightRadius: 8,
+            borderBottomLeftRadius: isMobile ? 0 : 8,
+            borderBottomRightRadius: isMobile ? 0 : 8,
           }}
         >
           <Checkbox

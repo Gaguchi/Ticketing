@@ -450,7 +450,10 @@ export const TicketModal: React.FC<TicketModalProps> = ({
       footer={null}
       closeIcon={null}
       className="ticket-modal-overhaul"
-      styles={{ body: { padding: 0, height: isMobile ? "100vh" : "85vh", overflow: "hidden" } }}
+      styles={{
+        body: { padding: 0, height: isMobile ? "100vh" : "85vh", overflow: "hidden" },
+        content: isMobile ? { borderRadius: 0 } : undefined,
+      }}
     >
       <div className="ticket-modal-container">
         {/* HEADER */}
