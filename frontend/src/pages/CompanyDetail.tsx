@@ -1572,8 +1572,8 @@ const CompanyDetail: React.FC = () => {
                   <div style={{ marginBottom: 16 }}>
                     <Space.Compact style={{ width: isMobile ? "100%" : 400 }}>
                       <Select
-                        placeholder="Select user to assign as admin"
-                        style={{ flex: 1 }}
+                        placeholder={isMobile ? "Select user..." : "Select user to assign as admin"}
+                        style={{ flex: 1, minWidth: 0 }}
                         value={selectedAdminId}
                         onChange={setSelectedAdminId}
                         loading={loadingUsers}
@@ -1665,7 +1665,7 @@ const CompanyDetail: React.FC = () => {
                       icon={<PlusOutlined />}
                       onClick={() => setShowCreateUser(!showCreateUser)}
                     >
-                      Create User
+                      {!isMobile && "Create User"}
                     </Button>
                   }
                 >
