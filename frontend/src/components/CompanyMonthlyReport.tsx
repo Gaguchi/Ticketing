@@ -21,6 +21,7 @@ import {
 } from '@ant-design/icons';
 import { apiService } from '../services';
 import { API_ENDPOINTS } from '../config/api';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 const { Option } = Select;
 
@@ -124,6 +125,7 @@ export const CompanyMonthlyReport: React.FC<CompanyMonthlyReportProps> = ({
     companyId,
     projectId,
 }) => {
+    const isMobile = useIsMobile();
     const now = new Date();
     const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
     const [selectedYear, setSelectedYear] = useState(now.getFullYear());
@@ -773,18 +775,19 @@ export const CompanyMonthlyReport: React.FC<CompanyMonthlyReportProps> = ({
         <div>
             {/* ── Toolbar (outside print area) ── */}
             <div style={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                display: 'flex', flexDirection: isMobile ? 'column' : 'row',
+                justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'center',
                 marginBottom: 16, flexWrap: 'wrap', gap: 8,
             }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
                     <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text-heading)' }}>
                         {report.period.month_name} {report.period.year}
                     </span>
-                    <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
+                    <span style={{ fontSize: 12, color: 'var(--color-text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {report.company.name}
                     </span>
                 </div>
-                <Space size={6}>
+                <Space size={6} wrap>
                     <Select value={selectedMonth} onChange={setSelectedMonth} style={{ width: 120 }} size="small">
                         {MONTHS.map((m, i) => <Option key={i + 1} value={i + 1}>{m}</Option>)}
                     </Select>
@@ -807,7 +810,7 @@ export const CompanyMonthlyReport: React.FC<CompanyMonthlyReportProps> = ({
                         onClick={() => setSendModalOpen(true)}
                         disabled={!anyOverview && !anyPerf && !anyTrends}
                     >
-                        Send
+                        {!isMobile && 'Send'}
                     </Button>
                 </Space>
             </div>
@@ -829,8 +832,8 @@ export const CompanyMonthlyReport: React.FC<CompanyMonthlyReportProps> = ({
             <div style={{
                 background: 'var(--color-bg-inset)',
                 borderRadius: 8,
-                padding: '28px 36px',
-                margin: '0 -12px',
+                padding: isMobile ? '12px 0' : '28px 36px',
+                margin: isMobile ? '0 -12px' : '0 -12px',
             }}>
               <div
                 style={{
@@ -840,18 +843,18 @@ export const CompanyMonthlyReport: React.FC<CompanyMonthlyReportProps> = ({
                     margin: '0 auto',
                     borderRadius: 2,
                     overflow: 'hidden',
-                    /* Surface color shift: white paper on gray desk */
                 }}
               >
                 {/* ── Accent rule: 2px solid brand ── */}
                 <div style={{ height: 2, background: BRAND }} />
 
-                <div style={{ padding: '36px 44px 32px' }}>
+                <div style={{ padding: isMobile ? '20px 16px 20px' : '36px 44px 32px' }}>
 
                     {/* ── Document Header ── */}
                     <div style={{
-                        display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
-                        paddingBottom: 20, marginBottom: 24,
+                        display: 'flex', flexDirection: isMobile ? 'column' : 'row',
+                        justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'flex-start',
+                        paddingBottom: 20, marginBottom: 24, gap: isMobile ? 12 : 0,
                         borderBottom: `1px solid ${RULE}`,
                     }}>
                         <div>
@@ -862,8 +865,9 @@ export const CompanyMonthlyReport: React.FC<CompanyMonthlyReportProps> = ({
                                 Monthly Service Report
                             </div>
                             <div style={{
-                                fontSize: 26, fontWeight: 800, color: INK,
+                                fontSize: isMobile ? 20 : 26, fontWeight: 800, color: INK,
                                 lineHeight: 1.15, letterSpacing: '-0.015em',
+                                wordBreak: 'break-word',
                             }}>
                                 {report.company.name}
                             </div>
@@ -871,7 +875,7 @@ export const CompanyMonthlyReport: React.FC<CompanyMonthlyReportProps> = ({
                                 {report.period.month_name} {report.period.year}
                             </div>
                         </div>
-                        <div style={{ textAlign: 'right', paddingTop: 2 }}>
+                        <div style={{ textAlign: isMobile ? 'left' : 'right', paddingTop: 2, flexShrink: 0 }}>
                             {report.company.logo_url && (
                                 <img
                                     src={report.company.logo_url}
@@ -889,27 +893,29 @@ export const CompanyMonthlyReport: React.FC<CompanyMonthlyReportProps> = ({
                     {/* Compact horizontal strip — like a financial report "at a glance" row */}
                     {anyOverview && (
                         <div style={{
-                            display: 'flex', marginBottom: 24,
+                            display: isMobile ? 'grid' : 'flex',
+                            gridTemplateColumns: isMobile ? '1fr 1fr' : undefined,
+                            marginBottom: 24,
                             background: SURFACE, border: `1px solid ${RULE}`, borderRadius: 6,
                             overflow: 'hidden',
                         }}>
                             {on('submitted') && (
-                                <div style={{ flex: 1, padding: '14px 20px', borderRight: `1px solid ${RULE}` }}>
+                                <div style={{ flex: isMobile ? undefined : 1, padding: isMobile ? '10px 14px' : '14px 20px', borderRight: isMobile ? undefined : `1px solid ${RULE}`, borderBottom: isMobile ? `1px solid ${RULE}` : undefined }}>
                                     <div style={{
-                                        fontSize: 24, fontWeight: 800, color: BRAND, lineHeight: 1,
+                                        fontSize: isMobile ? 20 : 24, fontWeight: 800, color: BRAND, lineHeight: 1,
                                         fontVariantNumeric: 'tabular-nums',
                                     }}>
                                         {overview.submitted}
                                     </div>
-                                    <div style={{ fontSize: 10, color: INK_MUTED, marginTop: 4, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                                    <div style={{ fontSize: isMobile ? 9 : 10, color: INK_MUTED, marginTop: 4, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                                         Submitted
                                     </div>
                                 </div>
                             )}
                             {on('resolved') && (
-                                <div style={{ flex: 1, padding: '14px 20px', borderRight: `1px solid ${RULE}` }}>
+                                <div style={{ flex: isMobile ? undefined : 1, padding: isMobile ? '10px 14px' : '14px 20px', borderRight: isMobile ? undefined : `1px solid ${RULE}`, borderBottom: isMobile ? `1px solid ${RULE}` : undefined }}>
                                     <div style={{
-                                        fontSize: 24, fontWeight: 800, color: '#065f46', lineHeight: 1,
+                                        fontSize: isMobile ? 20 : 24, fontWeight: 800, color: '#065f46', lineHeight: 1,
                                         fontVariantNumeric: 'tabular-nums',
                                         display: 'flex', alignItems: 'center', gap: 6,
                                     }}>
@@ -925,34 +931,34 @@ export const CompanyMonthlyReport: React.FC<CompanyMonthlyReportProps> = ({
                                             </span>
                                         )}
                                     </div>
-                                    <div style={{ fontSize: 10, color: INK_MUTED, marginTop: 4, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                                    <div style={{ fontSize: isMobile ? 9 : 10, color: INK_MUTED, marginTop: 4, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                                         Resolved
                                     </div>
                                 </div>
                             )}
                             {on('open') && (
-                                <div style={{ flex: 1, padding: '14px 20px', borderRight: `1px solid ${RULE}` }}>
+                                <div style={{ flex: isMobile ? undefined : 1, padding: isMobile ? '10px 14px' : '14px 20px', borderRight: isMobile ? undefined : `1px solid ${RULE}` }}>
                                     <div style={{
-                                        fontSize: 24, fontWeight: 800, color: '#92400e', lineHeight: 1,
+                                        fontSize: isMobile ? 20 : 24, fontWeight: 800, color: '#92400e', lineHeight: 1,
                                         fontVariantNumeric: 'tabular-nums',
                                     }}>
                                         {overview.open}
                                     </div>
-                                    <div style={{ fontSize: 10, color: INK_MUTED, marginTop: 4, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                                    <div style={{ fontSize: isMobile ? 9 : 10, color: INK_MUTED, marginTop: 4, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                                         Open
                                     </div>
                                 </div>
                             )}
                             {on('overdue') && (
-                                <div style={{ flex: 1, padding: '14px 20px' }}>
+                                <div style={{ flex: isMobile ? undefined : 1, padding: isMobile ? '10px 14px' : '14px 20px' }}>
                                     <div style={{
-                                        fontSize: 24, fontWeight: 800, lineHeight: 1,
+                                        fontSize: isMobile ? 20 : 24, fontWeight: 800, lineHeight: 1,
                                         fontVariantNumeric: 'tabular-nums',
                                         color: overview.overdue > 0 ? '#991b1b' : INK_FAINT,
                                     }}>
                                         {overview.overdue}
                                     </div>
-                                    <div style={{ fontSize: 10, color: INK_MUTED, marginTop: 4, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                                    <div style={{ fontSize: isMobile ? 9 : 10, color: INK_MUTED, marginTop: 4, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                                         Overdue
                                     </div>
                                 </div>
@@ -964,10 +970,10 @@ export const CompanyMonthlyReport: React.FC<CompanyMonthlyReportProps> = ({
                     {anyPerf && (
                         <div style={{ marginBottom: 24 }}>
                             <SectionTitle>Performance</SectionTitle>
-                            <div style={{ display: 'flex', gap: 12 }}>
+                            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 12 }}>
                                 {on('avg_resolution') && (
                                     <div style={{
-                                        flex: 1, padding: '16px 20px',
+                                        flex: 1, padding: isMobile ? '12px 14px' : '16px 20px',
                                         background: '#fff', border: `1px solid ${RULE}`, borderRadius: 6,
                                     }}>
                                         <div style={{ fontSize: 10, color: INK_MUTED, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>
@@ -993,7 +999,7 @@ export const CompanyMonthlyReport: React.FC<CompanyMonthlyReportProps> = ({
                                 )}
                                 {on('on_time') && (
                                     <div style={{
-                                        flex: 1, padding: '16px 20px',
+                                        flex: 1, padding: isMobile ? '12px 14px' : '16px 20px',
                                         background: '#fff', border: `1px solid ${RULE}`, borderRadius: 6,
                                     }}>
                                         <div style={{ fontSize: 10, color: INK_MUTED, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>
@@ -1029,7 +1035,7 @@ export const CompanyMonthlyReport: React.FC<CompanyMonthlyReportProps> = ({
                                 )}
                                 {on('satisfaction') && (
                                     <div style={{
-                                        flex: 1, padding: '16px 20px',
+                                        flex: 1, padding: isMobile ? '12px 14px' : '16px 20px',
                                         background: '#fff', border: `1px solid ${RULE}`, borderRadius: 6,
                                     }}>
                                         <div style={{ fontSize: 10, color: INK_MUTED, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>
@@ -1063,10 +1069,10 @@ export const CompanyMonthlyReport: React.FC<CompanyMonthlyReportProps> = ({
                     {anyTrends && (
                         <div style={{ marginBottom: 24 }}>
                             <SectionTitle>Month-over-Month</SectionTitle>
-                            <div style={{ display: 'flex', gap: 12 }}>
+                            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 12 }}>
                                 {on('trend_resolved') && (
                                     <div style={{
-                                        flex: 1, padding: '14px 20px',
+                                        flex: 1, padding: isMobile ? '12px 14px' : '14px 20px',
                                         border: `1px solid ${RULE}`, borderRadius: 6,
                                     }}>
                                         <div style={{ fontSize: 10, color: INK_MUTED, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 10 }}>
@@ -1098,7 +1104,7 @@ export const CompanyMonthlyReport: React.FC<CompanyMonthlyReportProps> = ({
                                 )}
                                 {on('trend_speed') && (
                                     <div style={{
-                                        flex: 1, padding: '14px 20px',
+                                        flex: 1, padding: isMobile ? '12px 14px' : '14px 20px',
                                         border: `1px solid ${RULE}`, borderRadius: 6,
                                     }}>
                                         <div style={{ fontSize: 10, color: INK_MUTED, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 10 }}>
@@ -1152,14 +1158,15 @@ export const CompanyMonthlyReport: React.FC<CompanyMonthlyReportProps> = ({
                             </div>
 
                             <div style={{ border: `1px solid ${RULE}`, borderRadius: 6, overflow: 'hidden' }}>
-                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                              <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: isMobile ? 600 : undefined }}>
                                     <thead>
                                         <tr style={{ background: '#1e293b' }}>
                                             <th style={{ ...thStyle, width: 28, textAlign: 'center' }}>#</th>
                                             <th style={{ ...thStyle, minWidth: 120 }}>Ticket</th>
                                             <th style={{ ...thStyle, width: 68 }}>Priority</th>
-                                            <th style={{ ...thStyle, width: 100 }}>Reporter</th>
-                                            <th style={{ ...thStyle, width: 100 }}>Assignee</th>
+                                            {!isMobile && <th style={{ ...thStyle, width: 100 }}>Reporter</th>}
+                                            {!isMobile && <th style={{ ...thStyle, width: 100 }}>Assignee</th>}
                                             <th style={{ ...thStyle, width: 76 }}>Created</th>
                                             <th style={{ ...thStyle, width: 76 }}>Done</th>
                                             <th style={{ ...thStyle, width: 72, textAlign: 'right' }}>Time</th>
@@ -1174,17 +1181,20 @@ export const CompanyMonthlyReport: React.FC<CompanyMonthlyReportProps> = ({
                                                     <td style={{ ...tdStyle, color: INK_FAINT, fontSize: 10, fontWeight: 600, textAlign: 'center' }}>
                                                         {idx + 1}
                                                     </td>
-                                                    <td style={tdStyle}>
-                                                        <span style={{
-                                                            color: BRAND, fontWeight: 700, fontSize: 10,
-                                                            marginRight: 5,
-                                                            fontFamily: "'SF Mono', 'Fira Code', 'Consolas', monospace",
-                                                        }}>
-                                                            {ticket.ticket_key}
-                                                        </span>
-                                                        <span style={{ color: INK, fontWeight: 500, fontSize: 11 }}>
-                                                            {ticket.name}
-                                                        </span>
+                                                    <td style={{ ...tdStyle, maxWidth: isMobile ? 160 : undefined }}>
+                                                        <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 2 : 0 }}>
+                                                            <span style={{
+                                                                color: BRAND, fontWeight: 700, fontSize: 10,
+                                                                marginRight: isMobile ? 0 : 5,
+                                                                fontFamily: "'SF Mono', 'Fira Code', 'Consolas', monospace",
+                                                                whiteSpace: 'nowrap',
+                                                            }}>
+                                                                {ticket.ticket_key}
+                                                            </span>
+                                                            <span style={{ color: INK, fontWeight: 500, fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                                {ticket.name}
+                                                            </span>
+                                                        </div>
                                                     </td>
                                                     <td style={tdStyle}>
                                                         <span style={{
@@ -1192,18 +1202,23 @@ export const CompanyMonthlyReport: React.FC<CompanyMonthlyReportProps> = ({
                                                             color: p.text, background: p.bg,
                                                             padding: '2px 6px', borderRadius: 3,
                                                             border: `1px solid ${p.border}`,
+                                                            whiteSpace: 'nowrap',
                                                         }}>
                                                             {ticket.priority_label}
                                                         </span>
                                                     </td>
-                                                    <td style={{ ...tdStyle, fontSize: 10.5 }}>
-                                                        {formatPersonName(ticket.reporter)}
-                                                    </td>
-                                                    <td style={{ ...tdStyle, fontSize: 10.5 }}>
-                                                        {ticket.assignees.length > 0
-                                                            ? ticket.assignees.map(a => formatPersonName(a)).join(', ')
-                                                            : '\u2014'}
-                                                    </td>
+                                                    {!isMobile && (
+                                                        <td style={{ ...tdStyle, fontSize: 10.5 }}>
+                                                            {formatPersonName(ticket.reporter)}
+                                                        </td>
+                                                    )}
+                                                    {!isMobile && (
+                                                        <td style={{ ...tdStyle, fontSize: 10.5 }}>
+                                                            {ticket.assignees.length > 0
+                                                                ? ticket.assignees.map(a => formatPersonName(a)).join(', ')
+                                                                : '\u2014'}
+                                                        </td>
+                                                    )}
                                                     <td style={{ ...tdStyle, fontSize: 10.5, whiteSpace: 'nowrap', color: INK_MUTED }}>
                                                         {ticket.created_at_display || '\u2014'}
                                                     </td>
@@ -1245,6 +1260,7 @@ export const CompanyMonthlyReport: React.FC<CompanyMonthlyReportProps> = ({
                                         })}
                                     </tbody>
                                 </table>
+                              </div>
                             </div>
                         </div>
                     )}
@@ -1262,9 +1278,11 @@ export const CompanyMonthlyReport: React.FC<CompanyMonthlyReportProps> = ({
                     <div style={{
                         marginTop: 28, paddingTop: 16,
                         borderTop: `1px solid ${RULE}`,
-                        display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end',
+                        display: 'flex', flexDirection: isMobile ? 'column' : 'row',
+                        justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'flex-end',
+                        gap: isMobile ? 12 : 0,
                     }}>
-                        <div style={{ display: 'flex', gap: 24 }}>
+                        <div style={{ display: 'flex', gap: isMobile ? 16 : 24, flexWrap: 'wrap' }}>
                             <div>
                                 <div style={{ fontSize: 9, color: INK_FAINT, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total</div>
                                 <div style={{ fontSize: 14, fontWeight: 800, color: INK, fontVariantNumeric: 'tabular-nums' }}>{report.tickets.length}</div>
@@ -1305,7 +1323,9 @@ export const CompanyMonthlyReport: React.FC<CompanyMonthlyReportProps> = ({
                 confirmLoading={sending}
                 okText="Send"
                 okButtonProps={{ icon: <SendOutlined /> }}
-                width={420}
+                width={isMobile ? "100%" : 420}
+                style={isMobile ? { top: 0, maxWidth: "100vw", margin: 0, paddingBottom: 0 } : undefined}
+                styles={isMobile ? { content: { borderRadius: 0 } } : undefined}
             >
                 <div style={{ marginBottom: 16 }}>
                     <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: 6 }}>Recipient</div>
