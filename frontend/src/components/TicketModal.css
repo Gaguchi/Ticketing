@@ -88,6 +88,8 @@
   font-size: var(--fs-3xl);
   font-weight: 600;
   line-height: 1.3;
+  word-break: break-word;
+  overflow-wrap: break-word;
   color: var(--color-text-heading);
   padding: 4px 6px;
   margin: -4px -6px;

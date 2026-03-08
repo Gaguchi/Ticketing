@@ -463,6 +463,7 @@ const Settings: React.FC = () => {
       dataIndex: "lead_username",
       key: "lead_username",
       width: 150,
+      responsive: ['md'] as any,
       render: (lead: string) =>
         lead ? (
           <Space size={4}>
@@ -477,6 +478,7 @@ const Settings: React.FC = () => {
       title: "Stats",
       key: "stats",
       width: 150,
+      responsive: ['md'] as any,
       render: (_: any, record: Project) => (
         <Space size={16}>
           <Tooltip title="Tickets">
@@ -675,7 +677,7 @@ const Settings: React.FC = () => {
                 <Select
                   value={i18n.language}
                   onChange={(value: string) => i18n.changeLanguage(value)}
-                  style={{ width: 200 }}
+                  style={{ width: 200, maxWidth: "100%" }}
                   size="small"
                   options={[
                     { value: "en", label: "English" },
@@ -690,7 +692,7 @@ const Settings: React.FC = () => {
               control={
                 <Select
                   defaultValue="utc"
-                  style={{ width: 280 }}
+                  style={{ width: 280, maxWidth: "100%" }}
                   size="small"
                   options={[
                     { value: "utc", label: "(UTC+00:00) UTC" },
@@ -718,7 +720,7 @@ const Settings: React.FC = () => {
               control={
                 <Select
                   defaultValue="mdy"
-                  style={{ width: 200 }}
+                  style={{ width: 200, maxWidth: "100%" }}
                   size="small"
                   options={[
                     { value: "mdy", label: "MM/DD/YYYY" },

@@ -697,7 +697,7 @@ const CompanyDetail: React.FC = () => {
             gap: isMobile ? 12 : 0,
           }}
         >
-          <div style={{ display: "flex", alignItems: "flex-start", gap: 16 }}>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 16, minWidth: 0, flex: 1 }}>
             {company.logo_url || company.logo_thumbnail_url ? (
               <Avatar
                 size={64}
@@ -719,9 +719,9 @@ const CompanyDetail: React.FC = () => {
                 icon={<ShopOutlined />}
               />
             )}
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <Title level={3} style={{ margin: 0 }}>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{ display: "flex", alignItems: isMobile ? "flex-start" : "center", gap: 12, flexWrap: "wrap" }}>
+                <Title level={isMobile ? 4 : 3} style={{ margin: 0, wordBreak: "break-word" }}>
                   {company.name}
                 </Title>
                 {health && (
@@ -751,7 +751,7 @@ const CompanyDetail: React.FC = () => {
               {company.description && (
                 <Text
                   type="secondary"
-                  style={{ display: "block", marginBottom: 8 }}
+                  style={{ display: "block", marginBottom: 8, wordBreak: "break-word" }}
                 >
                   {company.description}
                 </Text>
@@ -760,8 +760,9 @@ const CompanyDetail: React.FC = () => {
               <div
                 style={{
                   display: "flex",
+                  flexDirection: isMobile ? "column" : "row",
                   flexWrap: "wrap",
-                  gap: 16,
+                  gap: isMobile ? 6 : 16,
                   marginTop: 8,
                 }}
               >
@@ -1321,11 +1322,13 @@ const CompanyDetail: React.FC = () => {
                               <Avatar size="small" icon={<UserOutlined />} />
                             }
                             title={
-                              user.first_name && user.last_name
-                                ? `${user.first_name} ${user.last_name}`
-                                : user.email
+                              <span style={{ wordBreak: "break-word" }}>
+                                {user.first_name && user.last_name
+                                  ? `${user.first_name} ${user.last_name}`
+                                  : user.email}
+                              </span>
                             }
-                            description={user.email}
+                            description={<span style={{ wordBreak: "break-all" }}>{user.email}</span>}
                           />
                         </List.Item>
                       )}
@@ -1376,11 +1379,13 @@ const CompanyDetail: React.FC = () => {
                               />
                             }
                             title={
-                              admin.first_name && admin.last_name
-                                ? `${admin.first_name} ${admin.last_name}`
-                                : admin.email
+                              <span style={{ wordBreak: "break-word" }}>
+                                {admin.first_name && admin.last_name
+                                  ? `${admin.first_name} ${admin.last_name}`
+                                  : admin.email}
+                              </span>
                             }
-                            description={admin.email}
+                            description={<span style={{ wordBreak: "break-all" }}>{admin.email}</span>}
                           />
                         </List.Item>
                       )}
@@ -1610,7 +1615,7 @@ const CompanyDetail: React.FC = () => {
                                 icon={<DeleteOutlined />}
                                 loading={removingAdminId === admin.id}
                               >
-                                Remove
+                                {!isMobile && "Remove"}
                               </Button>
                             </Popconfirm>,
                           ]}
@@ -1623,11 +1628,13 @@ const CompanyDetail: React.FC = () => {
                               />
                             }
                             title={
-                              admin.first_name && admin.last_name
-                                ? `${admin.first_name} ${admin.last_name}`
-                                : admin.username || admin.email
+                              <span style={{ wordBreak: "break-word" }}>
+                                {admin.first_name && admin.last_name
+                                  ? `${admin.first_name} ${admin.last_name}`
+                                  : admin.username || admin.email}
+                              </span>
                             }
-                            description={admin.email}
+                            description={<span style={{ wordBreak: "break-all" }}>{admin.email}</span>}
                           />
                         </List.Item>
                       )}
@@ -1748,14 +1755,16 @@ const CompanyDetail: React.FC = () => {
                       dataSource={company.users}
                       rowKey="id"
                       pagination={{ pageSize: 10 }}
+                      scroll={isMobile ? { x: 'max-content' } : undefined}
                       columns={[
                         {
                           title: "Name",
                           key: "name",
+                          ellipsis: true,
                           render: (_, user) => (
                             <Space>
                               <Avatar size="small" icon={<UserOutlined />} />
-                              <span>
+                              <span style={{ whiteSpace: "nowrap" }}>
                                 {user.first_name && user.last_name
                                   ? `${user.first_name} ${user.last_name}`
                                   : user.username || user.email}
@@ -1767,11 +1776,13 @@ const CompanyDetail: React.FC = () => {
                           title: "Email",
                           dataIndex: "email",
                           key: "email",
+                          ellipsis: true,
+                          responsive: ['sm'] as any,
                         },
                         {
                           title: "Actions",
                           key: "actions",
-                          width: 120,
+                          width: isMobile ? 80 : 120,
                           render: (_, user) => (
                             <Popconfirm
                               title="Remove user from company?"
@@ -1784,7 +1795,7 @@ const CompanyDetail: React.FC = () => {
                                 icon={<DeleteOutlined />}
                                 loading={removingUserId === user.id}
                               >
-                                Remove
+                                {!isMobile && "Remove"}
                               </Button>
                             </Popconfirm>
                           ),
@@ -1805,7 +1816,7 @@ const CompanyDetail: React.FC = () => {
           {/* Settings Tab */}
           <TabPane tab="Settings" key="settings">
             <Row gutter={24}>
-              <Col span={16}>
+              <Col xs={24} lg={16}>
                 <Card
                   title="Basic Information"
                   size="small"
@@ -1835,7 +1846,7 @@ const CompanyDetail: React.FC = () => {
                 >
                   <Form layout="vertical">
                     <Row gutter={16}>
-                      <Col span={12}>
+                      <Col xs={24} sm={12}>
                         <Form.Item label="Primary Email">
                           <Input
                             value={company.primary_contact_email || ""}
@@ -1843,7 +1854,7 @@ const CompanyDetail: React.FC = () => {
                           />
                         </Form.Item>
                       </Col>
-                      <Col span={12}>
+                      <Col xs={24} sm={12}>
                         <Form.Item label="Phone">
                           <Input value={company.phone || ""} disabled />
                         </Form.Item>
@@ -1861,8 +1872,10 @@ const CompanyDetail: React.FC = () => {
                     <div
                       style={{
                         display: "flex",
+                        flexDirection: isMobile ? "column" : "row",
                         justifyContent: "space-between",
-                        alignItems: "center",
+                        alignItems: isMobile ? "flex-start" : "center",
+                        gap: isMobile ? 12 : 0,
                       }}
                     >
                       <div>
@@ -1873,7 +1886,7 @@ const CompanyDetail: React.FC = () => {
                           data
                         </Text>
                       </div>
-                      <Button size="small" danger onClick={handleDeleteCompany}>
+                      <Button size="small" danger onClick={handleDeleteCompany} style={{ flexShrink: 0 }}>
                         Delete Company
                       </Button>
                     </div>

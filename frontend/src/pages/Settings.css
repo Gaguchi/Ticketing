@@ -198,6 +198,8 @@
   color: var(--color-text-secondary);
   margin: 0;
   line-height: 1.45;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .setting-row__control {
