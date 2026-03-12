@@ -103,12 +103,8 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
    */
   const fetchChatUnreadCount = useCallback(async () => {
     try {
-      const rooms = await chatService.getRooms();
-      const totalUnread = rooms.reduce(
-        (sum, room) => sum + room.unread_count,
-        0
-      );
-      setChatUnreadCount(totalUnread);
+      const count = await chatService.getUnreadCount();
+      setChatUnreadCount(count);
     } catch (error) {
       console.error("Failed to fetch chat unread count:", error);
     }

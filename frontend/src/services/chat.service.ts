@@ -22,9 +22,18 @@ class ChatService {
     const url = projectId
       ? `${this.BASE_URL}/rooms/?project=${projectId}`
       : `${this.BASE_URL}/rooms/`;
-    const response = await apiService.get<ChatRoom[] | { count: number; results: ChatRoom[] }>(url);
-    // Handle both paginated and non-paginated responses
-    return Array.isArray(response) ? response : response.results;
+    return await apiService.get<ChatRoom[]>(url);
+  }
+
+  /**
+   * Get total unread count across chat rooms (server-side calculation)
+   */
+  async getUnreadCount(projectId?: number): Promise<number> {
+    const url = projectId
+      ? `${this.BASE_URL}/rooms/unread_count/?project=${projectId}`
+      : `${this.BASE_URL}/rooms/unread_count/`;
+    const response = await apiService.get<{ unread_count: number }>(url);
+    return response.unread_count;
   }
 
   /**

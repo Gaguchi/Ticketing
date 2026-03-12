@@ -80,10 +80,8 @@ class ChatRoomViewSet(viewsets.ModelViewSet):
 
     def list(self, request, *args, **kwargs):
         """List rooms with bulk-fetched last messages to avoid N+1 queries."""
-        # Let DRF handle pagination and queryset evaluation
         queryset = self.filter_queryset(self.get_queryset())
-        page = self.paginate_queryset(queryset)
-        rooms = page if page is not None else list(queryset)
+        rooms = list(queryset)
 
         # Bulk-fetch last messages for all rooms in 1 query (instead of N)
         last_msg_ids = [r._last_message_id for r in rooms if getattr(r, '_last_message_id', None)]
@@ -102,9 +100,36 @@ class ChatRoomViewSet(viewsets.ModelViewSet):
             room._prefetched_last_message = last_messages_map.get(msg_id) if msg_id else None
 
         serializer = self.get_serializer(rooms, many=True)
-        if page is not None:
-            return self.get_paginated_response(serializer.data)
         return Response(serializer.data)
+
+    @action(detail=False, methods=['get'])
+    def unread_count(self, request):
+        """Get total unread message count across all rooms for the current user."""
+        user = request.user
+        project_id = request.query_params.get('project')
+
+        queryset = ChatRoom.objects.filter(participants__user=user)
+        if project_id:
+            queryset = queryset.filter(project_id=project_id)
+
+        last_read_subquery = ChatParticipant.objects.filter(
+            room=OuterRef('pk'),
+            user=user
+        ).values('last_read_at')[:1]
+
+        total = queryset.annotate(
+            user_last_read=Subquery(last_read_subquery)
+        ).aggregate(
+            total_unread=Count(
+                'messages',
+                filter=(
+                    (Q(messages__created_at__gt=F('user_last_read')) | Q(user_last_read__isnull=True)) &
+                    ~Q(messages__user=user)
+                )
+            )
+        )['total_unread'] or 0
+
+        return Response({'unread_count': total})
 
     def get_serializer_class(self):
         """Use different serializer for creation."""
