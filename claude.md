@@ -151,9 +151,17 @@ python manage.py migrate
 
 ## Dokploy Deployment
 
-The system deploys to Dokploy with the following services:
+The system deploys to **two separate Dokploy servers**:
 
-### Architecture on Dokploy
+| Environment | Branch   | Dokploy Server          | MCP Name        |
+| ----------- | -------- | ----------------------- | --------------- |
+| Development | `main`   | `31.97.181.167:3000`    | `dokploy`       |
+| Production  | `stable` | `187.77.70.21:3000`     | `dokploy-prod`  |
+
+- **`main` branch** → Dev server (`dokploy` MCP) — for testing and development
+- **`stable` branch** → Production server (`dokploy-prod` MCP) — live/client-facing
+
+### Architecture on Dokploy (per server)
 
 ```
 Traefik (Proxy/SSL) ─┬─► ticketing-frontend (Nginx, port 80)

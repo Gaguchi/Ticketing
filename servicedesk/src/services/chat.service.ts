@@ -90,6 +90,9 @@ class ChatService {
     roomId: number,
     options?: { limit?: number; before?: number; after?: number }
   ): Promise<{ messages: ChatMessage[]; hasMore: boolean; cursor: number | null }> {
+    if (!roomId) {
+      return { messages: [], hasMore: false, cursor: null };
+    }
     const params = new URLSearchParams({ room: roomId.toString() });
 
     if (options?.limit) {

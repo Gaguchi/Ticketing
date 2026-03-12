@@ -108,7 +108,7 @@ const Chat: React.FC = () => {
 
   // Load older messages when scrolling to top (with column-reverse)
   const loadOlderMessages = useCallback(async () => {
-    if (!activeRoom || loadingOlder || !hasMoreMessages || !messageCursor)
+    if (!activeRoom?.id || loadingOlder || !hasMoreMessages || !messageCursor)
       return;
 
     setLoadingOlder(true);
@@ -241,7 +241,7 @@ const Chat: React.FC = () => {
 
   // Load messages when active room changes
   useEffect(() => {
-    if (!activeRoom) return;
+    if (!activeRoom?.id) return;
 
     const loadMessages = async () => {
       try {
@@ -287,7 +287,7 @@ const Chat: React.FC = () => {
 
   // Connect to WebSocket when room is selected
   useEffect(() => {
-    if (!activeRoom || !user) return;
+    if (!activeRoom?.id || !user) return;
 
     // Clear typing users when switching rooms
     setTypingUsers(new Set());
