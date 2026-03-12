@@ -7,6 +7,7 @@ from .views import (
     NotificationViewSet, ProjectInvitationViewSet, StatusViewSet, BoardColumnViewSet,
     UserReviewViewSet,
     register_user, login_user, logout_user, get_current_user, refresh_token_cookie,
+    password_reset_request, password_reset_validate, password_reset_confirm,
     # Dashboard views
     dashboard_company_health, dashboard_attention_needed, dashboard_newest_tickets,
     dashboard_live_activity, dashboard_agent_workload, dashboard_kanban_summary
@@ -44,7 +45,10 @@ urlpatterns = [
     path('auth/logout/', logout_user, name='logout'),
     path('auth/me/', get_current_user, name='current-user'),
     path('auth/token/refresh/', refresh_token_cookie, name='token_refresh'),
-    
+    path('auth/password-reset/', password_reset_request, name='password-reset-request'),
+    path('auth/password-reset/validate/', password_reset_validate, name='password-reset-validate'),
+    path('auth/password-reset/confirm/', password_reset_confirm, name='password-reset-confirm'),
+
     # Dashboard endpoints
     path('dashboard/company-health/', dashboard_company_health, name='dashboard-company-health'),
     path('dashboard/attention-needed/', dashboard_attention_needed, name='dashboard-attention-needed'),

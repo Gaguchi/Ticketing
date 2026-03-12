@@ -22,6 +22,9 @@ export const API_ENDPOINTS = {
   AUTH_ME: api('/auth/me/'),
   AUTH_TOKEN_REFRESH: api('/auth/token/refresh/'),
   AUTH_LOGOUT: api('/auth/logout/'),
+  AUTH_PASSWORD_RESET: api('/auth/password-reset/'),
+  AUTH_PASSWORD_RESET_VALIDATE: api('/auth/password-reset/validate/'),
+  AUTH_PASSWORD_RESET_CONFIRM: api('/auth/password-reset/confirm/'),
 
   // Projects
   PROJECTS: api('/projects/'),

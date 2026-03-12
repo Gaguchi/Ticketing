@@ -124,6 +124,89 @@ The Ticketing Team
         return False
 
 
+def send_password_reset_email(user, reset_url):
+    """
+    Send password reset email with a secure token link.
+    """
+    subject = 'Reset your password - Ticketing System'
+
+    message = f"""
+Hi {user.first_name or user.username},
+
+You requested a password reset for your account.
+
+Click the link below to reset your password:
+{reset_url}
+
+This link expires in 1 hour. If you did not request this, you can safely ignore this email.
+
+Best regards,
+The Ticketing Team
+    """.strip()
+
+    html_message = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {{ font-family: 'Noto Sans Georgian', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }}
+        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+        .header {{ background-color: #0052cc; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }}
+        .content {{ background-color: #f4f5f7; padding: 30px; border-radius: 0 0 5px 5px; }}
+        .button {{ display: inline-block; background-color: #0052cc; color: white; padding: 12px 24px; text-decoration: none; border-radius: 3px; margin: 20px 0; }}
+        .footer {{ text-align: center; color: #6b778c; font-size: 12px; margin-top: 20px; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Password Reset</h1>
+        </div>
+        <div class="content">
+            <p>Hi {user.first_name or user.username},</p>
+            <p>You requested a password reset for your account.</p>
+
+            <div style="text-align: center;">
+                <a href="{reset_url}" class="button">Reset Password</a>
+            </div>
+
+            <p style="font-size: 14px; color: #6b778c;">
+                This link expires in 1 hour.
+            </p>
+
+            <p style="font-size: 13px; color: #6b778c;">
+                If you can't click the button, copy and paste this URL into your browser:<br>
+                <a href="{reset_url}" style="color: #0052cc; word-break: break-all;">{reset_url}</a>
+            </p>
+
+            <div style="background-color: #fff3cd; border: 1px solid #ffc107; padding: 10px; border-radius: 3px; margin-top: 20px;">
+                <strong>Security Note:</strong> If you did not request this password reset, you can safely ignore this email. Your password will not be changed.
+            </div>
+        </div>
+        <div class="footer">
+            <p>This is an automated message from the Ticketing System.</p>
+        </div>
+    </div>
+</body>
+</html>
+    """.strip()
+
+    try:
+        send_mail(
+            subject=subject,
+            message=message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+            html_message=html_message,
+            fail_silently=False,
+        )
+        return True
+    except Exception as e:
+        print(f"Failed to send password reset email to {user.email}: {e}")
+        return False
+
+
 def _format_hours(hours):
     """Format hours into a human-readable string like '2d 4h' or '8h'."""
     if not hours or hours == 0:

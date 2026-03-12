@@ -27,6 +27,8 @@ const Settings = lazy(() => import("./pages/Settings"));
 const KPI = lazy(() => import("./pages/KPI"));
 const KPIDemoPage = lazy(() => import("./pages/KPIDemoPage"));
 const AcceptInvitationPage = lazy(() => import("./pages/AcceptInvitationPage"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -59,6 +61,14 @@ function AppInner() {
                   {/* Public routes */}
                   <Route path="/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />
+                  <Route
+                    path="/forgot-password"
+                    element={<ForgotPassword />}
+                  />
+                  <Route
+                    path="/reset-password/:uid/:token"
+                    element={<ResetPassword />}
+                  />
                   <Route
                     path="/invite/accept"
                     element={<AcceptInvitationPage />}

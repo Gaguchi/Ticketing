@@ -144,5 +144,19 @@
   "validation.minLength": "მინიმუმ {{min}} სიმბოლო",
   "validation.maxLength": "მაქსიმუმ {{max}} სიმბოლო",
   "validation.pleaseInput": "გთხოვთ შეიყვანოთ {{field}}",
-  "validation.pleaseSelect": "გთხოვთ აირჩიოთ {{field}}"
+  "validation.pleaseSelect": "გთხოვთ აირჩიოთ {{field}}",
+  "auth.forgotPasswordTitle": "პაროლის აღდგენა",
+  "auth.forgotPasswordSubtitle": "შეიყვანეთ თქვენი ელ. ფოსტა და ჩვენ გამოგიგზავნით პაროლის აღდგენის ბმულს.",
+  "auth.sendResetLink": "ბმულის გაგზავნა",
+  "auth.resetEmailSent": "თუ ამ ელ. ფოსტით ანგარიში არსებობს, პაროლის აღდგენის ბმული გაიგზავნა. გთხოვთ შეამოწმოთ ელ. ფოსტა.",
+  "auth.backToLogin": "შესვლაზე დაბრუნება",
+  "auth.resetPasswordTitle": "პაროლის შეცვლა",
+  "auth.resetPasswordSubtitle": "შეიყვანეთ ახალი პაროლი.",
+  "auth.newPassword": "ახალი პაროლი",
+  "auth.confirmPassword": "დაადასტურეთ ახალი პაროლი",
+  "auth.resetPassword": "პაროლის შეცვლა",
+  "auth.resetSuccess": "პაროლი წარმატებით შეიცვალა. გადამისამართება შესვლის გვერდზე...",
+  "auth.resetTokenInvalid": "პაროლის აღდგენის ბმული არასწორია ან ვადაგასულია.",
+  "auth.resetTokenValidating": "ბმულის შემოწმება...",
+  "auth.requestNewReset": "ახალი ბმულის მოთხოვნა"
 }

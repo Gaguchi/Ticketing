@@ -11,6 +11,8 @@ import { WebSocketProvider } from "./contexts/WebSocketContext";
 import ProtectedRoute from "./components/auth/ProtectedRouteNew";
 import AppLayout from "./components/AppLayout";
 import Login from "./pages/LoginNew";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import TicketDetail from "./pages/TicketDetail";
 import Profile from "./pages/ProfileNew";
@@ -28,6 +30,8 @@ function App() {
             <Routes>
               {/* Public routes */}
               <Route path="/login" element={<Login />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password/:uid/:token" element={<ResetPassword />} />
 
               {/* Protected routes */}
               <Route

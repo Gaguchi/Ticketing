@@ -19,6 +19,9 @@ export const API_ENDPOINTS = {
   AUTH_LOGIN: getEndpoint('/auth/login/'),
   AUTH_ME: getEndpoint('/auth/me/'),
   AUTH_CHANGE_PASSWORD: getEndpoint('/auth/change-password/'),
+  AUTH_PASSWORD_RESET: getEndpoint('/auth/password-reset/'),
+  AUTH_PASSWORD_RESET_VALIDATE: getEndpoint('/auth/password-reset/validate/'),
+  AUTH_PASSWORD_RESET_CONFIRM: getEndpoint('/auth/password-reset/confirm/'),
 
   // Tickets
   MY_TICKETS: getEndpoint('/tickets/'),

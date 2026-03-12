@@ -104,6 +104,37 @@ class AuthService {
   async refreshToken(): Promise<void> {
     await apiService.post(API_ENDPOINTS.AUTH_TOKEN_REFRESH);
   }
+
+  /**
+   * Request a password reset email
+   */
+  async requestPasswordReset(email: string): Promise<void> {
+    await apiService.post(API_ENDPOINTS.AUTH_PASSWORD_RESET, {
+      email,
+      source: 'admin',
+    });
+  }
+
+  /**
+   * Validate a password reset token
+   */
+  async validateResetToken(uid: string, token: string): Promise<{ valid: boolean }> {
+    return await apiService.post<{ valid: boolean }>(
+      API_ENDPOINTS.AUTH_PASSWORD_RESET_VALIDATE,
+      { uid, token }
+    );
+  }
+
+  /**
+   * Confirm password reset with new password
+   */
+  async confirmPasswordReset(uid: string, token: string, newPassword: string): Promise<void> {
+    await apiService.post(API_ENDPOINTS.AUTH_PASSWORD_RESET_CONFIRM, {
+      uid,
+      token,
+      new_password: newPassword,
+    });
+  }
 }
 
 export const authService = new AuthService();

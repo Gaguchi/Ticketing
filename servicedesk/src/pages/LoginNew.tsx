@@ -1,5 +1,5 @@
 import { useState, FormEvent } from "react";
-import { useNavigate, Navigate } from "react-router-dom";
+import { useNavigate, Navigate, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../contexts/AuthContext";
 import { Card, Input, Button } from "../components/ui";
@@ -122,6 +122,15 @@ export default function Login() {
               </svg>
             }
           />
+
+          <div className="flex justify-end">
+            <Link
+              to="/forgot-password"
+              className="text-sm font-medium text-brand-400 hover:text-brand-500 transition-colors"
+            >
+              {t('login.forgotPassword')}
+            </Link>
+          </div>
 
           <Button
             type="submit"

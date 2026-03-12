@@ -150,5 +150,19 @@
   "notifications.markAllRead": "Mark all read",
   "notifications.noNotifications": "No notifications",
   "time.noActivity": "No activity",
-  "time.justNowShort": "Just now"
+  "time.justNowShort": "Just now",
+  "auth.forgotPasswordTitle": "Forgot Password",
+  "auth.forgotPasswordSubtitle": "Enter your email address and we'll send you a link to reset your password.",
+  "auth.sendResetLink": "Send Reset Link",
+  "auth.resetEmailSent": "If an account with that email exists, we've sent a password reset link. Please check your email.",
+  "auth.backToLogin": "Back to Login",
+  "auth.resetPasswordTitle": "Reset Password",
+  "auth.resetPasswordSubtitle": "Enter your new password below.",
+  "auth.newPassword": "New Password",
+  "auth.confirmPassword": "Confirm New Password",
+  "auth.resetPassword": "Reset Password",
+  "auth.resetSuccess": "Your password has been reset successfully. Redirecting to login...",
+  "auth.resetTokenInvalid": "This password reset link is invalid or has expired.",
+  "auth.resetTokenValidating": "Validating your reset link...",
+  "auth.requestNewReset": "Request a new reset link"
 }

@@ -375,16 +375,20 @@ EMAIL_BACKEND = os.getenv(
     'django.core.mail.backends.console.EmailBackend' if DEBUG else 'django.core.mail.backends.smtp.EmailBackend'
 )
 
-# SMTP Configuration (for production)
-EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+# SMTP Configuration - defaults to Resend
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.resend.com')
 EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
 EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() in ('true', '1', 'yes')
-EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', 'resend')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@ticketing.local')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@maxnet.tech')
 
-# Frontend URL for invitation links
-FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173')
+# Password reset token expiry (1 hour)
+PASSWORD_RESET_TIMEOUT = 3600
+
+# Frontend URLs for email links
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5178')
+SERVICEDESK_URL = os.getenv('SERVICEDESK_URL', 'http://localhost:3001')
 
 
 # ============================================
