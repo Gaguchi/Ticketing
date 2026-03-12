@@ -16,6 +16,7 @@ from .serializers import (
 class ChatRoomViewSet(viewsets.ModelViewSet):
     """ViewSet for chat rooms."""
     permission_classes = [IsAuthenticated]
+    pagination_class = None  # Return all rooms — frontend needs the full list
     filter_backends = [filters.SearchFilter]
     search_fields = ['name']
 
@@ -244,16 +245,17 @@ class ChatRoomViewSet(viewsets.ModelViewSet):
         try:
             room = ChatRoom.objects.get(ticket_id=ticket_id)
             
-            # Check user is a participant
+            # Auto-add user as participant if they have any relation to the ticket
             if not room.participants.filter(user=request.user).exists():
-                # If user is assigned to ticket or is admin, add them as participant
                 from tickets.models import Ticket
                 try:
                     ticket = Ticket.objects.get(id=ticket_id)
                     is_assignee = ticket.assignees.filter(id=request.user.id).exists()
                     is_company_admin = ticket.company and ticket.company.admins.filter(id=request.user.id).exists()
-                    
-                    if is_assignee or is_company_admin or request.user.is_superuser:
+                    is_company_user = ticket.company and ticket.company.users.filter(id=request.user.id).exists()
+                    is_project_member = ticket.project.members.filter(id=request.user.id).exists()
+
+                    if is_assignee or is_company_admin or is_company_user or is_project_member or request.user.is_superuser:
                         ChatParticipant.objects.get_or_create(room=room, user=request.user)
                     else:
                         return Response(

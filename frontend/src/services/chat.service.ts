@@ -22,8 +22,9 @@ class ChatService {
     const url = projectId
       ? `${this.BASE_URL}/rooms/?project=${projectId}`
       : `${this.BASE_URL}/rooms/`;
-    const response = await apiService.get<{ count: number; results: ChatRoom[] }>(url);
-    return response.results;
+    const response = await apiService.get<ChatRoom[] | { count: number; results: ChatRoom[] }>(url);
+    // Handle both paginated and non-paginated responses
+    return Array.isArray(response) ? response : response.results;
   }
 
   /**
