@@ -154,7 +154,7 @@ def login_user(request):
     """
     Login user and return JWT tokens
     """
-    username = request.data.get('username', '').strip().lower()
+    username = request.data.get('username', '').strip()
     password = request.data.get('password')
 
     if not username or not password:
@@ -163,7 +163,12 @@ def login_user(request):
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    user = authenticate(username=username, password=password)
+    # Case-insensitive username lookup, then authenticate with actual username
+    try:
+        user_obj = User.objects.get(username__iexact=username)
+        user = authenticate(username=user_obj.username, password=password)
+    except User.DoesNotExist:
+        user = None
     
     if user is None:
         return Response(
