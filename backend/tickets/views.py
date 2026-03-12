@@ -148,15 +148,15 @@ def login_user(request):
     """
     Login user and return JWT tokens
     """
-    username = request.data.get('username')
+    username = request.data.get('username', '').strip().lower()
     password = request.data.get('password')
-    
+
     if not username or not password:
         return Response(
             {'error': 'Username and password are required'},
             status=status.HTTP_400_BAD_REQUEST
         )
-    
+
     user = authenticate(username=username, password=password)
     
     if user is None:
