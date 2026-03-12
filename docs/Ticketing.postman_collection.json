@@ -1,0 +1,1684 @@
+{
+	"info": {
+		"_postman_id": "ticketing-system-api",
+		"name": "Ticketing System API",
+		"description": "Complete API collection for the Ticketing System.\n\n## Authentication\n- Cookie-based JWT (httpOnly)\n- Login sets `access_token` and `refresh_token` cookies automatically\n- Dev bypass: `X-Super-Secret-Key` header (DEBUG mode only)\n\n## Setup\n1. Set `base_url` variable to your backend URL\n2. Run the Login request first\n3. Cookies are managed automatically by Postman",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{ "key": "base_url", "value": "http://localhost:8002", "type": "string" },
+		{ "key": "project_id", "value": "1", "type": "string" },
+		{ "key": "ticket_id", "value": "1", "type": "string" },
+		{ "key": "company_id", "value": "1", "type": "string" },
+		{ "key": "user_id", "value": "1", "type": "string" },
+		{ "key": "column_id", "value": "1", "type": "string" },
+		{ "key": "tag_id", "value": "1", "type": "string" },
+		{ "key": "comment_id", "value": "1", "type": "string" },
+		{ "key": "room_id", "value": "1", "type": "string" },
+		{ "key": "notification_id", "value": "1", "type": "string" }
+	],
+	"item": [
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "Register",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"newuser\",\n  \"email\": \"newuser@example.com\",\n  \"password\": \"securepassword123\",\n  \"first_name\": \"John\",\n  \"last_name\": \"Doe\"\n}"
+						},
+						"url": "{{base_url}}/api/tickets/auth/register/"
+					}
+				},
+				{
+					"name": "Login",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"boris\",\n  \"password\": \"your_password\"\n}"
+						},
+						"url": "{{base_url}}/api/tickets/auth/login/"
+					}
+				},
+				{
+					"name": "Get Current User",
+					"request": {
+						"method": "GET",
+						"url": "{{base_url}}/api/tickets/auth/me/"
+					}
+				},
+				{
+					"name": "Refresh Token",
+					"request": {
+						"method": "POST",
+						"url": "{{base_url}}/api/tickets/auth/token/refresh/"
+					}
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"url": "{{base_url}}/api/tickets/auth/logout/"
+					}
+				},
+				{
+					"name": "Password Reset - Request",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"user@example.com\",\n  \"source\": \"admin\"\n}"
+						},
+						"url": "{{base_url}}/api/tickets/auth/password-reset/",
+						"description": "Always returns 200 to not leak user existence. Source: 'admin' or 'servicedesk'."
+					}
+				},
+				{
+					"name": "Password Reset - Validate Token",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"uid\": \"MTI\",\n  \"token\": \"abc123-tokenhere\"\n}"
+						},
+						"url": "{{base_url}}/api/tickets/auth/password-reset/validate/"
+					}
+				},
+				{
+					"name": "Password Reset - Confirm",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"uid\": \"MTI\",\n  \"token\": \"abc123-tokenhere\",\n  \"new_password\": \"newsecurepassword123\"\n}"
+						},
+						"url": "{{base_url}}/api/tickets/auth/password-reset/confirm/"
+					}
+				}
+			]
+		},
+		{
+			"name": "Projects",
+			"item": [
+				{
+					"name": "List Projects",
+					"request": {
+						"method": "GET",
+						"url": "{{base_url}}/api/tickets/projects/"
+					}
+				},
+				{
+					"name": "Create Project",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"New Project\",\n  \"key\": \"NP\",\n  \"description\": \"Project description\"\n}"
+						},
+						"url": "{{base_url}}/api/tickets/projects/"
+					}
+				},
+				{
+					"name": "Get Project",
+					"request": {
+						"method": "GET",
+						"url": "{{base_url}}/api/tickets/projects/{{project_id}}/"
+					}
+				},
+				{
+					"name": "Update Project",
+					"request": {
+						"method": "PATCH",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Updated Project Name\"\n}"
+						},
+						"url": "{{base_url}}/api/tickets/projects/{{project_id}}/"
+					}
+				},
+				{
+					"name": "Delete Project",
+					"request": {
+						"method": "DELETE",
+						"url": "{{base_url}}/api/tickets/projects/{{project_id}}/"
+					}
+				},
+				{
+					"name": "Get Project Tickets",
+					"request": {
+						"method": "GET",
+						"url": "{{base_url}}/api/tickets/projects/{{project_id}}/tickets/"
+					}
+				},
+				{
+					"name": "Get Project Columns",
+					"request": {
+						"method": "GET",
+						"url": "{{base_url}}/api/tickets/projects/{{project_id}}/columns/"
+					}
+				},
+				{
+					"name": "Get Project Admins",
+					"request": {
+						"method": "GET",
+						"url": "{{base_url}}/api/tickets/projects/{{project_id}}/admins/"
+					}
+				}
+			]
+		},
+		{
+			"name": "Tickets",
+			"item": [
+				{
+					"name": "List Tickets",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/tickets/tickets/?project={{project_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tickets", "tickets", ""],
+							"query": [
+								{ "key": "project", "value": "{{project_id}}" },
+								{ "key": "view", "value": "kanban", "disabled": true },
+								{ "key": "status", "value": "", "disabled": true },
+								{ "key": "priority_id", "value": "", "disabled": true },
+								{ "key": "company", "value": "", "disabled": true },
+								{ "key": "column", "value": "", "disabled": true },
+								{ "key": "tags", "value": "", "disabled": true },
+								{ "key": "type", "value": "", "disabled": true },
+								{ "key": "archived", "value": "false", "disabled": true }
+							]
+						}
+					}
+				},
+				{
+					"name": "List Tickets (Kanban View)",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/tickets/tickets/?project={{project_id}}&view=kanban",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tickets", "tickets", ""],
+							"query": [
+								{ "key": "project", "value": "{{project_id}}" },
+								{ "key": "view", "value": "kanban" }
+							]
+						}
+					}
+				},
+				{
+					"name": "List Archived Tickets",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/tickets/tickets/archived/?project={{project_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tickets", "tickets", "archived", ""],
+							"query": [
+								{ "key": "project", "value": "{{project_id}}" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Create Ticket",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"New Ticket\",\n  \"description\": \"Ticket description\",\n  \"type\": \"task\",\n  \"priority_id\": 3,\n  \"project\": {{project_id}},\n  \"assignees\": [],\n  \"tags\": []\n}"
+						},
+						"url": "{{base_url}}/api/tickets/tickets/"
+					}
+				},
+				{
+					"name": "Get Ticket",
+					"request": {
+						"method": "GET",
+						"url": "{{base_url}}/api/tickets/tickets/{{ticket_id}}/"
+					}
+				},
+				{
+					"name": "Update Ticket",
+					"request": {
+						"method": "PATCH",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Updated Ticket Name\",\n  \"priority_id\": 2\n}"
+						},
+						"url": "{{base_url}}/api/tickets/tickets/{{ticket_id}}/"
+					}
+				},
+				{
+					"name": "Delete Ticket",
+					"request": {
+						"method": "DELETE",
+						"url": "{{base_url}}/api/tickets/tickets/{{ticket_id}}/"
+					}
+				},
+				{
+					"name": "Get Ticket History",
+					"request": {
+						"method": "GET",
+						"url": "{{base_url}}/api/tickets/tickets/{{ticket_id}}/history/"
+					}
+				},
+				{
+					"name": "Get Assignable Users",
+					"request": {
+						"method": "GET",
+						"url": "{{base_url}}/api/tickets/tickets/{{ticket_id}}/assignable-users/"
+					}
+				},
+				{
+					"name": "Move to Column",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"column_id\": {{column_id}}\n}"
+						},
+						"url": "{{base_url}}/api/tickets/tickets/{{ticket_id}}/move_to_column/"
+					}
+				},
+				{
+					"name": "Move to Status",
+					"request": {
+						"method": "PATCH",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"in_progress\"\n}"
+						},
+						"url": "{{base_url}}/api/tickets/tickets/{{ticket_id}}/move_to_status/"
+					}
+				},
+				{
+					"name": "Reorder Tickets",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"updates\": [\n    { \"ticket_id\": 1, \"column_id\": 1, \"order\": 0 },\n    { \"ticket_id\": 2, \"column_id\": 1, \"order\": 1 }\n  ]\n}"
+						},
+						"url": "{{base_url}}/api/tickets/tickets/reorder_tickets/"
+					}
+				},
+				{
+					"name": "Toggle Follow",
+					"request": {
+						"method": "POST",
+						"url": "{{base_url}}/api/tickets/tickets/{{ticket_id}}/toggle_follow/"
+					}
+				},
+				{
+					"name": "Archive Ticket",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"reason\": \"Completed\"\n}"
+						},
+						"url": "{{base_url}}/api/tickets/tickets/{{ticket_id}}/archive/"
+					}
+				},
+				{
+					"name": "Restore Ticket",
+					"request": {
+						"method": "POST",
+						"url": "{{base_url}}/api/tickets/tickets/{{ticket_id}}/restore/"
+					}
+				},
+				{
+					"name": "Submit Review",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"rating\": 5,\n  \"feedback\": \"Great work!\"\n}"
+						},
+						"url": "{{base_url}}/api/tickets/tickets/{{ticket_id}}/review/"
+					}
+				},
+				{
+					"name": "Reject Resolution",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"feedback\": \"Issue is not fully resolved\"\n}"
+						},
+						"url": "{{base_url}}/api/tickets/tickets/{{ticket_id}}/reject_resolution/"
+					}
+				},
+				{
+					"name": "Trigger Auto-Archive",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/tickets/tickets/trigger-archive/?project_id={{project_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tickets", "tickets", "trigger-archive", ""],
+							"query": [
+								{ "key": "project_id", "value": "{{project_id}}" }
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Companies",
+			"item": [
+				{
+					"name": "List Companies",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/tickets/companies/?project={{project_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tickets", "companies", ""],
+							"query": [
+								{ "key": "project", "value": "{{project_id}}" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Create Company",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"New Company\",\n  \"description\": \"Company description\"\n}"
+						},
+						"url": "{{base_url}}/api/tickets/companies/"
+					}
+				},
+				{
+					"name": "Get Company",
+					"request": {
+						"method": "GET",
+						"url": "{{base_url}}/api/tickets/companies/{{company_id}}/"
+					}
+				},
+				{
+					"name": "Update Company",
+					"request": {
+						"method": "PATCH",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Updated Company Name\"\n}"
+						},
+						"url": "{{base_url}}/api/tickets/companies/{{company_id}}/"
+					}
+				},
+				{
+					"name": "Delete Company",
+					"request": {
+						"method": "DELETE",
+						"url": "{{base_url}}/api/tickets/companies/{{company_id}}/"
+					}
+				},
+				{
+					"name": "Get Company Admins",
+					"request": {
+						"method": "GET",
+						"url": "{{base_url}}/api/tickets/companies/{{company_id}}/admins/"
+					}
+				},
+				{
+					"name": "Assign Admin",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"user_id\": {{user_id}}\n}"
+						},
+						"url": "{{base_url}}/api/tickets/companies/{{company_id}}/assign_admin/"
+					}
+				},
+				{
+					"name": "Remove Admin",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"user_id\": {{user_id}}\n}"
+						},
+						"url": "{{base_url}}/api/tickets/companies/{{company_id}}/remove_admin/"
+					}
+				},
+				{
+					"name": "Assign User",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"user_id\": {{user_id}}\n}"
+						},
+						"url": "{{base_url}}/api/tickets/companies/{{company_id}}/assign_user/"
+					}
+				},
+				{
+					"name": "Remove User",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"user_id\": {{user_id}}\n}"
+						},
+						"url": "{{base_url}}/api/tickets/companies/{{company_id}}/remove_user/"
+					}
+				},
+				{
+					"name": "Create User for Company",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"companyuser\",\n  \"email\": \"user@company.com\",\n  \"password\": \"securepass123\",\n  \"first_name\": \"Jane\",\n  \"last_name\": \"Smith\"\n}"
+						},
+						"url": "{{base_url}}/api/tickets/companies/{{company_id}}/create_user/"
+					}
+				},
+				{
+					"name": "Get Company Tickets",
+					"request": {
+						"method": "GET",
+						"url": "{{base_url}}/api/tickets/companies/{{company_id}}/tickets/"
+					}
+				},
+				{
+					"name": "Get Company Stats",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/tickets/companies/{{company_id}}/stats/?project={{project_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tickets", "companies", "{{company_id}}", "stats", ""],
+							"query": [
+								{ "key": "project", "value": "{{project_id}}" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Bulk Stats",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/tickets/companies/bulk-stats/?project={{project_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tickets", "companies", "bulk-stats", ""],
+							"query": [
+								{ "key": "project", "value": "{{project_id}}" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Monthly Report",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/tickets/companies/{{company_id}}/monthly-report/?month=3&year=2026&project={{project_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tickets", "companies", "{{company_id}}", "monthly-report", ""],
+							"query": [
+								{ "key": "month", "value": "3" },
+								{ "key": "year", "value": "2026" },
+								{ "key": "project", "value": "{{project_id}}" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Send Monthly Report",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"month\": 3,\n  \"year\": 2026,\n  \"project\": {{project_id}},\n  \"sections\": [\"summary\", \"tickets\", \"performance\"],\n  \"recipient_email\": \"client@example.com\"\n}"
+						},
+						"url": "{{base_url}}/api/tickets/companies/{{company_id}}/send-monthly-report/"
+					}
+				}
+			]
+		},
+		{
+			"name": "Users",
+			"item": [
+				{
+					"name": "List Users",
+					"request": {
+						"method": "GET",
+						"url": "{{base_url}}/api/tickets/users/"
+					}
+				},
+				{
+					"name": "Create User",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"newuser\",\n  \"email\": \"new@example.com\",\n  \"password\": \"securepass123\"\n}"
+						},
+						"url": "{{base_url}}/api/tickets/users/"
+					}
+				},
+				{
+					"name": "Get User",
+					"request": {
+						"method": "GET",
+						"url": "{{base_url}}/api/tickets/users/{{user_id}}/"
+					}
+				},
+				{
+					"name": "Update User",
+					"request": {
+						"method": "PATCH",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"first_name\": \"Updated\",\n  \"last_name\": \"Name\"\n}"
+						},
+						"url": "{{base_url}}/api/tickets/users/{{user_id}}/"
+					}
+				},
+				{
+					"name": "Delete User",
+					"request": {
+						"method": "DELETE",
+						"url": "{{base_url}}/api/tickets/users/{{user_id}}/"
+					}
+				},
+				{
+					"name": "Assign Role",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"project_id\": {{project_id}},\n  \"role\": \"admin\"\n}"
+						},
+						"url": "{{base_url}}/api/tickets/users/{{user_id}}/assign_role/",
+						"description": "Roles: superadmin, admin, manager, user"
+					}
+				},
+				{
+					"name": "Remove Role",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"project_id\": {{project_id}}\n}"
+						},
+						"url": "{{base_url}}/api/tickets/users/{{user_id}}/remove_role/"
+					}
+				},
+				{
+					"name": "Set Password",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"password\": \"newsecurepassword\"\n}"
+						},
+						"url": "{{base_url}}/api/tickets/users/{{user_id}}/set_password/"
+					}
+				},
+				{
+					"name": "Toggle Active",
+					"request": {
+						"method": "POST",
+						"url": "{{base_url}}/api/tickets/users/{{user_id}}/toggle_active/"
+					}
+				},
+				{
+					"name": "Get User Roles",
+					"request": {
+						"method": "GET",
+						"url": "{{base_url}}/api/tickets/users/{{user_id}}/roles/"
+					}
+				}
+			]
+		},
+		{
+			"name": "Columns",
+			"item": [
+				{
+					"name": "List Columns",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/tickets/columns/?project={{project_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tickets", "columns", ""],
+							"query": [
+								{ "key": "project", "value": "{{project_id}}" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Create Column",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"In Review\",\n  \"project\": {{project_id}},\n  \"color\": \"#1890ff\"\n}"
+						},
+						"url": "{{base_url}}/api/tickets/columns/"
+					}
+				},
+				{
+					"name": "Update Column",
+					"request": {
+						"method": "PATCH",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Updated Column\"\n}"
+						},
+						"url": "{{base_url}}/api/tickets/columns/{{column_id}}/"
+					}
+				},
+				{
+					"name": "Delete Column",
+					"request": {
+						"method": "DELETE",
+						"url": "{{base_url}}/api/tickets/columns/{{column_id}}/"
+					}
+				},
+				{
+					"name": "Create Default Columns",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"project_id\": {{project_id}}\n}"
+						},
+						"url": "{{base_url}}/api/tickets/columns/create_defaults/"
+					}
+				},
+				{
+					"name": "Reorder Columns",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"order\": [\n    { \"id\": 1, \"order\": 0 },\n    { \"id\": 2, \"order\": 1 }\n  ]\n}"
+						},
+						"url": "{{base_url}}/api/tickets/columns/reorder/"
+					}
+				}
+			]
+		},
+		{
+			"name": "Statuses & Board Columns",
+			"item": [
+				{
+					"name": "List Statuses",
+					"request": {
+						"method": "GET",
+						"url": "{{base_url}}/api/tickets/statuses/"
+					}
+				},
+				{
+					"name": "Create Status",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Under Review\",\n  \"key\": \"under_review\",\n  \"category\": \"in_progress\"\n}"
+						},
+						"url": "{{base_url}}/api/tickets/statuses/",
+						"description": "Categories: todo, in_progress, done"
+					}
+				},
+				{
+					"name": "List Board Columns",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/tickets/board-columns/?project={{project_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tickets", "board-columns", ""],
+							"query": [
+								{ "key": "project", "value": "{{project_id}}" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Create Board Column",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"In Progress\",\n  \"project\": {{project_id}},\n  \"statuses\": [1, 2]\n}"
+						},
+						"url": "{{base_url}}/api/tickets/board-columns/"
+					}
+				},
+				{
+					"name": "Reorder Board Columns",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"project\": {{project_id}},\n  \"order\": [\n    { \"id\": 1, \"order\": 0 },\n    { \"id\": 2, \"order\": 1 }\n  ]\n}"
+						},
+						"url": "{{base_url}}/api/tickets/board-columns/reorder/"
+					}
+				}
+			]
+		},
+		{
+			"name": "Comments",
+			"item": [
+				{
+					"name": "List Comments",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/tickets/comments/?ticket={{ticket_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tickets", "comments", ""],
+							"query": [
+								{ "key": "ticket", "value": "{{ticket_id}}" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Create Comment",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"text\": \"This is a comment\",\n  \"ticket\": {{ticket_id}}\n}"
+						},
+						"url": "{{base_url}}/api/tickets/comments/"
+					}
+				},
+				{
+					"name": "Update Comment",
+					"request": {
+						"method": "PATCH",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"text\": \"Updated comment\"\n}"
+						},
+						"url": "{{base_url}}/api/tickets/comments/{{comment_id}}/"
+					}
+				},
+				{
+					"name": "Delete Comment",
+					"request": {
+						"method": "DELETE",
+						"url": "{{base_url}}/api/tickets/comments/{{comment_id}}/"
+					}
+				}
+			]
+		},
+		{
+			"name": "Attachments",
+			"item": [
+				{
+					"name": "List Attachments",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/tickets/attachments/?ticket={{ticket_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tickets", "attachments", ""],
+							"query": [
+								{ "key": "ticket", "value": "{{ticket_id}}" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Upload Attachment",
+					"request": {
+						"method": "POST",
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{ "key": "file", "type": "file", "src": "" },
+								{ "key": "ticket", "value": "{{ticket_id}}", "type": "text" }
+							]
+						},
+						"url": "{{base_url}}/api/tickets/attachments/"
+					}
+				},
+				{
+					"name": "Delete Attachment",
+					"request": {
+						"method": "DELETE",
+						"url": "{{base_url}}/api/tickets/attachments/1/"
+					}
+				}
+			]
+		},
+		{
+			"name": "Tags",
+			"item": [
+				{
+					"name": "List Tags",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/tickets/tags/?project={{project_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tickets", "tags", ""],
+							"query": [
+								{ "key": "project", "value": "{{project_id}}" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Create Tag",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Bug\",\n  \"project\": {{project_id}},\n  \"color\": \"#ff4d4f\"\n}"
+						},
+						"url": "{{base_url}}/api/tickets/tags/"
+					}
+				},
+				{
+					"name": "Update Tag",
+					"request": {
+						"method": "PATCH",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Critical Bug\",\n  \"color\": \"#ff0000\"\n}"
+						},
+						"url": "{{base_url}}/api/tickets/tags/{{tag_id}}/"
+					}
+				},
+				{
+					"name": "Delete Tag",
+					"request": {
+						"method": "DELETE",
+						"url": "{{base_url}}/api/tickets/tags/{{tag_id}}/"
+					}
+				},
+				{
+					"name": "Get Tag Contacts",
+					"request": {
+						"method": "GET",
+						"url": "{{base_url}}/api/tickets/tags/{{tag_id}}/contacts/"
+					}
+				},
+				{
+					"name": "Add Contact to Tag",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"contact_id\": 1\n}"
+						},
+						"url": "{{base_url}}/api/tickets/tags/{{tag_id}}/add_contact/"
+					}
+				},
+				{
+					"name": "Get Tag Tickets",
+					"request": {
+						"method": "GET",
+						"url": "{{base_url}}/api/tickets/tags/{{tag_id}}/tickets/"
+					}
+				}
+			]
+		},
+		{
+			"name": "Contacts",
+			"item": [
+				{
+					"name": "List Contacts",
+					"request": {
+						"method": "GET",
+						"url": "{{base_url}}/api/tickets/contacts/"
+					}
+				},
+				{
+					"name": "Create Contact",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"John Client\",\n  \"email\": \"john@client.com\",\n  \"title\": \"CTO\",\n  \"phone\": \"+1234567890\"\n}"
+						},
+						"url": "{{base_url}}/api/tickets/contacts/"
+					}
+				},
+				{
+					"name": "Update Contact",
+					"request": {
+						"method": "PATCH",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"VP Engineering\"\n}"
+						},
+						"url": "{{base_url}}/api/tickets/contacts/1/"
+					}
+				},
+				{
+					"name": "Delete Contact",
+					"request": {
+						"method": "DELETE",
+						"url": "{{base_url}}/api/tickets/contacts/1/"
+					}
+				}
+			]
+		},
+		{
+			"name": "Subtasks",
+			"item": [
+				{
+					"name": "List Subtasks",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/tickets/subtasks/?ticket={{ticket_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tickets", "subtasks", ""],
+							"query": [
+								{ "key": "ticket", "value": "{{ticket_id}}" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Create Subtask",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Subtask item\",\n  \"ticket\": {{ticket_id}}\n}"
+						},
+						"url": "{{base_url}}/api/tickets/subtasks/"
+					}
+				},
+				{
+					"name": "Update Subtask",
+					"request": {
+						"method": "PATCH",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"is_complete\": true\n}"
+						},
+						"url": "{{base_url}}/api/tickets/subtasks/1/"
+					}
+				},
+				{
+					"name": "Delete Subtask",
+					"request": {
+						"method": "DELETE",
+						"url": "{{base_url}}/api/tickets/subtasks/1/"
+					}
+				}
+			]
+		},
+		{
+			"name": "Issue Links",
+			"item": [
+				{
+					"name": "List Issue Links",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/tickets/issue-links/?source_ticket={{ticket_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tickets", "issue-links", ""],
+							"query": [
+								{ "key": "source_ticket", "value": "{{ticket_id}}" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Create Issue Link",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"source_ticket\": 1,\n  \"target_ticket\": 2,\n  \"link_type\": \"blocks\"\n}"
+						},
+						"url": "{{base_url}}/api/tickets/issue-links/",
+						"description": "Link types: blocks, relates_to, duplicates, depends_on"
+					}
+				},
+				{
+					"name": "Delete Issue Link",
+					"request": {
+						"method": "DELETE",
+						"url": "{{base_url}}/api/tickets/issue-links/1/"
+					}
+				}
+			]
+		},
+		{
+			"name": "Notifications",
+			"item": [
+				{
+					"name": "List Notifications",
+					"request": {
+						"method": "GET",
+						"url": "{{base_url}}/api/tickets/notifications/"
+					}
+				},
+				{
+					"name": "Unread Count",
+					"request": {
+						"method": "GET",
+						"url": "{{base_url}}/api/tickets/notifications/unread_count/"
+					}
+				},
+				{
+					"name": "Mark Read",
+					"request": {
+						"method": "POST",
+						"url": "{{base_url}}/api/tickets/notifications/{{notification_id}}/mark_read/"
+					}
+				},
+				{
+					"name": "Mark All Read",
+					"request": {
+						"method": "POST",
+						"url": "{{base_url}}/api/tickets/notifications/mark_all_read/"
+					}
+				},
+				{
+					"name": "Delete Notification",
+					"request": {
+						"method": "DELETE",
+						"url": "{{base_url}}/api/tickets/notifications/{{notification_id}}/"
+					}
+				}
+			]
+		},
+		{
+			"name": "Invitations",
+			"item": [
+				{
+					"name": "List Invitations",
+					"request": {
+						"method": "GET",
+						"url": "{{base_url}}/api/tickets/invitations/"
+					}
+				},
+				{
+					"name": "Send Invitation",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"project_id\": {{project_id}},\n  \"email\": \"user@example.com\",\n  \"role\": \"user\"\n}"
+						},
+						"url": "{{base_url}}/api/tickets/invitations/send/"
+					}
+				},
+				{
+					"name": "Check Invitation",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/tickets/invitations/check/?token=abc123",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tickets", "invitations", "check", ""],
+							"query": [
+								{ "key": "token", "value": "abc123" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Accept Invitation",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"token\": \"abc123\"\n}"
+						},
+						"url": "{{base_url}}/api/tickets/invitations/accept/"
+					}
+				},
+				{
+					"name": "Revoke Invitation",
+					"request": {
+						"method": "POST",
+						"url": "{{base_url}}/api/tickets/invitations/1/revoke/"
+					}
+				}
+			]
+		},
+		{
+			"name": "Dashboard",
+			"item": [
+				{
+					"name": "Company Health",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/tickets/dashboard/company-health/?project={{project_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tickets", "dashboard", "company-health", ""],
+							"query": [
+								{ "key": "project", "value": "{{project_id}}" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Attention Needed",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/tickets/dashboard/attention-needed/?project={{project_id}}&limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tickets", "dashboard", "attention-needed", ""],
+							"query": [
+								{ "key": "project", "value": "{{project_id}}" },
+								{ "key": "limit", "value": "10" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Newest Tickets",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/tickets/dashboard/newest/?project={{project_id}}&limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tickets", "dashboard", "newest", ""],
+							"query": [
+								{ "key": "project", "value": "{{project_id}}" },
+								{ "key": "limit", "value": "10" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Activity Feed",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/tickets/dashboard/activity/?project={{project_id}}&limit=20",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tickets", "dashboard", "activity", ""],
+							"query": [
+								{ "key": "project", "value": "{{project_id}}" },
+								{ "key": "limit", "value": "20" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Workload",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/tickets/dashboard/workload/?project={{project_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tickets", "dashboard", "workload", ""],
+							"query": [
+								{ "key": "project", "value": "{{project_id}}" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Kanban Summary",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/tickets/dashboard/kanban-summary/?project={{project_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tickets", "dashboard", "kanban-summary", ""],
+							"query": [
+								{ "key": "project", "value": "{{project_id}}" }
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "KPI",
+			"item": [
+				{
+					"name": "My Metrics",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/tickets/kpi/my-metrics/?project={{project_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tickets", "kpi", "my-metrics", ""],
+							"query": [
+								{ "key": "project", "value": "{{project_id}}" }
+							]
+						}
+					}
+				},
+				{
+					"name": "User Metrics",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/tickets/kpi/user-metrics/?user_id={{user_id}}&project={{project_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tickets", "kpi", "user-metrics", ""],
+							"query": [
+								{ "key": "user_id", "value": "{{user_id}}" },
+								{ "key": "project", "value": "{{project_id}}" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Project Summary",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/tickets/kpi/project-summary/?project={{project_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tickets", "kpi", "project-summary", ""],
+							"query": [
+								{ "key": "project", "value": "{{project_id}}" }
+							]
+						}
+					}
+				},
+				{
+					"name": "My Tickets",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/tickets/kpi/my-tickets/?project={{project_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tickets", "kpi", "my-tickets", ""],
+							"query": [
+								{ "key": "project", "value": "{{project_id}}" }
+							]
+						}
+					}
+				},
+				{
+					"name": "My Active Tickets",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/tickets/kpi/my-active/?project={{project_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tickets", "kpi", "my-active", ""],
+							"query": [
+								{ "key": "project", "value": "{{project_id}}" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Project Trends",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/tickets/kpi/project-trends/?project={{project_id}}&days=30",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tickets", "kpi", "project-trends", ""],
+							"query": [
+								{ "key": "project", "value": "{{project_id}}" },
+								{ "key": "days", "value": "30" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Available Indicators",
+					"request": {
+						"method": "GET",
+						"url": "{{base_url}}/api/tickets/kpi/available-indicators/"
+					}
+				},
+				{
+					"name": "Get KPI Config",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/tickets/kpi/config/?project={{project_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tickets", "kpi", "config", ""],
+							"query": [
+								{ "key": "project", "value": "{{project_id}}" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Save KPI Config",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"project\": {{project_id}},\n  \"indicators\": [\n    { \"key\": \"tickets_resolved\", \"enabled\": true }\n  ]\n}"
+						},
+						"url": "{{base_url}}/api/tickets/kpi/config/save/"
+					}
+				},
+				{
+					"name": "Scoreboard",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/tickets/kpi/scoreboard/?project={{project_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tickets", "kpi", "scoreboard", ""],
+							"query": [
+								{ "key": "project", "value": "{{project_id}}" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Scoreboard Members",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/tickets/kpi/scoreboard-members/?project={{project_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tickets", "kpi", "scoreboard-members", ""],
+							"query": [
+								{ "key": "project", "value": "{{project_id}}" }
+							]
+						}
+					}
+				},
+				{
+					"name": "My Score",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/tickets/kpi/my-score/?project={{project_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tickets", "kpi", "my-score", ""],
+							"query": [
+								{ "key": "project", "value": "{{project_id}}" }
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "User Reviews",
+			"item": [
+				{
+					"name": "List Reviews",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/tickets/user-reviews/?project={{project_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tickets", "user-reviews", ""],
+							"query": [
+								{ "key": "project", "value": "{{project_id}}" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Create Review",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"user\": {{user_id}},\n  \"project\": {{project_id}},\n  \"ticket\": {{ticket_id}},\n  \"rating\": 4,\n  \"feedback\": \"Good work on this ticket\"\n}"
+						},
+						"url": "{{base_url}}/api/tickets/user-reviews/"
+					}
+				},
+				{
+					"name": "Reviews for User",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/tickets/user-reviews/for-user/{{user_id}}/?project={{project_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tickets", "user-reviews", "for-user", "{{user_id}}", ""],
+							"query": [
+								{ "key": "project", "value": "{{project_id}}" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Pending Review Prompts",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/tickets/user-reviews/pending-prompts/?project={{project_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tickets", "user-reviews", "pending-prompts", ""],
+							"query": [
+								{ "key": "project", "value": "{{project_id}}" }
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Chat",
+			"item": [
+				{
+					"name": "List Rooms",
+					"request": {
+						"method": "GET",
+						"url": "{{base_url}}/api/chat/rooms/"
+					}
+				},
+				{
+					"name": "Create Room",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"General Chat\",\n  \"ticket\": {{ticket_id}}\n}"
+						},
+						"url": "{{base_url}}/api/chat/rooms/"
+					}
+				},
+				{
+					"name": "Get Room",
+					"request": {
+						"method": "GET",
+						"url": "{{base_url}}/api/chat/rooms/{{room_id}}/"
+					}
+				},
+				{
+					"name": "Unread Count",
+					"request": {
+						"method": "GET",
+						"url": "{{base_url}}/api/chat/rooms/unread_count/"
+					}
+				},
+				{
+					"name": "List Messages",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/chat/messages/?room={{room_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "chat", "messages", ""],
+							"query": [
+								{ "key": "room", "value": "{{room_id}}" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Send Message",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"text\": \"Hello!\",\n  \"room\": {{room_id}}\n}"
+						},
+						"url": "{{base_url}}/api/chat/messages/"
+					}
+				}
+			]
+		},
+		{
+			"name": "M2M Relationships",
+			"item": [
+				{
+					"name": "List Tag-Contacts",
+					"request": {
+						"method": "GET",
+						"url": "{{base_url}}/api/tickets/tag-contacts/"
+					}
+				},
+				{
+					"name": "Create Tag-Contact",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"tag\": {{tag_id}},\n  \"contact\": 1\n}"
+						},
+						"url": "{{base_url}}/api/tickets/tag-contacts/"
+					}
+				},
+				{
+					"name": "List User-Tags",
+					"request": {
+						"method": "GET",
+						"url": "{{base_url}}/api/tickets/user-tags/"
+					}
+				},
+				{
+					"name": "Create User-Tag",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"user\": {{user_id}},\n  \"tag\": {{tag_id}}\n}"
+						},
+						"url": "{{base_url}}/api/tickets/user-tags/"
+					}
+				},
+				{
+					"name": "List Ticket-Tags",
+					"request": {
+						"method": "GET",
+						"url": "{{base_url}}/api/tickets/ticket-tags/"
+					}
+				},
+				{
+					"name": "Create Ticket-Tag",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"ticket\": {{ticket_id}},\n  \"tag\": {{tag_id}}\n}"
+						},
+						"url": "{{base_url}}/api/tickets/ticket-tags/"
+					}
+				}
+			]
+		},
+		{
+			"name": "System",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"url": "{{base_url}}/"
+					}
+				},
+				{
+					"name": "API Root",
+					"request": {
+						"method": "GET",
+						"url": "{{base_url}}/api/"
+					}
+				},
+				{
+					"name": "OpenAPI Schema",
+					"request": {
+						"method": "GET",
+						"url": "{{base_url}}/api/schema/"
+					}
+				},
+				{
+					"name": "Swagger Docs",
+					"request": {
+						"method": "GET",
+						"url": "{{base_url}}/api/docs/"
+					}
+				}
+			]
+		}
+	]
+}
