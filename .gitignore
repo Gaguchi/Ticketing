@@ -56,15 +56,22 @@ yarn-error.log
 .pnp/
 .pnp.js
 
-# Production
-/frontend/dist/
-/frontend/build/
+# TypeScript build artifacts
+*.tsbuildinfo
+
+# Production builds
+**/dist/
+**/build/
 
 # Testing
 .coverage
 htmlcov/
 .pytest_cache/
 .tox/
+test_output*.txt
+
+# Playwright MCP screenshots
+.playwright-mcp/
 
 # Misc
 *.bak
