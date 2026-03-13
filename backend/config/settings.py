@@ -179,6 +179,7 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'anon': '100/minute',
         'user': '300/minute',
+        'auth': '10/minute',
     },
 }
 
@@ -186,7 +187,7 @@ REST_FRAMEWORK = {
 from datetime import timedelta
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
@@ -226,7 +227,7 @@ CORS_ALLOW_CREDENTIALS = True
 CORS_PREFLIGHT_MAX_AGE = 86400  # 24 hours
 
 # Apply CORS to all paths including media files
-CORS_URLS_REGEX = r'^.*$'
+CORS_URLS_REGEX = r'^/api/.*$'
 
 # Additional CORS settings for better compatibility
 CORS_ALLOW_METHODS = [
@@ -281,7 +282,7 @@ X_FRAME_OPTIONS = 'SAMEORIGIN'  # Allow same origin for admin
 JWT_AUTH_COOKIE = 'access_token'
 JWT_AUTH_REFRESH_COOKIE = 'refresh_token'
 JWT_AUTH_COOKIE_HTTPONLY = True
-JWT_AUTH_COOKIE_SAMESITE = 'None' if USE_HTTPS else 'Lax'
+JWT_AUTH_COOKIE_SAMESITE = 'Lax'
 JWT_AUTH_COOKIE_SECURE = USE_HTTPS
 
 # drf-spectacular settings for API documentation

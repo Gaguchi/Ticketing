@@ -20,16 +20,14 @@ from chat.routing import websocket_urlpatterns as chat_websocket_urlpatterns
 # Combine all WebSocket URL patterns
 websocket_urlpatterns = tickets_websocket_urlpatterns + chat_websocket_urlpatterns
 
-# WebSocket application with JWT auth (no AllowedHostsOriginValidator to allow Traefik domains)
-# ALLOWED_HOSTS in settings.py will handle host validation
+# WebSocket application with JWT auth and origin validation
+# AllowedHostsOriginValidator checks the Origin header against ALLOWED_HOSTS
+# Make sure ALLOWED_HOSTS includes your traefik.me domains in Dokploy deployments
 application = ProtocolTypeRouter({
-    # Django's ASGI application to handle traditional HTTP requests
     "http": django_asgi_app,
-    
-    # WebSocket handler with JWT authentication
-    # Note: Removed AllowedHostsOriginValidator because it's too strict for Traefik.me domains
-    # Use ALLOWED_HOSTS in settings.py instead
-    "websocket": JWTAuthMiddleware(
-        URLRouter(websocket_urlpatterns)
+    "websocket": AllowedHostsOriginValidator(
+        JWTAuthMiddleware(
+            URLRouter(websocket_urlpatterns)
+        )
     ),
 })

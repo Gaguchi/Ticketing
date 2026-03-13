@@ -85,11 +85,27 @@ def _set_auth_cookies(response, access_token, refresh_token):
     return response
 
 
+def _clear_auth_cookies(response):
+    """Clear all auth cookies with matching attributes so browsers actually delete them."""
+    from django.conf import settings as s
+    for cookie_name in ('access_token', 'refresh_token', 'is_authenticated'):
+        response.delete_cookie(
+            cookie_name,
+            path='/',
+            samesite=s.JWT_AUTH_COOKIE_SAMESITE,
+        )
+    return response
+
+
 TRUE_VALUES = {'true', '1', 'yes', 'on'}
 FALSE_VALUES = {'false', '0', 'no', 'off'}
 
 
 # ==================== Authentication Views ====================
+
+class AuthRateThrottle(AnonRateThrottle):
+    scope = 'auth'
+
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -97,31 +113,48 @@ def register_user(request):
     """
     Register a new user
     """
+    # Manual throttle check (since @throttle_classes doesn't work with @api_view easily)
+    throttle = AuthRateThrottle()
+    if not throttle.allow_request(request, None):
+        return Response(
+            {'error': 'Too many attempts. Please try again later.'},
+            status=status.HTTP_429_TOO_MANY_REQUESTS
+        )
+
     username = request.data.get('username')
     email = request.data.get('email')
     password = request.data.get('password')
     first_name = request.data.get('first_name', '')
     last_name = request.data.get('last_name', '')
-    
+
     # Validation
     if not username or not email or not password:
         return Response(
             {'error': 'Username, email, and password are required'},
             status=status.HTTP_400_BAD_REQUEST
         )
-    
+
     if User.objects.filter(username=username).exists():
         return Response(
             {'error': 'Username already exists'},
             status=status.HTTP_400_BAD_REQUEST
         )
-    
+
     if User.objects.filter(email=email).exists():
         return Response(
             {'error': 'Email already exists'},
             status=status.HTTP_400_BAD_REQUEST
         )
-    
+
+    # Validate password against Django's password validators
+    try:
+        validate_password(password)
+    except DjangoValidationError as e:
+        return Response(
+            {'error': e.messages},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
     # Create user
     user = User.objects.create_user(
         username=username,
@@ -154,6 +187,13 @@ def login_user(request):
     """
     Login user and return JWT tokens
     """
+    throttle = AuthRateThrottle()
+    if not throttle.allow_request(request, None):
+        return Response(
+            {'error': 'Too many login attempts. Please try again later.'},
+            status=status.HTTP_429_TOO_MANY_REQUESTS
+        )
+
     username = request.data.get('username', '').strip()
     password = request.data.get('password')
 
@@ -270,9 +310,7 @@ def logout_user(request):
             pass
 
     response = Response({'status': 'logged out'})
-    response.delete_cookie('access_token', path='/')
-    response.delete_cookie('refresh_token', path='/')
-    response.delete_cookie('is_authenticated', path='/')
+    _clear_auth_cookies(response)
     return response
 
 
@@ -318,9 +356,7 @@ def refresh_token_cookie(request):
             {'error': 'Invalid refresh token'},
             status=status.HTTP_401_UNAUTHORIZED
         )
-        response.delete_cookie('access_token', path='/')
-        response.delete_cookie('refresh_token', path='/')
-        response.delete_cookie('is_authenticated', path='/')
+        _clear_auth_cookies(response)
         return response
 
 
