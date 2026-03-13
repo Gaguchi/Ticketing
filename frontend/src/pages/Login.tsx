@@ -23,14 +23,16 @@ const Login: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, isAuthenticated } = useAuth();
   const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY;
   const turnstileEnabled = import.meta.env.VITE_TURNSTILE_ENABLED === "true";
 
-  // Clear any local state when login page loads
+  // Redirect if already authenticated
   React.useEffect(() => {
-    localStorage.removeItem("user");
-  }, []);
+    if (isAuthenticated) {
+      navigate("/", { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   const onFinish = async (values: LoginFormValues) => {
     if (turnstileEnabled && turnstileSiteKey && !captchaToken) {

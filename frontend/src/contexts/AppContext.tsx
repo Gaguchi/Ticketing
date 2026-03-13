@@ -158,6 +158,39 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
     setProjectLoading(false);
   }, [user?.id, authLoading, selectedProject?.id, user?.projects?.length]); // Added projects.length to detect when projects load
 
+  // ===== Periodic token refresh =====
+  useEffect(() => {
+    if (!token) return;
+
+    // Refresh token every 20 minutes (access token lasts 24h but refresh proactively)
+    const interval = window.setInterval(async () => {
+      try {
+        await authService.refreshToken();
+      } catch {
+        // Let the 401 interceptor handle it on next request
+      }
+    }, 20 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, [token]);
+
+  // ===== Cross-tab logout sync =====
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      // If user data was removed in another tab, sync logout
+      if (e.key === 'user' && e.newValue === null && user) {
+        debug.auth("Logout detected in another tab");
+        setToken(null);
+        setUser(null);
+        setSelectedProjectState(null);
+        setAvailableProjects([]);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [user]);
+
   // ===== Memoized actions =====
   const login = useCallback((newUser: User) => {
     debug.auth("Login:", newUser.username);

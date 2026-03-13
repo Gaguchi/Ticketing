@@ -27,10 +27,17 @@ const Register: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, isAuthenticated } = useAuth();
   const [form] = Form.useForm();
   const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY;
   const turnstileEnabled = import.meta.env.VITE_TURNSTILE_ENABLED === "true";
+
+  // Redirect if already authenticated
+  React.useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/", { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   const onFinish = async (values: RegisterFormValues) => {
     if (turnstileEnabled && turnstileSiteKey && !captchaToken) {

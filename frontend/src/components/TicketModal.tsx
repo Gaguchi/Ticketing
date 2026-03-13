@@ -36,6 +36,7 @@ import {
   faLink,
 } from "@fortawesome/free-solid-svg-icons";
 import dayjs from "dayjs";
+import DOMPurify from "dompurify";
 import ReactQuill from "react-quill-new";
 import "react-quill-new/dist/quill.snow.css";
 import "./TicketModal.css";
@@ -1019,9 +1020,10 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                     className="description-view"
                     onClick={() => setIsEditingDescription(true)}
                     dangerouslySetInnerHTML={{
-                      __html:
+                      __html: DOMPurify.sanitize(
                         description ||
-                        `<p class='placeholder'>${t('form.descriptionPlaceholder')}</p>`,
+                        `<p class='placeholder'>${t('form.descriptionPlaceholder')}</p>`
+                      ),
                     }}
                   />
                 )}
