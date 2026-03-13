@@ -16,7 +16,7 @@ class AuthService {
   private readonly USER_KEY = 'user';
 
   /**
-   * Login user - tokens are set as httpOnly cookies by the backend
+   * Login user - tokens are set as httpOnly cookies AND returned in body
    */
   async login(credentials: LoginCredentials): Promise<{ user: User }> {
     const response = await apiService.post<any>(
@@ -25,12 +25,13 @@ class AuthService {
     );
 
     this.setUser(response.user);
+    this.setTokens(response.access, response.refresh);
 
     return { user: response.user };
   }
 
   /**
-   * Register new user - tokens are set as httpOnly cookies by the backend
+   * Register new user - tokens are set as httpOnly cookies AND returned in body
    */
   async register(data: RegisterData): Promise<{ user: User }> {
     const response = await apiService.post<any>(
@@ -39,6 +40,7 @@ class AuthService {
     );
 
     this.setUser(response.user);
+    this.setTokens(response.access, response.refresh);
 
     return { user: response.user };
   }
@@ -58,7 +60,7 @@ class AuthService {
   }
 
   /**
-   * Logout user - clears httpOnly cookies via API call
+   * Logout user - clears httpOnly cookies via API call and localStorage tokens
    */
   async logout(): Promise<void> {
     try {
@@ -67,6 +69,8 @@ class AuthService {
       // Even if API call fails, clear local state
     }
     localStorage.removeItem(this.USER_KEY);
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
   }
 
   /**
@@ -98,11 +102,25 @@ class AuthService {
   }
 
   /**
-   * Refresh access token via httpOnly cookie
-   * Backend reads refresh_token cookie and sets new access_token cookie
+   * Store tokens in localStorage (fallback for cross-site cookie issues)
+   */
+  private setTokens(access?: string, refresh?: string): void {
+    if (access) localStorage.setItem('access_token', access);
+    if (refresh) localStorage.setItem('refresh_token', refresh);
+  }
+
+  /**
+   * Refresh access token via httpOnly cookie or localStorage refresh token
+   * Backend accepts refresh token from cookie OR request body
    */
   async refreshToken(): Promise<void> {
-    await apiService.post(API_ENDPOINTS.AUTH_TOKEN_REFRESH);
+    const refreshToken = localStorage.getItem('refresh_token');
+    const response = await apiService.post<any>(
+      API_ENDPOINTS.AUTH_TOKEN_REFRESH,
+      refreshToken ? { refresh: refreshToken } : undefined
+    );
+    // Save new tokens if returned in response body
+    this.setTokens(response.access, response.refresh);
   }
 
   /**

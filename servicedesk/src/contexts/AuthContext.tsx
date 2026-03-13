@@ -59,10 +59,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const login = async (username: string, password: string) => {
     const response = await apiService.post<{
       user: User;
+      access?: string;
+      refresh?: string;
     }>(API_ENDPOINTS.AUTH_LOGIN, { username, password });
 
-    // Tokens are set as httpOnly cookies by the backend
+    // Tokens are set as httpOnly cookies AND returned in body (cross-site fallback)
     localStorage.setItem("user", JSON.stringify(response.user));
+    if (response.access) localStorage.setItem("access_token", response.access);
+    if (response.refresh) localStorage.setItem("refresh_token", response.refresh);
     setUser(response.user);
   };
 
@@ -70,6 +74,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     // Call backend to clear httpOnly cookies
     apiService.post('/api/tickets/auth/logout/').catch(() => {});
     localStorage.removeItem("user");
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
     setUser(null);
   };
 

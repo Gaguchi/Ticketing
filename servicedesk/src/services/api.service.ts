@@ -5,8 +5,12 @@ class ApiService {
   private refreshPromise: Promise<boolean> | null = null;
 
   private getHeaders(): HeadersInit {
-    // Auth is handled via httpOnly cookies sent with credentials: 'include'
-    return API_HEADERS;
+    // Cookies are primary auth (same-site). Authorization header is fallback
+    // for cross-site deployments (e.g., traefik.me domains).
+    const token = localStorage.getItem('access_token');
+    return token
+      ? { ...API_HEADERS, 'Authorization': `Bearer ${token}` }
+      : API_HEADERS;
   }
 
   /**
@@ -30,7 +34,7 @@ class ApiService {
   }
 
   /**
-   * Attempt to refresh the access token using the httpOnly refresh cookie
+   * Attempt to refresh the access token using cookie or localStorage refresh token
    */
   private async refreshToken(): Promise<boolean> {
     // If already refreshing, wait for that to complete
@@ -42,16 +46,23 @@ class ApiService {
     this.refreshPromise = (async () => {
       try {
         console.log('🔄 [ApiService] Attempting to refresh token...');
+        const refreshToken = localStorage.getItem('refresh_token');
         const response = await fetch(this.getRefreshEndpoint(), {
           method: 'POST',
-          headers: API_HEADERS,
+          headers: this.getHeaders(),
           credentials: 'include',
+          body: refreshToken ? JSON.stringify({ refresh: refreshToken }) : undefined,
         });
 
         if (!response.ok) {
           console.error('❌ [ApiService] Token refresh failed:', response.status);
           return false;
         }
+
+        // Save new tokens from response body
+        const data = await response.json().catch(() => ({}));
+        if (data.access) localStorage.setItem('access_token', data.access);
+        if (data.refresh) localStorage.setItem('refresh_token', data.refresh);
 
         console.log('✅ [ApiService] Token refreshed successfully');
         return true;
@@ -75,13 +86,15 @@ class ApiService {
     try {
       await fetch(this.getLogoutEndpoint(), {
         method: 'POST',
-        headers: API_HEADERS,
+        headers: this.getHeaders(),
         credentials: 'include',
       });
     } catch {
       // Ignore logout errors
     }
     localStorage.removeItem('user');
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
     window.location.href = '/login';
   }
 
@@ -95,41 +108,21 @@ class ApiService {
       credentials: 'include',
     });
 
-    // Check for auth errors (401 or 403 with token_not_valid)
-    if (response.status === 401 || response.status === 403) {
-      // Don't try to refresh for auth endpoints
+    // Check for auth errors (401 or 403)
+    // 403 can mean missing credentials (cross-site cookie issue) or permission denied
+    // On retry after refresh, legitimate 403 (permission denied) passes through
+    if ((response.status === 401 || response.status === 403) && !isRetry) {
       const isAuthEndpoint = url.includes('/auth/login/') || url.includes('/auth/token/refresh/');
 
-      if (!isAuthEndpoint && !isRetry) {
-        // Check if it's a token error (try to parse response)
-        const errorData = await response.clone().json().catch(() => ({}));
+      if (!isAuthEndpoint) {
+        // Try to refresh the token
+        const success = await this.refreshToken();
 
-        const isTokenError = response.status === 401 ||
-          errorData.code === 'token_not_valid' ||
-          errorData.detail?.includes('token');
-
-        if (isTokenError) {
-          // Try to refresh the token
-          const success = await this.refreshToken();
-
-          if (success) {
-            // Retry the original request with new cookie
-            console.log('🔄 [ApiService] Retrying request after token refresh');
-            return this.request<T>(url, options, true);
-          }
-          // Refresh failed - logout
-          await this.handleAuthFailure();
-          throw new Error('Unauthorized');
+        if (success) {
+          console.log('🔄 [ApiService] Retrying request after token refresh');
+          return this.request<T>(url, options, true);
         }
-      }
-
-      // If it's a 403 but NOT a token error (e.g. permission denied), DO NOT logout.
-      if (response.status === 403) {
-        throw new Error('Permission Denied');
-      }
-
-      // 401 (refresh failed or not applicable) - logout
-      if (response.status === 401) {
+        // Refresh failed - logout
         await this.handleAuthFailure();
         throw new Error('Unauthorized');
       }

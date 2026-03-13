@@ -42,10 +42,13 @@ class APIService {
 
   /**
    * Get authorization header with JWT token
+   * Cookies are the primary auth mechanism (same-site deployments).
+   * Authorization header is the fallback for cross-site deployments
+   * (e.g., traefik.me domains where SameSite=Lax blocks cookies).
    */
   private getAuthHeader(): Record<string, string> {
-    // Auth is handled via httpOnly cookies sent automatically with credentials: 'include'
-    return {};
+    const token = localStorage.getItem('access_token');
+    return token ? { 'Authorization': `Bearer ${token}` } : {};
   }
 
   /**
@@ -140,12 +143,11 @@ class APIService {
         const isRefreshEndpoint = url.includes('/auth/token/refresh/');
         const isLoginEndpoint = url.includes('/auth/login/') || url.includes('/auth/register/');
 
-        // Handle 401 Unauthorized or 403 Forbidden (invalid/expired token)
-        // Django can return 403 with "token_not_valid" error code
-        // Skip if this is already a retry to prevent infinite refresh loops
+        // Handle 401 Unauthorized or 403 Forbidden (auth failure)
+        // 401 = invalid/expired token, 403 = no credentials sent (cross-site cookie issue)
+        // On retry after refresh, legitimate 403 (permission denied) passes through
         if (
-          (response.status === 401 ||
-            (response.status === 403 && errorData.code === 'token_not_valid')) &&
+          (response.status === 401 || response.status === 403) &&
           !isRefreshEndpoint &&
           !isLoginEndpoint &&
           !isRetry

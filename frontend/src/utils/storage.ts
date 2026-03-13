@@ -58,28 +58,28 @@ class StorageService {
   }
 
   // ============ TOKEN MANAGEMENT ============
-  // Tokens are now stored in httpOnly cookies managed by the backend.
-  // These methods are kept for backward compatibility but are no-ops.
+  // Tokens are stored in both httpOnly cookies (primary, same-site) and
+  // localStorage (fallback for cross-site scenarios like traefik.me domains).
+  // The backend accepts both Cookie and Authorization: Bearer header.
   getAccessToken(): string | null {
-    // Use localStorage user as auth signal — actual auth is via httpOnly cookies
-    // (the is_authenticated cookie may not be readable cross-origin in production)
-    return localStorage.getItem(StorageKeys.USER) ? 'cookie-auth' : null;
+    return localStorage.getItem(StorageKeys.ACCESS_TOKEN);
   }
 
-  setAccessToken(_token: string): void {
-    // No-op: tokens managed by httpOnly cookies
+  setAccessToken(token: string): void {
+    localStorage.setItem(StorageKeys.ACCESS_TOKEN, token);
   }
 
   getRefreshToken(): string | null {
-    return null; // httpOnly cookie, not accessible from JS
+    return localStorage.getItem(StorageKeys.REFRESH_TOKEN);
   }
 
-  setRefreshToken(_token: string): void {
-    // No-op: tokens managed by httpOnly cookies
+  setRefreshToken(token: string): void {
+    localStorage.setItem(StorageKeys.REFRESH_TOKEN, token);
   }
 
   clearTokens(): void {
-    // No-op: tokens cleared by backend logout endpoint
+    localStorage.removeItem(StorageKeys.ACCESS_TOKEN);
+    localStorage.removeItem(StorageKeys.REFRESH_TOKEN);
   }
 
   // ============ USER MANAGEMENT ============

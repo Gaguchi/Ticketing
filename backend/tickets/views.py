@@ -170,6 +170,9 @@ def register_user(request):
     # Generate tokens
     refresh = RefreshToken.for_user(user)
 
+    access_token = str(refresh.access_token)
+    refresh_token = str(refresh)
+
     response = Response({
         'user': {
             'id': user.id,
@@ -178,9 +181,11 @@ def register_user(request):
             'first_name': user.first_name,
             'last_name': user.last_name,
         },
+        'access': access_token,
+        'refresh': refresh_token,
     }, status=status.HTTP_201_CREATED)
 
-    _set_auth_cookies(response, str(refresh.access_token), str(refresh))
+    _set_auth_cookies(response, access_token, refresh_token)
     return response
 
 
@@ -212,15 +217,17 @@ def login_user(request):
         user = authenticate(username=user_obj.username, password=password)
     except User.DoesNotExist:
         user = None
-    
+
     if user is None:
         return Response(
             {'error': 'Invalid credentials'},
             status=status.HTTP_401_UNAUTHORIZED
         )
-    
+
     # Generate tokens
     refresh = RefreshToken.for_user(user)
+    access_token = str(refresh.access_token)
+    refresh_token = str(refresh)
 
     response = Response({
         'user': {
@@ -230,9 +237,11 @@ def login_user(request):
             'first_name': user.first_name,
             'last_name': user.last_name,
         },
+        'access': access_token,
+        'refresh': refresh_token,
     })
 
-    _set_auth_cookies(response, str(refresh.access_token), str(refresh))
+    _set_auth_cookies(response, access_token, refresh_token)
     return response
 
 
@@ -324,10 +333,11 @@ def refresh_token_cookie(request):
     from rest_framework_simplejwt.tokens import RefreshToken as RefToken
     from rest_framework_simplejwt.exceptions import TokenError as TError
 
-    refresh_token_str = request.COOKIES.get('refresh_token')
+    # Accept refresh token from cookie OR request body (cross-site fallback)
+    refresh_token_str = request.COOKIES.get('refresh_token') or request.data.get('refresh')
     if not refresh_token_str:
         return Response(
-            {'error': 'No refresh token cookie'},
+            {'error': 'No refresh token provided'},
             status=status.HTTP_401_UNAUTHORIZED
         )
 
@@ -351,7 +361,7 @@ def refresh_token_cookie(request):
         else:
             new_refresh = refresh_token_str
 
-        response = Response({'status': 'refreshed'})
+        response = Response({'access': new_access, 'refresh': new_refresh})
         _set_auth_cookies(response, new_access, new_refresh)
         return response
     except TError:
