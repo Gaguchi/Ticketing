@@ -9,12 +9,6 @@ import { User } from "../types";
 import { API_ENDPOINTS } from "../config/api";
 import apiService from "../services/api.service";
 
-// Helper to read a specific cookie value
-function getCookie(name: string): string | null {
-  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
-  return match ? decodeURIComponent(match[2]) : null;
-}
-
 interface AuthContextType {
   user: User | null;
   loading: boolean;
@@ -36,25 +30,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   }, []);
 
   const checkAuth = async () => {
-    // Check if is_authenticated cookie exists (set by backend, non-httpOnly)
-    const isAuth = getCookie('is_authenticated');
+    // Use localStorage as auth signal — the is_authenticated cookie may not be
+    // readable cross-origin in production. Actual auth uses httpOnly cookies.
     const storedUser = localStorage.getItem("user");
 
-    if (isAuth === 'true' && storedUser) {
+    if (storedUser) {
       try {
         setUser(JSON.parse(storedUser));
       } catch (error) {
         console.error("Failed to parse stored user:", error);
         logout();
+        setLoading(false);
+        return;
       }
-    } else if (isAuth === 'true') {
-      // Cookie exists but no local user data - fetch from API
+
+      // Validate session with backend (httpOnly cookies sent automatically)
       try {
         const userData = await apiService.get<User>(API_ENDPOINTS.AUTH_ME);
         setUser(userData);
         localStorage.setItem("user", JSON.stringify(userData));
       } catch {
-        logout();
+        // Token invalid and refresh failed — API interceptor handles redirect
       }
     }
     setLoading(false);

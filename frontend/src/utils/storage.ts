@@ -61,9 +61,9 @@ class StorageService {
   // Tokens are now stored in httpOnly cookies managed by the backend.
   // These methods are kept for backward compatibility but are no-ops.
   getAccessToken(): string | null {
-    // Check is_authenticated cookie instead
-    const match = document.cookie.match(/(^| )is_authenticated=([^;]+)/);
-    return match ? 'cookie-auth' : null;
+    // Use localStorage user as auth signal — actual auth is via httpOnly cookies
+    // (the is_authenticated cookie may not be readable cross-origin in production)
+    return localStorage.getItem(StorageKeys.USER) ? 'cookie-auth' : null;
   }
 
   setAccessToken(_token: string): void {
