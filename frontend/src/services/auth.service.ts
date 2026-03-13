@@ -74,7 +74,13 @@ class AuthService {
    */
   getUser(): User | null {
     const userJson = localStorage.getItem(this.USER_KEY);
-    return userJson ? JSON.parse(userJson) : null;
+    if (!userJson) return null;
+    try {
+      return JSON.parse(userJson);
+    } catch {
+      localStorage.removeItem(this.USER_KEY);
+      return null;
+    }
   }
 
   /**
