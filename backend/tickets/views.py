@@ -147,8 +147,11 @@ def register_user(request):
         )
 
     # Validate password against Django's password validators
+    # Pass a temporary user so UserAttributeSimilarityValidator can check
+    # password similarity against username/email
     try:
-        validate_password(password)
+        temp_user = User(username=username, email=email)
+        validate_password(password, user=temp_user)
     except DjangoValidationError as e:
         return Response(
             {'error': e.messages},
