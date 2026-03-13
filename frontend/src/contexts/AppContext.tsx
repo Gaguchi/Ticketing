@@ -125,10 +125,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
         debug.auth("Fresh data received:", freshUser.username);
       } catch (error) {
         console.error("Auth fetch failed:", error);
-        // Token expired and refresh failed — clear stale state
-        setToken(null);
-        setUser(null);
-        storage.clearAll();
+        // Keep cached user — the 401 interceptor handles auth failures per-request
       } finally {
         fetchInProgressRef.current = false;
         setAuthLoading(false);

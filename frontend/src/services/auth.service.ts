@@ -12,12 +12,6 @@ import type {
   User,
 } from '../types/api';
 
-// Helper to read a specific cookie value
-function getCookie(name: string): string | null {
-  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
-  return match ? decodeURIComponent(match[2]) : null;
-}
-
 class AuthService {
   private readonly USER_KEY = 'user';
 
@@ -84,10 +78,10 @@ class AuthService {
   }
 
   /**
-   * Check if user is authenticated (via non-httpOnly is_authenticated cookie)
+   * Check if user is authenticated (via localStorage user data)
    */
   isAuthenticated(): boolean {
-    return getCookie('is_authenticated') === 'true';
+    return !!localStorage.getItem(this.USER_KEY);
   }
 
   /**
