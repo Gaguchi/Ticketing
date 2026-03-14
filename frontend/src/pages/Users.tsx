@@ -625,7 +625,7 @@ const Users: React.FC = () => {
               onClick={() => setIsInviteModalOpen(true)}
               size="small"
             >
-              {!isMobile && "Add to Project"}
+              {!isMobile && "Invite to Project"}
             </Button>
           )}
           <Button

@@ -1,6 +1,6 @@
 /**
  * Invite User Modal
- * Modal for adding existing users to a project by email
+ * Modal for inviting users to a project by email (registered or unregistered)
  */
 
 import React, { useState } from "react";
@@ -43,10 +43,13 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
       const response = await invitationService.sendInvitation(requestData);
 
       if (response.success) {
-        // Show success message with user details
         message.success(
-          response.message || `User added to ${projectName} successfully`
+          response.message || `Invitation sent successfully`
         );
+
+        if (response.email_sent === false) {
+          message.info("Invitation created but email could not be delivered");
+        }
 
         form.resetFields();
 
@@ -54,18 +57,17 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
           onSuccess();
         }
 
-        // Close modal after 1.5 seconds
         setTimeout(() => {
           onClose();
         }, 1500);
       }
     } catch (error: any) {
-      console.error("Failed to add user:", error);
+      console.error("Failed to send invitation:", error);
 
       if (error.response?.data?.error) {
         message.error(error.response.data.error);
       } else {
-        message.error("Failed to add user to project");
+        message.error("Failed to send invitation");
       }
     } finally {
       setLoading(false);
@@ -79,11 +81,11 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
 
   return (
     <Modal
-      title={`Add User to ${projectName}`}
+      title={`Invite User to ${projectName}`}
       open={open}
       onOk={() => form.submit()}
       onCancel={handleCancel}
-      okText="Add User"
+      okText="Send Invitation"
       confirmLoading={loading}
       width={isMobile ? "100%" : 520}
       style={isMobile ? { top: 0, maxWidth: "100vw", margin: 0, paddingBottom: 0 } : undefined}
@@ -97,8 +99,8 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
         initialValues={{ role: "user" }}
       >
         <Alert
-          message="Add Existing User"
-          description="Enter the email address of an existing user to add them to this project. The user must already have an account."
+          message="Invite User"
+          description="Enter the email address of the user you want to invite. They will receive an email with a link to accept the invitation. If they don't have an account yet, they'll be prompted to register first."
           type="info"
           showIcon
           style={{ marginBottom: 16 }}

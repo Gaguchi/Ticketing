@@ -1361,6 +1361,8 @@ class Notification(models.Model):
         ('status_changed', 'Status Changed'),
         ('priority_changed', 'Priority Changed'),
         ('chat_message', 'Chat Message'),
+        ('invitation_received', 'Invitation Received'),
+        ('invitation_accepted', 'Invitation Accepted'),
         ('general', 'General'),
     ]
     

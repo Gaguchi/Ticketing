@@ -126,6 +126,10 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
         return { color: "#13c2c2", emoji: "🔄" };
       case "priority_changed":
         return { color: "#fa541c", emoji: "⚡" };
+      case "invitation_received":
+        return { color: "#1890ff", emoji: "📩" };
+      case "invitation_accepted":
+        return { color: "#52c41a", emoji: "🤝" };
       default:
         return { color: "var(--color-text-muted)", emoji: "🔔" };
     }

@@ -3255,21 +3255,26 @@ class ProjectInvitationViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Filter invitations based on user permissions"""
         user = self.request.user
-        
+
         # Superusers see all
         if user.is_superuser:
             return ProjectInvitation.objects.all()
-        
-        # Users see invitations for projects they're members of
-        return ProjectInvitation.objects.filter(
-            project__members=user
-        )
+
+        # Only admins/superadmins of projects can see invitations
+        admin_project_ids = UserRole.objects.filter(
+            user=user,
+            role__in=['superadmin', 'admin']
+        ).values_list('project_id', flat=True)
+
+        return ProjectInvitation.objects.filter(project_id__in=admin_project_ids)
     
     @action(detail=False, methods=['post'], url_path='send')
     def send_invitation(self, request):
         """
-        Add an existing user to project by email (simplified - no email sending)
-        
+        Send a project invitation to an email address.
+        Creates a pending invitation, sends an email, and notifies the user (if registered).
+        Works for both registered and unregistered users.
+
         POST /api/tickets/invitations/send/
         Body: {
             "project_id": 1,
@@ -3283,11 +3288,11 @@ class ProjectInvitationViewSet(viewsets.ModelViewSet):
                 serializer.errors,
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         project_id = request.data.get('project_id')
         email = serializer.validated_data['email']
         role = serializer.validated_data.get('role', 'user')
-        
+
         # Get project
         try:
             project = Project.objects.get(id=project_id)
@@ -3296,57 +3301,79 @@ class ProjectInvitationViewSet(viewsets.ModelViewSet):
                 {'error': 'Project not found'},
                 status=status.HTTP_404_NOT_FOUND
             )
-        
-        # Check if user has permission to invite to this project
-        if not request.user.is_superuser and request.user not in project.members.all():
+
+        # Check permission: only superusers or project admins/superadmins can invite
+        if not request.user.is_superuser:
+            has_invite_perm = UserRole.objects.filter(
+                user=request.user,
+                project=project,
+                role__in=['superadmin', 'admin']
+            ).exists()
+            if not has_invite_perm:
+                return Response(
+                    {'error': 'Only project admins can invite users'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+        # Check for existing pending invitation for this email+project
+        existing_pending = ProjectInvitation.objects.filter(
+            project=project,
+            email=email,
+            status='pending',
+            expires_at__gt=timezone.now()
+        ).exists()
+        if existing_pending:
             return Response(
-                {'error': 'You do not have permission to invite users to this project'},
-                status=status.HTTP_403_FORBIDDEN
+                {'error': 'A pending invitation already exists for this email'},
+                status=status.HTTP_400_BAD_REQUEST
             )
-        
-        # Check if user with this email exists
-        try:
-            user_to_add = User.objects.get(email=email)
-        except User.DoesNotExist:
-            return Response(
-                {'error': 'User with this email not found'},
-                status=status.HTTP_404_NOT_FOUND
-            )
-        
-        # Check if user is already a member
-        if user_to_add in project.members.all():
+
+        # Check if user is already a member (if they're registered)
+        existing_user = User.objects.filter(email=email).first()
+        if existing_user and existing_user in project.members.all():
             return Response(
                 {'error': 'User is already a member of this project'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
-        # Add user to project instantly
-        project.members.add(user_to_add)
-        
-        # Optionally create an invitation record for tracking (marked as accepted immediately)
+
+        # Create a PENDING invitation (token and expiry set automatically by model save)
         invitation = ProjectInvitation.objects.create(
             project=project,
             email=email,
             role=role,
             invited_by=request.user,
-            accepted_by=user_to_add,
-            status='accepted'
         )
-        
+
+        # Send invitation email
+        email_sent = False
+        try:
+            email_sent = send_invitation_email(invitation)
+        except Exception:
+            pass
+
+        # Send in-app notification if user is registered
+        if existing_user:
+            from .signals import create_and_send_notification
+            inviter_name = request.user.get_full_name() or request.user.username
+            create_and_send_notification(
+                user_id=existing_user.id,
+                notification_type='invitation_received',
+                title='Project Invitation',
+                message=f'{inviter_name} invited you to join {project.name}',
+                link=f'/invite/accept?token={invitation.token}',
+                data={
+                    'project_id': project.id,
+                    'project_name': project.name,
+                    'invitation_id': invitation.id,
+                    'role': role,
+                }
+            )
+
         return Response({
             'success': True,
-            'message': f'{user_to_add.first_name} {user_to_add.last_name} ({email}) has been added to {project.name}',
-            'user': {
-                'id': user_to_add.id,
-                'email': user_to_add.email,
-                'first_name': user_to_add.first_name,
-                'last_name': user_to_add.last_name
-            },
-            'project': {
-                'id': project.id,
-                'name': project.name,
-                'key': project.key
-            }
+            'email_sent': email_sent,
+            'message': f'Invitation sent to {email}',
+            'invitation': ProjectInvitationSerializer(invitation).data,
         }, status=status.HTTP_201_CREATED)
     
     @action(detail=False, methods=['post'], url_path='accept', permission_classes=[IsAuthenticated])
@@ -3387,6 +3414,25 @@ class ProjectInvitationViewSet(viewsets.ModelViewSet):
         # Accept invitation
         try:
             invitation.accept(request.user)
+
+            # Notify the inviter that the invitation was accepted
+            if invitation.invited_by:
+                from .signals import create_and_send_notification
+                accepter_name = request.user.get_full_name() or request.user.username
+                create_and_send_notification(
+                    user_id=invitation.invited_by.id,
+                    notification_type='invitation_accepted',
+                    title='Invitation Accepted',
+                    message=f'{accepter_name} accepted your invitation to {invitation.project.name}',
+                    link=f'/users',
+                    data={
+                        'project_id': invitation.project.id,
+                        'project_name': invitation.project.name,
+                        'accepted_by_user_id': request.user.id,
+                        'invitation_id': invitation.id,
+                    }
+                )
+
             return Response({
                 'success': True,
                 'message': f'You have been added to {invitation.project.name}',
@@ -3445,12 +3491,18 @@ class ProjectInvitationViewSet(viewsets.ModelViewSet):
         """
         invitation = self.get_object()
         
-        # Check permission
+        # Check permission: superuser, original inviter, or project admin/superadmin
         if not request.user.is_superuser and request.user != invitation.invited_by:
-            return Response(
-                {'error': 'You do not have permission to revoke this invitation'},
-                status=status.HTTP_403_FORBIDDEN
-            )
+            has_perm = UserRole.objects.filter(
+                user=request.user,
+                project=invitation.project,
+                role__in=['superadmin', 'admin']
+            ).exists()
+            if not has_perm:
+                return Response(
+                    {'error': 'You do not have permission to revoke this invitation'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
         
         if invitation.status != 'pending':
             return Response(

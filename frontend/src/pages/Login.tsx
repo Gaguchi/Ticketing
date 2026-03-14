@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Form, Input, Button, Card, Typography, Alert, Checkbox } from "antd";
 import { UserOutlined, LockOutlined } from "@ant-design/icons";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "../contexts/AppContext";
 import { authService } from "../services/auth.service";
 import { Turnstile } from "../components/Turnstile";
@@ -23,16 +23,18 @@ const Login: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login, isAuthenticated } = useAuth();
   const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY;
   const turnstileEnabled = import.meta.env.VITE_TURNSTILE_ENABLED === "true";
+  const redirectUrl = searchParams.get('redirect');
 
   // Redirect if already authenticated
   React.useEffect(() => {
     if (isAuthenticated) {
-      navigate("/", { replace: true });
+      navigate(redirectUrl || "/", { replace: true });
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, navigate, redirectUrl]);
 
   const onFinish = async (values: LoginFormValues) => {
     if (turnstileEnabled && turnstileSiteKey && !captchaToken) {
@@ -70,9 +72,10 @@ const Login: React.FC = () => {
         localStorage.setItem("remember", "true");
       }
 
-      // Navigate based on whether user has projects
-      // Use the freshUser we just fetched instead of making another API call
-      if (freshUser.has_projects) {
+      // Navigate: redirect param takes priority, then check if user has projects
+      if (redirectUrl) {
+        navigate(redirectUrl, { replace: true });
+      } else if (freshUser.has_projects) {
         navigate("/");
       } else {
         navigate("/setup");
